@@ -1,0 +1,111 @@
+@using Microsoft.AspNetCore.Http
+
+@{
+    var soLuongGio = Context.Session.GetInt32("GioThue_SoLuong") ?? 0;
+    var isLoggedIn = User.Identity?.IsAuthenticated ?? false;
+    var hoTen = User.FindFirst("HoTen")?.Value ?? "";
+    var vaiTro = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? "";
+}
+
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm sticky-top">
+    <div class="container">
+
+        <a class="navbar-brand fw-bold d-flex align-items-center gap-2"
+           asp-controller="Home" asp-action="Index">
+            <span class="text-warning fs-4">⛺</span>
+            <span>GearGo</span>
+        </a>
+
+        <button class="navbar-toggler border-0" type="button"
+                data-bs-toggle="collapse" data-bs-target="#navMain">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="navMain">
+            <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                <li class="nav-item">
+                    <a class="nav-link" asp-controller="SanPham" asp-action="Index">Sản phẩm</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" asp-controller="TuVan" asp-action="Index">
+                        <span class="badge bg-warning text-dark me-1">AI</span>Tư vấn
+                    </a>
+                </li>
+                @if (vaiTro is "NhanVien" or "QuanTriVien")
+                {
+                    <li class="nav-item">
+                        <a class="nav-link text-warning"
+                           asp-area="Admin" asp-controller="Home" asp-action="Index">Quản lý</a>
+                    </li>
+                }
+            </ul>
+
+            <ul class="navbar-nav align-items-center gap-1">
+
+                @if (vaiTro == "KhachHang" || !isLoggedIn)
+                {
+                    <li class="nav-item">
+                        <a class="nav-link position-relative px-2"
+                           asp-controller="GioThue" asp-action="Index" title="Giỏ thuê">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22"
+                                 fill="currentColor" viewBox="0 0 16 16">
+                                <path d="M0 1.5A.5.5 0 0 1 .5 1H2a.5.5 0 0 1 .485.379L2.89 3H14.5a.5.5
+                                         0 0 1 .491.592l-1.5 8A.5.5 0 0 1 13 12H4a.5.5 0 0
+                                         1-.491-.408L2.01 3.607 1.61 2H.5a.5.5 0 0 1-.5-.5zM5
+                                         12a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm7 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4z"/>
+                            </svg>
+                            @if (soLuongGio > 0)
+                            {
+                                <span id="cart-badge"
+                                      class="position-absolute top-0 start-100 translate-middle
+                                             badge rounded-pill bg-warning text-dark">
+                                    @soLuongGio
+                                </span>
+                            }
+                        </a>
+                    </li>
+                }
+
+                @if (isLoggedIn)
+                {
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle d-flex align-items-center gap-1"
+                           href="#" role="button" data-bs-toggle="dropdown">
+                            <div class="rounded-circle bg-warning text-dark d-flex align-items-center
+                                        justify-content-center fw-bold"
+                                 style="width:30px;height:30px;font-size:.8rem;">
+                                @(hoTen.Length > 0 ? hoTen[0].ToString().ToUpper() : "?")
+                            </div>
+                            <span class="d-none d-lg-inline small">@hoTen</span>
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end shadow border-0">
+                            <li><span class="dropdown-item-text text-muted small px-3">@vaiTro</span></li>
+                            <li><hr class="dropdown-divider my-1"></li>
+                            @if (vaiTro == "KhachHang")
+                            {
+                                <li><a class="dropdown-item" asp-controller="HoSo" asp-action="Index">Hồ sơ</a></li>
+                                <li><a class="dropdown-item" asp-controller="DonThue" asp-action="CuaToi">Đơn thuê</a></li>
+                                <li><hr class="dropdown-divider my-1"></li>
+                            }
+                            <li>
+                                <form asp-controller="XacThuc" asp-action="DangXuat" method="post">
+                                    <button type="submit" class="dropdown-item text-danger">Đăng xuất</button>
+                                </form>
+                            </li>
+                        </ul>
+                    </li>
+                }
+                else
+                {
+                    <li class="nav-item">
+                        <a class="nav-link" asp-controller="XacThuc" asp-action="DangNhap">Đăng nhập</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="btn btn-warning btn-sm fw-semibold ms-1"
+                           asp-controller="XacThuc" asp-action="DangKy">Đăng ký</a>
+                    </li>
+                }
+            </ul>
+        </div>
+    </div>
+</nav>

@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>GearGo</RootNamespace>
+    <AssemblyName>GearGo</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- EF Core 9 stable, tương thích .NET 10 -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="9.0.*" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="9.0.*">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.*">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />
+    <!-- AutoMapper: thêm lại khi cần mapping ViewModel, kiểm tra phiên bản đã vá lỗi GHSA-rvv3-g6hj-g44x -->
+    <!-- <PackageReference Include="AutoMapper" Version="14.*" /> -->
+  </ItemGroup>
+
+</Project>
