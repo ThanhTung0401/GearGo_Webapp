@@ -20,8 +20,7 @@
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />
-    <!-- AutoMapper: thêm lại khi cần mapping ViewModel, kiểm tra phiên bản đã vá lỗi GHSA-rvv3-g6hj-g44x -->
-    <!-- <PackageReference Include="AutoMapper" Version="14.*" /> -->
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.*" />
+    <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.*" />
   </ItemGroup>
-
 </Project>

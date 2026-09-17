@@ -4,9 +4,9 @@
 
 **Mục tiêu tuần 2:** Dựng nền tảng dự án + xác thực (UC01) + khách duyệt danh mục / tìm sản phẩm / kiểm tra khả dụng / quản lý giỏ thuê / tạo đơn giữ chỗ / thanh toán xác nhận đơn (UC03–UC06) + admin CRUD danh mục và sản phẩm (UC21).
 
-**Kiến trúc:** ASP.NET Core MVC — phân lớp Model → Service → Controller → View. Mỗi tính năng có service riêng, controller gọi service, không chứa logic nghiệp vụ. Repository Pattern qua EF Core DbContext.
+**Kiến trúc:** ASP.NET Core **Web API** (backend) + **React** (frontend). Backend trả JSON thuần, không có Razor Views. Frontend React gọi API qua fetch/axios kèm JWT token.
 
-**Tech Stack:** ASP.NET Core 8 MVC · Entity Framework Core 8 · SQL Server · ASP.NET Core Identity · Bootstrap 5 · jQuery · VNPay SDK (hoặc mock gateway) · AutoMapper
+**Tech Stack:** ASP.NET Core 10 Web API · Entity Framework Core 9 · SQL Server (Docker) · JWT Bearer Authentication · BCrypt.Net-Next · React (Vite) · Bootstrap 5
 
 ---
 
@@ -14,7 +14,7 @@
 
 | Nhóm | Use Case | Tên nghiệp vụ |
 |---|---|---|
-| Nền tảng | — | Khởi tạo dự án, cấu hình EF Core, SQL Server, Identity, layout chung |
+| Nền tảng | — | Khởi tạo API, cấu hình EF Core, SQL Server Docker, JWT, CORS |
 | Xác thực | UC01 | Đăng ký, đăng nhập, phục hồi mật khẩu |
 | Khách | UC03 | Tìm kiếm, xem sản phẩm và kiểm tra khả dụng |
 | Khách | UC04 | Quản lý giỏ thuê và xem báo giá |
@@ -24,270 +24,213 @@
 
 ---
 
-## Cấu trúc file sẽ tạo / chỉnh sửa
+## Cấu trúc file
 
 ```
-GearGo_Webapp/
-├── GearGo.csproj                       (mới — khởi tạo)
-├── Program.cs                           (mới — DI, middleware, Identity)
-├── appsettings.json                     (mới — connection string, JWT/Cookie config)
+GearGo_Webapp/                              ← Backend ASP.NET Core Web API
+├── GearGo.csproj                           (xong — Task 0)
+├── Program.cs                              (xong — Task 0)
+├── appsettings.json                        (xong — Task 0)
+├── Migrations/                             (xong — tạo qua EF CLI, root project)
+│   ├── [timestamp]_InitialCreate.cs
+│   └── ApplicationDbContextModelSnapshot.cs
+├── Data/
+│   └── ApplicationDbContext.cs             (xong — Task 0)
 ├── Models/
 │   ├── Entities/
-│   │   ├── ApplicationUser.cs          (mới — extends IdentityUser)
-│   │   ├── KhachHang.cs                (mới — thông tin khách hàng)
-│   │   └── NhanVien.cs                 (mới — thông tin nhân viên)
-│   ├── ViewModels/
-│   │   └── Auth/
-│   │       ├── DangKyVM.cs             (mới)
-│   │       ├── DangNhapVM.cs           (mới)
-│   │       └── QuenMatKhauVM.cs        (mới)
-├── Services/
-│   ├── Interfaces/
-│   │   └── IXacThucService.cs          (mới)
-│   └── XacThucService.cs               (mới)
-├── Controllers/
-│   └── XacThucController.cs            (mới)
-├── Views/
-│   ├── Shared/
-│   │   ├── _Layout.cshtml              (mới — layout chung Bootstrap 5)
-│   │   └── _Header.cshtml              (mới — partial: nav + icon giỏ + user menu)
-│   └── XacThuc/
-│       ├── DangKy.cshtml               (mới)
-│       ├── DangNhap.cshtml             (mới)
-│       └── QuenMatKhau.cshtml          (mới)
-├── Data/
-│   ├── ApplicationDbContext.cs         (mới)
-│   └── Migrations/
-│       └── [timestamp]_InitialCreate.cs (tạo qua EF CLI)
-│   ├── Entities/
-│   │   ├── DanhMucSanPham.cs          (mới)
-│   │   ├── SanPham.cs                  (mới)
-│   │   ├── HinhAnhSanPham.cs           (mới)
-│   │   ├── GioThue.cs                  (mới)
-│   │   ├── ChiTietGioThue.cs           (mới)
-│   │   ├── GiuCho.cs                   (mới)
-│   │   ├── DonThue.cs                  (mới)
-│   │   ├── ChiTietDonThue.cs           (mới)
-│   │   ├── ThanhToan.cs                (mới)
-│   │   └── KhuyenMai.cs                (mới — dùng cho giỏ thuê)
-│   └── ViewModels/
+│   │   ├── TaiKhoan.cs                     (xong — Task 0)
+│   │   ├── KhachHang.cs                    (xong — Task 0)
+│   │   ├── NhanVien.cs                     (xong — Task 0)
+│   │   ├── DanhMucSanPham.cs               (mới — Task 1)
+│   │   ├── SanPham.cs                      (mới — Task 1)
+│   │   ├── HinhAnhSanPham.cs               (mới — Task 1)
+│   │   ├── ThietBi.cs                      (mới — Task 2)
+│   │   ├── GioThue.cs                      (mới — Task 2)
+│   │   ├── ChiTietGioThue.cs               (mới — Task 2)
+│   │   ├── GiuCho.cs                       (mới — Task 2)
+│   │   ├── DonThue.cs                      (mới — Task 2)
+│   │   ├── ChiTietDonThue.cs               (mới — Task 2)
+│   │   ├── ThanhToan.cs                    (mới — Task 2)
+│   │   ├── KhuyenMai.cs                    (mới — Task 2)
+│   │   └── LuotSuDungKhuyenMai.cs          (mới — Task 2)
+│   ├── Enums/
+│   │   ├── TrangThaiThietBi.cs             (mới — Task 2)
+│   │   └── TrangThaiDonThue.cs             (mới — Task 2)
+│   └── DTOs/                               ← request/response JSON, thay ViewModels
+│       ├── Auth/
+│       │   ├── DangKyRequest.cs            (mới — Task 0.5)
+│       │   ├── DangNhapRequest.cs          (mới — Task 0.5)
+│       │   ├── QuenMatKhauRequest.cs       (mới — Task 0.5)
+│       │   └── AuthResponse.cs             (mới — Task 0.5)
 │       ├── SanPham/
-│       │   ├── SanPhamListVM.cs        (mới)
-│       │   ├── SanPhamDetailVM.cs      (mới)
-│       │   └── TimKiemSanPhamVM.cs     (mới)
+│       │   ├── SanPhamResponse.cs          (mới — Task 5)
+│       │   ├── SanPhamDetailResponse.cs    (mới — Task 5)
+│       │   └── TimKiemSanPhamRequest.cs    (mới — Task 4)
 │       ├── GioThue/
-│       │   ├── GioThueVM.cs            (mới)
-│       │   └── ThemVaoGioVM.cs         (mới)
+│       │   ├── GioThueResponse.cs          (mới — Task 6)
+│       │   └── ThemVaoGioRequest.cs        (mới — Task 6)
 │       ├── DonThue/
-│       │   ├── TaoDonThueVM.cs         (mới)
-│       │   └── XacNhanDonVM.cs         (mới)
+│       │   ├── TaoDonThueRequest.cs        (mới — Task 7)
+│       │   └── DonThueResponse.cs          (mới — Task 7)
 │       ├── ThanhToan/
-│       │   ├── ThanhToanVM.cs          (mới)
-│       │   └── KetQuaThanhToanVM.cs    (mới)
+│       │   ├── ThanhToanRequest.cs         (mới — Task 8)
+│       │   └── ThanhToanResponse.cs        (mới — Task 8)
 │       └── Admin/
-│           ├── DanhMucVM.cs            (mới)
-│           └── SanPhamAdminVM.cs       (mới)
+│           ├── DanhMucRequest.cs           (mới — Task 9)
+│           └── SanPhamAdminRequest.cs      (mới — Task 9)
 ├── Services/
 │   ├── Interfaces/
-│   │   ├── ISanPhamService.cs          (mới)
-│   │   ├── IGioThueService.cs          (mới)
-│   │   ├── IDonThueService.cs          (mới)
-│   │   ├── IKhaDungService.cs          (mới)
-│   │   ├── IThanhToanService.cs        (mới)
-│   │   └── IDanhMucService.cs          (mới)
-│   ├── SanPhamService.cs               (mới)
-│   ├── GioThueService.cs               (mới)
-│   ├── DonThueService.cs               (mới)
-│   ├── KhaDungService.cs               (mới)
-│   ├── ThanhToanService.cs             (mới)
-│   └── DanhMucService.cs               (mới)
-├── Controllers/
-│   ├── SanPhamController.cs            (mới)
-│   ├── GioThueController.cs            (mới)
-│   ├── DonThueController.cs            (mới)
-│   ├── ThanhToanController.cs          (mới)
-│   └── Admin/
-│       ├── DanhMucController.cs        (mới)
-│       └── SanPhamController.cs        (mới)
-├── Views/
-│   ├── SanPham/
-│   │   ├── Index.cshtml                (mới — trang tìm kiếm + lọc)
-│   │   └── ChiTiet.cshtml              (mới — trang chi tiết sản phẩm)
-│   ├── GioThue/
-│   │   └── Index.cshtml                (mới — giỏ thuê + báo giá)
-│   ├── DonThue/
-│   │   ├── XacNhan.cshtml              (mới — review trước khi tạo đơn)
-│   │   └── ChiTiet.cshtml              (mới — chi tiết đơn đã tạo)
-│   ├── ThanhToan/
-│   │   ├── Index.cshtml                (mới — trang thanh toán)
-│   │   └── KetQua.cshtml               (mới — kết quả thanh toán)
-│   └── Admin/
-│       ├── DanhMuc/
-│       │   ├── Index.cshtml            (mới)
-│       │   ├── TaoMoi.cshtml           (mới)
-│       │   └── ChinhSua.cshtml         (mới)
-│       └── SanPham/
-│           ├── Index.cshtml            (mới)
-│           ├── TaoMoi.cshtml           (mới)
-│           └── ChinhSua.cshtml         (mới)
-├── Data/
-│   └── Migrations/
-│       └── [timestamp]_AddCatalogAndOrderTables.cs   (tạo qua EF CLI)
-└── wwwroot/
-    └── js/
-        ├── gio-thue.js                 (mới — AJAX cập nhật giỏ)
-        └── san-pham-search.js          (mới — debounce tìm kiếm)
+│   │   ├── IXacThucService.cs              (mới — Task 0.5)
+│   │   ├── IDanhMucService.cs              (mới — Task 4)
+│   │   ├── ISanPhamService.cs              (mới — Task 4)
+│   │   ├── IKhaDungService.cs              (mới — Task 3)
+│   │   ├── IGioThueService.cs              (mới — Task 6)
+│   │   ├── IDonThueService.cs              (mới — Task 7)
+│   │   └── IThanhToanService.cs            (mới — Task 8)
+│   ├── XacThucService.cs                   (mới — Task 0.5)
+│   ├── DanhMucService.cs                   (mới — Task 4)
+│   ├── SanPhamService.cs                   (mới — Task 4)
+│   ├── KhaDungService.cs                   (mới — Task 3)
+│   ├── GioThueService.cs                   (mới — Task 6)
+│   ├── DonThueService.cs                   (mới — Task 7)
+│   └── ThanhToanService.cs                 (mới — Task 8)
+└── Controllers/
+    ├── AuthController.cs                   (mới — Task 0.5)
+    ├── SanPhamController.cs                (mới — Task 5)
+    ├── GioThueController.cs                (mới — Task 6)
+    ├── DonThueController.cs                (mới — Task 7)
+    ├── ThanhToanController.cs              (mới — Task 8)
+    └── Admin/
+        ├── DanhMucController.cs            (mới — Task 9)
+        └── SanPhamController.cs            (mới — Task 9)
 ```
 
 ---
 
-## Task 0: Khởi tạo dự án và cấu hình nền tảng
+## Task 0: Khởi tạo dự án và cấu hình nền tảng ✅
 
-**Files:**
-- Tạo: `GearGo.csproj`
-- Tạo: `Program.cs`
-- Tạo: `appsettings.json`
-- Tạo: `Data/ApplicationDbContext.cs`
-- Tạo: `Views/Shared/_Layout.cshtml`, `_Header.cshtml`
+**Files đã tạo:**
+- `GearGo.csproj` — .NET 10, EF Core 9, BCrypt, JWT Bearer
+- `Program.cs` — `AddControllers`, JWT Auth, CORS cho React, Authorization policies
+- `appsettings.json` — connection string SQL Server Docker (`localhost,1433`), JWT secret key
+- `Data/ApplicationDbContext.cs` — DbContext với TaiKhoans, KhachHangs, NhanViens
+- `Models/Entities/TaiKhoan.cs`, `KhachHang.cs`, `NhanVien.cs`
+- `Migrations/[timestamp]_InitialCreate.cs`
 
 **Các bước:**
 
-- [ ] **0.1** Tạo dự án ASP.NET Core MVC:
-  ```bash
-  dotnet new mvc -n GearGo -f net8.0
-  cd GearGo
-  dotnet add package Microsoft.EntityFrameworkCore.SqlServer
-  dotnet add package Microsoft.EntityFrameworkCore.Tools
-  dotnet add package Microsoft.AspNetCore.Identity.EntityFrameworkCore
-  dotnet add package AutoMapper.Extensions.Microsoft.DependencyInjection
-  ```
+- [x] **0.1** Tạo dự án ASP.NET Core 10 Web API, thêm packages EF Core, BCrypt, JWT Bearer.
 
-- [ ] **0.2** Tạo `ApplicationDbContext.cs` kế thừa `IdentityDbContext<ApplicationUser>`. Chưa có DbSet nào ngoài Identity — các bảng nghiệp vụ sẽ thêm dần qua migration.
+- [x] **0.2** `Data/ApplicationDbContext.cs` kế thừa `DbContext`. DbSet: `TaiKhoans`, `KhachHangs`, `NhanViens`.
 
-- [ ] **0.3** Cấu hình `appsettings.json`: thêm `ConnectionStrings:DefaultConnection` trỏ đến SQL Server local. Không commit mật khẩu thật — dùng `dotnet user-secrets` cho môi trường dev.
+- [x] **0.3** `appsettings.json`: `ConnectionStrings:DefaultConnection` → SQL Server Docker. `Jwt:SecretKey` → chuỗi bí mật ≥ 32 ký tự.
 
-- [ ] **0.4** Đăng ký trong `Program.cs`:
-  ```csharp
-  builder.Services.AddDbContext<ApplicationDbContext>(opt =>
-      opt.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
-  builder.Services.AddIdentity<ApplicationUser, IdentityRole>(opt => {
-      opt.Password.RequiredLength = 8;
-      opt.Lockout.MaxFailedAccessAttempts = 5;
-      opt.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
-  }).AddEntityFrameworkStores<ApplicationDbContext>().AddDefaultTokenProviders();
-  builder.Services.ConfigureApplicationCookie(opt => {
-      opt.LoginPath = "/xac-thuc/dang-nhap";
-      opt.AccessDeniedPath = "/xac-thuc/tu-choi";
-  });
-  ```
+- [x] **0.4** `Program.cs`:
+  - `AddControllers()` (không Views)
+  - `AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(...)`
+  - `AddAuthorization` — 3 policies: `AdminOnly`, `StaffOrAdmin`, `CustomerOnly`
+  - `AddCors("ReactApp")` → `localhost:5173` và `localhost:3000`
 
-- [ ] **0.5** Chạy migration khởi tạo:
-  ```bash
-  dotnet ef migrations add InitialCreate
-  dotnet ef database update
-  ```
-  Kiểm tra bảng Identity xuất hiện trong SQL Server.
+- [x] **0.5** `dotnet ef migrations add InitialCreate && dotnet ef database update`
 
-- [ ] **0.6** Tạo `_Layout.cshtml`: navbar Bootstrap 5 với logo GearGo, link Sản phẩm, icon Giỏ thuê, dropdown User (Đăng nhập / Hồ sơ / Đăng xuất). Responsive mobile. Tạo partial `_Header.cshtml` cho phần nav.
-
-- [ ] **0.7** Chạy `dotnet run`, truy cập `https://localhost:{port}` → trang chủ hiển thị layout. Không có lỗi console.
-
-- [ ] **0.8** Commit: `chore: initialize ASP.NET Core MVC project with EF Core and Identity`
+- [x] **0.6** Commit: `feat: Task 0 — khởi tạo ASP.NET Core Web API với EF Core, JWT và CORS`
 
 ---
 
 ## Task 0.5: Xác thực người dùng (UC01)
 
 **Files:**
-- Tạo: `Models/Entities/ApplicationUser.cs`, `KhachHang.cs`, `NhanVien.cs`
-- Tạo: `Models/ViewModels/Auth/DangKyVM.cs`, `DangNhapVM.cs`, `QuenMatKhauVM.cs`
+- Tạo: `Models/DTOs/Auth/DangKyRequest.cs`, `DangNhapRequest.cs`, `QuenMatKhauRequest.cs`, `AuthResponse.cs`
 - Tạo: `Services/Interfaces/IXacThucService.cs`, `Services/XacThucService.cs`
-- Tạo: `Controllers/XacThucController.cs`
-- Tạo: `Views/XacThuc/DangKy.cshtml`, `DangNhap.cshtml`, `QuenMatKhau.cshtml`
+- Tạo: `Controllers/AuthController.cs`
+
+**Lưu ý:** Không dùng ASP.NET Identity. Xác thực thủ công qua `TAI_KHOAN`. BCrypt hash mật khẩu. Trả **JWT token** — không trả cookie hay View.
+
+**Luồng đăng nhập:**
+```
+React POST /api/auth/dang-nhap { taiKhoan, matKhau }
+        │
+        ▼
+AuthController → XacThucService
+        │  BCrypt.Verify → tạo JWT claims: MaTaiKhoan, Email, VaiTro
+        ▼
+Response: { token, loaiToken: "Bearer", hetHanSau, vaiTro, hoTen }
+        │
+        ▼
+React lưu token, gửi mỗi request:
+Authorization: Bearer <token>
+```
 
 **Các bước:**
 
-- [ ] **0.5.1** Tạo `ApplicationUser.cs` kế thừa `IdentityUser`: thêm `HoTen`, `NgayTao`, `TrangThai` (enum: `HoatDong`, `BiKhoa`). Quan hệ 1-1 với `KhachHang` (nullable — nhân viên không có `KhachHang`).
+- [ ] **0.5.1** DTOs:
+  - `DangKyRequest`: `HoTen`, `Email`, `SoDienThoai`, `MatKhau`, `XacNhanMatKhau`
+  - `DangNhapRequest`: `TaiKhoan` (email hoặc SĐT), `MatKhau`
+  - `QuenMatKhauRequest`: `Email`
+  - `AuthResponse`: `Token`, `LoaiToken = "Bearer"`, `HetHanSau`, `VaiTro`, `HoTen`
 
-- [ ] **0.5.2** Tạo `KhachHang.cs`: `Id`, `ApplicationUserId`, `HoTen`, `SoDienThoai`, `Email`, `DiaChi`, `NgaySinh` (nullable). Navigation: `ApplicationUser`.
-
-  Tạo `NhanVien.cs`: `Id`, `ApplicationUserId`, `MaNhanVien`, `HoTen`, `SoDienThoai`, `ChucVu`, `TrangThai`. Navigation: `ApplicationUser`.
-
-- [ ] **0.5.3** Thêm `DbSet<KhachHang>`, `DbSet<NhanVien>` vào `ApplicationDbContext`. Migration:
-  ```bash
-  dotnet ef migrations add AddKhachHangNhanVien
-  dotnet ef database update
-  ```
-
-- [ ] **0.5.4** Tạo `DangKyVM.cs`: `HoTen`, `Email`, `SoDienThoai`, `MatKhau`, `XacNhanMatKhau`. Validation attributes: `[Required]`, `[EmailAddress]`, `[Phone]`, `[MinLength(8)]`, `[Compare("MatKhau")]`.
-
-  Tạo `DangNhapVM.cs`: `TaiKhoan` (email hoặc SĐT), `MatKhau`, `NhoToi` (bool).
-
-  Tạo `QuenMatKhauVM.cs`: `Email` (bước 1 — nhận link); `Token + Email + MatKhauMoi + XacNhanMatKhauMoi` (bước 2 — đặt lại).
-
-- [ ] **0.5.5** Interface `IXacThucService`:
+- [ ] **0.5.2** Interface `IXacThucService`:
   ```csharp
-  Task<IdentityResult> DangKyAsync(DangKyVM vm);
-  Task<SignInResult> DangNhapAsync(DangNhapVM vm);
-  Task DangXuatAsync();
-  Task<string> TaoTokenQuenMatKhauAsync(string email);
-  Task<IdentityResult> DatLaiMatKhauAsync(string email, string token, string matKhauMoi);
+  Task<(bool ThanhCong, string? LoiLam)> DangKyAsync(DangKyRequest req);
+  Task<(bool ThanhCong, AuthResponse? Data, string? LoiLam)> DangNhapAsync(DangNhapRequest req);
+  Task<(bool ThanhCong, string? Token)> TaoTokenQuenMatKhauAsync(string email);
+  Task<(bool ThanhCong, string? LoiLam)> DatLaiMatKhauAsync(string email, string token, string matKhauMoi);
   ```
 
-- [ ] **0.5.6** Implement `XacThucService.DangKyAsync`:
-  - Kiểm tra email và SĐT chưa tồn tại trong `ApplicationUser`.
-  - Tạo `ApplicationUser`, sau đó tạo `KhachHang` liên kết.
-  - Gán role `KhachHang` (`UserManager.AddToRoleAsync`).
-  - Seed role `KhachHang`, `NhanVien`, `QuanTriVien` khi `Program.cs` khởi động nếu chưa có.
-  - **Không được tạo role `NhanVien` hoặc `QuanTriVien` qua form đăng ký công khai.**
+- [ ] **0.5.3** Implement `DangKyAsync`:
+  - Kiểm tra email và SĐT chưa tồn tại.
+  - `BCrypt.Net.BCrypt.HashPassword(req.MatKhau)`.
+  - Tạo `TaiKhoan` (`VaiTro = "KhachHang"`) + `KhachHang` liên kết.
+  - Không cho đăng ký `NhanVien` / `QuanTriVien` qua endpoint công khai.
 
-- [ ] **0.5.7** Implement `XacThucService.DangNhapAsync`: cho phép đăng nhập bằng email hoặc SĐT — nếu `TaiKhoan` chứa `@` thì tìm theo email, ngược lại tìm theo `SoDienThoai` trong `KhachHang` để lấy `UserName`. Kiểm tra tài khoản không bị khóa trước khi `SignInManager.PasswordSignInAsync`.
+- [ ] **0.5.4** Implement `DangNhapAsync`:
+  - Tìm theo email hoặc SĐT → `BCrypt.Verify` → kiểm tra `TrangThai`.
+  - Tạo JWT token với claims `MaTaiKhoan`, `Email`, `VaiTro`, hết hạn 7 ngày.
+  - Theo dõi số lần sai → khóa sau N lần (đọc từ `AppSettings`).
 
-- [ ] **0.5.8** Implement `TaoTokenQuenMatKhauAsync`: dùng `UserManager.GeneratePasswordResetTokenAsync`. Hiện tại ghi token ra log (dev) — tuần sau tích hợp gửi email thật khi có SMTP config.
+- [ ] **0.5.5** `AuthController` — `[Route("api/auth")]`:
+  - `POST /api/auth/dang-ky` → `201 Created`
+  - `POST /api/auth/dang-nhap` → `{ token, ... }`
+  - `POST /api/auth/quen-mat-khau` → `200 OK`
+  - `POST /api/auth/dat-lai-mat-khau` → đặt lại mật khẩu
+  - `GET /api/auth/toi` `[Authorize]` → thông tin user từ JWT claims
 
-- [ ] **0.5.9** `XacThucController`:
-  - `GET /xac-thuc/dang-ky` + `POST` → đăng ký.
-  - `GET /xac-thuc/dang-nhap` + `POST` → đăng nhập, redirect về trang trước hoặc `/`.
-  - `POST /xac-thuc/dang-xuat` → đăng xuất.
-  - `GET /xac-thuc/quen-mat-khau` + `POST` → nhập email nhận link.
-  - `GET /xac-thuc/dat-lai-mat-khau?email=&token=` + `POST` → đặt lại mật khẩu.
+- [ ] **0.5.6** Đăng ký `IXacThucService` (Scoped) trong `Program.cs`.
 
-- [ ] **0.5.10** Views: form Bootstrap 5 có validation server-side (`asp-validation-for`) và client-side (`jquery-validate`). Trang đăng nhập có link "Quên mật khẩu?". Trang đăng ký có thông báo lỗi rõ ràng khi email / SĐT trùng.
+- [ ] **0.5.7** Test bằng Postman hoặc curl:
+  ```bash
+  # Đăng ký
+  curl -X POST http://localhost:5000/api/auth/dang-ky \
+    -H "Content-Type: application/json" \
+    -d '{"hoTen":"Test","email":"test@test.com","soDienThoai":"0901234567","matKhau":"12345678","xacNhanMatKhau":"12345678"}'
 
-- [ ] **0.5.11** Test thủ công:
-  - Đăng ký tài khoản mới → đăng nhập thành công.
-  - Đăng ký email đã tồn tại → hiện lỗi, không crash.
-  - Đăng nhập sai 5 lần → tài khoản bị khóa 15 phút.
-  - Quên mật khẩu → lấy token từ log → đặt lại → đăng nhập được bằng mật khẩu mới.
+  # Đăng nhập → lấy token
+  curl -X POST http://localhost:5000/api/auth/dang-nhap \
+    -H "Content-Type: application/json" \
+    -d '{"taiKhoan":"test@test.com","matKhau":"12345678"}'
+  ```
 
-- [ ] **0.5.12** Commit: `feat: UC01 authentication — register, login, password reset`
+- [ ] **0.5.8** Commit: `feat: UC01 — JWT authentication API`
 
 ---
 
 ## Task 1: Entities cho danh mục và sản phẩm
 
 **Files:**
-- Tạo: `Models/Entities/DanhMucSanPham.cs`
-- Tạo: `Models/Entities/SanPham.cs`
-- Tạo: `Models/Entities/HinhAnhSanPham.cs`
-- Chỉnh sửa: `Data/ApplicationDbContext.cs` — thêm DbSet
+- Tạo: `Models/Entities/DanhMucSanPham.cs`, `SanPham.cs`, `HinhAnhSanPham.cs`
+- Chỉnh sửa: `Data/ApplicationDbContext.cs`
 
 **Các bước:**
 
-- [ ] **1.1** Tạo `DanhMucSanPham.cs` với các trường: `Id`, `Ten`, `DanhMucChaId` (nullable, self-ref), `MoTa`, `ThuTu`, `HienThi` (bool), `CreatedAt`, `UpdatedAt`. Thêm navigation property `DanhMucCha`, `DanhMucCon`, `SanPhams`.
+- [ ] **1.1** `DanhMucSanPham.cs`: `Id`, `Ten`, `DanhMucChaId` (nullable, self-ref), `MoTa`, `ThuTu`, `HienThi`, `CreatedAt`, `UpdatedAt`.
 
-- [ ] **1.2** Tạo `SanPham.cs` với các trường: `Id`, `Ma` (unique string), `Ten`, `DanhMucId`, `ThuongHieu`, `MoTa`, `SucChuaHoacKichThuoc`, `GiaThueNgay` (decimal), `MucCocMotThietBi` (decimal), `GiaTriBoiThuong` (decimal), `TrangThaiKinhDoanh` (enum: `DangKinhDoanh`, `TamNgung`, `NgungKinhDoanh`), `CreatedAt`, `UpdatedAt`. Thêm navigation property `DanhMuc`, `HinhAnhs`, `ThietBis`.
+- [ ] **1.2** `SanPham.cs`: `Id`, `Ma` (unique), `Ten`, `DanhMucId`, `ThuongHieu`, `MoTa`, `SucChuaHoacKichThuoc`, `GiaThueNgay`, `MucCocMotThietBi`, `GiaTriBoiThuong`, `TrangThaiKinhDoanh` (enum), `CreatedAt`, `UpdatedAt`.
 
-- [ ] **1.3** Tạo `HinhAnhSanPham.cs` với `Id`, `SanPhamId`, `DuongDan`, `LaAnhChinh` (bool), `ThuTu`.
+- [ ] **1.3** `HinhAnhSanPham.cs`: `Id`, `SanPhamId`, `DuongDan`, `LaAnhChinh`, `ThuTu`.
 
-- [ ] **1.4** Thêm `DbSet<DanhMucSanPham>`, `DbSet<SanPham>`, `DbSet<HinhAnhSanPham>` vào `ApplicationDbContext`. Cấu hình Fluent API: index unique cho `SanPham.Ma`; quan hệ self-reference `DanhMucSanPham`; cascade delete `HinhAnhSanPham` theo `SanPham`.
+- [ ] **1.4** Fluent API: unique index `SanPham.Ma`, self-reference `DanhMucSanPham`, cascade delete `HinhAnhSanPham`.
 
-- [ ] **1.5** Chạy migration:
-  ```bash
-  dotnet ef migrations add AddCatalog
-  dotnet ef database update
-  ```
-  Kiểm tra bảng xuất hiện đúng trong SQL Server.
+- [ ] **1.5** `dotnet ef migrations add AddCatalog && dotnet ef database update`
 
 - [ ] **1.6** Commit: `feat: add DanhMucSanPham, SanPham, HinhAnhSanPham entities`
 
@@ -296,45 +239,21 @@ GearGo_Webapp/
 ## Task 2: Entities cho thiết bị, giỏ thuê và đặt đơn
 
 **Files:**
-- Tạo: `Models/Entities/ThietBi.cs`
-- Tạo: `Models/Entities/GioThue.cs`, `ChiTietGioThue.cs`
-- Tạo: `Models/Entities/GiuCho.cs`
-- Tạo: `Models/Entities/DonThue.cs`, `ChiTietDonThue.cs`
-- Tạo: `Models/Entities/ThanhToan.cs`
-- Tạo: `Models/Entities/KhuyenMai.cs`, `LuotSuDungKhuyenMai.cs`
+- Tạo: `Models/Entities/ThietBi.cs`, `GioThue.cs`, `ChiTietGioThue.cs`, `GiuCho.cs`, `DonThue.cs`, `ChiTietDonThue.cs`, `ThanhToan.cs`, `KhuyenMai.cs`, `LuotSuDungKhuyenMai.cs`
+- Tạo: `Models/Enums/TrangThaiThietBi.cs`, `TrangThaiDonThue.cs`
 - Chỉnh sửa: `Data/ApplicationDbContext.cs`
 
 **Các bước:**
 
-- [ ] **2.1** Tạo enum `TrangThaiThietBi` trong `Models/Enums/TrangThaiThietBi.cs`:
-  `SanSang`, `DangThue`, `DangBaoTri`, `ThatLac`, `NgungSuDung`.
+- [ ] **2.1** Enum `TrangThaiThietBi`: `SanSang`, `DangThue`, `DangBaoTri`, `ThatLac`, `NgungSuDung`.
 
-- [ ] **2.2** Tạo enum `TrangThaiDonThue` trong `Models/Enums/TrangThaiDonThue.cs`:
-  `ChoThanhToan`, `DaXacNhan`, `DangChuanBi`, `SanSangNhan`, `DangThue`, `DaNhanTra`, `ChoDoiSoat`, `HoanTat`, `HetHan`, `KhachHuy`, `CuaHangHuy`.
+- [ ] **2.2** Enum `TrangThaiDonThue`: `ChoThanhToan`, `DaXacNhan`, `DangChuanBi`, `SanSangNhan`, `DangThue`, `DaNhanTra`, `ChoDoiSoat`, `HoanTat`, `HetHan`, `KhachHuy`, `CuaHangHuy`.
 
-- [ ] **2.3** Tạo `ThietBi.cs` với: `Id`, `Ma`, `SanPhamId`, `NgayNhap`, `GiaNhap`, `TinhTrang` (enum `TrangThaiThietBi`), `PhuKienDiKem`, `SoLanChoThue`, `GhiChu`. Navigation: `SanPham`.
+- [ ] **2.3–2.9** Tạo các entities theo ERD: `ThietBi`, `GioThue`, `ChiTietGioThue`, `GiuCho`, `DonThue`, `ChiTietDonThue`, `ThanhToan`, `KhuyenMai`, `LuotSuDungKhuyenMai`.
 
-- [ ] **2.4** Tạo `GioThue.cs` với: `Id`, `KhachHangId`, `GioNhan` (DateTime?), `GioTra` (DateTime?), `MaGiamGia` (string?), `UpdatedAt`. Navigation: `KhachHang`, `ChiTiets`.
+- [ ] **2.10** Fluent API: unique index `DonThue.Ma`; `GioThue` 1-1 `KhachHang`; không cascade delete `DonThue` khi xóa `KhachHang`.
 
-  Tạo `ChiTietGioThue.cs`: `Id`, `GioThueId`, `SanPhamId`, `SoLuong`, `DonGiaThamKhao`.
-
-- [ ] **2.5** Tạo `GiuCho.cs`: `Id`, `DonThueId`, `SanPhamId`, `SoLuong`, `ThoiDiemHetHan`.
-
-- [ ] **2.6** Tạo `DonThue.cs` với đầy đủ các trường nghiệp vụ: `Id`, `Ma`, `KhachHangId`, `TenNguoiNhan`, `SdtNguoiNhan`, `GioNhanDuKien`, `GioTraDuKien`, `TienThue`, `GiamGia`, `TienCoc`, `TrangThai` (enum), `HanGiuCho`, `ChinhSachApDung` (JSON string), `MaKhuyenMaiId` (nullable), `CreatedAt`, `NguoiHuyId`, `LyDoHuy`, `ThoiDiemHuy`.
-
-- [ ] **2.7** Tạo `ChiTietDonThue.cs`: `Id`, `DonThueId`, `SanPhamId`, `SoLuong`, `SoNgayTinhTien`, `DonGia`, `TienThue`, `MucCoc`, `GiaTriBoiThuong`.
-
-- [ ] **2.8** Tạo `ThanhToan.cs`: `Id`, `DonThueId`, `SoTien`, `MucDich` (enum: `TienThue`, `TienCoc`, `ThuBoSung`), `PhuongThuc`, `MaGiaoDich`, `ThoiDiem`, `TrangThai` (enum: `ThanhCong`, `ThatBai`, `DangXuLy`), `GhiChu`.
-
-- [ ] **2.9** Tạo `KhuyenMai.cs`: `Id`, `Ma`, `LoaiGiam` (enum: `PhanTram`, `SoTien`), `GiaTri`, `GiaTriThueToiThieu`, `GiamToiDa` (nullable), `NgayBatDau`, `NgayKetThuc`, `TongLuotToiDa` (int?), `GioiHanMoiKhach` (int), `TrangThai`. Tạo `LuotSuDungKhuyenMai.cs`: `Id`, `KhuyenMaiId`, `KhachHangId`, `DonThueId`, `ThoiDiem`.
-
-- [ ] **2.10** Đăng ký tất cả DbSet mới vào `ApplicationDbContext`. Cấu hình Fluent API quan trọng: index unique `DonThue.Ma`; `GioThue` quan hệ 1-1 với `KhachHang`; `DonThue` không cascade delete khi xóa `KhachHang`.
-
-- [ ] **2.11** Migration và update:
-  ```bash
-  dotnet ef migrations add AddOrderAndCartTables
-  dotnet ef database update
-  ```
+- [ ] **2.11** `dotnet ef migrations add AddOrderAndCartTables && dotnet ef database update`
 
 - [ ] **2.12** Commit: `feat: add ThietBi, GioThue, DonThue, ThanhToan, KhuyenMai entities`
 
@@ -343,350 +262,191 @@ GearGo_Webapp/
 ## Task 3: Service tính khả dụng (IKhaDungService)
 
 **Files:**
-- Tạo: `Services/Interfaces/IKhaDungService.cs`
-- Tạo: `Services/KhaDungService.cs`
-
-**Mục tiêu nghiệp vụ:** Trả về số lượng thiết bị còn nhận đặt của một sản phẩm trong khoảng thời gian cho trước (tính theo UC03 và mục 8.1 đặc tả).
+- Tạo: `Services/Interfaces/IKhaDungService.cs`, `Services/KhaDungService.cs`
 
 **Các bước:**
 
-- [ ] **3.1** Định nghĩa interface `IKhaDungService`:
+- [ ] **3.1** Interface:
   ```csharp
   Task<int> LayKhaDungAsync(int sanPhamId, DateTime gioNhan, DateTime gioTra);
-  Task<Dictionary<int, int>> LayKhaDungNhieuSanPhamAsync(
-      IEnumerable<int> sanPhamIds, DateTime gioNhan, DateTime gioTra);
+  Task<Dictionary<int, int>> LayKhaDungNhieuSanPhamAsync(IEnumerable<int> ids, DateTime gioNhan, DateTime gioTra);
   ```
 
-- [ ] **3.2** Implement `KhaDungService.LayKhaDungAsync`:
-  - Đếm `ThietBi` theo `SanPhamId` thuộc trạng thái `SanSang` hoặc `DangThue`.
-  - Loại trừ thiết bị đang `DangBaoTri`, `ThatLac`, `NgungSuDung`.
-  - Trừ đi số lượng đã bị giữ bởi đơn trạng thái `ChoThanhToan` (còn trong `HanGiuCho`) + `DaXacNhan` + `DangChuanBi` + `SanSangNhan` + `DangThue` có giao khoảng thời gian với `[gioNhan, gioTra]`.
-  - Lịch trùng khi: `gioNhanDon < gioTra` **VÀ** `gioTraDon > gioNhan` (theo mục 8.1).
-  - Thiết bị đã được gán (PhânCôngThiếtBị) không đếm thêm một lần.
+- [ ] **3.2** Implement: đếm `ThietBi` trạng thái `SanSang`/`DangThue`, trừ số đang bị giữ. Lịch trùng: `gioNhanDon < gioTra` VÀ `gioTraDon > gioNhan`.
 
-- [ ] **3.3** Đăng ký `IKhaDungService` / `KhaDungService` vào DI container trong `Program.cs` (Scoped).
+- [ ] **3.3** Đăng ký DI (Scoped). Unit test 3 trường hợp: không trùng, trùng một phần, tất cả bị giữ.
 
-- [ ] **3.4** Viết unit test `Tests/Services/KhaDungServiceTests.cs` cho ít nhất 3 trường hợp: không có đơn nào trùng lịch, có đơn trùng một phần, tất cả thiết bị đều bị giữ.
-
-- [ ] **3.5** Commit: `feat: add KhaDungService with availability calculation logic`
+- [ ] **3.4** Commit: `feat: add KhaDungService`
 
 ---
 
-## Task 4: Service danh mục và sản phẩm (IDanhMucService, ISanPhamService)
+## Task 4: Service danh mục và sản phẩm
 
 **Files:**
-- Tạo: `Services/Interfaces/IDanhMucService.cs`, `Services/DanhMucService.cs`
-- Tạo: `Services/Interfaces/ISanPhamService.cs`, `Services/SanPhamService.cs`
-- Tạo: `Models/ViewModels/SanPham/TimKiemSanPhamVM.cs`
+- Tạo: `Services/Interfaces/IDanhMucService.cs`, `DanhMucService.cs`
+- Tạo: `Services/Interfaces/ISanPhamService.cs`, `SanPhamService.cs`
+- Tạo: `Models/DTOs/SanPham/TimKiemSanPhamRequest.cs`
 
 **Các bước:**
 
-- [ ] **4.1** Interface `IDanhMucService`:
-  ```csharp
-  Task<List<DanhMucSanPham>> LayTatCaAsync(bool chiLayHienThi = true);
-  Task<DanhMucSanPham?> LayTheoIdAsync(int id);
-  Task<DanhMucSanPham> TaoMoiAsync(DanhMucSanPham entity);
-  Task CapNhatAsync(DanhMucSanPham entity);
-  Task XoaAsync(int id); // chỉ được xóa nếu không có sản phẩm
-  ```
+- [ ] **4.1** `IDanhMucService`: LayTatCa, LayTheoId, TaoMoi, CapNhat, Xoa (chỉ xóa nếu không có sản phẩm).
 
-- [ ] **4.2** Interface `ISanPhamService`:
-  ```csharp
-  Task<(List<SanPham> Items, int Total)> TimKiemAsync(TimKiemSanPhamVM filter);
-  Task<SanPham?> LayChiTietAsync(int id);
-  Task<SanPham> TaoMoiAsync(SanPham entity, List<IFormFile> hinhs);
-  Task CapNhatAsync(SanPham entity, List<IFormFile>? hinhsMoi);
-  Task DoiTrangThaiAsync(int id, TrangThaiKinhDoanh trangThai);
-  ```
+- [ ] **4.2** `ISanPhamService`: TimKiem (phân trang + filter), LayChiTiet, TaoMoi (upload ảnh), CapNhat, DoiTrangThai.
 
-- [ ] **4.3** Tạo `TimKiemSanPhamVM.cs` với các thuộc tính lọc: `TuKhoa` (string?), `DanhMucId` (int?), `ThuongHieu` (string?), `GiaThueCaoNhat` (decimal?), `GiaThueThapNhat` (decimal?), `GioNhan` (DateTime?), `GioTra` (DateTime?), `SapXepTheo` (enum: `Ten`, `GiaThap`, `GiaCao`, `DanhGia`), `Trang` (int = 1), `SoMoiTrang` (int = 12).
+- [ ] **4.3** `TimKiemSanPhamRequest`: `TuKhoa`, `DanhMucId`, `ThuongHieu`, `GiaThueCaoNhat`, `GiaThueThapNhat`, `GioNhan`, `GioTra`, `SapXepTheo`, `Trang=1`, `SoMoiTrang=12`.
 
-- [ ] **4.4** Implement `SanPhamService.TimKiemAsync`: build query IQueryable theo từng filter, gọi `IKhaDungService` nếu có `GioNhan` + `GioTra` để lọc sản phẩm không còn hàng, áp dụng phân trang. Chỉ trả về sản phẩm `DangKinhDoanh` cho khách.
+- [ ] **4.4** Upload ảnh: chỉ `.jpg/.jpeg/.png/.webp`, tối đa 5MB, lưu `wwwroot/uploads/sanpham/`.
 
-- [ ] **4.5** Implement `SanPhamService.TaoMoiAsync`: validate `Ma` không trùng, lưu ảnh vào `wwwroot/uploads/sanpham/`, tạo bản ghi `HinhAnhSanPham`. Chỉ chấp nhận extension `.jpg`, `.jpeg`, `.png`, `.webp`; giới hạn 5MB/file.
-
-- [ ] **4.6** Đăng ký cả hai service vào DI (Scoped).
-
-- [ ] **4.7** Commit: `feat: add DanhMucService and SanPhamService`
+- [ ] **4.5** Đăng ký DI. Commit: `feat: add DanhMucService and SanPhamService`
 
 ---
 
-## Task 5: Controller và View — Tìm kiếm sản phẩm (UC03)
+## Task 5: Controller sản phẩm (UC03)
 
 **Files:**
 - Tạo: `Controllers/SanPhamController.cs`
-- Tạo: `Views/SanPham/Index.cshtml`
-- Tạo: `Views/SanPham/ChiTiet.cshtml`
-- Tạo: `Models/ViewModels/SanPham/SanPhamListVM.cs`, `SanPhamDetailVM.cs`
-- Tạo: `wwwroot/js/san-pham-search.js`
+- Tạo: `Models/DTOs/SanPham/SanPhamResponse.cs`, `SanPhamDetailResponse.cs`
 
 **Các bước:**
 
-- [ ] **5.1** Tạo `SanPhamListVM.cs`: chứa `TimKiemSanPhamVM Filter`, `List<SanPhamCardVM> Items`, `int TotalCount`, `int TotalPages`, `List<DanhMucSanPham> DanhMucs`. Tạo `SanPhamCardVM`: `Id`, `Ten`, `AnhChinh`, `GiaThueNgay`, `MucCoc`, `ThuongHieu`, `SoLuongKhaDung` (int, -1 nếu chưa chọn ngày).
+- [ ] **5.1** `SanPhamController` — `[Route("api/san-pham")]`:
+  - `GET /api/san-pham` → `([FromQuery] TimKiemSanPhamRequest filter)` → JSON danh sách + phân trang
+  - `GET /api/san-pham/{id}` → chi tiết + `SoLuongKhaDung` nếu có query `?gioNhan=&gioTra=`
 
-- [ ] **5.2** Tạo `SanPhamDetailVM.cs`: đầy đủ thông tin sản phẩm + `List<HinhAnhSanPham>` + `SoLuongKhaDung` + `List<DanhGiaVM>` (tóm tắt đánh giá).
+- [ ] **5.2** `SanPhamResponse`: `Id`, `Ten`, `AnhChinh`, `GiaThueNgay`, `MucCoc`, `ThuongHieu`, `SoLuongKhaDung`.
 
-- [ ] **5.3** `SanPhamController`:
-  - `GET /san-pham` → `Index(TimKiemSanPhamVM filter)`: gọi `ISanPhamService.TimKiemAsync`; nếu filter có ngày hợp lệ thì kèm khả dụng; trả view.
-  - `GET /san-pham/{id}` → `ChiTiet(int id)`: gọi `ISanPhamService.LayChiTietAsync`; nếu có query param `?gioNhan=&gioTra=` thì kiểm tra khả dụng.
+- [ ] **5.3** `SanPhamDetailResponse`: đầy đủ thông tin + `List<string> HinhAnhs` + `SoLuongKhaDung`.
 
-- [ ] **5.4** View `Index.cshtml`:
-  - Panel lọc bên trái: chọn danh mục (tree), khoảng giá, thương hiệu (checkbox).
-  - Trên cùng: date-time picker chọn `GioNhan` / `GioTra` (submit form GET).
-  - Grid sản phẩm: card hiển thị ảnh, tên, giá/ngày, mức cọc, badge khả dụng.
-  - Phân trang với `asp-route-*`.
-
-- [ ] **5.5** View `ChiTiet.cshtml`:
-  - Carousel ảnh.
-  - Thông tin: mô tả, sức chứa, thương hiệu, giá thuê/ngày, mức cọc, giá trị bồi thường.
-  - Ô chọn ngày + số lượng + nút "Thêm vào giỏ" (POST AJAX).
-  - Hiển thị số lượng khả dụng realtime sau khi chọn ngày.
-  - Phần đánh giá bên dưới.
-
-- [ ] **5.6** `san-pham-search.js`: debounce 400ms khi nhập từ khóa; tự submit form khi thay đổi filter; cập nhật URL bằng `history.pushState`.
-
-- [ ] **5.7** Test thủ công: truy cập `/san-pham`, lọc danh mục, chọn ngày, kiểm tra số lượng khả dụng thay đổi đúng.
-
-- [ ] **5.8** Commit: `feat: UC03 product search and availability check views`
+- [ ] **5.4** Commit: `feat: UC03 product search API`
 
 ---
 
 ## Task 6: Service và Controller giỏ thuê (UC04)
 
 **Files:**
-- Tạo: `Services/Interfaces/IGioThueService.cs`, `Services/GioThueService.cs`
+- Tạo: `Services/Interfaces/IGioThueService.cs`, `GioThueService.cs`
 - Tạo: `Controllers/GioThueController.cs`
-- Tạo: `Views/GioThue/Index.cshtml`
-- Tạo: `Models/ViewModels/GioThue/GioThueVM.cs`, `ThemVaoGioVM.cs`
-- Tạo: `wwwroot/js/gio-thue.js`
+- Tạo: `Models/DTOs/GioThue/GioThueResponse.cs`, `ThemVaoGioRequest.cs`
 
 **Các bước:**
 
-- [ ] **6.1** Interface `IGioThueService`:
-  ```csharp
-  Task<GioThueVM> LayGioThueAsync(int khachHangId);
-  Task<GioThueVM> ThemSanPhamAsync(int khachHangId, int sanPhamId, int soLuong);
-  Task<GioThueVM> CapNhatSoLuongAsync(int khachHangId, int chiTietId, int soLuongMoi);
-  Task<GioThueVM> XoaChiTietAsync(int khachHangId, int chiTietId);
-  Task<GioThueVM> CapNhatThoiGianAsync(int khachHangId, DateTime gioNhan, DateTime gioTra);
-  Task<GioThueVM> ApMaGiamGiaAsync(int khachHangId, string ma);
-  Task<bool> KiemTraHopLeAsync(int khachHangId);
-  ```
+- [ ] **6.1** `GioThueController` — `[Authorize]`, `[Route("api/gio-thue")]`:
+  - `GET /api/gio-thue` → lấy giỏ
+  - `POST /api/gio-thue/them` → thêm sản phẩm
+  - `PUT /api/gio-thue/cap-nhat-so-luong` → cập nhật số lượng
+  - `DELETE /api/gio-thue/{chiTietId}` → xóa dòng
+  - `PUT /api/gio-thue/thoi-gian` → cập nhật giờ nhận/trả
+  - `POST /api/gio-thue/ma-giam-gia` → áp mã
 
-- [ ] **6.2** Tạo `GioThueVM.cs`: `DateTime? GioNhan`, `DateTime? GioTra`, `List<ChiTietGioThueVM> ChiTiets`, `string? MaGiamGia`, `decimal TongTienThue`, `decimal TienGiam`, `decimal TienCoc`, `decimal TongThanhToan`, `List<string> LoiKhaDung`.
+- [ ] **6.2** Tính báo giá: `SoNgay = Ceiling((gioTra - gioNhan).TotalHours / 24)`, tối thiểu 1.
 
-- [ ] **6.3** Implement `GioThueService.LayGioThueAsync`: lấy hoặc tạo `GioThue` cho `KhachHangId`. Tính báo giá tạm tính theo mục 8.2: số ngày = `Ceiling((gioTra - gioNhan).TotalHours / 24)`, tối thiểu 1. Áp dụng khuyến mãi nếu có mã hợp lệ.
+- [ ] **6.3** `GioThueResponse`: `GioNhan`, `GioTra`, `ChiTiets`, `MaGiamGia`, `TongTienThue`, `TienGiam`, `TienCoc`, `TongThanhToan`, `LoiKhaDung`.
 
-- [ ] **6.4** Implement `GioThueService.ThemSanPhamAsync`: nếu sản phẩm đã có trong giỏ thì cộng số lượng; nếu chưa thì thêm mới. Kiểm tra sản phẩm `DangKinhDoanh`.
-
-- [ ] **6.5** `GioThueController` (yêu cầu đăng nhập — `[Authorize]`):
-  - `GET /gio-thue` → `Index()`: hiển thị giỏ.
-  - `POST /gio-thue/them` → AJAX, trả JSON `{success, soLuongGio, thongBao}`.
-  - `POST /gio-thue/cap-nhat-so-luong` → AJAX.
-  - `POST /gio-thue/xoa` → AJAX.
-  - `POST /gio-thue/cap-nhat-thoi-gian` → AJAX, trả lại báo giá mới.
-  - `POST /gio-thue/ap-ma-giam-gia` → AJAX.
-
-- [ ] **6.6** View `GioThue/Index.cshtml`:
-  - Date-time picker chọn giờ nhận / trả (gọi AJAX cập nhật báo giá).
-  - Bảng chi tiết: ảnh, tên, số lượng (stepper +/-), đơn giá, số ngày, thành tiền, nút xóa.
-  - Panel báo giá bên phải: tổng tiền thuê, giảm giá, tổng cọc, **tổng thanh toán ban đầu**.
-  - Ô nhập mã giảm giá.
-  - Nút "Đặt thuê" → POST `/don-thue/xac-nhan`.
-  - Hiển thị cảnh báo nếu sản phẩm không còn đủ khả dụng.
-
-- [ ] **6.7** `gio-thue.js`: xử lý tất cả AJAX của giỏ thuê; cập nhật DOM không reload trang; cập nhật badge số lượng trên icon giỏ ở header.
-
-- [ ] **6.8** Test: thêm 2 sản phẩm vào giỏ, đổi số lượng, kiểm tra báo giá tính đúng theo công thức mục 8.2.
-
-- [ ] **6.9** Commit: `feat: UC04 cart management with real-time quote calculation`
+- [ ] **6.4** Commit: `feat: UC04 cart management API`
 
 ---
 
 ## Task 7: Tạo đơn và giữ chỗ (UC05)
 
 **Files:**
-- Tạo: `Services/Interfaces/IDonThueService.cs`, `Services/DonThueService.cs`
+- Tạo: `Services/Interfaces/IDonThueService.cs`, `DonThueService.cs`
 - Tạo: `Controllers/DonThueController.cs`
-- Tạo: `Views/DonThue/XacNhan.cshtml`, `Views/DonThue/ChiTiet.cshtml`
-- Tạo: `Models/ViewModels/DonThue/TaoDonThueVM.cs`, `XacNhanDonVM.cs`
+- Tạo: `Models/DTOs/DonThue/TaoDonThueRequest.cs`, `DonThueResponse.cs`
 
 **Các bước:**
 
-- [ ] **7.1** Interface `IDonThueService`:
-  ```csharp
-  Task<XacNhanDonVM> ChuanBiXacNhanAsync(int khachHangId);
-  Task<DonThue> TaoDonThueAsync(int khachHangId, TaoDonThueVM vm);
-  Task<DonThue?> LayChiTietAsync(int id, int khachHangId);
-  Task HuyDonAsync(int donThueId, int nguoiHuyId, string lyDo);
-  Task XuLyHetHanGiuChoAsync();
-  ```
+- [ ] **7.1** `DonThueController` — `[Authorize]`, `[Route("api/don-thue")]`:
+  - `GET /api/don-thue/xac-nhan` → preview giỏ trước khi đặt
+  - `POST /api/don-thue` → tạo đơn
+  - `GET /api/don-thue/{id}` → chi tiết đơn của mình
+  - `POST /api/don-thue/{id}/huy` → hủy đơn
 
-- [ ] **7.2** Tạo `TaoDonThueVM.cs`: `TenNguoiNhan`, `SdtNguoiNhan`, `GhiChu`, `DaXacNhanBaogiaThayDoi` (bool). Tạo `XacNhanDonVM.cs`: toàn bộ thông tin giỏ để khách review + `bool BaogiaThayDoi`.
+- [ ] **7.2** `TaoDonThueAsync` (`IsolationLevel.Serializable`):
+  1. Kiểm tra khả dụng toàn bộ giỏ.
+  2. Tạo `DonThue` (`ChoThanhToan`) + `GiuCho` + snapshot giá vào `ChiTietDonThue`.
+  3. `HanGiuCho = Now + 15 phút`. Xóa giỏ thuê.
 
-- [ ] **7.3** Implement `DonThueService.TaoDonThueAsync` — nghiệp vụ cốt lõi:
-  1. Kiểm tra lại khả dụng toàn bộ giỏ trong transaction (`IsolationLevel.Serializable`).
-  2. Nếu báo giá thay đổi và `DaXacNhanBaogiaThayDoi = false` → throw `BaogiaThayDoiException`.
-  3. Nếu đủ hàng: tạo `DonThue` trạng thái `ChoThanhToan`; tạo `GiuCho` từng dòng; tạo `ChiTietDonThue` **snapshot giá** từ `SanPham` tại thời điểm đặt; set `HanGiuCho = Now + 15 phút`; tạm giữ lượt `KhuyenMai`.
-  4. Xóa giỏ thuê.
-  5. Nếu thiếu hàng bất kỳ một dòng → rollback toàn bộ, throw `KhongDuHangException`.
+- [ ] **7.3** `IHostedService` mỗi 1 phút: đơn `ChoThanhToan` hết hạn → `HetHan`, xóa `GiuCho`.
 
-- [ ] **7.4** `DonThueController`:
-  - `GET /don-thue/xac-nhan` → `XacNhan()`: hiển thị màn hình review.
-  - `POST /don-thue/tao` → `TaoDon(TaoDonThueVM vm)`: nếu `BaogiaThayDoiException` redirect về xác nhận với flag cảnh báo; thành công redirect `/don-thue/{id}`.
-  - `GET /don-thue/{id}` → `ChiTiet(int id)`: chỉ xem đơn của mình.
-
-- [ ] **7.5** View `XacNhan.cshtml`:
-  - Bảng tóm tắt: sản phẩm, số lượng, khoảng thuê, đơn giá snapshot.
-  - Form nhập `TenNguoiNhan`, `SdtNguoiNhan`.
-  - Nếu `BaogiaThayDoi = true`: banner cảnh báo màu vàng + checkbox bắt buộc xác nhận trước khi submit.
-  - Nút "Xác nhận đặt thuê".
-
-- [ ] **7.6** View `ChiTiet.cshtml`: badge trạng thái đơn + countdown timer hạn thanh toán (JS) + bảng chi tiết + nút "Thanh toán ngay" + nút "Hủy đơn".
-
-- [ ] **7.7** Đăng ký `IHostedService` chạy `XuLyHetHanGiuChoAsync` mỗi 1 phút: tìm đơn `ChoThanhToan` có `HanGiuCho < Now`, chuyển sang `HetHan`, xóa `GiuCho`, trả lại lượt `KhuyenMai`.
-
-- [ ] **7.8** Test: tạo đơn → kiểm tra trạng thái `ChoThanhToan`; set hạn ngắn → kiểm tra chuyển `HetHan`, khả dụng được giải phóng.
-
-- [ ] **7.9** Commit: `feat: UC05 order creation with 15-minute reservation hold`
+- [ ] **7.4** Commit: `feat: UC05 order creation API with 15-minute hold`
 
 ---
 
-## Task 8: Thanh toán và xác nhận đơn (UC06)
+## Task 8: Thanh toán (UC06)
 
 **Files:**
-- Tạo: `Services/Interfaces/IThanhToanService.cs`, `Services/ThanhToanService.cs`
+- Tạo: `Services/Interfaces/IThanhToanService.cs`, `ThanhToanService.cs`
 - Tạo: `Controllers/ThanhToanController.cs`
-- Tạo: `Views/ThanhToan/Index.cshtml`, `Views/ThanhToan/KetQua.cshtml`
-- Tạo: `Models/ViewModels/ThanhToan/ThanhToanVM.cs`, `KetQuaThanhToanVM.cs`
+- Tạo: `Models/DTOs/ThanhToan/ThanhToanRequest.cs`, `ThanhToanResponse.cs`
 
-**Lưu ý:** Nếu chưa có tài khoản VNPay, implement mock gateway trả về thành công để unblock các feature khác. Để lại comment `// TODO: Replace with VNPay SDK` tại điểm cần thay thế.
+**Lưu ý:** Mock gateway trước, để lại `// TODO: Replace with VNPay SDK`.
 
 **Các bước:**
 
-- [ ] **8.1** Interface `IThanhToanService`:
-  ```csharp
-  Task<string> TaoUrlThanhToanAsync(int donThueId, string returnUrl);
-  Task<KetQuaThanhToanVM> XuLyKetQuaAsync(IQueryCollection queryParams);
-  Task<bool> KiemTraDaThanhToanAsync(int donThueId);
-  ```
+- [ ] **8.1** Mock: `TaoUrlThanhToanAsync` → trả URL callback với `donId` và `maGD`.
 
-- [ ] **8.2** Mock gateway: `TaoUrlThanhToanAsync` → trả `/thanh-toan/ket-qua?donId={id}&ketQua=success&maGD={Guid.NewGuid()}`.
+- [ ] **8.2** `XuLyKetQuaAsync`: idempotency check `MaGiaoDich` → tạo 2 `ThanhToan` → đơn `DaXacNhan` → xóa `GiuCho`.
 
-- [ ] **8.3** Implement `XuLyKetQuaAsync`:
-  1. Validate chữ ký (mock: bỏ qua).
-  2. Kiểm tra đơn còn `ChoThanhToan` và chưa hết hạn.
-  3. Kiểm tra số tiền trả về đúng `TienThue + TienCoc`.
-  4. **Idempotency:** nếu `MaGiaoDich` đã tồn tại → bỏ qua, không ghi trùng.
-  5. Nếu hợp lệ: tạo 2 bản ghi `ThanhToan` (tiền thuê + cọc), chuyển đơn sang `DaXacNhan`, xóa `GiuCho`.
-  6. Nếu tiền đến sau khi đơn `HetHan` / `KhachHuy`: tạo `ThanhToan` trạng thái `CanHoanTien`, **không khôi phục đơn**.
+- [ ] **8.3** `ThanhToanController` — `[Route("api/thanh-toan")]`:
+  - `POST /api/thanh-toan/{donId}/tao-url` → trả URL thanh toán
+  - `GET /api/thanh-toan/ket-qua` → nhận callback từ gateway
 
-- [ ] **8.4** `ThanhToanController`:
-  - `GET /thanh-toan/{donId}` → kiểm tra đơn thuộc về khách; hiển thị tóm tắt và nút chuyển hướng thanh toán.
-  - `GET /thanh-toan/ket-qua` → nhận callback, gọi `XuLyKetQuaAsync`, redirect về `/don-thue/{id}`.
-
-- [ ] **8.5** View `Index.cshtml`: tóm tắt đơn, số tiền = tiền thuê + cọc, countdown hạn giữ chỗ, nút "Thanh toán".
-
-- [ ] **8.6** View `KetQua.cshtml`: spinner "Đang kiểm tra kết quả..." → redirect về chi tiết đơn sau 2 giây.
-
-- [ ] **8.7** Test: tạo đơn → thanh toán (mock) → kiểm tra `DaXacNhan`, có 2 bản ghi `ThanhToan`; gọi callback lần 2 với cùng `MaGiaoDich` → không tạo thêm bản ghi.
-
-- [ ] **8.8** Commit: `feat: UC06 payment processing with idempotency guard`
+- [ ] **8.4** Commit: `feat: UC06 payment API with idempotency`
 
 ---
 
 ## Task 9: Admin — Quản lý danh mục và sản phẩm (UC21)
 
 **Files:**
-- Tạo: `Controllers/Admin/DanhMucController.cs`
-- Tạo: `Controllers/Admin/SanPhamController.cs`
-- Tạo: `Views/Admin/DanhMuc/Index.cshtml`, `TaoMoi.cshtml`, `ChinhSua.cshtml`
-- Tạo: `Views/Admin/SanPham/Index.cshtml`, `TaoMoi.cshtml`, `ChinhSua.cshtml`
-- Tạo: `Models/ViewModels/Admin/DanhMucVM.cs`, `SanPhamAdminVM.cs`
+- Tạo: `Controllers/Admin/DanhMucController.cs`, `Controllers/Admin/SanPhamController.cs`
+- Tạo: `Models/DTOs/Admin/DanhMucRequest.cs`, `SanPhamAdminRequest.cs`
 
 **Các bước:**
 
-- [ ] **9.1** Thêm Authorization Policy `AdminOnly` trong `Program.cs`:
-  ```csharp
-  builder.Services.AddAuthorization(opt =>
-      opt.AddPolicy("AdminOnly", p => p.RequireRole("QuanTriVien")));
-  ```
-  Đặt `[Authorize(Policy = "AdminOnly")]` trên toàn bộ `Controllers/Admin/`.
+- [ ] **9.1** `[Authorize(Policy = "AdminOnly")]` trên toàn bộ `Controllers/Admin/`.
 
-- [ ] **9.2** `Admin/DanhMucController`:
-  - `GET /admin/danh-muc` → danh sách dạng tree.
-  - `GET /admin/danh-muc/tao-moi` + `POST` → tạo mới với validation.
-  - `GET /admin/danh-muc/chinh-sua/{id}` + `POST` → sửa. Không cho đặt danh mục cha là chính nó hoặc con của nó.
-  - `POST /admin/danh-muc/doi-trang-thai/{id}` → ẩn/hiện.
+- [ ] **9.2** `Admin/DanhMucController` — `[Route("api/admin/danh-muc")]`: CRUD + ẩn/hiện. Không cho đặt cha là chính nó hoặc con của nó.
 
-- [ ] **9.3** `Admin/SanPhamController`:
-  - `GET /admin/san-pham` → danh sách + filter theo danh mục, trạng thái; hiển thị số thiết bị thực tế.
-  - `GET /admin/san-pham/tao-moi` + `POST` → tạo mới với upload ảnh. Validate: `Ma` unique, giá và cọc ≥ 0, giá trị bồi thường > 0. **Không có trường nhập số lượng kho** (nhập hàng phải qua phiếu nhập — tuần sau).
-  - `GET /admin/san-pham/chinh-sua/{id}` + `POST` → sửa. Đổi giá chỉ tác động đơn mới; hiển thị cảnh báo nếu đang có đơn `ChoThanhToan` / `DaXacNhan`.
-  - `POST /admin/san-pham/doi-trang-thai/{id}` → chuyển trạng thái kinh doanh.
+- [ ] **9.3** `Admin/SanPhamController` — `[Route("api/admin/san-pham")]`: CRUD + upload ảnh. Không nhập kho trực tiếp (tuần 3).
 
-- [ ] **9.4** View `Admin/SanPham/Index.cshtml`: table với cột Mã, Tên, Danh mục, Giá thuê/ngày, Cọc, Số thiết bị (tổng / sẵn sàng), Trạng thái, Hành động. Phân trang server-side.
-
-- [ ] **9.5** View `Admin/SanPham/TaoMoi.cshtml` và `ChinhSua.cshtml`: form đầy đủ với upload ảnh preview, validation client-side (jQuery Validate).
-
-- [ ] **9.6** Test: tạo danh mục cha → con, tạo sản phẩm thuộc danh mục con, đổi giá → kiểm tra đơn cũ không đổi.
-
-- [ ] **9.7** Commit: `feat: UC21 admin category and product management`
+- [ ] **9.4** Commit: `feat: UC21 admin category and product API`
 
 ---
 
-## Task 10: Seed data, kiểm thử tích hợp và review
+## Task 10: Seed data và kiểm thử
 
 **Files:**
-- Tạo/Chỉnh sửa: `Data/SeedData.cs`
+- Tạo: `Data/SeedData.cs`
 - Tạo: `Tests/Integration/DonThueFlowTests.cs`
 
 **Các bước:**
 
-- [ ] **10.1** Viết seed data tối thiểu để test toàn bộ flow:
-  - 3 danh mục: "Lều trại", "Bàn ghế", "Phụ kiện".
-  - 5 sản phẩm với ảnh placeholder, giá và cọc hợp lệ.
-  - 10 thiết bị (mỗi sản phẩm 2 chiếc) trạng thái `SanSang`.
-  - 1 khuyến mãi `TEST10` giảm 10%, tối thiểu 500.000đ, hết hạn +30 ngày.
-  - Tài khoản admin và 1 khách hàng test.
+- [ ] **10.1** Seed: 3 danh mục, 5 sản phẩm, 10 thiết bị (`SanSang`), 1 khuyến mãi `TEST10`, 1 tài khoản `QuanTriVien` + 1 `KhachHang`.
 
-- [ ] **10.2** Integration test `DonThueFlowTests.cs` — happy path:
-  1. Tìm sản phẩm → có khả dụng.
-  2. Thêm vào giỏ → báo giá đúng.
-  3. Tạo đơn → `ChoThanhToan`, có `GiuCho`.
-  4. Thanh toán mock → `DaXacNhan`, có 2 `ThanhToan`.
-  5. Sản phẩm cùng khoảng thời gian → số khả dụng giảm đúng.
+- [ ] **10.2** Integration test happy path: đăng nhập → JWT token → thêm giỏ → tạo đơn → thanh toán mock → `DaXacNhan`.
 
-- [ ] **10.3** Kiểm tra race condition: 2 user đặt cùng lúc sản phẩm cuối cùng → chỉ 1 tạo được đơn (xác nhận transaction `Serializable` trong `TaoDonThueAsync`).
+- [ ] **10.3** Race condition: 2 user đặt cùng lúc sản phẩm cuối → chỉ 1 tạo được (`Serializable`).
 
-- [ ] **10.4** Chạy toàn bộ test:
-  ```bash
-  dotnet test --logger "console;verbosity=normal"
-  ```
-  Tất cả phải pass.
+- [ ] **10.4** Security: không raw SQL nhận user input; upload chỉ `.jpg/.jpeg/.png/.webp`, 5MB.
 
-- [ ] **10.5** Security check: xác nhận không có raw SQL nào nhận trực tiếp user input; file upload chỉ cho phép `.jpg`, `.jpeg`, `.png`, `.webp`, tối đa 5MB.
-
-- [ ] **10.6** Commit cuối tuần: `feat: week-2 complete — catalog, cart, order, payment, admin CRUD`
+- [ ] **10.5** Commit: `feat: week-2 complete`
 
 ---
 
 ## Checklist nghiệm thu tuần 2
 
-- [ ] Dự án build thành công, `dotnet run` không lỗi.
-- [ ] Đăng ký tài khoản mới → đăng nhập được; email trùng → báo lỗi rõ.
-- [ ] Đăng nhập sai 5 lần → bị khóa 15 phút.
-- [ ] Quên mật khẩu → token hợp lệ → đổi được mật khẩu mới.
-- [ ] Khách vãng lai truy cập `/san-pham`, lọc danh mục, chọn ngày → thấy số lượng khả dụng.
-- [ ] Khách đăng nhập thêm sản phẩm vào giỏ → báo giá hiển thị đúng (tiền thuê + cọc).
-- [ ] Khách tạo đơn → trạng thái `ChoThanhToan`, có hạn 15 phút.
-- [ ] Khách thanh toán → đơn chuyển `DaXacNhan`.
-- [ ] Đơn hết hạn chưa thanh toán → tự chuyển `HetHan`.
-- [ ] Admin tạo danh mục mới → xuất hiện trên trang tìm kiếm khách.
-- [ ] Admin tạo sản phẩm → số thiết bị = 0 (chưa nhập hàng qua phiếu nhập).
-- [ ] Admin sửa giá → đơn cũ không thay đổi.
-- [ ] Không có lỗi console JS, không có exception 500 trên các luồng chính.
-- [ ] Tất cả automated test pass.
+- [ ] `dotnet build` — 0 errors.
+- [ ] `POST /api/auth/dang-ky` → `201`, tạo tài khoản thành công.
+- [ ] `POST /api/auth/dang-nhap` → trả JWT token hợp lệ.
+- [ ] Gọi API `[Authorize]` không có token → `401 Unauthorized`.
+- [ ] Gọi API `AdminOnly` bằng token `KhachHang` → `403 Forbidden`.
+- [ ] `GET /api/san-pham` → JSON danh sách + phân trang.
+- [ ] Thêm giỏ → báo giá đúng công thức mục 8.2.
+- [ ] Tạo đơn → `ChoThanhToan`, hạn 15 phút.
+- [ ] Thanh toán mock → `DaXacNhan`.
+- [ ] Đơn hết hạn → tự `HetHan`.
+- [ ] Admin CRUD danh mục và sản phẩm qua API.
+- [ ] Tất cả test pass.
 
 ---
 
@@ -694,9 +454,12 @@ GearGo_Webapp/
 
 | Điểm | Lưu ý |
 |---|---|
-| Race condition đặt hàng | Dùng `IsolationLevel.Serializable` trong transaction `TaoDonThueAsync` |
-| Idempotency thanh toán | Unique index trên `ThanhToan.MaGiaoDich`; bỏ qua callback trùng |
-| Snapshot giá đơn | Copy `GiaThueNgay`, `MucCocMotThietBi`, `GiaTriBoiThuong` vào `ChiTietDonThue` khi tạo |
-| Không xóa lịch sử | Soft-delete cho `SanPham`, `DanhMuc` nếu có giao dịch liên quan |
-| Giỏ không giữ hàng | Chỉ `DonThue` mới giữ qua `GiuCho`; giỏ chỉ là draft |
-| Admin không nhập kho trực tiếp | Số lượng thiết bị chỉ tăng qua `PhieuNhapHang` — sẽ làm tuần 3 |
+| Xác thực | JWT Bearer — React gửi `Authorization: Bearer <token>` mỗi request |
+| Hash mật khẩu | `BCrypt.Net.BCrypt.HashPassword/Verify` |
+| CORS | `AllowCredentials()` bắt buộc khi React gửi header Authorization |
+| Race condition | `IsolationLevel.Serializable` trong `TaoDonThueAsync` |
+| Idempotency thanh toán | Unique index `ThanhToan.MaGiaoDich` |
+| Snapshot giá đơn | Copy giá vào `ChiTietDonThue` tại thời điểm đặt |
+| Migrations | EF Core tạo `Migrations/` ở root project |
+| Database | SQL Server trong Docker container `geargo-sqlserver` (`localhost,1433`) |
+| Không có Views | Backend trả JSON thuần — UI hoàn toàn do React xử lý |
