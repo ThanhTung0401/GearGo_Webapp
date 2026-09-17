@@ -1,0 +1,714 @@
+// =============================================
+// TÀI KHOẢN VÀ HỒ SƠ
+// =============================================
+
+Table TAI_KHOAN {
+  ma_tai_khoan bigint [pk, increment]
+  email varchar(255) [unique]
+  so_dien_thoai varchar(20) [unique]
+  mat_khau_bam varchar(255)
+  vai_tro varchar(50)
+  trang_thai varchar(50)
+  ly_do_khoa text
+  ngay_tao datetime
+  ngay_cap_nhat datetime
+}
+
+Table KHACH_HANG {
+  ma_khach_hang bigint [pk, increment]
+  ma_tai_khoan bigint [not null, unique]
+  ho_ten varchar(255)
+  dia_chi text
+  ngay_sinh date
+  anh_dai_dien text
+}
+
+Table NHAN_VIEN {
+  ma_nhan_vien bigint [pk, increment]
+  ma_tai_khoan bigint [not null, unique]
+  ho_ten varchar(255)
+  dia_chi text
+  ngay_vao_lam date
+  ngay_nghi_viec date
+  trang_thai_lam_viec varchar(50)
+}
+
+// =============================================
+// SẢN PHẨM VÀ NHẬP KHO
+// =============================================
+
+Table DANH_MUC_SAN_PHAM {
+  ma_danh_muc bigint [pk, increment]
+  ma_danh_muc_cha bigint
+  ten_danh_muc varchar(255)
+  mo_ta text
+  thu_tu_hien_thi int
+  trang_thai varchar(50)
+}
+
+Table SAN_PHAM {
+  ma_san_pham bigint [pk, increment]
+  ma_danh_muc bigint [not null]
+  ma_san_pham_hien_thi varchar(50) [unique]
+  ten_san_pham varchar(255)
+  thuong_hieu varchar(255)
+  mo_ta text
+  suc_chua int
+  kich_thuoc varchar(255)
+  thong_so json
+  gia_thue_moi_ngay decimal(18,2)
+  muc_coc_moi_thiet_bi decimal(18,2)
+  gia_tri_boi_thuong decimal(18,2)
+  trang_thai_kinh_doanh varchar(50)
+}
+
+Table HINH_ANH_SAN_PHAM {
+  ma_hinh_anh bigint [pk, increment]
+  ma_san_pham bigint [not null]
+  duong_dan varchar(500)
+  la_anh_chinh boolean
+  thu_tu int
+}
+
+Table THIET_BI {
+  ma_thiet_bi bigint [pk, increment]
+  ma_chi_tiet_phieu_nhap bigint [not null]
+  ma_thiet_bi_hien_thi varchar(50) [unique]
+  ngay_nhap datetime
+  gia_nhap decimal(18,2)
+  tinh_trang text
+  phu_kien_di_kem json
+  trang_thai_su_dung varchar(50)
+  ghi_chu text
+}
+
+Table NHA_CUNG_CAP {
+  ma_nha_cung_cap bigint [pk, increment]
+  ma_nha_cung_cap_hien_thi varchar(50) [unique]
+  ten_nha_cung_cap varchar(255)
+  nguoi_lien_he varchar(255)
+  so_dien_thoai varchar(20)
+  email varchar(255)
+  dia_chi text
+  ma_so_thue varchar(50)
+  ghi_chu text
+  trang_thai_hop_tac varchar(50)
+}
+
+Table PHIEU_NHAP_HANG {
+  ma_phieu_nhap bigint [pk, increment]
+  ma_nha_cung_cap bigint [not null]
+  ma_nguoi_lap bigint [not null]
+  ma_nguoi_xac_nhan bigint
+  ma_phieu_hien_thi varchar(50) [unique]
+  so_chung_tu_nha_cung_cap varchar(100)
+  ngay_lap datetime
+  ngay_nhap_du_kien datetime
+  ngay_nhap_thuc_te datetime
+  ngay_xac_nhan datetime
+  tong_tien decimal(18,2)
+  thong_tin_nha_cung_cap_luc_nhap json
+  ten_nguoi_lap_luc_nhap varchar(255)
+  ten_nguoi_xac_nhan_luc_nhap varchar(255)
+  trang_thai varchar(50)
+  ly_do_huy text
+  ghi_chu text
+}
+
+Table CHI_TIET_PHIEU_NHAP {
+  ma_chi_tiet_phieu_nhap bigint [pk, increment]
+  ma_phieu_nhap bigint [not null]
+  ma_san_pham bigint [not null]
+  ten_san_pham_luc_nhap varchar(255)
+  so_luong int
+  don_gia_nhap decimal(18,2)
+  tinh_trang_khi_nhap text
+  ghi_chu text
+}
+
+// =============================================
+// GIỎ THUÊ VÀ ĐƠN THUÊ
+// =============================================
+
+Table GIO_THUE {
+  ma_gio_thue bigint [pk, increment]
+  ma_khach_hang bigint [not null, unique]
+  ma_khuyen_mai bigint
+  gio_nhan_du_kien datetime
+  gio_tra_du_kien datetime
+  ngay_cap_nhat datetime
+}
+
+Table CHI_TIET_GIO_THUE {
+  ma_chi_tiet_gio bigint [pk, increment]
+  ma_gio_thue bigint [not null]
+  ma_san_pham bigint [not null]
+  so_luong int
+}
+
+Table CHINH_SACH {
+  ma_chinh_sach bigint [pk, increment]
+  ma_nguoi_tao bigint [not null]
+  ten_chinh_sach varchar(255)
+  phien_ban int [unique]
+  thoi_diem_ap_dung datetime
+  noi_dung_chinh_sach json
+  ngay_tao datetime
+}
+
+Table DON_THUE {
+  ma_don_thue bigint [pk, increment]
+  ma_khach_hang bigint [not null]
+  ma_chinh_sach bigint [not null]
+  ma_nguoi_huy bigint
+  ma_don_hien_thi varchar(50) [unique]
+  ngay_dat datetime
+  gio_nhan_du_kien datetime
+  gio_tra_du_kien datetime
+  han_thanh_toan datetime
+  ten_nguoi_nhan varchar(255)
+  so_dien_thoai_nguoi_nhan varchar(20)
+  email_lien_he varchar(255)
+  tong_tien_thue_truoc_giam decimal(18,2)
+  tong_tien_giam decimal(18,2)
+  tong_tien_coc decimal(18,2)
+  khuyen_mai_luc_dat json
+  trang_thai varchar(50)
+  thoi_diem_huy datetime
+  ly_do_huy text
+  tien_thue_giu_lai_khi_huy decimal(18,2)
+  thoi_diem_hoan_tat datetime
+  ghi_chu text
+}
+
+Table CHI_TIET_DON_THUE {
+  ma_chi_tiet_don bigint [pk, increment]
+  ma_don_thue bigint [not null]
+  ma_san_pham bigint [not null]
+  ten_san_pham_luc_dat varchar(255)
+  so_luong int
+  so_ngay_tinh_tien int
+  don_gia_thue_moi_ngay decimal(18,2)
+  tien_giam decimal(18,2)
+  muc_coc_moi_thiet_bi decimal(18,2)
+  gia_tri_boi_thuong_moi_thiet_bi decimal(18,2)
+  phu_kien_va_muc_boi_thuong_luc_dat json
+}
+
+Table GIU_CHO {
+  ma_giu_cho bigint [pk, increment]
+  ma_chi_tiet_don bigint [not null, unique]
+  thoi_diem_tao datetime
+  thoi_diem_het_han datetime
+  thoi_diem_giai_phong datetime
+  trang_thai varchar(50)
+}
+
+// =============================================
+// KHUYẾN MÃI
+// =============================================
+
+Table KHUYEN_MAI {
+  ma_khuyen_mai bigint [pk, increment]
+  ma_giam_gia varchar(50) [unique]
+  ten_khuyen_mai varchar(255)
+  loai_giam varchar(50)
+  gia_tri_giam decimal(18,2)
+  muc_giam_toi_da decimal(18,2)
+  tien_thue_toi_thieu decimal(18,2)
+  pham_vi_ap_dung varchar(50)
+  bat_dau datetime
+  ket_thuc datetime
+  gioi_han_tong_luot int
+  gioi_han_moi_khach int
+  trang_thai varchar(50)
+}
+
+Table KHUYEN_MAI_SAN_PHAM {
+  ma_khuyen_mai bigint [not null]
+  ma_san_pham bigint [not null]
+
+  indexes {
+    (ma_khuyen_mai, ma_san_pham) [pk]
+  }
+}
+
+Table KHUYEN_MAI_DANH_MUC {
+  ma_khuyen_mai bigint [not null]
+  ma_danh_muc bigint [not null]
+
+  indexes {
+    (ma_khuyen_mai, ma_danh_muc) [pk]
+  }
+}
+
+Table LUOT_SU_DUNG_KHUYEN_MAI {
+  ma_luot_su_dung bigint [pk, increment]
+  ma_khuyen_mai bigint [not null]
+  ma_don_thue bigint [not null, unique]
+  thoi_diem_giu_luot datetime
+  thoi_diem_het_han datetime
+  thoi_diem_su_dung datetime
+  thoi_diem_giai_phong datetime
+  so_tien_giam decimal(18,2)
+  trang_thai varchar(50)
+}
+
+// =============================================
+// PHÂN CÔNG VÀ BÀN GIAO
+// =============================================
+
+Table PHAN_CONG_THIET_BI {
+  ma_phan_cong bigint [pk, increment]
+  ma_chi_tiet_don bigint [not null]
+  ma_thiet_bi bigint [not null]
+  ma_nguoi_phan_cong bigint [not null]
+  ma_nguoi_huy_phan_cong bigint
+  thoi_diem_phan_cong datetime
+  thoi_diem_huy_phan_cong datetime
+  ly_do_huy_phan_cong text
+  trang_thai varchar(50)
+}
+
+Table PHIEU_BAN_GIAO {
+  ma_phieu_ban_giao bigint [pk, increment]
+  ma_don_thue bigint [not null, unique]
+  ma_nhan_vien bigint [not null]
+  thoi_diem_lap datetime
+  thoi_diem_giao_thuc_te datetime
+  ten_nhan_vien_luc_giao varchar(255)
+  ten_nguoi_nhan_thuc_te varchar(255)
+  thoi_diem_khach_xac_nhan datetime
+  bang_chung_xac_nhan json
+  trang_thai varchar(50)
+  ghi_chu text
+}
+
+Table CHI_TIET_BAN_GIAO {
+  ma_chi_tiet_ban_giao bigint [pk, increment]
+  ma_phieu_ban_giao bigint [not null]
+  ma_phan_cong bigint [not null, unique]
+  tinh_trang_truoc_thue text
+  phu_kien_thuc_giao json
+  danh_sach_anh json
+  ghi_chu text
+}
+
+// =============================================
+// NHẬN TRẢ
+// =============================================
+
+Table PHIEU_NHAN_TRA {
+  ma_phieu_nhan_tra bigint [pk, increment]
+  ma_don_thue bigint [not null]
+  ma_nhan_vien bigint [not null]
+  thoi_diem_lap datetime
+  thoi_diem_chot datetime
+  ten_nhan_vien_luc_nhan varchar(255)
+  trang_thai varchar(50)
+  ghi_chu text
+}
+
+Table CHI_TIET_NHAN_TRA {
+  ma_chi_tiet_nhan_tra bigint [pk, increment]
+  ma_phieu_nhan_tra bigint [not null]
+  ma_chi_tiet_ban_giao bigint [not null, unique]
+  ma_nguoi_duyet_mat bigint
+  thoi_diem_tra_thuc_te datetime
+  thoi_diem_duyet_mat datetime
+  ket_luan varchar(100)
+  tinh_trang_sau_thue text
+  phu_kien_thuc_nhan json
+  phu_kien_con_thieu json
+  danh_sach_anh json
+  bien_ban_mat json
+  trang_thai_xu_ly varchar(50)
+  ghi_chu text
+}
+
+// =============================================
+// THANH TOÁN
+// =============================================
+
+Table THANH_TOAN {
+  ma_thanh_toan bigint [pk, increment]
+  ma_don_thue bigint [not null]
+  ma_nguoi_ghi_nhan bigint
+  ma_yeu_cau varchar(100) [unique]
+  cong_thanh_toan varchar(50)
+  ma_giao_dich_cong varchar(255)
+  tong_so_tien decimal(18,2)
+  phuong_thuc varchar(50)
+  thoi_diem_tao datetime
+  thoi_diem_thanh_cong datetime
+  trang_thai varchar(50)
+  trang_thai_doi_chieu varchar(50)
+  ghi_chu text
+}
+
+Table CHI_TIET_THANH_TOAN {
+  ma_chi_tiet_thanh_toan bigint [pk, increment]
+  ma_thanh_toan bigint [not null]
+  muc_dich varchar(50)
+  so_tien decimal(18,2)
+}
+
+// =============================================
+// PHỤ PHÍ VÀ ĐỐI SOÁT
+// =============================================
+
+Table PHU_PHI {
+  ma_phu_phi bigint [pk, increment]
+  ma_don_thue bigint [not null]
+  ma_chi_tiet_ban_giao bigint
+  ma_nguoi_lap bigint [not null]
+  ma_nguoi_duyet bigint
+  ma_phu_phi_goc bigint
+  ma_doi_soat bigint
+  loai_phi varchar(50)
+  so_tien decimal(18,2)
+  ly_do text
+  can_cu_tinh_phi json
+  bang_chung json
+  thoi_diem_lap datetime
+  thoi_diem_duyet datetime
+  trang_thai_duyet varchar(50)
+  trang_thai_tranh_chap varchar(50)
+  ket_qua_giai_quyet text
+}
+
+Table DOI_SOAT_TIEN_COC {
+  ma_doi_soat bigint [pk, increment]
+  ma_don_thue bigint [not null]
+  ma_doi_soat_goc bigint
+  ma_nguoi_lap bigint [not null]
+  ma_nguoi_chot bigint
+  loai_doi_soat varchar(50)
+  tien_coc_duoc_doi_soat decimal(18,2)
+  tong_phu_phi_duoc_duyet decimal(18,2)
+  so_tien_can_hoan decimal(18,2)
+  so_tien_can_thu_them decimal(18,2)
+  bang_tinh_doi_soat json
+  ten_nguoi_chot_luc_doi_soat varchar(255)
+  thoi_diem_lap datetime
+  thoi_diem_chot datetime
+  trang_thai varchar(50)
+  ly_do_dieu_chinh text
+}
+
+Table GIAO_DICH_DOI_SOAT {
+  ma_giao_dich_doi_soat bigint [pk, increment]
+  ma_doi_soat bigint [not null]
+  ma_chi_tiet_thanh_toan bigint [not null, unique]
+}
+
+// =============================================
+// HOÀN TIỀN
+// =============================================
+
+Table HOAN_TIEN {
+  ma_hoan_tien bigint [pk, increment]
+  ma_chi_tiet_thanh_toan_goc bigint [not null]
+  ma_doi_soat bigint
+  ma_nguoi_xu_ly bigint
+  ma_yeu_cau varchar(100) [unique]
+  ma_giao_dich_hoan_cong varchar(255)
+  loai_hoan varchar(50)
+  so_tien decimal(18,2)
+  ly_do text
+  thoi_diem_yeu_cau datetime
+  thoi_diem_thanh_cong datetime
+  trang_thai varchar(50)
+  ghi_chu text
+}
+
+// =============================================
+// BẢO TRÌ
+// =============================================
+
+Table PHIEU_BAO_TRI {
+  ma_phieu_bao_tri bigint [pk, increment]
+  ma_thiet_bi bigint [not null]
+  ma_don_thue bigint
+  ma_nguoi_lap bigint [not null]
+  ma_nguoi_xu_ly bigint
+  ma_nguoi_xac_nhan_hoan_thanh bigint
+  loai_xu_ly varchar(50)
+  mo_ta_loi text
+  muc_do varchar(50)
+  ngay_bat_dau datetime
+  ngay_du_kien_hoan_thanh datetime
+  ngay_hoan_thanh_thuc_te datetime
+  chi_phi decimal(18,2)
+  ket_qua text
+  bang_chung json
+  trang_thai varchar(50)
+}
+
+// =============================================
+// ĐIỀU CHỈNH KHO
+// =============================================
+
+Table PHIEU_DIEU_CHINH_KHO {
+  ma_phieu_dieu_chinh bigint [pk, increment]
+  ma_phieu_nhap_lien_quan bigint
+  ma_nguoi_lap bigint [not null]
+  ma_nguoi_duyet bigint
+  loai_dieu_chinh varchar(50)
+  ly_do text
+  bang_chung json
+  thoi_diem_lap datetime
+  thoi_diem_duyet datetime
+  thoi_diem_ap_dung datetime
+  ten_nguoi_lap_luc_lap varchar(255)
+  ten_nguoi_duyet_luc_duyet varchar(255)
+  trang_thai varchar(50)
+}
+
+Table CHI_TIET_DIEU_CHINH_KHO {
+  ma_chi_tiet_dieu_chinh bigint [pk, increment]
+  ma_phieu_dieu_chinh bigint [not null]
+  ma_thiet_bi bigint
+  ma_chi_tiet_phieu_nhap bigint
+  gia_tri_truoc json
+  gia_tri_sau json
+  ghi_chu text
+}
+
+// =============================================
+// ĐÁNH GIÁ VÀ THÔNG BÁO
+// =============================================
+
+Table DANH_GIA {
+  ma_danh_gia bigint [pk, increment]
+  ma_chi_tiet_don bigint [not null, unique]
+  ma_nguoi_an bigint
+  so_sao int
+  noi_dung text
+  danh_sach_anh json
+  ngay_tao datetime
+  ngay_cap_nhat datetime
+  trang_thai_hien_thi varchar(50)
+  ly_do_an text
+}
+
+Table THONG_BAO {
+  ma_thong_bao bigint [pk, increment]
+  ma_tai_khoan bigint [not null]
+  ma_don_thue bigint
+  ma_su_kien varchar(100)
+  loai_su_kien varchar(50)
+  tieu_de varchar(255)
+  noi_dung text
+  kenh_gui varchar(50)
+  trang_thai_gui varchar(50)
+  so_lan_thu_gui int
+  thoi_diem_tao datetime
+  thoi_diem_gui datetime
+  thoi_diem_doc datetime
+  loi_gui_gan_nhat text
+}
+
+// =============================================
+// LỊCH SỬ VÀ NHẬT KÝ
+// =============================================
+
+Table LICH_SU_TRANG_THAI_DON {
+  ma_lich_su_don bigint [pk, increment]
+  ma_don_thue bigint [not null]
+  ma_nguoi_thuc_hien bigint
+  trang_thai_truoc varchar(50)
+  trang_thai_sau varchar(50)
+  thoi_diem datetime
+  ly_do text
+}
+
+Table LICH_SU_TINH_TRANG_THIET_BI {
+  ma_lich_su_thiet_bi bigint [pk, increment]
+  ma_thiet_bi bigint [not null]
+  ma_nguoi_thuc_hien bigint
+  trang_thai_truoc varchar(50)
+  trang_thai_sau varchar(50)
+  tinh_trang_truoc text
+  tinh_trang_sau text
+  thoi_diem datetime
+  ly_do text
+  tham_chieu_chung_tu json
+}
+
+Table NHAT_KY_THAO_TAC {
+  ma_nhat_ky bigint [pk, increment]
+  ma_tai_khoan bigint
+  hanh_dong varchar(100)
+  loai_doi_tuong varchar(100)
+  ma_doi_tuong varchar(100)
+  du_lieu_truoc json
+  du_lieu_sau json
+  thoi_diem datetime
+  ly_do text
+}
+
+// =============================================
+// QUAN HỆ: TÀI KHOẢN VÀ HỒ SƠ
+// Với quan hệ 1-1, cột bên phải là khóa ngoại.
+// =============================================
+
+Ref: TAI_KHOAN.ma_tai_khoan - KHACH_HANG.ma_tai_khoan
+Ref: TAI_KHOAN.ma_tai_khoan - NHAN_VIEN.ma_tai_khoan
+
+// =============================================
+// QUAN HỆ: SẢN PHẨM VÀ NHẬP KHO
+// =============================================
+
+Ref: DANH_MUC_SAN_PHAM.ma_danh_muc_cha > DANH_MUC_SAN_PHAM.ma_danh_muc
+Ref: SAN_PHAM.ma_danh_muc > DANH_MUC_SAN_PHAM.ma_danh_muc
+Ref: HINH_ANH_SAN_PHAM.ma_san_pham > SAN_PHAM.ma_san_pham
+
+Ref: PHIEU_NHAP_HANG.ma_nha_cung_cap > NHA_CUNG_CAP.ma_nha_cung_cap
+Ref: PHIEU_NHAP_HANG.ma_nguoi_lap > NHAN_VIEN.ma_nhan_vien
+Ref: PHIEU_NHAP_HANG.ma_nguoi_xac_nhan > NHAN_VIEN.ma_nhan_vien
+
+Ref: CHI_TIET_PHIEU_NHAP.ma_phieu_nhap > PHIEU_NHAP_HANG.ma_phieu_nhap
+Ref: CHI_TIET_PHIEU_NHAP.ma_san_pham > SAN_PHAM.ma_san_pham
+
+Ref: THIET_BI.ma_chi_tiet_phieu_nhap > CHI_TIET_PHIEU_NHAP.ma_chi_tiet_phieu_nhap
+
+// =============================================
+// QUAN HỆ: GIỎ THUÊ VÀ ĐƠN THUÊ
+// =============================================
+
+Ref: KHACH_HANG.ma_khach_hang - GIO_THUE.ma_khach_hang
+Ref: GIO_THUE.ma_khuyen_mai > KHUYEN_MAI.ma_khuyen_mai
+
+Ref: CHI_TIET_GIO_THUE.ma_gio_thue > GIO_THUE.ma_gio_thue
+Ref: CHI_TIET_GIO_THUE.ma_san_pham > SAN_PHAM.ma_san_pham
+
+Ref: CHINH_SACH.ma_nguoi_tao > NHAN_VIEN.ma_nhan_vien
+
+Ref: DON_THUE.ma_khach_hang > KHACH_HANG.ma_khach_hang
+Ref: DON_THUE.ma_chinh_sach > CHINH_SACH.ma_chinh_sach
+Ref: DON_THUE.ma_nguoi_huy > TAI_KHOAN.ma_tai_khoan
+
+Ref: CHI_TIET_DON_THUE.ma_don_thue > DON_THUE.ma_don_thue
+Ref: CHI_TIET_DON_THUE.ma_san_pham > SAN_PHAM.ma_san_pham
+
+Ref: CHI_TIET_DON_THUE.ma_chi_tiet_don - GIU_CHO.ma_chi_tiet_don
+
+// =============================================
+// QUAN HỆ: KHUYẾN MÃI
+// =============================================
+
+Ref: KHUYEN_MAI_SAN_PHAM.ma_khuyen_mai > KHUYEN_MAI.ma_khuyen_mai
+Ref: KHUYEN_MAI_SAN_PHAM.ma_san_pham > SAN_PHAM.ma_san_pham
+
+Ref: KHUYEN_MAI_DANH_MUC.ma_khuyen_mai > KHUYEN_MAI.ma_khuyen_mai
+Ref: KHUYEN_MAI_DANH_MUC.ma_danh_muc > DANH_MUC_SAN_PHAM.ma_danh_muc
+
+Ref: LUOT_SU_DUNG_KHUYEN_MAI.ma_khuyen_mai > KHUYEN_MAI.ma_khuyen_mai
+Ref: DON_THUE.ma_don_thue - LUOT_SU_DUNG_KHUYEN_MAI.ma_don_thue
+
+// =============================================
+// QUAN HỆ: PHÂN CÔNG VÀ BÀN GIAO
+// =============================================
+
+Ref: PHAN_CONG_THIET_BI.ma_chi_tiet_don > CHI_TIET_DON_THUE.ma_chi_tiet_don
+Ref: PHAN_CONG_THIET_BI.ma_thiet_bi > THIET_BI.ma_thiet_bi
+Ref: PHAN_CONG_THIET_BI.ma_nguoi_phan_cong > NHAN_VIEN.ma_nhan_vien
+Ref: PHAN_CONG_THIET_BI.ma_nguoi_huy_phan_cong > NHAN_VIEN.ma_nhan_vien
+
+Ref: DON_THUE.ma_don_thue - PHIEU_BAN_GIAO.ma_don_thue
+Ref: PHIEU_BAN_GIAO.ma_nhan_vien > NHAN_VIEN.ma_nhan_vien
+
+Ref: CHI_TIET_BAN_GIAO.ma_phieu_ban_giao > PHIEU_BAN_GIAO.ma_phieu_ban_giao
+Ref: PHAN_CONG_THIET_BI.ma_phan_cong - CHI_TIET_BAN_GIAO.ma_phan_cong
+
+// =============================================
+// QUAN HỆ: NHẬN TRẢ
+// =============================================
+
+Ref: PHIEU_NHAN_TRA.ma_don_thue > DON_THUE.ma_don_thue
+Ref: PHIEU_NHAN_TRA.ma_nhan_vien > NHAN_VIEN.ma_nhan_vien
+
+Ref: CHI_TIET_NHAN_TRA.ma_phieu_nhan_tra > PHIEU_NHAN_TRA.ma_phieu_nhan_tra
+Ref: CHI_TIET_BAN_GIAO.ma_chi_tiet_ban_giao - CHI_TIET_NHAN_TRA.ma_chi_tiet_ban_giao
+Ref: CHI_TIET_NHAN_TRA.ma_nguoi_duyet_mat > NHAN_VIEN.ma_nhan_vien
+
+// =============================================
+// QUAN HỆ: THANH TOÁN
+// =============================================
+
+Ref: THANH_TOAN.ma_don_thue > DON_THUE.ma_don_thue
+Ref: THANH_TOAN.ma_nguoi_ghi_nhan > NHAN_VIEN.ma_nhan_vien
+
+Ref: CHI_TIET_THANH_TOAN.ma_thanh_toan > THANH_TOAN.ma_thanh_toan
+
+// =============================================
+// QUAN HỆ: PHỤ PHÍ VÀ ĐỐI SOÁT
+// =============================================
+
+Ref: PHU_PHI.ma_don_thue > DON_THUE.ma_don_thue
+Ref: PHU_PHI.ma_chi_tiet_ban_giao > CHI_TIET_BAN_GIAO.ma_chi_tiet_ban_giao
+Ref: PHU_PHI.ma_nguoi_lap > NHAN_VIEN.ma_nhan_vien
+Ref: PHU_PHI.ma_nguoi_duyet > NHAN_VIEN.ma_nhan_vien
+Ref: PHU_PHI.ma_phu_phi_goc > PHU_PHI.ma_phu_phi
+Ref: PHU_PHI.ma_doi_soat > DOI_SOAT_TIEN_COC.ma_doi_soat
+
+Ref: DOI_SOAT_TIEN_COC.ma_don_thue > DON_THUE.ma_don_thue
+Ref: DOI_SOAT_TIEN_COC.ma_doi_soat_goc > DOI_SOAT_TIEN_COC.ma_doi_soat
+Ref: DOI_SOAT_TIEN_COC.ma_nguoi_lap > NHAN_VIEN.ma_nhan_vien
+Ref: DOI_SOAT_TIEN_COC.ma_nguoi_chot > NHAN_VIEN.ma_nhan_vien
+
+Ref: GIAO_DICH_DOI_SOAT.ma_doi_soat > DOI_SOAT_TIEN_COC.ma_doi_soat
+Ref: CHI_TIET_THANH_TOAN.ma_chi_tiet_thanh_toan - GIAO_DICH_DOI_SOAT.ma_chi_tiet_thanh_toan
+
+// =============================================
+// QUAN HỆ: HOÀN TIỀN
+// =============================================
+
+Ref: HOAN_TIEN.ma_chi_tiet_thanh_toan_goc > CHI_TIET_THANH_TOAN.ma_chi_tiet_thanh_toan
+Ref: HOAN_TIEN.ma_doi_soat > DOI_SOAT_TIEN_COC.ma_doi_soat
+Ref: HOAN_TIEN.ma_nguoi_xu_ly > NHAN_VIEN.ma_nhan_vien
+
+// =============================================
+// QUAN HỆ: BẢO TRÌ
+// =============================================
+
+Ref: PHIEU_BAO_TRI.ma_thiet_bi > THIET_BI.ma_thiet_bi
+Ref: PHIEU_BAO_TRI.ma_don_thue > DON_THUE.ma_don_thue
+Ref: PHIEU_BAO_TRI.ma_nguoi_lap > NHAN_VIEN.ma_nhan_vien
+Ref: PHIEU_BAO_TRI.ma_nguoi_xu_ly > NHAN_VIEN.ma_nhan_vien
+Ref: PHIEU_BAO_TRI.ma_nguoi_xac_nhan_hoan_thanh > NHAN_VIEN.ma_nhan_vien
+
+// =============================================
+// QUAN HỆ: ĐIỀU CHỈNH KHO
+// =============================================
+
+Ref: PHIEU_DIEU_CHINH_KHO.ma_phieu_nhap_lien_quan > PHIEU_NHAP_HANG.ma_phieu_nhap
+Ref: PHIEU_DIEU_CHINH_KHO.ma_nguoi_lap > NHAN_VIEN.ma_nhan_vien
+Ref: PHIEU_DIEU_CHINH_KHO.ma_nguoi_duyet > NHAN_VIEN.ma_nhan_vien
+
+Ref: CHI_TIET_DIEU_CHINH_KHO.ma_phieu_dieu_chinh > PHIEU_DIEU_CHINH_KHO.ma_phieu_dieu_chinh
+Ref: CHI_TIET_DIEU_CHINH_KHO.ma_thiet_bi > THIET_BI.ma_thiet_bi
+Ref: CHI_TIET_DIEU_CHINH_KHO.ma_chi_tiet_phieu_nhap > CHI_TIET_PHIEU_NHAP.ma_chi_tiet_phieu_nhap
+
+// =============================================
+// QUAN HỆ: ĐÁNH GIÁ VÀ THÔNG BÁO
+// =============================================
+
+Ref: CHI_TIET_DON_THUE.ma_chi_tiet_don - DANH_GIA.ma_chi_tiet_don
+Ref: DANH_GIA.ma_nguoi_an > NHAN_VIEN.ma_nhan_vien
+
+Ref: THONG_BAO.ma_tai_khoan > TAI_KHOAN.ma_tai_khoan
+Ref: THONG_BAO.ma_don_thue > DON_THUE.ma_don_thue
+
+// =============================================
+// QUAN HỆ: LỊCH SỬ VÀ NHẬT KÝ
+// =============================================
+
+Ref: LICH_SU_TRANG_THAI_DON.ma_don_thue > DON_THUE.ma_don_thue
+Ref: LICH_SU_TRANG_THAI_DON.ma_nguoi_thuc_hien > TAI_KHOAN.ma_tai_khoan
+
+Ref: LICH_SU_TINH_TRANG_THIET_BI.ma_thiet_bi > THIET_BI.ma_thiet_bi
+Ref: LICH_SU_TINH_TRANG_THIET_BI.ma_nguoi_thuc_hien > TAI_KHOAN.ma_tai_khoan
+
+Ref: NHAT_KY_THAO_TAC.ma_tai_khoan > TAI_KHOAN.ma_tai_khoan
