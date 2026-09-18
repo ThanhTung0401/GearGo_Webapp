@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using GearGo.Services;
+using GearGo.Services.Interfaces;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -57,9 +59,9 @@ builder.Services.AddCors(opt =>
 // ── 6. Application Services (Dependency Injection) ────────────────────────────
 // Bỏ comment khi hoàn thành từng Task tương ứng theo Plan
 // builder.Services.AddScoped<IXacThucService, XacThucService>();
-// builder.Services.AddScoped<IDanhMucService, DanhMucService>();
-// builder.Services.AddScoped<ISanPhamService, SanPhamService>();
-// builder.Services.AddScoped<IKhaDungService, KhaDungService>();
+ builder.Services.AddScoped<IDanhMucService, DanhMucService>();
+ builder.Services.AddScoped<ISanPhamService, SanPhamService>();
+ builder.Services.AddScoped<IKhaDungService, KhaDungService>();
 // builder.Services.AddScoped<IGioThueService, GioThueService>();
 // builder.Services.AddScoped<IDonThueService, DonThueService>();
 // builder.Services.AddScoped<IThanhToanService, ThanhToanService>();
