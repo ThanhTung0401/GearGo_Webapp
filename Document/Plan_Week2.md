@@ -10,6 +10,14 @@
 
 **Phạm vi nghiệm thu tuần 2:** Backend API. React frontend chưa phân công trong tuần 2; nếu có thì bổ sung riêng.
 
+**Chỉ Người 1 chịu trách nhiệm tạo migration** (xem `PhanCong_Week2.md`): thành viên hoàn thiện entity và Fluent API → Người 1 tích hợp, tạo migration → cả nhóm cập nhật database bằng migration đã thống nhất. Trong tuần có thể có nhiều migration nối tiếp nhau (không phải 1 migration duy nhất), nhưng **chỉ Người 1 tạo**. Người 1 cũng tích hợp cấu hình chung trong `Program.cs` và kiểm tra migration chạy được trên database mới.
+
+**Người 1 bàn giao service xử lý lỗi chung (Day 1–2):**
+- `Result<T>` / `Result` cho tầng service.
+- Cây exception nghiệp vụ: `NghiepVuException` (base), `KhongDuHangException`, `BaogiaThayDoiException`, `TrangThaiKhongHopLeException`, `TaiKhoanBiKhoaException`, `KhuyenMaiKhongHopLeException`, `KhongTimThayException`, `KhongCoQuyenException`.
+- `ExceptionHandlingMiddleware`: exception nghiệp vụ → HTTP 400/403/404/409; exception khác → 500.
+- Cấu trúc lỗi JSON thống nhất: `{ maLoi, thongDiep, chiTiet? }`.
+
 ---
 
 ## Quy ước kỹ thuật dùng chung
@@ -49,8 +57,8 @@
 - **Cấu trúc lỗi chung:**
   ```json
   {
-    "loiCode": "KHONG_DU_HANG",
-    "thongBao": "Sản phẩm Lều 4 người không đủ số lượng.",
+    "maLoi": "KHONG_DU_HANG",
+    "thongDiep": "Sản phẩm Lều 4 người không đủ số lượng.",
     "chiTiet": { "maSanPham": 1, "canThiet": 3, "conLai": 1 }
   }
   ```
@@ -275,7 +283,7 @@ DANH_MUC_SAN_PHAM
 
 - [ ] **2.4** Fluent API: self-ref `HasOne(DanhMucCha).WithMany(DanhMucCon)`, `OnDelete(Restrict)`.
 
-- [ ] **2.5** `dotnet ef migrations add AddDanhMucSanPham && dotnet ef database update`
+- [ ] **2.5** Hoàn thiện entity và Fluent API → báo Người 1 tích hợp và tạo migration → cả nhóm cập nhật database bằng migration đã thống nhất.
 
 - [ ] **2.6** Commit: `feat: add DanhMucSanPham entity`
 
@@ -323,7 +331,7 @@ HINH_ANH_SAN_PHAM
   - `SanPham` → `DanhMuc` cascade Restrict.
   - `HinhAnhSanPham` → `SanPham` cascade Delete.
 
-- [ ] **3.5** `dotnet ef migrations add AddSanPham && dotnet ef database update`
+- [ ] **3.5** Hoàn thiện entity và Fluent API → báo Người 1 tích hợp và tạo migration → cả nhóm cập nhật database bằng migration đã thống nhất.
 
 - [ ] **3.6** Commit: `feat: add SanPham and HinhAnhSanPham entities`
 
@@ -362,9 +370,24 @@ KHUYEN_MAI_DANH_MUC   (composite PK: MaKhuyenMai + MaDanhMuc)
 
 - [ ] **4.3** Tạo `KhuyenMaiSanPham` với composite PK `HasKey(x => new { x.MaKhuyenMai, x.MaSanPham })` và `KhuyenMaiDanhMuc` với composite PK `HasKey(x => new { x.MaKhuyenMai, x.MaDanhMuc })`.
 
-- [ ] **4.4** `dotnet ef migrations add AddKhuyenMai && dotnet ef database update`
+- [ ] **4.4** Chuẩn bị model xong → báo Người 1 tích hợp migration.
 
-- [ ] **4.5** Commit: `feat: add KhuyenMai with product/category scope tables`
+- [ ] **4.5** Tạo `IKhuyenMaiService` + `KhuyenMaiService` (dùng chung Người 3–4–5, bàn giao Day 2):
+  ```csharp
+  Task<Result<KhuyenMaiHopLe>> KiemTraApDungAsync(string maGiamGia, long maKhachHang, IEnumerable<DongGio> dong, decimal tienThueTruocGiam);
+  Task GiuLuotAsync(long maKhuyenMai, long maDonThue, DateTime thoiDiemHetHan, IDbContextTransaction tx);
+  Task XacNhanDaSuDungAsync(long maDonThue);
+  Task GiaiPhongLuotAsync(long maDonThue);
+  ```
+  - Kiểm tra đủ: trạng thái `HienThi` (loại `TamAn`/`HetHan`), thời hạn, phạm vi, mức tối thiểu, giới hạn tổng lượt, giới hạn mỗi khách. **Loại lượt `DangGiu` đã hết hạn khi đếm.**
+  - Phân định gọi:
+    - **Người 4 (giỏ):** gọi `KiemTraApDungAsync` để báo giá dự kiến, **KHÔNG giữ lượt**.
+    - **Người 5 (tạo đơn):** gọi lại `KiemTraApDungAsync` trong transaction + `GiuLuotAsync` để ghi lượt.
+    - Callback thanh toán thành công: gọi `XacNhanDaSuDungAsync`. Hủy đơn/hết hạn: gọi `GiaiPhongLuotAsync`.
+
+- [ ] **4.6** Test đơn vị đầy đủ nhánh: hợp lệ, `TamAn`, hết hạn, không đủ tối thiểu, vượt tổng lượt, vượt lượt/khách, lượt `DangGiu` hết hạn không tính.
+
+- [ ] **4.7** Commit: `feat: add KhuyenMai entity, service and validation logic`
 
 ---
 
@@ -382,7 +405,7 @@ KHUYEN_MAI_DANH_MUC   (composite PK: MaKhuyenMai + MaDanhMuc)
 
 - [ ] **5.2** Tạo `PhieuNhapHang.cs` (Cấp 2) — FK: `MaNhaCungCap`, `MaNguoiLap` (NhanVien), `MaNguoiXacNhan` (NhanVien, nullable). Đủ **17 trường** theo ERD: `MaPhieuNhap`, `MaNhaCungCap`, `MaNguoiLap`, `MaNguoiXacNhan`, `MaPhieuHienThi` (unique), `SoChungTuNhaCungCap`, `NgayLap`, `NgayNhapDuKien`, `NgayNhapThucTe`, `NgayXacNhan`, `TongTien`, `ThongTinNhaCungCapLucNhap` (json), `TenNguoiLapLucNhap`, `TenNguoiXacNhanLucNhap`, `TrangThai`, `LyDoHuy`, `GhiChu`.
 
-- [ ] **5.3** Tạo `ChiTietPhieuNhap.cs` (Cấp 3) — FK: `MaPhieuNhap`, `MaSanPham`. Đủ 7 trường: `MaChiTietPhieuNhap`, `MaPhieuNhap`, `MaSanPham`, `TenSanPhamLucNhap`, `SoLuong`, `DonGiaNhap`, `TinhTrangKhiNhap`, `GhiChu`.
+- [ ] **5.3** Tạo `ChiTietPhieuNhap.cs` (Cấp 3) — FK: `MaPhieuNhap`, `MaSanPham`. Đủ **8 trường**: `MaChiTietPhieuNhap`, `MaPhieuNhap`, `MaSanPham`, `TenSanPhamLucNhap`, `SoLuong`, `DonGiaNhap`, `TinhTrangKhiNhap`, `GhiChu`.
 
 - [ ] **5.4** Tạo `ThietBi.cs` (Cấp 4) — FK: `MaChiTietPhieuNhap`. Đủ **9 trường** theo ERD: `MaThietBi`, `MaChiTietPhieuNhap`, `MaThietBiHienThi` (unique), `NgayNhap`, `GiaNhap`, `TinhTrang`, `PhuKienDiKem` (json), `TrangThaiSuDung`, `GhiChu`.
 
@@ -390,7 +413,7 @@ KHUYEN_MAI_DANH_MUC   (composite PK: MaKhuyenMai + MaDanhMuc)
 
 - [ ] **5.6** Fluent API unique: `NhaCungCap.ma_nha_cung_cap_hien_thi`, `PhieuNhapHang.ma_phieu_hien_thi`, `ThietBi.ma_thiet_bi_hien_thi`.
 
-- [ ] **5.7** `dotnet ef migrations add AddNhapKhoThietBi && dotnet ef database update`
+- [ ] **5.7** Hoàn thiện entity và Fluent API → báo Người 1 tích hợp và tạo migration → cả nhóm cập nhật database bằng migration đã thống nhất.
 
 - [ ] **5.8** Commit: `feat: add NhaCungCap, PhieuNhapHang, ChiTietPhieuNhap, ThietBi (skeleton for Week 3)`
 
@@ -425,7 +448,7 @@ CHI_TIET_GIO_THUE
   - `GioThue.MaKhachHang` unique (1-1 với KhachHang).
   - Cascade delete `ChiTietGioThue` theo `GioThue`.
 
-- [ ] **6.4** `dotnet ef migrations add AddGioThue && dotnet ef database update`
+- [ ] **6.4** Hoàn thiện entity và Fluent API → báo Người 1 tích hợp và tạo migration → cả nhóm cập nhật database bằng migration đã thống nhất.
 
 - [ ] **6.5** Commit: `feat: add GioThue and ChiTietGioThue entities`
 
@@ -485,7 +508,7 @@ CHI_TIET_GIO_THUE
   - `LuotSuDungKhuyenMai.MaDonThue` unique.
   - `ChinhSach.PhienBan` unique.
 
-- [ ] **7.10** `dotnet ef migrations add AddDonThue && dotnet ef database update`
+- [ ] **7.10** Hoàn thiện entity và Fluent API → báo Người 1 tích hợp và tạo migration → cả nhóm cập nhật database bằng migration đã thống nhất.
 
 - [ ] **7.11** Commit: `feat: add ChinhSach, DonThue, ChiTietDonThue, GiuCho, LuotSuDungKhuyenMai, LichSuTrangThaiDon`
 
@@ -529,7 +552,7 @@ CHI_TIET_THANH_TOAN
 
 - [ ] **8.5** Fluent API: `ThanhToan.MaYeuCau` unique (idempotency), index `ThanhToan.MaGiaoDichCong`.
 
-- [ ] **8.6** `dotnet ef migrations add AddThanhToan && dotnet ef database update`
+- [ ] **8.6** Hoàn thiện entity và Fluent API → báo Người 1 tích hợp và tạo migration → cả nhóm cập nhật database bằng migration đã thống nhất.
 
 - [ ] **8.7** Commit: `feat: add ThanhToan and ChiTietThanhToan entities`
 
@@ -558,9 +581,14 @@ CHI_TIET_THANH_TOAN
   - **Chưa chọn ngày:** chỉ hiện giá tham khảo, **không khẳng định còn hàng**.
   - **Kiểm tra đầu vào:** giờ trả phải sau giờ nhận; không tạo lượt thuê bắt đầu trong quá khứ.
   - Đếm tổng `THIET_BI` **đủ điều kiện** của sản phẩm: `TrangThaiSuDung` thuộc {SanSang, DangThue} + join qua `CHI_TIET_PHIEU_NHAP` từ **phiếu nhập đã xác nhận** (`TrangThai = DaNhapKho`). Thiết bị DangBaoTri, ThatLac, NgungSuDung không tính.
-  - Tính cả số lượng **giữ chỗ còn hạn** (GiuCho.TrangThai = DangGiu **và** ThoiDiemHetHan > Now — giữ chỗ hết hạn không chiếm lịch dù job chưa chạy) của đơn `ChoThanhToan`, và số lượng của các đơn đã xác nhận/đang xử lý còn chiếm lịch.
-  - **Không tính trùng:** mỗi lượt đặt chỉ tính một lần; đơn đã phân công thiết bị không cộng thêm giữ chỗ.
-  - Giữ công thức: **`Khả dụng = Tổng thiết bị đủ điều kiện − Số lượng bị chiếm đồng thời lớn nhất trong khoảng khách chọn`**.
+  - **Giữ chỗ tạm chiếm lịch khi ĐỒNG THỜI:**
+    - Đơn đang `ChoThanhToan`
+    - `GiuCho.TrangThai = DangGiu`
+    - `ThoiDiemHetHan > Now`
+  - **Đơn đã xác nhận (`DaXacNhan`, `DangChuanBi`, `SanSangNhan`, `DangThue`, ...) tính riêng và chỉ tính một lần** — không còn phụ thuộc hạn 15 phút của giữ chỗ.
+  - **Giữ chỗ hết hạn không chiếm lịch** dù job chưa chạy (điều kiện `ThoiDiemHetHan > Now` loại chúng ra).
+  - **Không tính trùng:** mỗi lượt đặt chỉ tính một lần; hai bản ghi cùng thuộc một `ChiTietDonThue` chỉ tính một lần.
+  - Công thức: **`Khả dụng = Tổng thiết bị đủ điều kiện − Số lượng bị chiếm đồng thời lớn nhất trên khoảng [GioNhan, GioTra]`** — không cộng dồn các đơn không giao nhau về thời gian.
   - Lịch giao nhau: `gioNhanDon < gioTra` AND `gioTraDon > gioNhan`.
   - Ví dụ: có 5 lều, đơn A thuê 3 cái ngày 20, đơn B thuê 3 cái ngày 21 và hai đơn không trùng nhau; khách thuê xuyên hai ngày vẫn còn 2 cái, không phải `5 - 3 - 3`.
 
@@ -614,12 +642,15 @@ CHI_TIET_THANH_TOAN
   - **Phân bổ giảm giá xuống từng dòng**, làm tròn thống nhất (đồng VNĐ).
   - Có cơ chế **lưu/đối chiếu báo giá khách đã xem** (hash hoặc version) để phát hiện giá thay đổi khi tạo đơn.
 
-- [ ] **10.4** Kiểm tra mã khuyến mãi:
+- [ ] **10.4** Kiểm tra mã khuyến mãi (gọi `IKhuyenMaiService.KiemTraApDungAsync` do Người 3 viết):
+  - **Trạng thái:** chỉ chấp nhận `HienThi`; `TamAn` → từ chối; `HetHan` → từ chối.
   - Thời hạn: `BatDau <= Now <= KetThuc`.
   - Phạm vi: sản phẩm/danh mục phù hợp.
-  - Mức tối thiểu: `TienThueTruocGiam >= TienThueTieuThieu`.
-  - **Giới hạn tổng lượt**: đếm `LUOT_SU_DUNG_KHUYEN_MAI` có `TrangThai` thuộc {DangGiu, DaSuDung} < `GioiHanTongLuot`.
-  - **Giới hạn mỗi khách**: đếm lượt của khách có `TrangThai` thuộc {DangGiu, DaSuDung} < `GioiHanMoiKhach`.
+  - Mức tối thiểu: `TienThueTruocGiam >= TienThueToiThieu`.
+  - **Giới hạn tổng lượt**: đếm `LUOT_SU_DUNG_KHUYEN_MAI` có `TrangThai` ∈ {DangGiu **còn hạn** (`ThoiDiemHetHan > Now`), DaSuDung} < `GioiHanTongLuot`.
+  - **Giới hạn mỗi khách**: đếm lượt của khách có `TrangThai` ∈ {DangGiu **còn hạn**, DaSuDung} < `GioiHanMoiKhach`.
+  - **Lượt `DangGiu` đã hết hạn không tiếp tục chiếm lượt** dù job chưa chạy — loại chúng khi đếm.
+  - Giỏ chỉ gọi để **báo giá dự kiến, KHÔNG giữ lượt**; tạo đơn mới gọi `GiuLuotAsync` trong transaction.
 
 - [ ] **10.5** `GioThueController` (`[Authorize]`, `[Route("api/gio-thue")]`):
   - `GET /api/gio-thue`
@@ -633,30 +664,52 @@ CHI_TIET_THANH_TOAN
 
 - [ ] **10.6** `IDonThueService.TaoDonAsync` trong `IsolationLevel.Serializable`:
   1. Load giỏ, kiểm tra không rỗng.
-  2. Kiểm tra khả dụng mỗi dòng → nếu thiếu → throw `KhongDuHangException`.
-  3. Nếu báo giá thay đổi từ khi khách xem giỏ → throw `BaogiaThayDoiException`.
-  4. Load `CHINH_SACH` **đang có hiệu lực** (`ThoiDiemApDung <= Now`, lấy phiên bản mới nhất thỏa điều kiện); không đơn thuần lấy phiên bản cao nhất.
-  5. Tạo `DonThue` (`ChoThanhToan`), sinh `MaDonHienThi` unique. Lưu `GioNhanDuKien`, `GioTraDuKien`.
-  6. Snapshot vào `ChiTietDonThue`: giá + phụ kiện + bồi thường tại thời điểm đặt.
-  7. Với mỗi `ChiTietDonThue`: tạo `GiuCho` (`DangGiu`, `ThoiDiemHetHan = Now + 15 phút`). Dùng tên trường `ThoiDiemHetHan` (của GiuCho), `HanThanhToan` (của DonThue).
-  8. Nếu có khuyến mãi: tạo `LuotSuDungKhuyenMai` (`DangGiu`, `ThoiDiemHetHan = Now + 15 phút`). **Không tạo thêm một lượt mới nếu đơn chỉ là chuyển sang DaSuDung.**
-  9. Xóa giỏ.
-  - **Toàn bộ bước 1-9 trong cùng transaction.** Thất bại → **rollback toàn bộ** và **giữ nguyên giỏ**.
+  2. **Kiểm tra `TrangThaiKinhDoanh` từng sản phẩm** — phải là `DangKinhDoanh`; nếu Admin đã chuyển `TamNgung`/`NgungKinhDoanh` sau lúc khách thêm giỏ → throw `TrangThaiKhongHopLeException` với danh sách sản phẩm sai.
+  3. Kiểm tra khả dụng mỗi dòng → nếu thiếu → throw `KhongDuHangException`.
+  4. Nếu báo giá thay đổi từ khi khách xem giỏ → throw `BaogiaThayDoiException`.
+  5. **Nếu giỏ có mã khuyến mãi** → gọi lại `IKhuyenMaiService.KiemTraApDungAsync` (mã có thể chuyển `TamAn`/hết hạn/vượt lượt giữa lúc áp mã trong giỏ và lúc tạo đơn). Đơn không dùng mã vẫn tạo bình thường, bỏ qua bước này.
+  6. Load `CHINH_SACH` **đang có hiệu lực** (`ThoiDiemApDung <= Now`, lấy phiên bản mới nhất thỏa điều kiện); không đơn thuần lấy phiên bản cao nhất.
+  7. **Gán hạn thanh toán thống nhất:**
+     ```
+     var thoiDiemTaoDon = DateTime.UtcNow;
+     var hanThanhToan = thoiDiemTaoDon.AddMinutes(15);
+     DonThue.HanThanhToan = hanThanhToan;
+     GiuCho.ThoiDiemHetHan = hanThanhToan;
+     LuotSuDungKhuyenMai.ThoiDiemHetHan = hanThanhToan;
+     ```
+     — cùng một mốc thời gian cho cả 3 trường để đồng nhất.
+  8. Tạo `DonThue` (`ChoThanhToan`), sinh `MaDonHienThi` unique. Lưu `GioNhanDuKien`, `GioTraDuKien`, `HanThanhToan`.
+  9. Snapshot vào `ChiTietDonThue`: giá + phụ kiện + bồi thường tại thời điểm đặt.
+  10. Với mỗi `ChiTietDonThue`: tạo `GiuCho` (`DangGiu`, `ThoiDiemHetHan = hanThanhToan`).
+  11. Nếu có khuyến mãi: gọi `IKhuyenMaiService.GiuLuotAsync` — tạo `LuotSuDungKhuyenMai` (`DangGiu`, `ThoiDiemHetHan = hanThanhToan`). **Không tạo thêm một lượt mới nếu đơn chỉ là chuyển sang DaSuDung.**
+  12. Xóa giỏ.
+  - **Toàn bộ các bước trên trong cùng transaction.** Thất bại → **rollback toàn bộ** và **giữ nguyên giỏ**.
   - **Hai yêu cầu đồng thời** không tạo hai đơn từ cùng dữ liệu giỏ (Serializable + kiểm tra giỏ rỗng).
   - **Ghi lịch sử chuyển trạng thái** vào `LICH_SU_TRANG_THAI_DON`.
 
-- [ ] **10.7** Hủy đơn chưa thanh toán:
-  - Ghi **người hủy** (MaNguoiHuy = MaTaiKhoan), **thời điểm** (ThoiDiemHuy), **lý do** (LyDoHuy).
-  - **Giải phóng giữ chỗ**: GiuCho → DaGiaiPhong.
-  - **Giải phóng lượt mã**: LuotSuDungKhuyenMai → DaGiaiPhong (trả lại lượt).
-  - Ghi lịch sử chuyển trạng thái.
+> **Quy ước hết hạn (áp dụng cho `DonThue.HanThanhToan`, `GiuCho.ThoiDiemHetHan`, `LuotSuDungKhuyenMai.ThoiDiemHetHan`):**
+> - **Còn hạn khi `Now < hạn`**.
+> - **Hết hạn khi `Now >= hạn`**.
+> - Query đếm lượt đang chiếm: dùng `ThoiDiemHetHan > Now`.
+> - Job hết hạn: điều kiện `hạn <= Now`.
 
-- [ ] **10.8** `IHostedService` chạy 1 phút — **job hết hạn**:
-  - Đơn `ChoThanhToan` có `HanThanhToan < Now` → chuyển `HetHan`.
-  - Giải phóng `GiuCho` (chỉ update bản ghi có `ThoiDiemHetHan < Now`, không cần chờ job).
-  - Giải phóng `LuotSuDungKhuyenMai` → `HetHan`.
-  - **Phối hợp với thanh toán và hủy:** Dùng kiểm tra trạng thái đơn trước khi cập nhật — nếu đơn đã chuyển `DaXacNhan` hoặc `KhachHuy` thì job bỏ qua, không ghi đè.
+- [ ] **10.7** Hủy đơn chưa thanh toán — **cùng transaction, cập nhật có điều kiện**:
+  - UPDATE `DonThue` với `WHERE MaDonThue = @id AND TrangThai = 'ChoThanhToan'` → chuyển `KhachHuy`/`CuaHangHuy`. Nếu 0 rows → đơn đã chuyển trạng thái khác (đã xác nhận / hết hạn) → throw `TrangThaiKhongHopLeException`, rollback.
+  - Ghi **người hủy** (MaNguoiHuy = MaTaiKhoan), **thời điểm** (ThoiDiemHuy), **lý do** (LyDoHuy).
+  - Giải phóng `GiuCho`: UPDATE `WHERE MaChiTietDon IN (...) AND TrangThai = 'DangGiu'` → `DaGiaiPhong`.
+  - Giải phóng lượt mã: gọi `IKhuyenMaiService.GiaiPhongLuotAsync` — UPDATE `LuotSuDungKhuyenMai` `WHERE MaDonThue = @id AND TrangThai = 'DangGiu'` → `DaGiaiPhong` (trả lại lượt).
   - Ghi lịch sử chuyển trạng thái.
+  - Toàn bộ trong **cùng transaction**; thất bại bất kỳ bước nào → rollback.
+
+- [ ] **10.8** `IHostedService` chạy 1 phút — **job hết hạn, cập nhật có điều kiện trong transaction**:
+  - Với mỗi đơn `ChoThanhToan` có `HanThanhToan <= Now`, mở transaction:
+    - UPDATE `DonThue` `WHERE MaDonThue = @id AND TrangThai = 'ChoThanhToan'` → `HetHan`. Nếu 0 rows → đơn đã đổi trạng thái (thanh toán vừa vào, hoặc khách vừa hủy) → bỏ qua, commit (không ghi đè).
+    - Giải phóng `GiuCho` (`ThoiDiemHetHan <= Now` AND `TrangThai = 'DangGiu'`) → `HetHan`.
+    - Giải phóng `LuotSuDungKhuyenMai` (`ThoiDiemHetHan <= Now` AND `TrangThai = 'DangGiu'`) → `HetHan`.
+    - Ghi lịch sử chuyển trạng thái.
+    - Commit.
+  - **Không ghi đè trạng thái nhau:** UPDATE có điều kiện `WHERE TrangThai = ...` là cơ chế đảm bảo, không dựa vào SELECT-then-UPDATE.
+  - Chú ý: khi callback thanh toán chạy song song, một bên sẽ thắng cuộc đua UPDATE; bên còn lại thấy 0 rows và không cập nhật.
 
 - [ ] **10.9** `DonThueController` (`[Authorize]`, `[Route("api/don-thue")]`):
   - `GET /api/don-thue/xac-nhan` — preview.
@@ -674,15 +727,26 @@ CHI_TIET_THANH_TOAN
   - Sinh `MaYeuCau = Guid.NewGuid().ToString("N")`.
   - Trả URL: `{returnUrl}?donId={id}&maYeuCau={maYeuCau}&ketQua=success&maGD={fakeId}`.
 
-- [ ] **10.11** `XuLyKetQuaAsync(callback)`:
-  - **Tìm đúng giao dịch** theo `MaYeuCau`; kiểm tra đơn chưa hết hạn/chưa hủy.
-  - **Idempotency:** callback lặp cùng `MaYeuCau` → không thu thêm lần nữa, trả kết quả cũ.
-  - **Kiểm tra số tiền:** `TongSoTien = TongTienThueTruocGiam - TongTienGiam + TongTienCoc`.
-  - Cập nhật `ThanhToan` → `ThanhCong` + tạo 2 `CHI_TIET_THANH_TOAN` (`TienThue` + `TienCoc`).
-  - Đơn → `DaXacNhan`, `GiuCho` → `DaXacNhan`.
-  - `LuotSuDungKhuyenMai` → `DaSuDung` (chuyển trạng thái từ DangGiu, **không tạo lượt mới**).
-  - **Phối hợp với job hết hạn và hủy:** Kiểm tra trạng thái đơn phải vẫn là `ChoThanhToan` trước khi cập nhật.
-  - Ghi lịch sử chuyển trạng thái.
+- [ ] **10.11** `XuLyKetQuaAsync(callback)` — **thứ tự bước quan trọng để idempotency đúng**:
+  1. **Tìm giao dịch theo `MaYeuCau`** — không thấy → 404.
+  2. **Idempotency ưu tiên trước:** nếu giao dịch đã `ThanhCong` → **trả kết quả cũ ngay lập tức**, không thu thêm, **không yêu cầu đơn phải còn `ChoThanhToan`** (lần đầu callback đã chuyển đơn sang `DaXacNhan`).
+  3. Nếu giao dịch đã `ThatBai`/`Huy` → trả lỗi cuối.
+  4. Chỉ khi giao dịch còn `DangXuLy` mới đi tiếp:
+     - **Kiểm tra số tiền:** `TongSoTien = TongTienThueTruocGiam - TongTienGiam + TongTienCoc`.
+     - **Cập nhật nguyên tử trong 1 transaction (dùng UPDATE có điều kiện):**
+       - UPDATE `DonThue` `WHERE MaDonThue = @id AND TrangThai = 'ChoThanhToan' AND HanThanhToan > @now` → `DaXacNhan`.
+       - UPDATE `ThanhToan` `WHERE MaThanhToan = @id AND TrangThai = 'DangXuLy'` → `ThanhCong` + tạo 2 `CHI_TIET_THANH_TOAN` (`TienThue` + `TienCoc`).
+       - UPDATE `GiuCho` → `DaXacNhan`.
+       - Gọi `IKhuyenMaiService.XacNhanDaSuDungAsync` → `LuotSuDungKhuyenMai` → `DaSuDung` (chuyển trạng thái từ DangGiu, **không tạo lượt mới**).
+       - Ghi lịch sử chuyển trạng thái.
+       - Commit.
+  - **Nếu UPDATE đơn trả về 0 rows** (đơn đã sang `HetHan`/`KhachHuy` hoặc `DaXacNhan`) — **KHÔNG tự ghi đè `ThatBai`**:
+    - Rollback transaction hiện tại.
+    - **Đọc lại đơn và giao dịch** trong transaction mới:
+      - Nếu giao dịch đã `ThanhCong` (do callback trước vừa chạy xong) → trả kết quả cũ, kết thúc.
+      - Nếu đơn `DaXacNhan` mà giao dịch này vẫn `DangXuLy` (bất thường — giao dịch khác đã confirm đơn trước) → **kiểm tra xem gateway có thực sự thu tiền không**: nếu gateway đã thu → cập nhật giao dịch `TrangThaiDoiChieu = 'CanDoiSoat'`, chuyển `ThanhCong` (tiền thật sự đã thu) và tạo yêu cầu hoàn tiền thu trùng để xử lý (UC07 tuần sau), **không tự đánh `ThatBai`**; nếu gateway chưa thu → cập nhật `ThatBai` với ghi chú "đơn đã được giao dịch khác xác nhận", log.
+      - Nếu đơn `HetHan`/`KhachHuy`/`CuaHangHuy` mà tiền đã thu ở gateway → **KHÔNG mặc định là `ThatBai`**: cập nhật giao dịch `TrangThaiDoiChieu = 'CanDoiSoat'`, giữ nguyên `TrangThai` (hoặc chuyển `ThanhCong` nếu gateway xác nhận thu tiền) và **tạo yêu cầu hoàn tiền** để đối soát/hoàn về cho khách (UC07 tuần sau). Không coi đây là thu thất bại.
+      - Ghi log chi tiết để nghiệp vụ đối soát thủ công.
 
 - [ ] **10.12** `ThanhToanController` (`[Route("api/thanh-toan")]`):
   - `POST /api/thanh-toan/{maDon}/tao-url` `[Authorize]`.
@@ -707,15 +771,19 @@ CHI_TIET_THANH_TOAN
   - Validate: không cho `ma_danh_muc_cha` là chính nó hoặc con của nó.
 
 - [ ] **11.3** `Admin/SanPhamController` (`[Route("api/admin/san-pham")]`):
-  - `GET` — list + filter.
+  - `GET` — list + filter (bao gồm cả `TamNgung`/`NgungKinhDoanh`, khác với API khách).
   - `POST` — tạo mới (unique `MaSanPhamHienThi`).
   - `PUT /{id}` — cập nhật (giá cũ đã snapshot trong `CHI_TIET_DON_THUE`).
   - `PATCH /{id}/trang-thai` — đổi kinh doanh.
-  - `POST /{id}/hinh-anh` — upload (`.jpg/.jpeg/.png/.webp`, ≤ 5MB).
+  - `POST /{id}/hinh-anh` — upload (`.jpg/.jpeg/.png/.webp`, ≤ 5MB, kiểm tra magic bytes).
   - `DELETE /hinh-anh/{maHinhAnh}` — xóa 1 ảnh.
   - **KHÔNG có endpoint tăng/giảm số lượng thiết bị trực tiếp** — qua phiếu nhập (Tuần 3).
 
-- [ ] **11.4** Commit: `feat: UC21 - admin category and product CRUD API`
+- [ ] **11.4** Validation trong `AdminSanPhamService` (Người 4 viết, tách khỏi `SanPhamService` của Người 2):
+  - **`GiaThueMoiNgay >= 0`**, **`MucCocMoiThietBi >= 0`**, **`GiaTriBoiThuong >= 0`** — nhập âm → HTTP 400.
+  - `SucChua >= 0`, `MaSanPhamHienThi` không trùng.
+
+- [ ] **11.5** Commit: `feat: UC21 - admin category and product CRUD API`
 
 ---
 
@@ -794,6 +862,25 @@ CHI_TIET_THANH_TOAN
 - [ ] `/api/admin/*` chỉ nhận `QuanTriVien`, token `KhachHang` → 403.
 - [ ] Integration test happy path **9 bước** pass.
 - [ ] Mỗi chuyển trạng thái đơn có bản ghi trong `LICH_SU_TRANG_THAI_DON`.
+
+---
+
+## Mốc bàn giao service dùng chung
+
+| Mốc | Ai | Nội dung |
+|---|---|---|
+| **Cuối Day 1** | Người 1 | Bàn giao `Result<T>`, cây exception nghiệp vụ, `ExceptionHandlingMiddleware`, cấu trúc lỗi JSON. |
+| **Cuối Day 1** | Người 2, 3, 4, 5 | Chốt interface + DTO (`IKhuyenMaiService`, `IBaoGiaService`, `IKhaDungService`, `IDonThueService`, DTO báo giá truyền từ giỏ sang tạo đơn). Contract-first, chưa cần implement. |
+| **Cuối Day 2** | **Người 5** | **Bàn giao model + Fluent API cho `LuotSuDungKhuyenMai` và `DonThue`** (thuộc Task 7) — chỉ phần entity cần cho `IKhuyenMaiService`, chưa cần service tạo đơn. Người 1 tích hợp migration ngay. |
+| **Cuối Day 2** | Người 3 | `IKhuyenMaiService` có implement (đọc/ghi lượt trên `LuotSuDungKhuyenMai` đã có entity) để Người 4 (báo giá) và Người 5 (tạo đơn) tích hợp. |
+| **Cuối Day 2** | Người 4 | `IBaoGiaService` có implement để Người 5 gọi khi tạo đơn. |
+| **Cuối Day 3** | Người 2, 5 | `IKhaDungService` (Người 2, phụ thuộc `GiuCho`) + service tạo đơn tối thiểu (Người 5) — để bắt đầu tích hợp luồng đặt đơn. |
+| **Cuối Day 4** | Người 5 | Luồng đặt đơn → thanh toán chạy được end-to-end (happy path 9 bước). |
+| **Day 5** | Cả nhóm | Sửa lỗi tích hợp, nghiệm thu 9 bước, race condition test. |
+
+> **Phá vòng phụ thuộc:** `IKhuyenMaiService` (Người 3, Day 2) cần `LuotSuDungKhuyenMai` và `DonThue` (Task 7, Người 5). Giải quyết: **Người 5 bàn giao model + Fluent API của 2 entity này cuối Day 2** (chỉ phần cần cho service khuyến mãi ghi lượt), phần logic tạo đơn của Task 7 vẫn hoàn thiện tiếp đến Day 3. Nếu Người 5 không kịp Day 2, phải lùi mốc `IKhuyenMaiService` implement sang Day 3.
+
+> ⚠ **Người 5 với 3.5 ngày là khá căng** do phải chờ 4 người khác bàn giao. Người 1 hoặc Người 4 nên hỗ trợ Người 5 phần viết controller + DTO đơn thuê từ Day 3 để giảm tải.
 
 ---
 
