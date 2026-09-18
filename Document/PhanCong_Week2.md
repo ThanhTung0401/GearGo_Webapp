@@ -58,7 +58,7 @@ Người 5:         [───── Task 7 ─────────] [T8] [�
 
 ---
 
-### Người 1 — Auth + Testing + Quy ước chung (Task 1 + Task 12)
+### Thanh Tùng — Auth + Testing + Quy ước chung (Task 1 + Task 12)
 
 **Có thể bắt đầu:** Day 1 (độc lập hoàn toàn)
 
@@ -151,7 +151,7 @@ Controllers/
 
 ---
 
-### Người 2 — Danh mục + Sản phẩm + Tìm kiếm + Khả dụng (Task 2, 3, 9)
+### Kiện Minh — Danh mục + Sản phẩm + Tìm kiếm + Khả dụng (Task 2, 3, 9)
 
 **Có thể bắt đầu:** Day 1 (Task 2 độc lập)  
 **Task 3 cần:** Task 2 (SanPham FK → DanhMuc).  
@@ -248,7 +248,7 @@ Models/DTOs/DanhMuc/DanhMucResponse.cs
 
 ---
 
-### Người 3 — Khuyến mãi + Kho skeleton + Logic kiểm tra/giữ lượt (Task 4, 5)
+### Minh Tú — Khuyến mãi + Kho skeleton + Logic kiểm tra/giữ lượt (Task 4, 5)
 
 **Có thể bắt đầu Task 4:** Day 1 (KHUYEN_MAI cấp 0 độc lập).  
 **Bảng nối của Task 4 cần:** Task 2 (DanhMuc) và Task 3 (SanPham) — `KhuyenMaiSanPham` FK SanPham, `KhuyenMaiDanhMuc` FK DanhMuc.  
@@ -336,7 +336,7 @@ Models/Enums/TrangThaiSuDungThietBi.cs
 
 ---
 
-### Người 4 — Giỏ thuê + Logic báo giá dùng chung + Admin (Task 6, UC04, Task 11)
+### Kim Xuyến — Giỏ thuê + Logic báo giá dùng chung + Admin (Task 6, UC04, Task 11)
 
 **Có thể bắt đầu Task 6:** Sau khi Task 3 (Người 2) + Task 4 (Người 3) push xong  
 **Có thể bắt đầu Task 11:** Sau khi Task 2+3 (Người 2) push xong
@@ -450,7 +450,7 @@ Models/DTOs/Admin/CapNhatSanPhamRequest.cs
 
 ---
 
-### Người 5 — Đơn thuê + Hủy + Thanh toán + Hết hạn + Lịch sử đơn (Task 7, 8, UC05+06)
+### Tuấn Kiệt — Đơn thuê + Hủy + Thanh toán + Hết hạn + Lịch sử đơn (Task 7, 8, UC05+06)
 
 **Có thể bắt đầu Task 7:** Sau khi Task 3 (Người 2) và Task 4 (Người 3) xong. **Không cần chờ entity Task 6** — chỉ nghiệp vụ tạo đơn UC05 mới cần đọc giỏ.  
 **Task 8 + UC05+06 làm tuần tự sau Task 7**  
