@@ -6,3 +6,7 @@ obj/
 .DS_Store
 appsettings.Development.json
 .agents/
+.idea/
+backend/.idea/
+review/
+backend/global.json
