@@ -6,3 +6,4 @@ public enum TrangThaiKinhDoanh
     TamNgung,
     NgungKinhDoanh
 }
+
