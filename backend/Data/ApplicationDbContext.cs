@@ -1,4 +1,5 @@
 using GearGo.Models.Entities;
+using GearGo.Models.Enums;
 using Microsoft.EntityFrameworkCore;
 
 namespace GearGo.Data;
@@ -14,8 +15,9 @@ public class ApplicationDbContext : DbContext
     public DbSet<NhanVien> NhanViens { get; set; }
 
     // ── Sản phẩm và nhập kho ── (uncomment khi tạo entity ở Task 1)
-    // public DbSet<DanhMucSanPham> DanhMucSanPhams { get; set; }
-    // public DbSet<SanPham> SanPhams { get; set; }
+    public DbSet<DanhMucSanPham> DanhMucSanPhams { get; set; }
+    public DbSet<SanPham> SanPhams { get; set; }
+    public DbSet<HinhAnhSanPham> HinhAnhSanPhams { get; set; }
     // public DbSet<ThietBi> ThietBis { get; set; }
     // public DbSet<NhaCungCap> NhaCungCaps { get; set; }
     // public DbSet<PhieuNhapHang> PhieuNhapHangs { get; set; }
@@ -76,6 +78,38 @@ public class ApplicationDbContext : DbContext
              .WithOne(t => t.NhanVien)
              .HasForeignKey<NhanVien>(n => n.MaTaiKhoan)
              .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // ── Danh Mục Sản Phẩm ──
+        modelBuilder.Entity<DanhMucSanPham>(e =>
+        {
+            e.HasOne(d => d.DanhMucCha)
+             .WithMany(d => d.DanhMucCon)
+             .HasForeignKey(d => d.MaDanhMucCha)
+             .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // ── Sản Phẩm ──
+        modelBuilder.Entity<SanPham>(e =>
+        {
+            e.HasIndex(s => s.MaSanPhamHienThi).IsUnique();
+            
+            e.Property(s => s.TrangThaiKinhDoanh)
+             .HasConversion<string>();
+
+            e.HasOne(s => s.DanhMuc)
+             .WithMany(d => d.SanPhams)
+             .HasForeignKey(s => s.MaDanhMuc)
+             .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // ── Hình Ảnh Sản Phẩm ──
+        modelBuilder.Entity<HinhAnhSanPham>(e =>
+        {
+            e.HasOne(h => h.SanPham)
+             .WithMany(s => s.HinhAnhs)
+             .HasForeignKey(h => h.MaSanPham)
+             .OnDelete(DeleteBehavior.Cascade);
         });
     }
 }
