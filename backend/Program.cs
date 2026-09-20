@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using GearGo.Services.DonThue;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -61,11 +62,11 @@ builder.Services.AddCors(opt =>
 // builder.Services.AddScoped<ISanPhamService, SanPhamService>();
 // builder.Services.AddScoped<IKhaDungService, KhaDungService>();
 // builder.Services.AddScoped<IGioThueService, GioThueService>();
-// builder.Services.AddScoped<IDonThueService, DonThueService>();
+builder.Services.AddScoped<IDonThueService, DonThueService>();
 // builder.Services.AddScoped<IThanhToanService, ThanhToanService>();
 
 // Bật lại khi thêm AutoMapper package
-// builder.Services.AddAutoMapper(typeof(Program)); 
+// builder.Services.AddAutoMapper(typeof(Program));
 
 // ==============================================================================
 var app = builder.Build();
@@ -78,7 +79,7 @@ if (!app.Environment.IsDevelopment())
 }
 
 // CORS phải đặt trước Authentication & Authorization
-app.UseCors("ReactApp"); 
+app.UseCors("ReactApp");
 
 app.UseAuthentication(); // Kích hoạt middleware Xác thực (JWT)
 app.UseAuthorization();  // Kích hoạt middleware Phân quyền
@@ -93,9 +94,9 @@ app.MapGet("/", () => new
     testEndpoint = "/api/test"
 });
 
-app.MapGet("/api/test", () => new { 
-    message = "Backend API is running thành công cho React!", 
-    timestamp = DateTime.Now 
+app.MapGet("/api/test", () => new {
+    message = "Backend API is running thành công cho React!",
+    timestamp = DateTime.Now
 });
 
 app.Run();
