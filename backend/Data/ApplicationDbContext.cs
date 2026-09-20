@@ -115,24 +115,54 @@ public class ApplicationDbContext : DbContext
         });
 
         // ── Composite keys & Unique constraints ──
-        modelBuilder.Entity<KhuyenMaiSanPham>().HasKey(x => new { x.MaKhuyenMai, x.MaSanPham });
-        modelBuilder.Entity<KhuyenMaiDanhMuc>().HasKey(x => new { x.MaKhuyenMai, x.MaDanhMuc });
+        modelBuilder.Entity<KhuyenMaiSanPham>(e =>
+        {
+            e.HasKey(x => new { x.MaKhuyenMai, x.MaSanPham });
+        });
+
+        modelBuilder.Entity<KhuyenMaiDanhMuc>(e =>
+        {
+            e.HasKey(x => new { x.MaKhuyenMai, x.MaDanhMuc });
+        });
 
         // Khuyến mãi mã giảm giá duy nhất
-        modelBuilder.Entity<KhuyenMai>().HasIndex(x => x.MaGiamGia).IsUnique();
+        modelBuilder.Entity<KhuyenMai>(e =>
+        {
+            e.HasIndex(x => x.MaGiamGia).IsUnique();
+        });
 
         // Unique constraints cho các đối tượng kho
-        modelBuilder.Entity<NhaCungCap>().HasIndex(x => x.MaNhaCungCapHienThi).IsUnique();
-        modelBuilder.Entity<PhieuNhapHang>().HasIndex(x => x.MaPhieuHienThi).IsUnique();
-        modelBuilder.Entity<ThietBi>().HasIndex(x => x.MaThietBiHienThi).IsUnique();
+        modelBuilder.Entity<NhaCungCap>(e =>
+        {
+            e.HasIndex(x => x.MaNhaCungCapHienThi).IsUnique();
+        });
+
+        modelBuilder.Entity<PhieuNhapHang>(e =>
+        {
+            e.HasIndex(x => x.MaPhieuHienThi).IsUnique();
+        });
+
+        modelBuilder.Entity<ThietBi>(e =>
+        {
+            e.HasIndex(x => x.MaThietBiHienThi).IsUnique();
+        });
 
         // 1 chi tiết đơn có tối đa 1 phiếu Giữ chỗ
-        modelBuilder.Entity<GiuCho>().HasIndex(x => x.MaChiTietDon).IsUnique(); 
+        modelBuilder.Entity<GiuCho>(e =>
+        {
+            e.HasIndex(x => x.MaChiTietDon).IsUnique();
+        });
         
         // Mỗi khách hàng có duy nhất 1 Giỏ thuê
-        modelBuilder.Entity<GioThue>().HasIndex(x => x.MaKhachHang).IsUnique(); 
+        modelBuilder.Entity<GioThue>(e =>
+        {
+            e.HasIndex(x => x.MaKhachHang).IsUnique();
+        });
         
         // Mỗi đơn thuê sử dụng 1 lượt khuyến mãi nhất định
-        modelBuilder.Entity<LuotSuDungKhuyenMai>().HasIndex(x => x.MaDonThue).IsUnique();
+        modelBuilder.Entity<LuotSuDungKhuyenMai>(e =>
+        {
+            e.HasIndex(x => x.MaDonThue).IsUnique();
+        });
     }
 }
