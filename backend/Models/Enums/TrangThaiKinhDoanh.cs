@@ -1,8 +1,2 @@
 namespace GearGo.Models.Enums;
-
-public enum TrangThaiKinhDoanh
-{
-    DangKinhDoanh,
-    TamNgung,
-    NgungKinhDoanh
-}
+public enum TrangThaiKinhDoanh { DangKinhDoanh, TamNgung, NgungKinhDoanh }

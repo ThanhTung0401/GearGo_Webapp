@@ -64,6 +64,9 @@ builder.Services.AddCors(opt =>
 // builder.Services.AddScoped<IGioThueService, GioThueService>();
 builder.Services.AddScoped<IDonThueService, DonThueService>();
 // builder.Services.AddScoped<IThanhToanService, ThanhToanService>();
+builder.Services.AddScoped<GearGo.Services.Interfaces.IKhuyenMaiService, GearGo.Services.Implements.KhuyenMaiService>();
+builder.Services.AddScoped<GearGo.Services.Interfaces.IInventoryService, GearGo.Services.Implements.InventoryService>();
+builder.Services.AddScoped<GearGo.Services.Interfaces.ICheckoutService, GearGo.Services.Implements.CheckoutService>();
 
 // Bật lại khi thêm AutoMapper package
 // builder.Services.AddAutoMapper(typeof(Program));
