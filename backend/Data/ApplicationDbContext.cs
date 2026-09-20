@@ -1,5 +1,4 @@
 using GearGo.Models.Entities;
-using GearGo.Models.Enums;
 using Microsoft.EntityFrameworkCore;
 
 namespace GearGo.Data;
@@ -30,10 +29,12 @@ public class ApplicationDbContext : DbContext
     public DbSet<DonThue> DonThues { get; set; }
     public DbSet<ChiTietDonThue> ChiTietDonThues { get; set; }
     public DbSet<GiuCho> GiuChos { get; set; }
+    // public DbSet<KhuyenMai> KhuyenMais { get; set; }
+    public DbSet<LuotSuDungKhuyenMai> LuotSuDungKhuyenMais { get; set; }
+    public DbSet<LichSuTrangThaiDon> LichSuTrangThaiDons { get; set; }
     public DbSet<KhuyenMai> KhuyenMais { get; set; }
     public DbSet<KhuyenMaiSanPham> KhuyenMaiSanPhams { get; set; }
     public DbSet<KhuyenMaiDanhMuc> KhuyenMaiDanhMucs { get; set; }
-    public DbSet<LuotSuDungKhuyenMai> LuotSuDungKhuyenMais { get; set; }
     // public DbSet<ThanhToan> ThanhToans { get; set; }
     // public DbSet<ChiTietThanhToan> ChiTietThanhToans { get; set; }
 
@@ -95,7 +96,7 @@ public class ApplicationDbContext : DbContext
         modelBuilder.Entity<SanPham>(e =>
         {
             e.HasIndex(s => s.MaSanPhamHienThi).IsUnique();
-            
+
             e.Property(s => s.TrangThaiKinhDoanh)
              .HasConversion<string>();
 
@@ -114,6 +115,54 @@ public class ApplicationDbContext : DbContext
              .OnDelete(DeleteBehavior.Cascade);
         });
 
+        // ── TASK 7: Cấu hình cho Đơn Thuê & Các Entity liên quan ──
+
+        modelBuilder.Entity<ChinhSach>(e =>
+        {
+            e.HasIndex(c => c.PhienBan).IsUnique();
+        });
+
+        modelBuilder.Entity<DonThue>(e =>
+        {
+            e.HasIndex(d => d.MaDonHienThi).IsUnique();
+
+            // Ép Enum lưu xuống DB dạng String thay vì số nguyên
+            e.Property(d => d.TrangThai).HasConversion<string>();
+
+            // Cấu hình Khóa ngoại MaKhachHang: Ngăn không cho xóa Khách hàng nếu họ có đơn thuê
+            e.HasOne(d => d.KhachHang)
+                .WithMany()
+                .HasForeignKey(d => d.MaKhachHang)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<ChiTietDonThue>(e =>
+        {
+            // Đơn thuê (1) - Nhiều Chi tiết đơn (N)
+            e.HasOne(c => c.DonThue)
+                .WithMany()
+                .HasForeignKey(c => c.MaDonThue)
+                .OnDelete(DeleteBehavior.Cascade); // Xóa đơn thuê thì xóa luôn chi tiết
+        });
+
+        modelBuilder.Entity<GiuCho>(e =>
+        {
+            e.Property(g => g.TrangThai).HasConversion<string>();
+
+            // Quan hệ 1-1: Một ChiTietDonThue chỉ có Một GiuCho
+            e.HasOne(g => g.ChiTietDonThue)
+                .WithOne(c => c.GiuCho)
+                .HasForeignKey<GiuCho>(g => g.MaChiTietDon)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<LuotSuDungKhuyenMai>(e =>
+        {
+            // Quan hệ 1-1: Một DonThue chỉ có Một LuotSuDungKhuyenMai
+            e.HasOne(l => l.DonThue)
+                .WithOne(d => d.LuotSuDungKhuyenMai)
+                .HasForeignKey<LuotSuDungKhuyenMai>(l => l.MaDonThue)
+                .OnDelete(DeleteBehavior.Cascade);
         // ── Composite keys & Unique constraints ──
         modelBuilder.Entity<KhuyenMaiSanPham>(e =>
         {
