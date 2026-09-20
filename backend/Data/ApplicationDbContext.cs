@@ -163,6 +163,8 @@ public class ApplicationDbContext : DbContext
                 .WithOne(d => d.LuotSuDungKhuyenMai)
                 .HasForeignKey<LuotSuDungKhuyenMai>(l => l.MaDonThue)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+        
         // ── Composite keys & Unique constraints ──
         modelBuilder.Entity<KhuyenMaiSanPham>(e =>
         {
