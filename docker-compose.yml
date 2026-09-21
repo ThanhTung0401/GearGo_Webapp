@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: geargo-sql
+    environment:
+      - ACCEPT_EULA=Y
+      - SA_PASSWORD=GearGo@123
+      - MSSQL_PID=Developer
+    ports:
+      - "1433:1433"
+    volumes:
+      - geargo_db_data:/var/opt/mssql
+    restart: unless-stopped
+
+volumes:
+  geargo_db_data:
