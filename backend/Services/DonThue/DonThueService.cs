@@ -70,7 +70,7 @@ public class DonThueService : IDonThueService
                 {
                     ChiTietDonThue = chiTiet,
                     ThoiDiemTao = DateTime.UtcNow,
-                    ThoiDiemHetHan = donThueMoi.HanThanhToan,
+                    ThoiDiemHetHan = donThueMoi.HanThanhToan ?? DateTime.UtcNow.AddMinutes(15),
                     TrangThai = Models.Enums.TrangThaiGiuCho.DangGiu
                 };
 
@@ -86,7 +86,7 @@ public class DonThueService : IDonThueService
                 0,
                 0,
                 donThueMoi.TrangThai.ToString(),
-                donThueMoi.HanThanhToan
+                donThueMoi.HanThanhToan ?? DateTime.UtcNow.AddMinutes(15)
             );
 
             return Result<DonThueResponse>.Ok(response);
