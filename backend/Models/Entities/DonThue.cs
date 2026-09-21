@@ -94,4 +94,7 @@ public class DonThue
 
     // @OneToMany
     public ICollection<ChiTietDonThue> ChiTietDonThues { get; set; } = new List<ChiTietDonThue>();
+
+    // @OneToMany: Một đơn thuê có thể có nhiều phiếu nhận trả (trả nhiều lần)
+    public ICollection<PhieuNhanTra> PhieuNhanTras { get; set; } = new List<PhieuNhanTra>();
 }
