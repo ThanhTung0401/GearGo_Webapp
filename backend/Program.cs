@@ -4,7 +4,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using GearGo.BackgroundJobs;
-using GearGo.Services.DonThue;
 using GearGo.Services.Implements;
 using GearGo.Services.Interfaces;
 
@@ -68,9 +67,9 @@ builder.Services.AddCors(opt =>
 // builder.Services.AddScoped<IGioThueService, GioThueService>();
 builder.Services.AddScoped<IDonThueService, DonThueService>();
 builder.Services.AddScoped<IThanhToanService, ThanhToanService>();
-// builder.Services.AddScoped<GearGo.Services.Interfaces.IKhuyenMaiService, GearGo.Services.Implements.KhuyenMaiService>();
+builder.Services.AddScoped<IKhuyenMaiService, KhuyenMaiService>();
 builder.Services.AddScoped<IInventoryService, InventoryService>();
-// builder.Services.AddScoped<GearGo.Services.Interfaces.ICheckoutService, GearGo.Services.Implements.CheckoutService>();
+builder.Services.AddScoped<ICheckoutService, CheckoutService>();
 
 builder.Services.AddHostedService<DonThueExpirationJob>();
 
