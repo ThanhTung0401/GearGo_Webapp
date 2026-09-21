@@ -27,32 +27,32 @@ public class KhuyenMaiService : IKhuyenMaiService
             .Include(k => k.KhuyenMaiDanhMucs)
             .FirstOrDefaultAsync(k => k.MaGiamGia == maGiamGia);
 
-        if (km == null) throw new KhuyenMaiKhongHopLeException(""Mã giảm giá không tồn tại."");
-        if (km.TrangThai == TrangThaiKhuyenMai.TamAn) throw new KhuyenMaiKhongHopLeException(""Mã giảm giá đang tạm ẩn."");
+        if (km == null) throw new KhuyenMaiKhongHopLeException("Mã giảm giá không tồn tại.");
+        if (km.TrangThai == TrangThaiKhuyenMai.TamAn) throw new KhuyenMaiKhongHopLeException("Mã giảm giá đang tạm ẩn.");
         if (km.TrangThai == TrangThaiKhuyenMai.HetHan || now < km.NgayBatDau || now > km.NgayKetThuc) 
-            throw new KhuyenMaiKhongHopLeException(""Mã giảm giá đã hết hạn hoặc chưa đến thời gian áp dụng."");
+            throw new KhuyenMaiKhongHopLeException("Mã giảm giá đã hết hạn hoặc chưa đến thời gian áp dụng.");
 
         if (tienThueTruocGiam < km.TienThueToiThieu)
-            throw new KhuyenMaiKhongHopLeException($""Đơn hàng chưa đạt mức tối thiểu {km.TienThueToiThieu} để áp dụng mã."");
+            throw new KhuyenMaiKhongHopLeException($"Đơn hàng chưa đạt mức tối thiểu {km.TienThueToiThieu} để áp dụng mã.");
 
         // Đếm tổng lượt đang giữ (còn hạn) hoặc đã dùng
         var tongLuot = await _context.LuotSuDungKhuyenMais
             .Where(l => l.MaKhuyenMai == km.MaKhuyenMai && 
-                        (l.TrangThai == 2 /* DaSuDung */ || (l.TrangThai == 1 /* DangGiu */ && l.HetHan > now)))
+                        (l.TrangThai == "DaSuDung" || (l.TrangThai == "DangGiu" && l.ThoiDiemHetHan > now)))
             .CountAsync();
             
         if (km.TongLuotSuDung.HasValue && tongLuot >= km.TongLuotSuDung.Value)
-            throw new KhuyenMaiKhongHopLeException(""Mã giảm giá đã hết lượt sử dụng."");
+            throw new KhuyenMaiKhongHopLeException("Mã giảm giá đã hết lượt sử dụng.");
 
         // Đếm lượt của khách này
         var luotKhach = await _context.LuotSuDungKhuyenMais
             .Include(l => l.DonThue)
             .Where(l => l.MaKhuyenMai == km.MaKhuyenMai && l.DonThue.MaKhachHang == maKhachHang &&
-                        (l.TrangThai == 2 || (l.TrangThai == 1 && l.HetHan > now)))
+                        (l.TrangThai == "DaSuDung" || (l.TrangThai == "DangGiu" && l.ThoiDiemHetHan > now)))
             .CountAsync();
             
         if (km.GioiHanMoiKhach.HasValue && luotKhach >= km.GioiHanMoiKhach.Value)
-            throw new KhuyenMaiKhongHopLeException(""Bạn đã hết lượt sử dụng mã này."");
+            throw new KhuyenMaiKhongHopLeException("Bạn đã hết lượt sử dụng mã này.");
 
         // Kiểm tra phạm vi áp dụng
         if (km.PhamVi != PhamViApDung.TatCa)
@@ -66,7 +66,7 @@ public class KhuyenMaiService : IKhuyenMaiService
                 // ...
                 hopLe = true; 
             }
-            if (!hopLe) throw new KhuyenMaiKhongHopLeException(""Mã giảm giá không áp dụng cho sản phẩm trong giỏ."");
+            if (!hopLe) throw new KhuyenMaiKhongHopLeException("Mã giảm giá không áp dụng cho sản phẩm trong giỏ.");
         }
 
         // Tính số tiền giảm
@@ -88,8 +88,8 @@ public class KhuyenMaiService : IKhuyenMaiService
         var luot = new LuotSuDungKhuyenMai {
             MaKhuyenMai = maKhuyenMai,
             MaDonThue = maDonThue,
-            HetHan = thoiDiemHetHan,
-            TrangThai = 1 // DangGiu
+            ThoiDiemHetHan = thoiDiemHetHan,
+            TrangThai = "DangGiu"
         };
         _context.LuotSuDungKhuyenMais.Add(luot);
         await _context.SaveChangesAsync();
@@ -99,15 +99,15 @@ public class KhuyenMaiService : IKhuyenMaiService
     {
         var luot = await _context.LuotSuDungKhuyenMais
             .Include(l => l.DonThue)
-            .FirstOrDefaultAsync(l => l.MaDonThue == maDonThue && l.TrangThai == 1);
+            .FirstOrDefaultAsync(l => l.MaDonThue == maDonThue && l.TrangThai == "DangGiu");
             
         if (luot != null) {
             // Bảo vệ: Chỉ cho phép xác nhận dùng lượt khi đơn hàng đã được cập nhật thành Đã Xác Nhận (Đã thanh toán)
             if (luot.DonThue.TrangThai != TrangThaiDonThue.DaXacNhan) {
                 throw new KhuyenMaiKhongHopLeException("Đơn hàng chưa được xác nhận thanh toán thành công, không thể dùng lượt.");
             }
-            luot.TrangThai = 2; // DaSuDung
-            luot.SuDung = DateTime.UtcNow;
+            luot.TrangThai = "DaSuDung";
+            luot.ThoiDiemSuDung = DateTime.UtcNow;
             await _context.SaveChangesAsync();
         }
     }
@@ -116,7 +116,7 @@ public class KhuyenMaiService : IKhuyenMaiService
     {
         var luot = await _context.LuotSuDungKhuyenMais
             .Include(l => l.DonThue)
-            .FirstOrDefaultAsync(l => l.MaDonThue == maDonThue && l.TrangThai == 1);
+            .FirstOrDefaultAsync(l => l.MaDonThue == maDonThue && l.TrangThai == "DangGiu");
             
         if (luot != null) {
             // Bảo vệ: Chỉ giải phóng lượt khi đơn hàng đã bị hủy trước thanh toán (Khách Hủy, Cửa Hàng Hủy) hoặc Hết Hạn
@@ -125,8 +125,8 @@ public class KhuyenMaiService : IKhuyenMaiService
                 luot.DonThue.TrangThai != TrangThaiDonThue.HetHan) {
                 throw new KhuyenMaiKhongHopLeException("Chỉ giải phóng lượt khi đơn hàng đã bị hủy hoặc hết hạn trước thanh toán.");
             }
-            luot.TrangThai = 3; // DaGiaiPhong
-            luot.GiaiPhong = DateTime.UtcNow;
+            luot.TrangThai = "DaGiaiPhong";
+            luot.ThoiDiemGiaiPhong = DateTime.UtcNow;
             await _context.SaveChangesAsync();
         }
     }
