@@ -5,8 +5,9 @@ using GearGo.Models.Common;
 using GearGo.Models.DTOs;
 using GearGo.Models.Entities;
 using GearGo.Models.Enums;
+using GearGo.Services.Interfaces;
 
-namespace GearGo.Services.DonThue;
+namespace GearGo.Services.Implements;
 
 public class DonThueService : IDonThueService
 {
@@ -35,7 +36,7 @@ public class DonThueService : IDonThueService
                 );
             }
 
-            var donThueMoi = new Models.Entities.DonThue
+            var donThueMoi = new DonThue
             {
                 MaKhachHang = request.MaKhachHang,
                 MaChinhSach = 1, // TODO

@@ -1,7 +1,7 @@
 using GearGo.Models.Common;
 using GearGo.Models.DTOs;
 
-namespace GearGo.Services.DonThue;
+namespace GearGo.Services.Interfaces;
 
 public interface IDonThueService
 {
