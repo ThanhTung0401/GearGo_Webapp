@@ -35,8 +35,8 @@ public class ApplicationDbContext : DbContext
     public DbSet<KhuyenMai> KhuyenMais { get; set; }
     public DbSet<KhuyenMaiSanPham> KhuyenMaiSanPhams { get; set; }
     public DbSet<KhuyenMaiDanhMuc> KhuyenMaiDanhMucs { get; set; }
-    // public DbSet<ThanhToan> ThanhToans { get; set; }
-    // public DbSet<ChiTietThanhToan> ChiTietThanhToans { get; set; }
+    public DbSet<ThanhToan> ThanhToans { get; set; }
+    public DbSet<ChiTietThanhToan> ChiTietThanhToans { get; set; }
 
     // ── Task 3+ ──
     public DbSet<PhanCongThietBi> PhanCongThietBis { get; set; }
@@ -230,6 +230,11 @@ public class ApplicationDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(p => p.MaThietBi)
                 .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<ThanhToan>(e =>
+        {
+            e.HasIndex(t => t.MaThanhToanHienThi).IsUnique();
         });
     }
 }
