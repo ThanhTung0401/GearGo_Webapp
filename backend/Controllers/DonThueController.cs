@@ -31,4 +31,14 @@ public class DonThueController : ControllerBase
 
         return Ok(result.DuLieu);
     }
+
+    [HttpPut("{id}/huy")]
+    public async Task<IActionResult> HuyDonThue(long id, [FromBody] string lyDo)
+    {
+        var result = await _donThueService.HuyDonAsync(id, lyDo);
+        if (!result.ThanhCong)
+            return BadRequest(new { result.MaLoi, result.ThongDiep });
+
+        return Ok(new { Message = "Đã hủy đơn thành công!" });
+    }
 }
