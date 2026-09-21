@@ -77,6 +77,9 @@ builder.Services.AddHostedService<DonThueExpirationJob>();
 // builder.Services.AddAutoMapper(typeof(Program));
 
 // ==============================================================================
+builder.Services.AddMemoryCache();
+builder.Services.AddScoped<GearGo.Services.Interfaces.IJwtService, GearGo.Services.Implements.JwtService>();
+builder.Services.AddScoped<GearGo.Services.Interfaces.IXacThucService, GearGo.Services.Implements.XacThucService>();
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
@@ -90,6 +93,7 @@ else
     app.UseHttpsRedirection();
 }
 
+ app.UseMiddleware<GearGo.Middleware.ExceptionHandlingMiddleware>();
 // CORS phải đặt trước Authentication & Authorization
 app.UseCors("ReactApp");
 
