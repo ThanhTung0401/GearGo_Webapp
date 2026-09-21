@@ -164,7 +164,7 @@ public class ApplicationDbContext : DbContext
                 .HasForeignKey<LuotSuDungKhuyenMai>(l => l.MaDonThue)
                 .OnDelete(DeleteBehavior.Cascade);
         });
-        
+
         // ── Composite keys & Unique constraints ──
         modelBuilder.Entity<KhuyenMaiSanPham>(e =>
         {
@@ -203,17 +203,33 @@ public class ApplicationDbContext : DbContext
         {
             e.HasIndex(x => x.MaChiTietDon).IsUnique();
         });
-        
+
         // Mỗi khách hàng có duy nhất 1 Giỏ thuê
         modelBuilder.Entity<GioThue>(e =>
         {
             e.HasIndex(x => x.MaKhachHang).IsUnique();
         });
-        
+
         // Mỗi đơn thuê sử dụng 1 lượt khuyến mãi nhất định
         modelBuilder.Entity<LuotSuDungKhuyenMai>(e =>
         {
             e.HasIndex(x => x.MaDonThue).IsUnique();
+        });
+
+        // TẮT CASCADE DELETE CHO PHAN_CONG_THIET_BI
+        modelBuilder.Entity<PhanCongThietBi>(e =>
+        {
+            // Tắt nhánh từ Nhân Viên
+            e.HasOne(p => p.NhanVienPhanCong)
+                .WithMany()
+                .HasForeignKey(p => p.MaNhanVienPhanCong)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // TẮT THÊM nhánh từ Thiết Bị
+            e.HasOne(p => p.ThietBi)
+                .WithMany()
+                .HasForeignKey(p => p.MaThietBi)
+                .OnDelete(DeleteBehavior.Restrict);
         });
     }
 }

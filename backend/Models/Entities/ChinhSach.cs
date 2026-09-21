@@ -1,4 +1,3 @@
-using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -26,7 +25,7 @@ public class ChinhSach
     public DateTime ThoiDiemApDung { get; set; }
 
     // Dạng chuỗi JSON
-    [Column("noi_dung_chinh_sach", TypeName = "json")]
+    [Column("noi_dung_chinh_sach", TypeName = "nvarchar(max)")]
     public string? NoiDungChinhSach { get; set; }
 
     [Column("ngay_tao")]

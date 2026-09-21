@@ -1,5 +1,3 @@
-using System;
-using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using GearGo.Models.Enums;
@@ -60,8 +58,7 @@ public class DonThue
     [Column("tong_tien_coc", TypeName = "decimal(18,2)")]
     public decimal TongTienCoc { get; set; }
 
-    // JSON string
-    [Column("khuyen_mai_luc_dat", TypeName = "json")]
+    [Column("khuyen_mai_luc_dat", TypeName = "nvarchar(max)")]
     public string? KhuyenMaiLucDat { get; set; }
 
     [Column("trang_thai")]

@@ -40,7 +40,7 @@ public class ChiTietDonThue
     [Column("gia_tri_boi_thuong_moi_thiet_bi", TypeName = "decimal(18,2)")]
     public decimal GiaTriBoiThuongMoiThietBi { get; set; }
 
-    [Column("phu_kien_va_muc_boi_thuong_luc_dat", TypeName = "json")]
+    [Column("phu_kien_va_muc_boi_thuong_luc_dat", TypeName = "nvarchar(max)")]
     public string? PhuKienVaMucBoiThuongLucDat { get; set; }
 
     // -- Navigation Properties --
