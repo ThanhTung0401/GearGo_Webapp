@@ -12,6 +12,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 // Hỗ trợ sinh tài liệu Swagger/OpenAPI (nếu cài thêm Swagger)
 builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
 
 // ── 2. Database Context ───────────────────────────────────────────────────────
 // Cấu hình kết nối SQL Server thông qua Entity Framework Core
@@ -74,8 +75,12 @@ builder.Services.AddScoped<GearGo.Services.Interfaces.ICheckoutService, GearGo.S
 // ==============================================================================
 var app = builder.Build();
 
-// Cấu hình HTTP Request Pipeline (Middleware)
-if (!app.Environment.IsDevelopment())
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI(); // Sinh ra giao diện web để test API
+}
+else
 {
     app.UseHsts();
     app.UseHttpsRedirection();
