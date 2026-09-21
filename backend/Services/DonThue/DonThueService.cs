@@ -4,6 +4,7 @@ using GearGo.Data;
 using GearGo.Models.Common;
 using GearGo.Models.DTOs;
 using GearGo.Models.Entities;
+using GearGo.Models.Enums;
 
 namespace GearGo.Services.DonThue;
 
@@ -46,7 +47,7 @@ public class DonThueService : IDonThueService
                 TenNguoiNhan = request.TenNguoiNhan,
                 SoDienThoaiNguoiNhan = request.SoDienThoaiNguoiNhan,
                 EmailLienHe = request.EmailLienHe,
-                TrangThai = Models.Enums.TrangThaiDonThue.ChoThanhToan
+                TrangThai = TrangThaiDonThue.ChoThanhToan
             };
 
             _context.DonThues.Add(donThueMoi);
@@ -71,7 +72,7 @@ public class DonThueService : IDonThueService
                     ChiTietDonThue = chiTiet,
                     ThoiDiemTao = DateTime.UtcNow,
                     ThoiDiemHetHan = donThueMoi.HanThanhToan ?? DateTime.UtcNow.AddMinutes(15),
-                    TrangThai = Models.Enums.TrangThaiGiuCho.DangGiu
+                    TrangThai = TrangThaiGiuCho.DangGiu
                 };
 
                 _context.GiuChos.Add(giuCho);
@@ -100,6 +101,60 @@ public class DonThueService : IDonThueService
                 $"Đã xảy ra lỗi khi tạo đơn: {e.Message}"
             );
         }
+    }
 
+    public async Task<Result<bool>> HuyDonAsync(long maDonThue, string lyDo)
+    {
+        using var transaction = await _context.Database.BeginTransactionAsync();
+
+        try
+        {
+            var donThue = await _context.DonThues
+                .Include(d => d.ChiTietDonThues)
+                .ThenInclude(c => c.GiuCho)
+                .FirstOrDefaultAsync(d => d.MaDonThue == maDonThue);
+
+            if (donThue == null)
+                return Result<bool>.Loi("NOT_FOUND", "Không tìm thấy đơn.");
+
+            // Chỉ cho phép hủy nếu đơn chưa thanh toán hoặc đang chờ xử lý
+            if (donThue.TrangThai != TrangThaiDonThue.ChoThanhToan)
+                return Result<bool>.Loi("INVALID_STATE", "Không thể hủy đơn ở trạng thái này.");
+
+            // 1. Cập nhật Đơn
+            donThue.TrangThai = TrangThaiDonThue.KhachHuy;
+            donThue.ThoiDiemHuy = DateTime.UtcNow;
+            donThue.LyDoHuy = lyDo;
+
+            // 2. Nhả hàng
+            foreach (var chiTiet in donThue.ChiTietDonThues)
+            {
+                if (chiTiet.GiuCho != null)
+                {
+                    chiTiet.GiuCho.TrangThai = TrangThaiGiuCho.DaGiaiPhong;
+                    chiTiet.GiuCho.ThoiDiemGiaiPhong = DateTime.UtcNow;
+                }
+            }
+
+            // 3. Ghi log lịch sử
+            _context.LichSuTrangThaiDons.Add(new LichSuTrangThaiDon
+            {
+                MaDonThue = donThue.MaDonThue,
+                TrangThaiTruoc = TrangThaiDonThue.ChoThanhToan.ToString(),
+                TrangThaiSau = TrangThaiDonThue.KhachHuy.ToString(),
+                ThoiDiem = DateTime.UtcNow,
+                LyDo = lyDo
+            });
+
+            await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
+
+            return Result<bool>.Ok(true);
+        }
+        catch (Exception e)
+        {
+            await transaction.RollbackAsync();
+            return Result<bool>.Loi("SYS_ERROR", "Lỗi hủy đơn: " + e.Message);
+        }
     }
 }
