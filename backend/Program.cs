@@ -72,7 +72,7 @@ builder.Services.AddScoped<IInventoryService, InventoryService>();
 builder.Services.AddScoped<ICheckoutService, CheckoutService>();
 
 builder.Services.AddHostedService<DonThueExpirationJob>();
-
+builder.Services.AddScoped<GearGo.Services.Interfaces.IBaoGiaService, GearGo.Services.BaoGiaService>();
 // Bật lại khi thêm AutoMapper package
 // builder.Services.AddAutoMapper(typeof(Program));
 
@@ -80,6 +80,8 @@ builder.Services.AddHostedService<DonThueExpirationJob>();
 builder.Services.AddMemoryCache();
 builder.Services.AddScoped<GearGo.Services.Interfaces.IJwtService, GearGo.Services.Implements.JwtService>();
 builder.Services.AddScoped<GearGo.Services.Interfaces.IXacThucService, GearGo.Services.Implements.XacThucService>();
+builder.Services.AddScoped<GearGo.Services.Interfaces.IAdminSanPhamService, GearGo.Services.Admin.AdminSanPhamService>();
+builder.Services.AddScoped<GearGo.Services.Interfaces.IAdminDanhMucService, GearGo.Services.Admin.AdminDanhMucService>();
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
