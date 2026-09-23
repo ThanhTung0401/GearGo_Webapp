@@ -1,71 +1,43 @@
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
+using System.Threading.Tasks;
+using GearGo.Models.DTOs.SanPham;
 using GearGo.Services.Interfaces;
-using GearGo.Models.DTOs.Admin;
-using GearGo.Helpers; // Dùng FileValidator
+using Microsoft.AspNetCore.Mvc;
 
-namespace GearGo.Controllers.Admin
+namespace GearGo.Controllers;
+
+/// <summary>
+/// Controller công khai tìm kiếm và xem chi tiết sản phẩm cho khách hàng (Task 9)
+/// </summary>
+[ApiController]
+[Route("api/san-pham")]
+public class SanPhamController : ControllerBase
 {
-    [Route("api/admin/san-pham")]
-    [ApiController]
-    [Authorize(Policy = "AdminOnly")] // Khóa cổng: Chỉ Admin mới được vào
-    public class SanPhamController : ControllerBase
+    private readonly ISanPhamService _sanPhamService;
+
+    public SanPhamController(ISanPhamService sanPhamService)
     {
-        private readonly IAdminSanPhamService _service;
+        _sanPhamService = sanPhamService;
+    }
 
-        public SanPhamController(IAdminSanPhamService service)
-        {
-            _service = service;
-        }
+    /// <summary>
+    /// Tìm kiếm và lọc sản phẩm có hỗ trợ kiểm tra số lượng khả dụng theo thời gian nhận - trả
+    /// </summary>
+    [HttpGet]
+    public async Task<IActionResult> GetAll([FromQuery] TimKiemSanPhamRequest request)
+    {
+        var result = await _sanPhamService.TimKiemAsync(request);
+        if (!result.ThanhCong) return BadRequest(result);
+        return Ok(result);
+    }
 
-        [HttpGet]
-        public async Task<IActionResult> GetDanhSach([FromQuery] string? tuKhoa, [FromQuery] int trang = 1, [FromQuery] int soMoiTrang = 12)
-        {
-            var result = await _service.LayDanhSachAsync(tuKhoa, trang, soMoiTrang);
-            return Ok(result);
-        }
-
-        [HttpPost]
-        public async Task<IActionResult> TaoMoi([FromBody] TaoSanPhamRequest req)
-        {
-            if (!ModelState.IsValid) return BadRequest(ModelState);
-            var result = await _service.TaoMoiAsync(req);
-            return Ok(result);
-        }
-
-        [HttpPut("{id}")]
-        public async Task<IActionResult> CapNhat(long id, [FromBody] CapNhatSanPhamRequest req)
-        {
-            if (!ModelState.IsValid) return BadRequest(ModelState);
-            var result = await _service.CapNhatAsync(id, req);
-            return Ok(result);
-        }
-
-       [HttpPatch("{id}/trang-thai")]
-        public async Task<IActionResult> DoiTrangThai(long id, [FromBody] string trangThaiMoi)
-        {
-            await _service.DoiTrangThaiAsync(id, trangThaiMoi);
-            return NoContent();
-        }
-
-        [HttpPost("{id}/hinh-anh")]
-        public async Task<IActionResult> UploadHinhAnh(long id, IFormFile file)
-        {
-            // GỌI HELPER BẢO MẬT: Kiểm tra Magic Bytes và Dung lượng
-            if (!FileValidator.IsValidImage(file, out string errorMessage))
-            {
-                return BadRequest(new { maLoi = "FILE_KHONG_HOP_LE", thongDiep = errorMessage });
-            }
-
-            var result = await _service.ThemHinhAnhAsync(id, file);
-            return Ok(result);
-        }
-
-        [HttpDelete("hinh-anh/{maHinhAnh}")]
-        public async Task<IActionResult> XoaHinhAnh(long maHinhAnh)
-        {
-            await _service.XoaHinhAnhAsync(maHinhAnh);
-            return NoContent();
-        }
+    /// <summary>
+    /// Xem chi tiết sản phẩm kèm số lượng khả dụng
+    /// </summary>
+    [HttpGet("{id:long}")]
+    public async Task<IActionResult> GetById([FromRoute] long id, [FromQuery] TimKiemSanPhamRequest request)
+    {
+        var result = await _sanPhamService.LayChiTietAsync(id, request);
+        if (!result.ThanhCong) return NotFound(result);
+        return Ok(result);
     }
 }

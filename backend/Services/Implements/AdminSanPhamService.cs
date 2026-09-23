@@ -107,10 +107,29 @@ namespace GearGo.Services.Admin
             var sp = await _context.Set<SanPham>().FindAsync(maSanPham);
             if (sp == null) throw new Exception("Không tìm thấy sản phẩm.");
 
+            if (file == null || file.Length == 0)
+                throw new Exception("File tải lên không hợp lệ.");
+
+            // Kiểm tra dung lượng tối đa 5MB
+            if (file.Length > 5 * 1024 * 1024)
+                throw new Exception("Dung lượng file vượt quá giới hạn 5MB.");
+
+            var ext = Path.GetExtension(file.FileName).ToLowerInvariant();
+            var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".webp" };
+            if (!allowedExtensions.Contains(ext))
+                throw new Exception("Định dạng file không được hỗ trợ. Chỉ chấp nhận .jpg, .jpeg, .png, .webp.");
+
+            // Xác thực chữ ký file (Magic Bytes) để chống tấn công đổi đuôi file độc hại
+            using (var streamCheck = file.OpenReadStream())
+            {
+                if (!KiemTraMagicBytes(streamCheck, ext))
+                    throw new Exception("Nội dung file không hợp lệ hoặc không đúng định dạng ảnh.");
+            }
+
             var uploadsFolder = Path.Combine(_env.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot"), "uploads", "san-pham");
             if (!Directory.Exists(uploadsFolder)) Directory.CreateDirectory(uploadsFolder);
 
-            var uniqueFileName = Guid.NewGuid().ToString() + Path.GetExtension(file.FileName);
+            var uniqueFileName = Guid.NewGuid().ToString() + ext;
             var filePath = Path.Combine(uploadsFolder, uniqueFileName);
 
             using (var stream = new FileStream(filePath, FileMode.Create))
@@ -148,6 +167,32 @@ namespace GearGo.Services.Admin
 
             _context.Remove(hinhAnh);
             await _context.SaveChangesAsync();
+        }
+
+        /// <summary>
+        /// Kiểm tra Magic Bytes đầu file để nhận diện chính xác định dạng ảnh
+        /// </summary>
+        private static bool KiemTraMagicBytes(Stream stream, string extension)
+        {
+            stream.Position = 0;
+            using var reader = new BinaryReader(stream, System.Text.Encoding.UTF8, leaveOpen: true);
+            var headerBytes = reader.ReadBytes(12);
+            stream.Position = 0;
+
+            if (headerBytes.Length < 4) return false;
+
+            return extension switch
+            {
+                // JPEG: FF D8 FF
+                ".jpg" or ".jpeg" => headerBytes[0] == 0xFF && headerBytes[1] == 0xD8 && headerBytes[2] == 0xFF,
+                // PNG: 89 50 4E 47
+                ".png" => headerBytes[0] == 0x89 && headerBytes[1] == 0x50 && headerBytes[2] == 0x4E && headerBytes[3] == 0x47,
+                // WEBP: "RIFF" .... "WEBP"
+                ".webp" => headerBytes.Length >= 12 &&
+                           headerBytes[0] == 0x52 && headerBytes[1] == 0x49 && headerBytes[2] == 0x46 && headerBytes[3] == 0x46 &&
+                           headerBytes[8] == 0x57 && headerBytes[9] == 0x45 && headerBytes[10] == 0x42 && headerBytes[11] == 0x50,
+                _ => false
+            };
         }
     }
 }

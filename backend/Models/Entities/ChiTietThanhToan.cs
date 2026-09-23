@@ -14,9 +14,9 @@ public class ChiTietThanhToan
     [Column("ma_thanh_toan")]
     public long MaThanhToan { get; set; }
 
-    [Column("loai_tien")]
+    [Column("muc_dich")]
     [MaxLength(50)]
-    public string LoaiTien { get; set; } = string.Empty; // TienThue, TienCoc, TienPhat, TienBoiThuong
+    public string MucDich { get; set; } = string.Empty; // TienThue, TienCoc, ThuBoSung
 
     [Column("so_tien", TypeName = "decimal(18,2)")]
     public decimal SoTien { get; set; }

@@ -145,9 +145,11 @@ Ví dụ này có một phiếu nhập và hai dòng chi tiết nhập.
 
 ## 12. THIET_BI — Từng chiếc đồ thực tế trong kho
 
-**Tham chiếu:** `CHI_TIET_PHIEU_NHAP`.
+**Tham chiếu:** `CHI_TIET_PHIEU_NHAP`, `SAN_PHAM`.
 
-Nhập 10 chiếc lều thì tạo 10 dòng thiết bị, chẳng hạn `LEU001` đến `LEU010`. Mỗi chiếc có tình trạng, phụ kiện, giá nhập và trạng thái sử dụng riêng.
+Nhập 10 chiếc lều thì tạo 10 dòng thiết bị, chẳng hạn `LEU001` đến `LEU010`. Mỗi chiếc có tình trạng, phụ kiện, giá nhập và trạng thái sử dụng riêng. Bảng này có 2 nguồn tham chiếu: 
+- `ma_chi_tiet_phieu_nhap`: Giữ lịch sử gốc lúc nhập kho (nhập thuộc sản phẩm nào, của nhà cung cấp nào).
+- `ma_san_pham_hien_tai`: Sản phẩm mà thiết bị đang được đóng vai trò để cho thuê. Điều này cho phép "giáng cấp" một thiết bị bị cũ sang mã sản phẩm khác rẻ hơn mà không mất lịch sử nhập hàng ban đầu.
 
 | Bảng | Ví dụ một dòng |
 |---|---|
@@ -155,7 +157,7 @@ Nhập 10 chiếc lều thì tạo 10 dòng thiết bị, chẳng hạn `LEU001`
 | `CHI_TIET_PHIEU_NHAP` | Nhập 10 chiếc lều đó trong PN001 |
 | `THIET_BI` | Chiếc lều LEU001 |
 
-Trong file này, thiết bị không có `ma_san_pham` trực tiếp. Muốn tìm sản phẩm, truy qua chi tiết phiếu nhập. Qua đó cũng truy được lần nhập và nhà cung cấp.
+Thiết bị được đem ra cho thuê dựa trên `ma_san_pham_hien_tai`, trong khi báo cáo lợi nhuận và nguồn gốc nhập hàng vẫn dùng `ma_chi_tiet_phieu_nhap`.
 
 ## 13. KHUYEN_MAI_SAN_PHAM — Khuyến mãi áp dụng cho sản phẩm nào?
 

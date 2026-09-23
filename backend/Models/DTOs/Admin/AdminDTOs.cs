@@ -41,4 +41,10 @@ namespace GearGo.Models.DTOs.Admin
     }
 
     public class CapNhatSanPhamRequest : TaoSanPhamRequest { }
+
+    // --- DTO DÙNG CHUNG ---
+    public class DoiTrangThaiRequest
+    {
+        [Required] public string TrangThaiMoi { get; set; } = string.Empty;
+    }
 }

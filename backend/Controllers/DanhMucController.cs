@@ -1,57 +1,42 @@
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
+using System.Threading.Tasks;
 using GearGo.Services.Interfaces;
-using GearGo.Models.DTOs.Admin;
+using Microsoft.AspNetCore.Mvc;
 
-namespace GearGo.Controllers.Admin
+namespace GearGo.Controllers;
+
+/// <summary>
+/// Controller công khai tra cứu danh mục sản phẩm cho khách hàng (Task 9)
+/// </summary>
+[ApiController]
+[Route("api/danh-muc")]
+public class DanhMucController : ControllerBase
 {
-    [Route("api/admin/danh-muc")]
-    [ApiController]
-    [Authorize(Policy = "AdminOnly")] // Khóa cổng: Chỉ Admin được vào
-    public class DanhMucController : ControllerBase
+    private readonly IDanhMucService _danhMucService;
+
+    public DanhMucController(IDanhMucService danhMucService)
     {
-        private readonly IAdminDanhMucService _service;
+        _danhMucService = danhMucService;
+    }
 
-        public DanhMucController(IAdminDanhMucService service)
-        {
-            _service = service;
-        }
+    /// <summary>
+    /// Lấy toàn bộ cây danh mục sản phẩm đang hiển thị
+    /// </summary>
+    [HttpGet]
+    public async Task<IActionResult> GetAll()
+    {
+        var result = await _danhMucService.LayCayDanhMucAsync();
+        if (!result.ThanhCong) return BadRequest(result);
+        return Ok(result);
+    }
 
-        [HttpGet]
-        public async Task<IActionResult> GetList()
-        {
-            var result = await _service.LayDanhSachAsync();
-            return Ok(result);
-        }
-
-        [HttpPost]
-        public async Task<IActionResult> TaoMoi([FromBody] TaoDanhMucRequest req)
-        {
-            if (!ModelState.IsValid) return BadRequest(ModelState);
-            var result = await _service.TaoMoiAsync(req);
-            return Ok(result);
-        }
-
-        [HttpPut("{id}")]
-        public async Task<IActionResult> CapNhat(long id, [FromBody] CapNhatDanhMucRequest req)
-        {
-            if (!ModelState.IsValid) return BadRequest(ModelState);
-            var result = await _service.CapNhatAsync(id, req);
-            return Ok(result);
-        }
-
-        [HttpPatch("{id}/trang-thai")]
-        public async Task<IActionResult> DoiTrangThai(long id, [FromBody] string trangThaiMoi)
-        {
-            await _service.DoiTrangThaiAsync(id, trangThaiMoi);
-            return NoContent();
-        }
-
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> Xoa(long id)
-        {
-            await _service.XoaAsync(id);
-            return NoContent();
-        }
+    /// <summary>
+    /// Lấy chi tiết một danh mục sản phẩm
+    /// </summary>
+    [HttpGet("{id:long}")]
+    public async Task<IActionResult> GetById([FromRoute] long id)
+    {
+        var result = await _danhMucService.LayChiTietAsync(id);
+        if (!result.ThanhCong) return NotFound(result);
+        return Ok(result);
     }
 }

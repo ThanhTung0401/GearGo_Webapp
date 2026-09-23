@@ -39,7 +39,7 @@ Tên thực thể và thông tin nghiệp vụ được ghi bằng tiếng Việ
 | Nhân viên | Mã nhân viên, họ tên, liên hệ, vai trò và trạng thái làm việc. |
 | Danh mục sản phẩm | Tên nhóm đồ, danh mục cha nếu có, mô tả, thứ tự và trạng thái hiển thị. |
 | Sản phẩm | Mẫu đồ cho thuê: mã, tên, danh mục, thương hiệu, mô tả, sức chứa hoặc kích thước, giá thuê mỗi ngày, mức cọc mỗi thiết bị, giá trị bồi thường, hình ảnh và trạng thái kinh doanh. |
-| Thiết bị | Từng vật phẩm thực tế thuộc một sản phẩm: mã riêng, nguồn nhập, ngày nhập, giá nhập, tình trạng, phụ kiện đi kèm, số lần cho thuê và trạng thái sử dụng. |
+| Thiết bị | Từng vật phẩm thực tế thuộc một sản phẩm: mã riêng, nguồn nhập, sản phẩm đang cho thuê hiện tại (cho phép giáng cấp), ngày nhập, giá nhập, tình trạng, phụ kiện đi kèm, số lần cho thuê và trạng thái sử dụng. |
 | Nhà cung cấp | Mã, tên, người liên hệ, số điện thoại, email, địa chỉ, mã số thuế nếu có, ghi chú và trạng thái hợp tác. |
 | Phiếu nhập hàng | Chứng từ nhập thiết bị: mã phiếu, nhà cung cấp, ngày lập, ngày nhập thực tế, người lập, người xác nhận, số chứng từ của nhà cung cấp nếu có, tổng tiền, trạng thái và ghi chú. |
 | Chi tiết phiếu nhập | Từng dòng hàng của phiếu: sản phẩm, số lượng nhập được chấp nhận, đơn giá nhập, thành tiền, tình trạng và ghi chú. Danh sách thiết bị nhận về được gắn với dòng tương ứng. |
@@ -61,7 +61,7 @@ Tên thực thể và thông tin nghiệp vụ được ghi bằng tiếng Việ
 | Thông báo | Người nhận, nội dung, sự kiện liên quan, thời điểm, kênh gửi và tình trạng gửi hoặc đọc. |
 | Lịch sử trạng thái đơn; Lịch sử tình trạng thiết bị; Nhật ký thao tác | Đối tượng thay đổi, nội dung trước và sau, người thực hiện, thời gian và lý do. |
 
-**Phân biệt sản phẩm và thiết bị:** “Lều 4 người” là một sản phẩm; năm chiếc lều mang mã L001–L005 là năm thiết bị. Phiếu nhập mua thêm thiết bị thuộc sản phẩm đó. Khách đặt theo sản phẩm và số lượng; nhân viên chọn mã thiết bị cụ thể khi chuẩn bị đơn.
+**Phân biệt sản phẩm và thiết bị:** “Lều 4 người” là một sản phẩm; năm chiếc lều mang mã L001–L005 là năm thiết bị. Phiếu nhập mua thêm thiết bị thuộc sản phẩm đó. Khi thiết bị bị cũ, quản trị viên có thể điều chuyển nó sang một mã sản phẩm khác rẻ hơn (ví dụ: "Lều 4 người - Cũ 80%") bằng cách đổi sản phẩm hiện tại của thiết bị mà vẫn giữ nguyên lịch sử nhập kho ban đầu. Khách đặt theo sản phẩm và số lượng; nhân viên chọn mã thiết bị cụ thể khi chuẩn bị đơn.
 
 ## 4. Use case khách hàng
 

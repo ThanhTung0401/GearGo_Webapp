@@ -38,12 +38,14 @@ public class KhaDungService : IKhaDungService
         }
 
         // 1. Tính tổng thiết bị đủ điều kiện của mỗi sản phẩm
-        // SanSang hoặc DangThue, và phiếu nhập DaNhapKho
+        // - Trạng thái sử dụng: SanSang hoặc DangThue
+        // - Nguồn gốc: Phiếu nhập đã hoàn tất (DaNhapKho)
+        // - Sản phẩm cho thuê: Dùng MaSanPhamHienTai để hỗ trợ thiết bị đã qua giáng cấp/phân loại lại
         var totalEligible = await _context.ThietBis
             .Where(t => t.TrangThaiSuDung == TrangThaiThietBi.SanSang || t.TrangThaiSuDung == TrangThaiThietBi.DangThue)
             .Where(t => t.ChiTietPhieuNhap.PhieuNhapHang.TrangThai == TrangThaiPhieuNhap.DaNhapKho)
-            .Where(t => sanPhamList.Contains(t.ChiTietPhieuNhap.MaSanPham))
-            .GroupBy(t => t.ChiTietPhieuNhap.MaSanPham)
+            .Where(t => sanPhamList.Contains(t.MaSanPhamHienTai))
+            .GroupBy(t => t.MaSanPhamHienTai)
             .Select(g => new { MaSanPham = g.Key, Total = g.Count() })
             .ToDictionaryAsync(x => x.MaSanPham, x => x.Total);
 

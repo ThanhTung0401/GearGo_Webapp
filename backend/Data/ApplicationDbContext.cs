@@ -196,6 +196,12 @@ public class ApplicationDbContext : DbContext
         modelBuilder.Entity<ThietBi>(e =>
         {
             e.HasIndex(x => x.MaThietBiHienThi).IsUnique();
+
+            // Quan hệ Thiết bị - Sản phẩm hiện tại (Hỗ trợ giáng cấp/đổi phân loại cho thuê)
+            e.HasOne(t => t.SanPhamHienTai)
+             .WithMany(s => s.ThietBis)
+             .HasForeignKey(t => t.MaSanPhamHienTai)
+             .OnDelete(DeleteBehavior.Restrict);
         });
 
         // 1 chi tiết đơn có tối đa 1 phiếu Giữ chỗ
@@ -220,9 +226,9 @@ public class ApplicationDbContext : DbContext
         modelBuilder.Entity<PhanCongThietBi>(e =>
         {
             // Tắt nhánh từ Nhân Viên
-            e.HasOne(p => p.NhanVienPhanCong)
+            e.HasOne(p => p.NguoiPhanCong)
                 .WithMany()
-                .HasForeignKey(p => p.MaNhanVienPhanCong)
+                .HasForeignKey(p => p.MaNguoiPhanCong)
                 .OnDelete(DeleteBehavior.Restrict);
 
             // TẮT THÊM nhánh từ Thiết Bị
@@ -234,7 +240,12 @@ public class ApplicationDbContext : DbContext
 
         modelBuilder.Entity<ThanhToan>(e =>
         {
-            e.HasIndex(t => t.MaThanhToanHienThi).IsUnique();
+            e.HasIndex(t => t.MaYeuCau).IsUnique();
+
+            e.HasOne(t => t.NguoiGhiNhan)
+                .WithMany()
+                .HasForeignKey(t => t.MaNguoiGhiNhan)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         // ── NHẬN TRẢ (Hỗ trợ 1 đơn thuê có nhiều đợt nhận trả) ──
