@@ -296,11 +296,12 @@ Mỗi phân công có tối đa một chi tiết bàn giao. Đây là căn cứ 
 
 **Tham chiếu:** `DON_THUE`, `NHAN_VIEN`.
 
-Lưu người nhận, thời điểm lập/chốt và trạng thái.
+Lưu người nhận, thời điểm lập/chốt, trạng thái, và thông tin đợt trả:
+- `ma_phieu_hien_thi`: Mã phiếu định dạng `PNT-{MaDonHienThi}-{lan_tra}` (ví dụ: `PNT-DT001-01`, `PNT-DT001-02`) giúp nhìn vào mã là biết ngay thuộc đơn nào và là đợt mấy.
+- `lan_tra`: Số thứ tự đợt trả (1, 2, 3...). Ràng buộc Unique `(ma_don_thue, lan_tra)` đảm bảo không trùng số đợt trong cùng một đơn.
+- `la_lan_tra_cuoi`: Boolean đánh dấu đây có phải đợt trả cuối cùng của đơn hay không. Nếu `false`, đơn tiếp tục ở trạng thái Đang thuê (nhãn Trả một phần); nếu `true` (khi đã nhận đủ toàn bộ thiết bị hoặc xử lý xong đồ mất), đơn chuyển sang Đã nhận trả để tiến hành đối soát cọc.
 
-`ma_don_thue` không có `unique`, nên một đơn có thể có nhiều phiếu nhận trả. Ví dụ: sáng Minh trả LEU001, chiều trả LEU002, ghi thành hai phiếu.
-
-Đây là cơ sở hỗ trợ trả từng phần.
+`ma_don_thue` không có `unique`, nên quan hệ là 1 Đơn thuê có Nhiều phiếu nhận trả (1-N). Ví dụ: sáng Minh trả LEU001 (Đợt 1), chiều trả LEU002 (Đợt 2), ghi thành hai phiếu riêng biệt.
 
 ## 27. CHI_TIET_NHAN_TRA — Kết quả kiểm tra từng chiếc đã giao
 

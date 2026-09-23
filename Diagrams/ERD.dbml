@@ -302,11 +302,18 @@ Table PHIEU_NHAN_TRA {
   ma_phieu_nhan_tra bigint [pk, increment]
   ma_don_thue bigint [not null]
   ma_nhan_vien bigint [not null]
+  ma_phieu_hien_thi varchar(50) [unique]
+  lan_tra int [not null]
+  la_lan_tra_cuoi boolean [default: false]
   thoi_diem_lap datetime
   thoi_diem_chot datetime
   ten_nhan_vien_luc_nhan varchar(255)
   trang_thai varchar(50)
   ghi_chu text
+
+  indexes {
+    (ma_don_thue, lan_tra) [unique]
+  }
 }
 
 Table CHI_TIET_NHAN_TRA {

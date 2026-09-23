@@ -42,8 +42,8 @@ public class ApplicationDbContext : DbContext
     public DbSet<PhanCongThietBi> PhanCongThietBis { get; set; }
     // public DbSet<PhieuBanGiao> PhieuBanGiaos { get; set; }
     // public DbSet<ChiTietBanGiao> ChiTietBanGiaos { get; set; }
-    // public DbSet<PhieuNhanTra> PhieuNhanTras { get; set; }
-    // public DbSet<ChiTietNhanTra> ChiTietNhanTras { get; set; }
+    public DbSet<PhieuNhanTra> PhieuNhanTras { get; set; }
+    public DbSet<ChiTietNhanTra> ChiTietNhanTras { get; set; }
     // public DbSet<PhuPhi> PhuPhis { get; set; }
     // public DbSet<DoiSoatTienCoc> DoiSoatTienCocs { get; set; }
     // public DbSet<HoanTien> HoanTiens { get; set; }
@@ -235,6 +235,44 @@ public class ApplicationDbContext : DbContext
         modelBuilder.Entity<ThanhToan>(e =>
         {
             e.HasIndex(t => t.MaThanhToanHienThi).IsUnique();
+        });
+
+        // ── NHẬN TRẢ (Hỗ trợ 1 đơn thuê có nhiều đợt nhận trả) ──
+        modelBuilder.Entity<PhieuNhanTra>(e =>
+        {
+            e.HasIndex(p => p.MaPhieuHienThi).IsUnique();
+
+            // Ràng buộc Unique trên (MaDonThue, LanTra) - Đảm bảo mỗi đơn không có 2 đợt trả cùng số thứ tự
+            e.HasIndex(p => new { p.MaDonThue, p.LanTra }).IsUnique();
+
+            e.Property(p => p.TrangThai).HasConversion<string>();
+
+            // Quan hệ 1-N: 1 Đơn thuê có Nhiều phiếu nhận trả
+            e.HasOne(p => p.DonThue)
+                .WithMany(d => d.PhieuNhanTras)
+                .HasForeignKey(p => p.MaDonThue)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            e.HasOne(p => p.NhanVien)
+                .WithMany()
+                .HasForeignKey(p => p.MaNhanVien)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<ChiTietNhanTra>(e =>
+        {
+            // 1 thiết bị bàn giao chỉ được ghi nhận trả 1 lần duy nhất trong toàn bộ các đợt trả
+            e.HasIndex(c => c.MaChiTietBanGiao).IsUnique();
+
+            e.HasOne(c => c.PhieuNhanTra)
+                .WithMany(p => p.ChiTietNhanTras)
+                .HasForeignKey(c => c.MaPhieuNhanTra)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            e.HasOne(c => c.NguoiDuyetMat)
+                .WithMany()
+                .HasForeignKey(c => c.MaNguoiDuyetMat)
+                .OnDelete(DeleteBehavior.Restrict);
         });
     }
 }
