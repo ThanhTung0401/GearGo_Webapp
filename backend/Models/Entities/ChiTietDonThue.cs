@@ -45,6 +45,7 @@ public class ChiTietDonThue
 
     // -- Navigation Properties --
     [ForeignKey(nameof(MaDonThue))]
+    [InverseProperty(nameof(DonThue.ChiTietDonThues))]
     public DonThue DonThue { get; set; } = null!;
 
     [ForeignKey(nameof(MaSanPham))]

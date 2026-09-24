@@ -32,7 +32,7 @@ public class SanPhamService : ISanPhamService
 
         if (!string.IsNullOrWhiteSpace(request.TuKhoa))
         {
-            query = query.Where(x => x.TenSanPham.Contains(request.TuKhoa) || x.MoTa.Contains(request.TuKhoa));
+            query = query.Where(x => x.TenSanPham.Contains(request.TuKhoa) || (x.MoTa != null && x.MoTa.Contains(request.TuKhoa)));
         }
 
         if (request.MaDanhMuc.HasValue)

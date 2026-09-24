@@ -151,7 +151,7 @@ public class ApplicationDbContext : DbContext
         {
             // Đơn thuê (1) - Nhiều Chi tiết đơn (N)
             e.HasOne(c => c.DonThue)
-                .WithMany()
+                .WithMany(d => d.ChiTietDonThues)
                 .HasForeignKey(c => c.MaDonThue)
                 .OnDelete(DeleteBehavior.Cascade); // Xóa đơn thuê thì xóa luôn chi tiết
         });

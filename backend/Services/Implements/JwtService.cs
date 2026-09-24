@@ -20,6 +20,7 @@ using GearGo.Models.Entities;
           var claims = new[]
           {
               new Claim("MaTaiKhoan", taiKhoan.MaTaiKhoan.ToString()),
+              new Claim(ClaimTypes.NameIdentifier, taiKhoan.MaTaiKhoan.ToString()),
               new Claim(ClaimTypes.Email, taiKhoan.Email ?? ""),
               new Claim(ClaimTypes.Role, taiKhoan.VaiTro)
           };

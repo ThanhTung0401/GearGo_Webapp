@@ -21,8 +21,9 @@ namespace GearGo.Controllers
         // Lấy MaTaiKhoan/MaKhachHang từ JWT Token
         private long GetMaKhachHang()
         {
-            // Tùy theo Thanh Tùng (Người 1) lưu Claim gì, ở đây mặc định lấy ID
-            var claim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            // Lấy ID người dùng từ Claim chuẩn NameIdentifier hoặc MaTaiKhoan
+            var claim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value 
+                        ?? User.FindFirst("MaTaiKhoan")?.Value;
             if (long.TryParse(claim, out var id)) return id;
             throw new UnauthorizedAccessException("Token không hợp lệ hoặc thiếu thông tin khách hàng");
         }

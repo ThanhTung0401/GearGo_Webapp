@@ -21,25 +21,43 @@ public class DonThueExpirationJob : BackgroundService
     {
         _logger.LogInformation("Job quét đơn hết hạn bắt đầu...");
 
-        // Chạy vòng lặp vô hạn cho đến khi tắt Server
+        // Chạy vòng lặp cho đến khi tắt Server
         while (!stoppingToken.IsCancellationRequested)
         {
             try
             {
-                await QuetDonHetHan();
+                await QuetDonHetHan(stoppingToken);
+                await Task.Delay(TimeSpan.FromMinutes(1), stoppingToken);
+            }
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+            {
+                // Dừng vòng lặp khi server tắt bình thường
+                break;
+            }
+            catch (ObjectDisposedException) when (stoppingToken.IsCancellationRequested)
+            {
+                // DI Container đang được giải phóng khi dừng server
+                break;
             }
             catch (Exception e)
             {
                 _logger.LogError(e, "Lỗi xảy ra trong quá trình quét đơn hết hạn.");
+                try
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(10), stoppingToken);
+                }
+                catch (OperationCanceledException)
+                {
+                    break;
+                }
             }
-
-            // Ngủ 1 phút rồi quét tiếp
-            await Task.Delay(TimeSpan.FromMinutes(1), stoppingToken);
         }
     }
 
-    private async Task QuetDonHetHan()
+    private async Task QuetDonHetHan(CancellationToken stoppingToken)
     {
+        if (stoppingToken.IsCancellationRequested) return;
+
         using var scope = _serviceProvider.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
@@ -51,9 +69,9 @@ public class DonThueExpirationJob : BackgroundService
             .ThenInclude(c => c.GiuCho)
             .Where(d => d.TrangThai == TrangThaiDonThue.ChoThanhToan
                         && d.HanThanhToan < thoiDiemHienTai)
-            .ToListAsync();
+            .ToListAsync(stoppingToken);
 
-        if (donHetHan.Count == 0) return;
+        if (donHetHan.Count == 0 || stoppingToken.IsCancellationRequested) return;
 
         _logger.LogInformation($"Tìm thấy {donHetHan.Count} đơn đã hết hạn. Đang xử lý...");
 
@@ -87,7 +105,7 @@ public class DonThueExpirationJob : BackgroundService
             context.LichSuTrangThaiDons.Add(lichSu);
         }
 
-        await context.SaveChangesAsync();
+        await context.SaveChangesAsync(stoppingToken);
         _logger.LogInformation($"Đã xử lý hủy thành công {donHetHan.Count} đơn.");
     }
 }
