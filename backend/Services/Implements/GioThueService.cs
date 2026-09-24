@@ -4,7 +4,7 @@ using GearGo.Models.DTOs.GioThue;
 using GearGo.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
-namespace GearGo.Services
+namespace GearGo.Services.Implements
 {
     public class GioThueService : IGioThueService
     {

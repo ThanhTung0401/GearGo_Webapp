@@ -87,7 +87,7 @@ builder.Services.AddCors(opt =>
 builder.Services.AddScoped<IDanhMucService, DanhMucService>();
 builder.Services.AddScoped<ISanPhamService, SanPhamService>();
 builder.Services.AddScoped<IKhaDungService, KhaDungService>();
-builder.Services.AddScoped<IGioThueService, GearGo.Services.GioThueService>();
+builder.Services.AddScoped<IGioThueService, GioThueService>();
 builder.Services.AddScoped<IDonThueService, DonThueService>();
 builder.Services.AddScoped<IThanhToanService, ThanhToanService>();
 builder.Services.AddScoped<IKhuyenMaiService, KhuyenMaiService>();
