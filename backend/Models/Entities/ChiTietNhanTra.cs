@@ -61,6 +61,9 @@ public class ChiTietNhanTra
     [ForeignKey(nameof(MaPhieuNhanTra))]
     public PhieuNhanTra PhieuNhanTra { get; set; } = null!;
 
+    [ForeignKey(nameof(MaChiTietBanGiao))]
+    public ChiTietBanGiao ChiTietBanGiao { get; set; } = null!;
+
     [ForeignKey(nameof(MaNguoiDuyetMat))]
     public NhanVien? NguoiDuyetMat { get; set; }
 }

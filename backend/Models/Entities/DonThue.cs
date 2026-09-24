@@ -97,4 +97,7 @@ public class DonThue
 
     // @OneToMany: Một đơn thuê có thể có nhiều phiếu nhận trả (trả nhiều lần)
     public ICollection<PhieuNhanTra> PhieuNhanTras { get; set; } = new List<PhieuNhanTra>();
+
+    // @OneToOne: Một đơn thuê có 1 phiếu bàn giao
+    public PhieuBanGiao? PhieuBanGiao { get; set; }
 }

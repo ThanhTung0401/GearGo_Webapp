@@ -24,4 +24,7 @@ public class ChiTietThanhToan
     // -- Navigation Property --
     [ForeignKey(nameof(MaThanhToan))]
     public ThanhToan ThanhToan { get; set; } = null!;
+
+    public GiaoDichDoiSoat? GiaoDichDoiSoat { get; set; }
+    public ICollection<HoanTien> HoanTiens { get; set; } = new List<HoanTien>();
 }

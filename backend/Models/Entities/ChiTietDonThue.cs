@@ -52,4 +52,7 @@ public class ChiTietDonThue
 
     // Quan hệ 1-1 với Giữ Chỗ
     public GiuCho? GiuCho { get; set; }
+
+    // Quan hệ 1-1 với Đánh Giá
+    public DanhGia? DanhGia { get; set; }
 }
