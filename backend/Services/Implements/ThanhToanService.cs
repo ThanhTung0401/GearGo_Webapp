@@ -35,16 +35,18 @@ public class ThanhToanService : IThanhToanService
                 return Result<string>.Loi("INVALID_STATE",
                     "Đơn thuê không ở trạng thái Chờ thanh toán.");
 
-            // 2. Tạo bản ghi Thanh toán
+            // 2. Tạo bản ghi Thanh toán theo đúng chuẩn thuộc tính ERD (ma_yeu_cau, tong_so_tien, phuong_thuc, ma_giao_dich_cong)
+            var maYeuCau = $"PAY_{DateTime.UtcNow:yyyyMMddHHmmss}_{Guid.NewGuid().ToString("N")[..8]}";
             var thanhToanMoi = new Models.Entities.ThanhToan
             {
                 MaDonThue = donThue.MaDonThue,
-                MaThanhToanHienThi = $"TT{DateTime.UtcNow:yyyyMMddHHmmss}",
-                PhuongThucThanhToan = request.PhuongThucThanhToan,
-                SoTien = request.SoTienDaTra,
-                MaGiaoDichDoiTac = request.MaGiaoDichDoiTac,
+                MaYeuCau = maYeuCau,
+                PhuongThuc = request.PhuongThucThanhToan,
+                TongSoTien = request.SoTienDaTra,
+                MaGiaoDichCong = request.MaGiaoDichDoiTac,
                 TrangThai = "ThanhCong",
-                ThoiGianThanhToan = DateTime.UtcNow
+                ThoiDiemTao = DateTime.UtcNow,
+                ThoiDiemThanhCong = DateTime.UtcNow
             };
             _context.ThanhToans.Add(thanhToanMoi);
 
@@ -75,7 +77,7 @@ public class ThanhToanService : IThanhToanService
             await _context.SaveChangesAsync();
             await transaction.CommitAsync();
 
-            return Result<string>.Ok(thanhToanMoi.MaThanhToanHienThi);
+            return Result<string>.Ok(thanhToanMoi.MaYeuCau);
         }
         catch (Exception e)
         {

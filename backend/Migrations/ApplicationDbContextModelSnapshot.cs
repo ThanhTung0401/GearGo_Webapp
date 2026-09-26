@@ -22,6 +22,93 @@ namespace GearGo.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("GearGo.Models.Entities.ChiTietBanGiao", b =>
+                {
+                    b.Property<long>("MaChiTietBanGiao")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("ma_chi_tiet_ban_giao");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("MaChiTietBanGiao"));
+
+                    b.Property<string>("DanhSachAnh")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("danh_sach_anh");
+
+                    b.Property<string>("GhiChu")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("ghi_chu");
+
+                    b.Property<long>("MaPhanCong")
+                        .HasColumnType("bigint")
+                        .HasColumnName("ma_phan_cong");
+
+                    b.Property<long>("MaPhieuBanGiao")
+                        .HasColumnType("bigint")
+                        .HasColumnName("ma_phieu_ban_giao");
+
+                    b.Property<string>("PhuKienThucGiao")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("phu_kien_thuc_giao");
+
+                    b.Property<string>("TinhTrangTruocThue")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("tinh_trang_truoc_thue");
+
+                    b.HasKey("MaChiTietBanGiao");
+
+                    b.HasIndex("MaPhanCong")
+                        .IsUnique();
+
+                    b.HasIndex("MaPhieuBanGiao");
+
+                    b.ToTable("CHI_TIET_BAN_GIAO");
+                });
+
+            modelBuilder.Entity("GearGo.Models.Entities.ChiTietDieuChinhKho", b =>
+                {
+                    b.Property<long>("MaChiTietDieuChinh")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("ma_chi_tiet_dieu_chinh");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("MaChiTietDieuChinh"));
+
+                    b.Property<string>("GhiChu")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("ghi_chu");
+
+                    b.Property<string>("GiaTriSau")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("gia_tri_sau");
+
+                    b.Property<string>("GiaTriTruoc")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("gia_tri_truoc");
+
+                    b.Property<long?>("MaChiTietPhieuNhap")
+                        .HasColumnType("bigint")
+                        .HasColumnName("ma_chi_tiet_phieu_nhap");
+
+                    b.Property<long>("MaPhieuDieuChinh")
+                        .HasColumnType("bigint")
+                        .HasColumnName("ma_phieu_dieu_chinh");
+
+                    b.Property<long?>("MaThietBi")
+                        .HasColumnType("bigint")
+                        .HasColumnName("ma_thiet_bi");
+
+                    b.HasKey("MaChiTietDieuChinh");
+
+                    b.HasIndex("MaChiTietPhieuNhap");
+
+                    b.HasIndex("MaPhieuDieuChinh");
+
+                    b.HasIndex("MaThietBi");
+
+                    b.ToTable("CHI_TIET_DIEU_CHINH_KHO");
+                });
+
             modelBuilder.Entity("GearGo.Models.Entities.ChiTietDonThue", b =>
                 {
                     b.Property<long>("MaChiTietDon")
@@ -32,13 +119,12 @@ namespace GearGo.Migrations
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("MaChiTietDon"));
 
                     b.Property<decimal>("DonGiaThueMoiNgay")
+                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)")
                         .HasColumnName("don_gia_thue_moi_ngay");
 
-                    b.Property<long?>("DonThueMaDonThue")
-                        .HasColumnType("bigint");
-
                     b.Property<decimal>("GiaTriBoiThuongMoiThietBi")
+                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)")
                         .HasColumnName("gia_tri_boi_thuong_moi_thiet_bi");
 
@@ -51,6 +137,7 @@ namespace GearGo.Migrations
                         .HasColumnName("ma_san_pham");
 
                     b.Property<decimal>("MucCocMoiThietBi")
+                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)")
                         .HasColumnName("muc_coc_moi_thiet_bi");
 
@@ -72,12 +159,11 @@ namespace GearGo.Migrations
                         .HasColumnName("ten_san_pham_luc_dat");
 
                     b.Property<decimal>("TienGiam")
+                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)")
                         .HasColumnName("tien_giam");
 
                     b.HasKey("MaChiTietDon");
-
-                    b.HasIndex("DonThueMaDonThue");
 
                     b.HasIndex("MaDonThue");
 
@@ -116,6 +202,81 @@ namespace GearGo.Migrations
                     b.ToTable("CHI_TIET_GIO_THUE");
                 });
 
+            modelBuilder.Entity("GearGo.Models.Entities.ChiTietNhanTra", b =>
+                {
+                    b.Property<long>("MaChiTietNhanTra")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("ma_chi_tiet_nhan_tra");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("MaChiTietNhanTra"));
+
+                    b.Property<string>("BienBanMat")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("bien_ban_mat");
+
+                    b.Property<string>("DanhSachAnh")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("danh_sach_anh");
+
+                    b.Property<string>("GhiChu")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("ghi_chu");
+
+                    b.Property<string>("KetLuan")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("ket_luan");
+
+                    b.Property<long>("MaChiTietBanGiao")
+                        .HasColumnType("bigint")
+                        .HasColumnName("ma_chi_tiet_ban_giao");
+
+                    b.Property<long?>("MaNguoiDuyetMat")
+                        .HasColumnType("bigint")
+                        .HasColumnName("ma_nguoi_duyet_mat");
+
+                    b.Property<long>("MaPhieuNhanTra")
+                        .HasColumnType("bigint")
+                        .HasColumnName("ma_phieu_nhan_tra");
+
+                    b.Property<string>("PhuKienConThieu")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("phu_kien_con_thieu");
+
+                    b.Property<string>("PhuKienThucNhan")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("phu_kien_thuc_nhan");
+
+                    b.Property<DateTime?>("ThoiDiemDuyetMat")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("thoi_diem_duyet_mat");
+
+                    b.Property<DateTime?>("ThoiDiemTraThucTe")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("thoi_diem_tra_thuc_te");
+
+                    b.Property<string>("TinhTrangSauThue")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("tinh_trang_sau_thue");
+
+                    b.Property<string>("TrangThaiXuLy")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("trang_thai_xu_ly");
+
+                    b.HasKey("MaChiTietNhanTra");
+
+                    b.HasIndex("MaChiTietBanGiao")
+                        .IsUnique();
+
+                    b.HasIndex("MaNguoiDuyetMat");
+
+                    b.HasIndex("MaPhieuNhanTra");
+
+                    b.ToTable("CHI_TIET_NHAN_TRA");
+                });
+
             modelBuilder.Entity("GearGo.Models.Entities.ChiTietPhieuNhap", b =>
                 {
                     b.Property<long>("MaChiTietPhieuNhap")
@@ -126,6 +287,7 @@ namespace GearGo.Migrations
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("MaChiTietPhieuNhap"));
 
                     b.Property<decimal>("DonGiaNhap")
+                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)")
                         .HasColumnName("don_gia_nhap");
 
@@ -172,17 +334,18 @@ namespace GearGo.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("MaChiTietThanhToan"));
 
-                    b.Property<string>("LoaiTien")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)")
-                        .HasColumnName("loai_tien");
-
                     b.Property<long>("MaThanhToan")
                         .HasColumnType("bigint")
                         .HasColumnName("ma_thanh_toan");
 
+                    b.Property<string>("MucDich")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("muc_dich");
+
                     b.Property<decimal>("SoTien")
+                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)")
                         .HasColumnName("so_tien");
 
@@ -237,6 +400,63 @@ namespace GearGo.Migrations
                     b.ToTable("CHINH_SACH");
                 });
 
+            modelBuilder.Entity("GearGo.Models.Entities.DanhGia", b =>
+                {
+                    b.Property<long>("MaDanhGia")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("ma_danh_gia");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("MaDanhGia"));
+
+                    b.Property<string>("DanhSachAnh")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("danh_sach_anh");
+
+                    b.Property<string>("LyDoAn")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("ly_do_an");
+
+                    b.Property<long>("MaChiTietDon")
+                        .HasColumnType("bigint")
+                        .HasColumnName("ma_chi_tiet_don");
+
+                    b.Property<long?>("MaNguoiAn")
+                        .HasColumnType("bigint")
+                        .HasColumnName("ma_nguoi_an");
+
+                    b.Property<DateTime?>("NgayCapNhat")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("ngay_cap_nhat");
+
+                    b.Property<DateTime>("NgayTao")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("ngay_tao");
+
+                    b.Property<string>("NoiDung")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("noi_dung");
+
+                    b.Property<int>("SoSao")
+                        .HasColumnType("int")
+                        .HasColumnName("so_sao");
+
+                    b.Property<string>("TrangThaiHienThi")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("trang_thai_hien_thi");
+
+                    b.HasKey("MaDanhGia");
+
+                    b.HasIndex("MaChiTietDon")
+                        .IsUnique();
+
+                    b.HasIndex("MaNguoiAn");
+
+                    b.ToTable("DANH_GIA");
+                });
+
             modelBuilder.Entity("GearGo.Models.Entities.DanhMucSanPham", b =>
                 {
                     b.Property<long>("MaDanhMuc")
@@ -273,6 +493,97 @@ namespace GearGo.Migrations
                     b.HasIndex("MaDanhMucCha");
 
                     b.ToTable("DANH_MUC_SAN_PHAM");
+                });
+
+            modelBuilder.Entity("GearGo.Models.Entities.DoiSoatTienCoc", b =>
+                {
+                    b.Property<long>("MaDoiSoat")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("ma_doi_soat");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("MaDoiSoat"));
+
+                    b.Property<string>("BangTinhDoiSoat")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("bang_tinh_doi_soat");
+
+                    b.Property<string>("LoaiDoiSoat")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("loai_doi_soat");
+
+                    b.Property<string>("LyDoDieuChinh")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("ly_do_dieu_chinh");
+
+                    b.Property<long?>("MaDoiSoatGoc")
+                        .HasColumnType("bigint")
+                        .HasColumnName("ma_doi_soat_goc");
+
+                    b.Property<long>("MaDonThue")
+                        .HasColumnType("bigint")
+                        .HasColumnName("ma_don_thue");
+
+                    b.Property<long?>("MaNguoiChot")
+                        .HasColumnType("bigint")
+                        .HasColumnName("ma_nguoi_chot");
+
+                    b.Property<long>("MaNguoiLap")
+                        .HasColumnType("bigint")
+                        .HasColumnName("ma_nguoi_lap");
+
+                    b.Property<decimal>("SoTienCanHoan")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("so_tien_can_hoan");
+
+                    b.Property<decimal>("SoTienCanThuThem")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("so_tien_can_thu_them");
+
+                    b.Property<string>("TenNguoiChotLucDoiSoat")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)")
+                        .HasColumnName("ten_nguoi_chot_luc_doi_soat");
+
+                    b.Property<DateTime?>("ThoiDiemChot")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("thoi_diem_chot");
+
+                    b.Property<DateTime>("ThoiDiemLap")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("thoi_diem_lap");
+
+                    b.Property<decimal>("TienCocDuocDoiSoat")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("tien_coc_duoc_doi_soat");
+
+                    b.Property<decimal>("TongPhuPhiDuocDuyet")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("tong_phu_phi_duoc_duyet");
+
+                    b.Property<string>("TrangThai")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("trang_thai");
+
+                    b.HasKey("MaDoiSoat");
+
+                    b.HasIndex("MaDoiSoatGoc");
+
+                    b.HasIndex("MaDonThue");
+
+                    b.HasIndex("MaNguoiChot");
+
+                    b.HasIndex("MaNguoiLap");
+
+                    b.ToTable("DOI_SOAT_TIEN_COC");
                 });
 
             modelBuilder.Entity("GearGo.Models.Entities.DonThue", b =>
@@ -354,18 +665,22 @@ namespace GearGo.Migrations
                         .HasColumnName("thoi_diem_huy");
 
                     b.Property<decimal>("TienThueGiuLaiKhiHuy")
+                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)")
                         .HasColumnName("tien_thue_giu_lai_khi_huy");
 
                     b.Property<decimal>("TongTienCoc")
+                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)")
                         .HasColumnName("tong_tien_coc");
 
                     b.Property<decimal>("TongTienGiam")
+                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)")
                         .HasColumnName("tong_tien_giam");
 
                     b.Property<decimal>("TongTienThueTruocGiam")
+                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)")
                         .HasColumnName("tong_tien_thue_truoc_giam");
 
@@ -386,6 +701,33 @@ namespace GearGo.Migrations
                     b.HasIndex("MaNguoiHuy");
 
                     b.ToTable("DON_THUE");
+                });
+
+            modelBuilder.Entity("GearGo.Models.Entities.GiaoDichDoiSoat", b =>
+                {
+                    b.Property<long>("MaGiaoDichDoiSoat")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("ma_giao_dich_doi_soat");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("MaGiaoDichDoiSoat"));
+
+                    b.Property<long>("MaChiTietThanhToan")
+                        .HasColumnType("bigint")
+                        .HasColumnName("ma_chi_tiet_thanh_toan");
+
+                    b.Property<long>("MaDoiSoat")
+                        .HasColumnType("bigint")
+                        .HasColumnName("ma_doi_soat");
+
+                    b.HasKey("MaGiaoDichDoiSoat");
+
+                    b.HasIndex("MaChiTietThanhToan")
+                        .IsUnique();
+
+                    b.HasIndex("MaDoiSoat");
+
+                    b.ToTable("GIAO_DICH_DOI_SOAT");
                 });
 
             modelBuilder.Entity("GearGo.Models.Entities.GioThue", b =>
@@ -413,10 +755,16 @@ namespace GearGo.Migrations
                         .HasColumnType("bigint")
                         .HasColumnName("ma_khuyen_mai");
 
+                    b.Property<DateTime>("NgayCapNhat")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("ngay_cap_nhat");
+
                     b.HasKey("MaGioThue");
 
                     b.HasIndex("MaKhachHang")
                         .IsUnique();
+
+                    b.HasIndex("MaKhuyenMai");
 
                     b.ToTable("GIO_THUE");
                 });
@@ -492,6 +840,84 @@ namespace GearGo.Migrations
                     b.ToTable("HINH_ANH_SAN_PHAM");
                 });
 
+            modelBuilder.Entity("GearGo.Models.Entities.HoanTien", b =>
+                {
+                    b.Property<long>("MaHoanTien")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("ma_hoan_tien");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("MaHoanTien"));
+
+                    b.Property<string>("GhiChu")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("ghi_chu");
+
+                    b.Property<string>("LoaiHoan")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("loai_hoan");
+
+                    b.Property<string>("LyDo")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("ly_do");
+
+                    b.Property<long>("MaChiTietThanhToanGoc")
+                        .HasColumnType("bigint")
+                        .HasColumnName("ma_chi_tiet_thanh_toan_goc");
+
+                    b.Property<long?>("MaDoiSoat")
+                        .HasColumnType("bigint")
+                        .HasColumnName("ma_doi_soat");
+
+                    b.Property<string>("MaGiaoDichHoanCong")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)")
+                        .HasColumnName("ma_giao_dich_hoan_cong");
+
+                    b.Property<long?>("MaNguoiXuLy")
+                        .HasColumnType("bigint")
+                        .HasColumnName("ma_nguoi_xu_ly");
+
+                    b.Property<string>("MaYeuCau")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("ma_yeu_cau");
+
+                    b.Property<decimal>("SoTien")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("so_tien");
+
+                    b.Property<DateTime?>("ThoiDiemThanhCong")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("thoi_diem_thanh_cong");
+
+                    b.Property<DateTime>("ThoiDiemYeuCau")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("thoi_diem_yeu_cau");
+
+                    b.Property<string>("TrangThai")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("trang_thai");
+
+                    b.HasKey("MaHoanTien");
+
+                    b.HasIndex("MaChiTietThanhToanGoc");
+
+                    b.HasIndex("MaDoiSoat");
+
+                    b.HasIndex("MaNguoiXuLy");
+
+                    b.HasIndex("MaYeuCau")
+                        .IsUnique()
+                        .HasFilter("[ma_yeu_cau] IS NOT NULL");
+
+                    b.ToTable("HOAN_TIEN");
+                });
+
             modelBuilder.Entity("GearGo.Models.Entities.KhachHang", b =>
                 {
                     b.Property<long>("MaKhachHang")
@@ -539,13 +965,26 @@ namespace GearGo.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("MaKhuyenMai"));
 
+                    b.Property<DateTime>("BatDau")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("bat_dau");
+
                     b.Property<decimal>("GiaTriGiam")
+                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)")
                         .HasColumnName("gia_tri_giam");
 
                     b.Property<int?>("GioiHanMoiKhach")
                         .HasColumnType("int")
                         .HasColumnName("gioi_han_moi_khach");
+
+                    b.Property<int?>("GioiHanTongLuot")
+                        .HasColumnType("int")
+                        .HasColumnName("gioi_han_tong_luot");
+
+                    b.Property<DateTime>("KetThuc")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("ket_thuc");
 
                     b.Property<int>("LoaiGiam")
                         .HasColumnType("int")
@@ -558,28 +997,23 @@ namespace GearGo.Migrations
                         .HasColumnName("ma_giam_gia");
 
                     b.Property<decimal?>("MucGiamToiDa")
+                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)")
                         .HasColumnName("muc_giam_toi_da");
-
-                    b.Property<DateTime>("NgayBatDau")
-                        .HasColumnType("datetime2")
-                        .HasColumnName("ngay_bat_dau");
-
-                    b.Property<DateTime>("NgayKetThuc")
-                        .HasColumnType("datetime2")
-                        .HasColumnName("ngay_ket_thuc");
 
                     b.Property<int>("PhamVi")
                         .HasColumnType("int")
                         .HasColumnName("pham_vi_ap_dung");
 
+                    b.Property<string>("TenKhuyenMai")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)")
+                        .HasColumnName("ten_khuyen_mai");
+
                     b.Property<decimal>("TienThueToiThieu")
+                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)")
                         .HasColumnName("tien_thue_toi_thieu");
-
-                    b.Property<int?>("TongLuotSuDung")
-                        .HasColumnType("int")
-                        .HasColumnName("tong_luot_su_dung");
 
                     b.Property<int>("TrangThai")
                         .HasColumnType("int")
@@ -625,6 +1059,62 @@ namespace GearGo.Migrations
                     b.HasIndex("MaSanPham");
 
                     b.ToTable("KHUYEN_MAI_SAN_PHAM");
+                });
+
+            modelBuilder.Entity("GearGo.Models.Entities.LichSuTinhTrangThietBi", b =>
+                {
+                    b.Property<long>("MaLichSuThietBi")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("ma_lich_su_thiet_bi");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("MaLichSuThietBi"));
+
+                    b.Property<string>("LyDo")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("ly_do");
+
+                    b.Property<long?>("MaNguoiThucHien")
+                        .HasColumnType("bigint")
+                        .HasColumnName("ma_nguoi_thuc_hien");
+
+                    b.Property<long>("MaThietBi")
+                        .HasColumnType("bigint")
+                        .HasColumnName("ma_thiet_bi");
+
+                    b.Property<string>("ThamChieuChungTu")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("tham_chieu_chung_tu");
+
+                    b.Property<DateTime>("ThoiDiem")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("thoi_diem");
+
+                    b.Property<string>("TinhTrangSau")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("tinh_trang_sau");
+
+                    b.Property<string>("TinhTrangTruoc")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("tinh_trang_truoc");
+
+                    b.Property<string>("TrangThaiSau")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("trang_thai_sau");
+
+                    b.Property<string>("TrangThaiTruoc")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("trang_thai_truoc");
+
+                    b.HasKey("MaLichSuThietBi");
+
+                    b.HasIndex("MaNguoiThucHien");
+
+                    b.HasIndex("MaThietBi");
+
+                    b.ToTable("LICH_SU_TINH_TRANG_THIET_BI");
                 });
 
             modelBuilder.Entity("GearGo.Models.Entities.LichSuTrangThaiDon", b =>
@@ -689,6 +1179,7 @@ namespace GearGo.Migrations
                         .HasColumnName("ma_khuyen_mai");
 
                     b.Property<decimal>("SoTienGiam")
+                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)")
                         .HasColumnName("so_tien_giam");
 
@@ -773,8 +1264,10 @@ namespace GearGo.Migrations
                         .HasColumnType("nvarchar(255)")
                         .HasColumnName("ten_nha_cung_cap");
 
-                    b.Property<bool>("TrangThaiHopTac")
-                        .HasColumnType("bit")
+                    b.Property<string>("TrangThaiHopTac")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
                         .HasColumnName("trang_thai_hop_tac");
 
                     b.HasKey("MaNhaCungCap");
@@ -829,6 +1322,57 @@ namespace GearGo.Migrations
                     b.ToTable("NHAN_VIEN");
                 });
 
+            modelBuilder.Entity("GearGo.Models.Entities.NhatKyThaoTac", b =>
+                {
+                    b.Property<long>("MaNhatKy")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("ma_nhat_ky");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("MaNhatKy"));
+
+                    b.Property<string>("DuLieuSau")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("du_lieu_sau");
+
+                    b.Property<string>("DuLieuTruoc")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("du_lieu_truoc");
+
+                    b.Property<string>("HanhDong")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("hanh_dong");
+
+                    b.Property<string>("LoaiDoiTuong")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("loai_doi_tuong");
+
+                    b.Property<string>("LyDo")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("ly_do");
+
+                    b.Property<string>("MaDoiTuong")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("ma_doi_tuong");
+
+                    b.Property<long?>("MaTaiKhoan")
+                        .HasColumnType("bigint")
+                        .HasColumnName("ma_tai_khoan");
+
+                    b.Property<DateTime>("ThoiDiem")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("thoi_diem");
+
+                    b.HasKey("MaNhatKy");
+
+                    b.HasIndex("MaTaiKhoan");
+
+                    b.ToTable("NHAT_KY_THAO_TAC");
+                });
+
             modelBuilder.Entity("GearGo.Models.Entities.PhanCongThietBi", b =>
                 {
                     b.Property<long>("MaPhanCong")
@@ -838,45 +1382,342 @@ namespace GearGo.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("MaPhanCong"));
 
+                    b.Property<string>("LyDoHuyPhanCong")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("ly_do_huy_phan_cong");
+
                     b.Property<long>("MaChiTietDon")
                         .HasColumnType("bigint")
                         .HasColumnName("ma_chi_tiet_don");
 
-                    b.Property<long?>("MaNhanVienHuy")
+                    b.Property<long?>("MaNguoiHuyPhanCong")
                         .HasColumnType("bigint")
-                        .HasColumnName("ma_nhan_vien_huy");
+                        .HasColumnName("ma_nguoi_huy_phan_cong");
 
-                    b.Property<long>("MaNhanVienPhanCong")
+                    b.Property<long>("MaNguoiPhanCong")
                         .HasColumnType("bigint")
-                        .HasColumnName("ma_nhan_vien_phan_cong");
+                        .HasColumnName("ma_nguoi_phan_cong");
 
                     b.Property<long>("MaThietBi")
                         .HasColumnType("bigint")
                         .HasColumnName("ma_thiet_bi");
 
-                    b.Property<DateTime?>("ThoiGianHuy")
+                    b.Property<DateTime?>("ThoiDiemHuyPhanCong")
                         .HasColumnType("datetime2")
-                        .HasColumnName("thoi_gian_huy");
+                        .HasColumnName("thoi_diem_huy_phan_cong");
 
-                    b.Property<DateTime>("ThoiGianPhanCong")
+                    b.Property<DateTime>("ThoiDiemPhanCong")
                         .HasColumnType("datetime2")
-                        .HasColumnName("thoi_gian_phan_cong");
+                        .HasColumnName("thoi_diem_phan_cong");
 
-                    b.Property<bool>("TrangThai")
-                        .HasColumnType("bit")
+                    b.Property<string>("TrangThai")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
                         .HasColumnName("trang_thai");
 
                     b.HasKey("MaPhanCong");
 
                     b.HasIndex("MaChiTietDon");
 
-                    b.HasIndex("MaNhanVienHuy");
+                    b.HasIndex("MaNguoiHuyPhanCong");
 
-                    b.HasIndex("MaNhanVienPhanCong");
+                    b.HasIndex("MaNguoiPhanCong");
 
                     b.HasIndex("MaThietBi");
 
                     b.ToTable("PHAN_CONG_THIET_BI");
+                });
+
+            modelBuilder.Entity("GearGo.Models.Entities.PhieuBanGiao", b =>
+                {
+                    b.Property<long>("MaPhieuBanGiao")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("ma_phieu_ban_giao");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("MaPhieuBanGiao"));
+
+                    b.Property<string>("BangChungXacNhan")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("bang_chung_xac_nhan");
+
+                    b.Property<string>("GhiChu")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("ghi_chu");
+
+                    b.Property<long>("MaDonThue")
+                        .HasColumnType("bigint")
+                        .HasColumnName("ma_don_thue");
+
+                    b.Property<long>("MaNhanVien")
+                        .HasColumnType("bigint")
+                        .HasColumnName("ma_nhan_vien");
+
+                    b.Property<string>("TenNguoiNhanThucTe")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)")
+                        .HasColumnName("ten_nguoi_nhan_thuc_te");
+
+                    b.Property<string>("TenNhanVienLucGiao")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)")
+                        .HasColumnName("ten_nhan_vien_luc_giao");
+
+                    b.Property<DateTime?>("ThoiDiemGiaoThucTe")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("thoi_diem_giao_thuc_te");
+
+                    b.Property<DateTime?>("ThoiDiemKhachXacNhan")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("thoi_diem_khach_xac_nhan");
+
+                    b.Property<DateTime>("ThoiDiemLap")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("thoi_diem_lap");
+
+                    b.Property<string>("TrangThai")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("trang_thai");
+
+                    b.HasKey("MaPhieuBanGiao");
+
+                    b.HasIndex("MaDonThue")
+                        .IsUnique();
+
+                    b.HasIndex("MaNhanVien");
+
+                    b.ToTable("PHIEU_BAN_GIAO");
+                });
+
+            modelBuilder.Entity("GearGo.Models.Entities.PhieuBaoTri", b =>
+                {
+                    b.Property<long>("MaPhieuBaoTri")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("ma_phieu_bao_tri");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("MaPhieuBaoTri"));
+
+                    b.Property<string>("BangChung")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("bang_chung");
+
+                    b.Property<decimal?>("ChiPhi")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("chi_phi");
+
+                    b.Property<string>("KetQua")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("ket_qua");
+
+                    b.Property<string>("LoaiXuLy")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("loai_xu_ly");
+
+                    b.Property<long?>("MaDonThue")
+                        .HasColumnType("bigint")
+                        .HasColumnName("ma_don_thue");
+
+                    b.Property<long>("MaNguoiLap")
+                        .HasColumnType("bigint")
+                        .HasColumnName("ma_nguoi_lap");
+
+                    b.Property<long?>("MaNguoiXacNhanHoanThanh")
+                        .HasColumnType("bigint")
+                        .HasColumnName("ma_nguoi_xac_nhan_hoan_thanh");
+
+                    b.Property<long?>("MaNguoiXuLy")
+                        .HasColumnType("bigint")
+                        .HasColumnName("ma_nguoi_xu_ly");
+
+                    b.Property<long>("MaThietBi")
+                        .HasColumnType("bigint")
+                        .HasColumnName("ma_thiet_bi");
+
+                    b.Property<string>("MoTaLoi")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("mo_ta_loi");
+
+                    b.Property<string>("MucDo")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("muc_do");
+
+                    b.Property<DateTime?>("NgayBatDau")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("ngay_bat_dau");
+
+                    b.Property<DateTime?>("NgayDuKienHoanThanh")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("ngay_du_kien_hoan_thanh");
+
+                    b.Property<DateTime?>("NgayHoanThanhThucTe")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("ngay_hoan_thanh_thuc_te");
+
+                    b.Property<string>("TrangThai")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("trang_thai");
+
+                    b.HasKey("MaPhieuBaoTri");
+
+                    b.HasIndex("MaDonThue");
+
+                    b.HasIndex("MaNguoiLap");
+
+                    b.HasIndex("MaNguoiXacNhanHoanThanh");
+
+                    b.HasIndex("MaNguoiXuLy");
+
+                    b.HasIndex("MaThietBi");
+
+                    b.ToTable("PHIEU_BAO_TRI");
+                });
+
+            modelBuilder.Entity("GearGo.Models.Entities.PhieuDieuChinhKho", b =>
+                {
+                    b.Property<long>("MaPhieuDieuChinh")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("ma_phieu_dieu_chinh");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("MaPhieuDieuChinh"));
+
+                    b.Property<string>("BangChung")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("bang_chung");
+
+                    b.Property<string>("LoaiDieuChinh")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("loai_dieu_chinh");
+
+                    b.Property<string>("LyDo")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("ly_do");
+
+                    b.Property<long?>("MaNguoiDuyet")
+                        .HasColumnType("bigint")
+                        .HasColumnName("ma_nguoi_duyet");
+
+                    b.Property<long>("MaNguoiLap")
+                        .HasColumnType("bigint")
+                        .HasColumnName("ma_nguoi_lap");
+
+                    b.Property<long?>("MaPhieuNhapLienQuan")
+                        .HasColumnType("bigint")
+                        .HasColumnName("ma_phieu_nhap_lien_quan");
+
+                    b.Property<string>("TenNguoiDuyetLucDuyet")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)")
+                        .HasColumnName("ten_nguoi_duyet_luc_duyet");
+
+                    b.Property<string>("TenNguoiLapLucLap")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)")
+                        .HasColumnName("ten_nguoi_lap_luc_lap");
+
+                    b.Property<DateTime?>("ThoiDiemApDung")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("thoi_diem_ap_dung");
+
+                    b.Property<DateTime?>("ThoiDiemDuyet")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("thoi_diem_duyet");
+
+                    b.Property<DateTime>("ThoiDiemLap")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("thoi_diem_lap");
+
+                    b.Property<string>("TrangThai")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("trang_thai");
+
+                    b.HasKey("MaPhieuDieuChinh");
+
+                    b.HasIndex("MaNguoiDuyet");
+
+                    b.HasIndex("MaNguoiLap");
+
+                    b.HasIndex("MaPhieuNhapLienQuan");
+
+                    b.ToTable("PHIEU_DIEU_CHINH_KHO");
+                });
+
+            modelBuilder.Entity("GearGo.Models.Entities.PhieuNhanTra", b =>
+                {
+                    b.Property<long>("MaPhieuNhanTra")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("ma_phieu_nhan_tra");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("MaPhieuNhanTra"));
+
+                    b.Property<string>("GhiChu")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("ghi_chu");
+
+                    b.Property<bool>("LaLanTraCuoi")
+                        .HasColumnType("bit")
+                        .HasColumnName("la_lan_tra_cuoi");
+
+                    b.Property<int>("LanTra")
+                        .HasColumnType("int")
+                        .HasColumnName("lan_tra");
+
+                    b.Property<long>("MaDonThue")
+                        .HasColumnType("bigint")
+                        .HasColumnName("ma_don_thue");
+
+                    b.Property<long>("MaNhanVien")
+                        .HasColumnType("bigint")
+                        .HasColumnName("ma_nhan_vien");
+
+                    b.Property<string>("MaPhieuHienThi")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("ma_phieu_hien_thi");
+
+                    b.Property<string>("TenNhanVienLucNhan")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)")
+                        .HasColumnName("ten_nhan_vien_luc_nhan");
+
+                    b.Property<DateTime?>("ThoiDiemChot")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("thoi_diem_chot");
+
+                    b.Property<DateTime>("ThoiDiemLap")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("thoi_diem_lap");
+
+                    b.Property<string>("TrangThai")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("trang_thai");
+
+                    b.HasKey("MaPhieuNhanTra");
+
+                    b.HasIndex("MaNhanVien");
+
+                    b.HasIndex("MaPhieuHienThi")
+                        .IsUnique();
+
+                    b.HasIndex("MaDonThue", "LanTra")
+                        .IsUnique();
+
+                    b.ToTable("PHIEU_NHAN_TRA");
                 });
 
             modelBuilder.Entity("GearGo.Models.Entities.PhieuNhapHang", b =>
@@ -950,6 +1791,7 @@ namespace GearGo.Migrations
                         .HasColumnName("thong_tin_nha_cung_cap_luc_nhap");
 
                     b.Property<decimal>("TongTien")
+                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)")
                         .HasColumnName("tong_tien");
 
@@ -971,6 +1813,102 @@ namespace GearGo.Migrations
                     b.ToTable("PHIEU_NHAP_HANG");
                 });
 
+            modelBuilder.Entity("GearGo.Models.Entities.PhuPhi", b =>
+                {
+                    b.Property<long>("MaPhuPhi")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("ma_phu_phi");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("MaPhuPhi"));
+
+                    b.Property<string>("BangChung")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("bang_chung");
+
+                    b.Property<string>("CanCuTinhPhi")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("can_cu_tinh_phi");
+
+                    b.Property<string>("KetQuaGiaiQuyet")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("ket_qua_giai_quyet");
+
+                    b.Property<string>("LoaiPhi")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("loai_phi");
+
+                    b.Property<string>("LyDo")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("ly_do");
+
+                    b.Property<long?>("MaChiTietBanGiao")
+                        .HasColumnType("bigint")
+                        .HasColumnName("ma_chi_tiet_ban_giao");
+
+                    b.Property<long?>("MaDoiSoat")
+                        .HasColumnType("bigint")
+                        .HasColumnName("ma_doi_soat");
+
+                    b.Property<long>("MaDonThue")
+                        .HasColumnType("bigint")
+                        .HasColumnName("ma_don_thue");
+
+                    b.Property<long?>("MaNguoiDuyet")
+                        .HasColumnType("bigint")
+                        .HasColumnName("ma_nguoi_duyet");
+
+                    b.Property<long>("MaNguoiLap")
+                        .HasColumnType("bigint")
+                        .HasColumnName("ma_nguoi_lap");
+
+                    b.Property<long?>("MaPhuPhiGoc")
+                        .HasColumnType("bigint")
+                        .HasColumnName("ma_phu_phi_goc");
+
+                    b.Property<decimal>("SoTien")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("so_tien");
+
+                    b.Property<DateTime?>("ThoiDiemDuyet")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("thoi_diem_duyet");
+
+                    b.Property<DateTime>("ThoiDiemLap")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("thoi_diem_lap");
+
+                    b.Property<string>("TrangThaiDuyet")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("trang_thai_duyet");
+
+                    b.Property<string>("TrangThaiTranhChap")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("trang_thai_tranh_chap");
+
+                    b.HasKey("MaPhuPhi");
+
+                    b.HasIndex("MaChiTietBanGiao");
+
+                    b.HasIndex("MaDoiSoat");
+
+                    b.HasIndex("MaDonThue");
+
+                    b.HasIndex("MaNguoiDuyet");
+
+                    b.HasIndex("MaNguoiLap");
+
+                    b.HasIndex("MaPhuPhiGoc");
+
+                    b.ToTable("PHU_PHI");
+                });
+
             modelBuilder.Entity("GearGo.Models.Entities.SanPham", b =>
                 {
                     b.Property<long>("MaSanPham")
@@ -981,10 +1919,12 @@ namespace GearGo.Migrations
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("MaSanPham"));
 
                     b.Property<decimal>("GiaThueMoiNgay")
+                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)")
                         .HasColumnName("gia_thue_moi_ngay");
 
                     b.Property<decimal>("GiaTriBoiThuong")
+                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)")
                         .HasColumnName("gia_tri_boi_thuong");
 
@@ -1006,6 +1946,7 @@ namespace GearGo.Migrations
                         .HasColumnName("mo_ta");
 
                     b.Property<decimal>("MucCocMoiThietBi")
+                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)")
                         .HasColumnName("muc_coc_moi_thiet_bi");
 
@@ -1111,34 +2052,52 @@ namespace GearGo.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("MaThanhToan"));
 
+                    b.Property<string>("CongThanhToan")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("cong_thanh_toan");
+
+                    b.Property<string>("GhiChu")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("ghi_chu");
+
                     b.Property<long>("MaDonThue")
                         .HasColumnType("bigint")
                         .HasColumnName("ma_don_thue");
 
-                    b.Property<string>("MaGiaoDichDoiTac")
+                    b.Property<string>("MaGiaoDichCong")
                         .HasMaxLength(255)
                         .HasColumnType("nvarchar(255)")
-                        .HasColumnName("ma_giao_dich_doi_tac");
+                        .HasColumnName("ma_giao_dich_cong");
 
-                    b.Property<string>("MaThanhToanHienThi")
+                    b.Property<long?>("MaNguoiGhiNhan")
+                        .HasColumnType("bigint")
+                        .HasColumnName("ma_nguoi_ghi_nhan");
+
+                    b.Property<string>("MaYeuCau")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("ma_yeu_cau");
+
+                    b.Property<string>("PhuongThuc")
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)")
-                        .HasColumnName("ma_thanh_toan_hien_thi");
+                        .HasColumnName("phuong_thuc");
 
-                    b.Property<string>("PhuongThucThanhToan")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)")
-                        .HasColumnName("phuong_thuc_thanh_toan");
-
-                    b.Property<decimal>("SoTien")
-                        .HasColumnType("decimal(18,2)")
-                        .HasColumnName("so_tien");
-
-                    b.Property<DateTime>("ThoiGianThanhToan")
+                    b.Property<DateTime>("ThoiDiemTao")
                         .HasColumnType("datetime2")
-                        .HasColumnName("thoi_gian_thanh_toan");
+                        .HasColumnName("thoi_diem_tao");
+
+                    b.Property<DateTime?>("ThoiDiemThanhCong")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("thoi_diem_thanh_cong");
+
+                    b.Property<decimal>("TongSoTien")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("tong_so_tien");
 
                     b.Property<string>("TrangThai")
                         .IsRequired()
@@ -1146,11 +2105,18 @@ namespace GearGo.Migrations
                         .HasColumnType("nvarchar(50)")
                         .HasColumnName("trang_thai");
 
+                    b.Property<string>("TrangThaiDoiChieu")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("trang_thai_doi_chieu");
+
                     b.HasKey("MaThanhToan");
 
                     b.HasIndex("MaDonThue");
 
-                    b.HasIndex("MaThanhToanHienThi")
+                    b.HasIndex("MaNguoiGhiNhan");
+
+                    b.HasIndex("MaYeuCau")
                         .IsUnique();
 
                     b.ToTable("THANH_TOAN");
@@ -1170,12 +2136,17 @@ namespace GearGo.Migrations
                         .HasColumnName("ghi_chu");
 
                     b.Property<decimal>("GiaNhap")
+                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)")
                         .HasColumnName("gia_nhap");
 
                     b.Property<long>("MaChiTietPhieuNhap")
                         .HasColumnType("bigint")
                         .HasColumnName("ma_chi_tiet_phieu_nhap");
+
+                    b.Property<long>("MaSanPhamHienTai")
+                        .HasColumnType("bigint")
+                        .HasColumnName("ma_san_pham_hien_tai");
 
                     b.Property<string>("MaThietBiHienThi")
                         .IsRequired()
@@ -1203,20 +2174,138 @@ namespace GearGo.Migrations
 
                     b.HasIndex("MaChiTietPhieuNhap");
 
+                    b.HasIndex("MaSanPhamHienTai");
+
                     b.HasIndex("MaThietBiHienThi")
                         .IsUnique();
 
                     b.ToTable("THIET_BI");
                 });
 
+            modelBuilder.Entity("GearGo.Models.Entities.ThongBao", b =>
+                {
+                    b.Property<long>("MaThongBao")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("ma_thong_bao");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("MaThongBao"));
+
+                    b.Property<string>("KenhGui")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("kenh_gui");
+
+                    b.Property<string>("LoaiSuKien")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("loai_su_kien");
+
+                    b.Property<string>("LoiGuiGanNhat")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("loi_gui_gan_nhat");
+
+                    b.Property<long?>("MaDonThue")
+                        .HasColumnType("bigint")
+                        .HasColumnName("ma_don_thue");
+
+                    b.Property<string>("MaSuKien")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("ma_su_kien");
+
+                    b.Property<long>("MaTaiKhoan")
+                        .HasColumnType("bigint")
+                        .HasColumnName("ma_tai_khoan");
+
+                    b.Property<string>("NoiDung")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("noi_dung");
+
+                    b.Property<int>("SoLanThuGui")
+                        .HasColumnType("int")
+                        .HasColumnName("so_lan_thu_gui");
+
+                    b.Property<DateTime?>("ThoiDiemDoc")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("thoi_diem_doc");
+
+                    b.Property<DateTime?>("ThoiDiemGui")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("thoi_diem_gui");
+
+                    b.Property<DateTime>("ThoiDiemTao")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("thoi_diem_tao");
+
+                    b.Property<string>("TieuDe")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)")
+                        .HasColumnName("tieu_de");
+
+                    b.Property<string>("TrangThaiGui")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("trang_thai_gui");
+
+                    b.HasKey("MaThongBao");
+
+                    b.HasIndex("MaDonThue");
+
+                    b.HasIndex("MaTaiKhoan");
+
+                    b.ToTable("THONG_BAO");
+                });
+
+            modelBuilder.Entity("GearGo.Models.Entities.ChiTietBanGiao", b =>
+                {
+                    b.HasOne("GearGo.Models.Entities.PhanCongThietBi", "PhanCongThietBi")
+                        .WithOne()
+                        .HasForeignKey("GearGo.Models.Entities.ChiTietBanGiao", "MaPhanCong")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("GearGo.Models.Entities.PhieuBanGiao", "PhieuBanGiao")
+                        .WithMany("ChiTietBanGiaos")
+                        .HasForeignKey("MaPhieuBanGiao")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("PhanCongThietBi");
+
+                    b.Navigation("PhieuBanGiao");
+                });
+
+            modelBuilder.Entity("GearGo.Models.Entities.ChiTietDieuChinhKho", b =>
+                {
+                    b.HasOne("GearGo.Models.Entities.ChiTietPhieuNhap", "ChiTietPhieuNhap")
+                        .WithMany()
+                        .HasForeignKey("MaChiTietPhieuNhap")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("GearGo.Models.Entities.PhieuDieuChinhKho", "PhieuDieuChinhKho")
+                        .WithMany("ChiTietDieuChinhKhos")
+                        .HasForeignKey("MaPhieuDieuChinh")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("GearGo.Models.Entities.ThietBi", "ThietBi")
+                        .WithMany()
+                        .HasForeignKey("MaThietBi")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("ChiTietPhieuNhap");
+
+                    b.Navigation("PhieuDieuChinhKho");
+
+                    b.Navigation("ThietBi");
+                });
+
             modelBuilder.Entity("GearGo.Models.Entities.ChiTietDonThue", b =>
                 {
-                    b.HasOne("GearGo.Models.Entities.DonThue", null)
-                        .WithMany("ChiTietDonThues")
-                        .HasForeignKey("DonThueMaDonThue");
-
                     b.HasOne("GearGo.Models.Entities.DonThue", "DonThue")
-                        .WithMany()
+                        .WithMany("ChiTietDonThues")
                         .HasForeignKey("MaDonThue")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -1251,6 +2340,32 @@ namespace GearGo.Migrations
                     b.Navigation("SanPham");
                 });
 
+            modelBuilder.Entity("GearGo.Models.Entities.ChiTietNhanTra", b =>
+                {
+                    b.HasOne("GearGo.Models.Entities.ChiTietBanGiao", "ChiTietBanGiao")
+                        .WithOne("ChiTietNhanTra")
+                        .HasForeignKey("GearGo.Models.Entities.ChiTietNhanTra", "MaChiTietBanGiao")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("GearGo.Models.Entities.NhanVien", "NguoiDuyetMat")
+                        .WithMany()
+                        .HasForeignKey("MaNguoiDuyetMat")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("GearGo.Models.Entities.PhieuNhanTra", "PhieuNhanTra")
+                        .WithMany("ChiTietNhanTras")
+                        .HasForeignKey("MaPhieuNhanTra")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ChiTietBanGiao");
+
+                    b.Navigation("NguoiDuyetMat");
+
+                    b.Navigation("PhieuNhanTra");
+                });
+
             modelBuilder.Entity("GearGo.Models.Entities.ChiTietPhieuNhap", b =>
                 {
                     b.HasOne("GearGo.Models.Entities.PhieuNhapHang", "PhieuNhapHang")
@@ -1273,7 +2388,7 @@ namespace GearGo.Migrations
             modelBuilder.Entity("GearGo.Models.Entities.ChiTietThanhToan", b =>
                 {
                     b.HasOne("GearGo.Models.Entities.ThanhToan", "ThanhToan")
-                        .WithMany()
+                        .WithMany("ChiTietThanhToans")
                         .HasForeignKey("MaThanhToan")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -1292,6 +2407,24 @@ namespace GearGo.Migrations
                     b.Navigation("NguoiTao");
                 });
 
+            modelBuilder.Entity("GearGo.Models.Entities.DanhGia", b =>
+                {
+                    b.HasOne("GearGo.Models.Entities.ChiTietDonThue", "ChiTietDonThue")
+                        .WithOne("DanhGia")
+                        .HasForeignKey("GearGo.Models.Entities.DanhGia", "MaChiTietDon")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("GearGo.Models.Entities.NhanVien", "NguoiAn")
+                        .WithMany()
+                        .HasForeignKey("MaNguoiAn")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("ChiTietDonThue");
+
+                    b.Navigation("NguoiAn");
+                });
+
             modelBuilder.Entity("GearGo.Models.Entities.DanhMucSanPham", b =>
                 {
                     b.HasOne("GearGo.Models.Entities.DanhMucSanPham", "DanhMucCha")
@@ -1300,6 +2433,39 @@ namespace GearGo.Migrations
                         .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("DanhMucCha");
+                });
+
+            modelBuilder.Entity("GearGo.Models.Entities.DoiSoatTienCoc", b =>
+                {
+                    b.HasOne("GearGo.Models.Entities.DoiSoatTienCoc", "DoiSoatGoc")
+                        .WithMany()
+                        .HasForeignKey("MaDoiSoatGoc")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("GearGo.Models.Entities.DonThue", "DonThue")
+                        .WithMany()
+                        .HasForeignKey("MaDonThue")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("GearGo.Models.Entities.NhanVien", "NguoiChot")
+                        .WithMany()
+                        .HasForeignKey("MaNguoiChot")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("GearGo.Models.Entities.NhanVien", "NguoiLap")
+                        .WithMany()
+                        .HasForeignKey("MaNguoiLap")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("DoiSoatGoc");
+
+                    b.Navigation("DonThue");
+
+                    b.Navigation("NguoiChot");
+
+                    b.Navigation("NguoiLap");
                 });
 
             modelBuilder.Entity("GearGo.Models.Entities.DonThue", b =>
@@ -1327,6 +2493,25 @@ namespace GearGo.Migrations
                     b.Navigation("NguoiHuy");
                 });
 
+            modelBuilder.Entity("GearGo.Models.Entities.GiaoDichDoiSoat", b =>
+                {
+                    b.HasOne("GearGo.Models.Entities.ChiTietThanhToan", "ChiTietThanhToan")
+                        .WithOne("GiaoDichDoiSoat")
+                        .HasForeignKey("GearGo.Models.Entities.GiaoDichDoiSoat", "MaChiTietThanhToan")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("GearGo.Models.Entities.DoiSoatTienCoc", "DoiSoatTienCoc")
+                        .WithMany("GiaoDichDoiSoats")
+                        .HasForeignKey("MaDoiSoat")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ChiTietThanhToan");
+
+                    b.Navigation("DoiSoatTienCoc");
+                });
+
             modelBuilder.Entity("GearGo.Models.Entities.GioThue", b =>
                 {
                     b.HasOne("GearGo.Models.Entities.KhachHang", "KhachHang")
@@ -1335,7 +2520,13 @@ namespace GearGo.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("GearGo.Models.Entities.KhuyenMai", "KhuyenMai")
+                        .WithMany()
+                        .HasForeignKey("MaKhuyenMai");
+
                     b.Navigation("KhachHang");
+
+                    b.Navigation("KhuyenMai");
                 });
 
             modelBuilder.Entity("GearGo.Models.Entities.GiuCho", b =>
@@ -1358,6 +2549,31 @@ namespace GearGo.Migrations
                         .IsRequired();
 
                     b.Navigation("SanPham");
+                });
+
+            modelBuilder.Entity("GearGo.Models.Entities.HoanTien", b =>
+                {
+                    b.HasOne("GearGo.Models.Entities.ChiTietThanhToan", "ChiTietThanhToanGoc")
+                        .WithMany("HoanTiens")
+                        .HasForeignKey("MaChiTietThanhToanGoc")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("GearGo.Models.Entities.DoiSoatTienCoc", "DoiSoatTienCoc")
+                        .WithMany("HoanTiens")
+                        .HasForeignKey("MaDoiSoat")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("GearGo.Models.Entities.NhanVien", "NguoiXuLy")
+                        .WithMany()
+                        .HasForeignKey("MaNguoiXuLy")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("ChiTietThanhToanGoc");
+
+                    b.Navigation("DoiSoatTienCoc");
+
+                    b.Navigation("NguoiXuLy");
                 });
 
             modelBuilder.Entity("GearGo.Models.Entities.KhachHang", b =>
@@ -1409,6 +2625,24 @@ namespace GearGo.Migrations
                     b.Navigation("SanPham");
                 });
 
+            modelBuilder.Entity("GearGo.Models.Entities.LichSuTinhTrangThietBi", b =>
+                {
+                    b.HasOne("GearGo.Models.Entities.TaiKhoan", "NguoiThucHien")
+                        .WithMany()
+                        .HasForeignKey("MaNguoiThucHien")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("GearGo.Models.Entities.ThietBi", "ThietBi")
+                        .WithMany()
+                        .HasForeignKey("MaThietBi")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("NguoiThucHien");
+
+                    b.Navigation("ThietBi");
+                });
+
             modelBuilder.Entity("GearGo.Models.Entities.LichSuTrangThaiDon", b =>
                 {
                     b.HasOne("GearGo.Models.Entities.DonThue", "DonThue")
@@ -1419,7 +2653,8 @@ namespace GearGo.Migrations
 
                     b.HasOne("GearGo.Models.Entities.TaiKhoan", "NguoiThucHien")
                         .WithMany()
-                        .HasForeignKey("MaNguoiThucHien");
+                        .HasForeignKey("MaNguoiThucHien")
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("DonThue");
 
@@ -1456,6 +2691,16 @@ namespace GearGo.Migrations
                     b.Navigation("TaiKhoan");
                 });
 
+            modelBuilder.Entity("GearGo.Models.Entities.NhatKyThaoTac", b =>
+                {
+                    b.HasOne("GearGo.Models.Entities.TaiKhoan", "TaiKhoan")
+                        .WithMany()
+                        .HasForeignKey("MaTaiKhoan")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("TaiKhoan");
+                });
+
             modelBuilder.Entity("GearGo.Models.Entities.PhanCongThietBi", b =>
                 {
                     b.HasOne("GearGo.Models.Entities.ChiTietDonThue", "ChiTietDon")
@@ -1464,13 +2709,13 @@ namespace GearGo.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("GearGo.Models.Entities.NhanVien", "NhanVienHuy")
+                    b.HasOne("GearGo.Models.Entities.NhanVien", "NguoiHuyPhanCong")
                         .WithMany()
-                        .HasForeignKey("MaNhanVienHuy");
+                        .HasForeignKey("MaNguoiHuyPhanCong");
 
-                    b.HasOne("GearGo.Models.Entities.NhanVien", "NhanVienPhanCong")
+                    b.HasOne("GearGo.Models.Entities.NhanVien", "NguoiPhanCong")
                         .WithMany()
-                        .HasForeignKey("MaNhanVienPhanCong")
+                        .HasForeignKey("MaNguoiPhanCong")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
@@ -1482,11 +2727,114 @@ namespace GearGo.Migrations
 
                     b.Navigation("ChiTietDon");
 
-                    b.Navigation("NhanVienHuy");
+                    b.Navigation("NguoiHuyPhanCong");
 
-                    b.Navigation("NhanVienPhanCong");
+                    b.Navigation("NguoiPhanCong");
 
                     b.Navigation("ThietBi");
+                });
+
+            modelBuilder.Entity("GearGo.Models.Entities.PhieuBanGiao", b =>
+                {
+                    b.HasOne("GearGo.Models.Entities.DonThue", "DonThue")
+                        .WithOne("PhieuBanGiao")
+                        .HasForeignKey("GearGo.Models.Entities.PhieuBanGiao", "MaDonThue")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("GearGo.Models.Entities.NhanVien", "NhanVien")
+                        .WithMany()
+                        .HasForeignKey("MaNhanVien")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("DonThue");
+
+                    b.Navigation("NhanVien");
+                });
+
+            modelBuilder.Entity("GearGo.Models.Entities.PhieuBaoTri", b =>
+                {
+                    b.HasOne("GearGo.Models.Entities.DonThue", "DonThue")
+                        .WithMany()
+                        .HasForeignKey("MaDonThue")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("GearGo.Models.Entities.NhanVien", "NguoiLap")
+                        .WithMany()
+                        .HasForeignKey("MaNguoiLap")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("GearGo.Models.Entities.NhanVien", "NguoiXacNhanHoanThanh")
+                        .WithMany()
+                        .HasForeignKey("MaNguoiXacNhanHoanThanh")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("GearGo.Models.Entities.NhanVien", "NguoiXuLy")
+                        .WithMany()
+                        .HasForeignKey("MaNguoiXuLy")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("GearGo.Models.Entities.ThietBi", "ThietBi")
+                        .WithMany()
+                        .HasForeignKey("MaThietBi")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("DonThue");
+
+                    b.Navigation("NguoiLap");
+
+                    b.Navigation("NguoiXacNhanHoanThanh");
+
+                    b.Navigation("NguoiXuLy");
+
+                    b.Navigation("ThietBi");
+                });
+
+            modelBuilder.Entity("GearGo.Models.Entities.PhieuDieuChinhKho", b =>
+                {
+                    b.HasOne("GearGo.Models.Entities.NhanVien", "NguoiDuyet")
+                        .WithMany()
+                        .HasForeignKey("MaNguoiDuyet")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("GearGo.Models.Entities.NhanVien", "NguoiLap")
+                        .WithMany()
+                        .HasForeignKey("MaNguoiLap")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("GearGo.Models.Entities.PhieuNhapHang", "PhieuNhapLienQuan")
+                        .WithMany()
+                        .HasForeignKey("MaPhieuNhapLienQuan")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("NguoiDuyet");
+
+                    b.Navigation("NguoiLap");
+
+                    b.Navigation("PhieuNhapLienQuan");
+                });
+
+            modelBuilder.Entity("GearGo.Models.Entities.PhieuNhanTra", b =>
+                {
+                    b.HasOne("GearGo.Models.Entities.DonThue", "DonThue")
+                        .WithMany("PhieuNhanTras")
+                        .HasForeignKey("MaDonThue")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("GearGo.Models.Entities.NhanVien", "NhanVien")
+                        .WithMany()
+                        .HasForeignKey("MaNhanVien")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("DonThue");
+
+                    b.Navigation("NhanVien");
                 });
 
             modelBuilder.Entity("GearGo.Models.Entities.PhieuNhapHang", b =>
@@ -1514,6 +2862,53 @@ namespace GearGo.Migrations
                     b.Navigation("NhaCungCap");
                 });
 
+            modelBuilder.Entity("GearGo.Models.Entities.PhuPhi", b =>
+                {
+                    b.HasOne("GearGo.Models.Entities.ChiTietBanGiao", "ChiTietBanGiao")
+                        .WithMany()
+                        .HasForeignKey("MaChiTietBanGiao")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("GearGo.Models.Entities.DoiSoatTienCoc", "DoiSoatTienCoc")
+                        .WithMany("PhuPhis")
+                        .HasForeignKey("MaDoiSoat")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("GearGo.Models.Entities.DonThue", "DonThue")
+                        .WithMany()
+                        .HasForeignKey("MaDonThue")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("GearGo.Models.Entities.NhanVien", "NguoiDuyet")
+                        .WithMany()
+                        .HasForeignKey("MaNguoiDuyet")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("GearGo.Models.Entities.NhanVien", "NguoiLap")
+                        .WithMany()
+                        .HasForeignKey("MaNguoiLap")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("GearGo.Models.Entities.PhuPhi", "PhuPhiGoc")
+                        .WithMany()
+                        .HasForeignKey("MaPhuPhiGoc")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("ChiTietBanGiao");
+
+                    b.Navigation("DoiSoatTienCoc");
+
+                    b.Navigation("DonThue");
+
+                    b.Navigation("NguoiDuyet");
+
+                    b.Navigation("NguoiLap");
+
+                    b.Navigation("PhuPhiGoc");
+                });
+
             modelBuilder.Entity("GearGo.Models.Entities.SanPham", b =>
                 {
                     b.HasOne("GearGo.Models.Entities.DanhMucSanPham", "DanhMuc")
@@ -1533,7 +2928,14 @@ namespace GearGo.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("GearGo.Models.Entities.NhanVien", "NguoiGhiNhan")
+                        .WithMany()
+                        .HasForeignKey("MaNguoiGhiNhan")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.Navigation("DonThue");
+
+                    b.Navigation("NguoiGhiNhan");
                 });
 
             modelBuilder.Entity("GearGo.Models.Entities.ThietBi", b =>
@@ -1544,17 +2946,57 @@ namespace GearGo.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("GearGo.Models.Entities.SanPham", "SanPhamHienTai")
+                        .WithMany("ThietBis")
+                        .HasForeignKey("MaSanPhamHienTai")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.Navigation("ChiTietPhieuNhap");
+
+                    b.Navigation("SanPhamHienTai");
+                });
+
+            modelBuilder.Entity("GearGo.Models.Entities.ThongBao", b =>
+                {
+                    b.HasOne("GearGo.Models.Entities.DonThue", "DonThue")
+                        .WithMany()
+                        .HasForeignKey("MaDonThue")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("GearGo.Models.Entities.TaiKhoan", "TaiKhoan")
+                        .WithMany()
+                        .HasForeignKey("MaTaiKhoan")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("DonThue");
+
+                    b.Navigation("TaiKhoan");
+                });
+
+            modelBuilder.Entity("GearGo.Models.Entities.ChiTietBanGiao", b =>
+                {
+                    b.Navigation("ChiTietNhanTra");
                 });
 
             modelBuilder.Entity("GearGo.Models.Entities.ChiTietDonThue", b =>
                 {
+                    b.Navigation("DanhGia");
+
                     b.Navigation("GiuCho");
                 });
 
             modelBuilder.Entity("GearGo.Models.Entities.ChiTietPhieuNhap", b =>
                 {
                     b.Navigation("ThietBis");
+                });
+
+            modelBuilder.Entity("GearGo.Models.Entities.ChiTietThanhToan", b =>
+                {
+                    b.Navigation("GiaoDichDoiSoat");
+
+                    b.Navigation("HoanTiens");
                 });
 
             modelBuilder.Entity("GearGo.Models.Entities.DanhMucSanPham", b =>
@@ -1564,11 +3006,24 @@ namespace GearGo.Migrations
                     b.Navigation("SanPhams");
                 });
 
+            modelBuilder.Entity("GearGo.Models.Entities.DoiSoatTienCoc", b =>
+                {
+                    b.Navigation("GiaoDichDoiSoats");
+
+                    b.Navigation("HoanTiens");
+
+                    b.Navigation("PhuPhis");
+                });
+
             modelBuilder.Entity("GearGo.Models.Entities.DonThue", b =>
                 {
                     b.Navigation("ChiTietDonThues");
 
                     b.Navigation("LuotSuDungKhuyenMai");
+
+                    b.Navigation("PhieuBanGiao");
+
+                    b.Navigation("PhieuNhanTras");
                 });
 
             modelBuilder.Entity("GearGo.Models.Entities.GioThue", b =>
@@ -1585,6 +3040,21 @@ namespace GearGo.Migrations
                     b.Navigation("LuotSuDungKhuyenMais");
                 });
 
+            modelBuilder.Entity("GearGo.Models.Entities.PhieuBanGiao", b =>
+                {
+                    b.Navigation("ChiTietBanGiaos");
+                });
+
+            modelBuilder.Entity("GearGo.Models.Entities.PhieuDieuChinhKho", b =>
+                {
+                    b.Navigation("ChiTietDieuChinhKhos");
+                });
+
+            modelBuilder.Entity("GearGo.Models.Entities.PhieuNhanTra", b =>
+                {
+                    b.Navigation("ChiTietNhanTras");
+                });
+
             modelBuilder.Entity("GearGo.Models.Entities.PhieuNhapHang", b =>
                 {
                     b.Navigation("ChiTietPhieuNhaps");
@@ -1593,6 +3063,8 @@ namespace GearGo.Migrations
             modelBuilder.Entity("GearGo.Models.Entities.SanPham", b =>
                 {
                     b.Navigation("HinhAnhs");
+
+                    b.Navigation("ThietBis");
                 });
 
             modelBuilder.Entity("GearGo.Models.Entities.TaiKhoan", b =>
@@ -1600,6 +3072,11 @@ namespace GearGo.Migrations
                     b.Navigation("KhachHang");
 
                     b.Navigation("NhanVien");
+                });
+
+            modelBuilder.Entity("GearGo.Models.Entities.ThanhToan", b =>
+                {
+                    b.Navigation("ChiTietThanhToans");
                 });
 #pragma warning restore 612, 618
         }

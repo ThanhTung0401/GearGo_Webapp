@@ -10,6 +10,13 @@ public class GioThue {
     [Column("ma_khuyen_mai")] public long? MaKhuyenMai { get; set; }
     [Column("gio_nhan_du_kien")] public DateTime? GioNhanDuKien { get; set; }
     [Column("gio_tra_du_kien")] public DateTime? GioTraDuKien { get; set; }
+    // Thêm cột Ngày Cập Nhật
+    [Column("ngay_cap_nhat")] 
+    public DateTime NgayCapNhat { get; set; }
+
+    // Thêm khóa ngoại KhuyenMai
+    [ForeignKey(nameof(MaKhuyenMai))] 
+    public KhuyenMai? KhuyenMai { get; set; }
     [ForeignKey(nameof(MaKhachHang))] public KhachHang KhachHang { get; set; } = null!;
     public ICollection<ChiTietGioThue> ChiTietGioThues { get; set; } = new List<ChiTietGioThue>();
 }

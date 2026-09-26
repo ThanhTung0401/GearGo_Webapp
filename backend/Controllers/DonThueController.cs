@@ -1,5 +1,5 @@
 using GearGo.Models.DTOs;
-using GearGo.Services.Interfaces; 
+using GearGo.Services.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 
 namespace GearGo.Controllers;

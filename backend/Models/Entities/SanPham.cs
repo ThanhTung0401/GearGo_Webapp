@@ -19,4 +19,5 @@ public class SanPham {
     [Column("trang_thai_kinh_doanh")] public TrangThaiKinhDoanh TrangThaiKinhDoanh { get; set; }
     [ForeignKey(nameof(MaDanhMuc))] public DanhMucSanPham DanhMuc { get; set; } = null!;
     public ICollection<HinhAnhSanPham> HinhAnhs { get; set; } = new List<HinhAnhSanPham>();
+    public ICollection<ThietBi> ThietBis { get; set; } = new List<ThietBi>();
 }

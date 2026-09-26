@@ -225,7 +225,7 @@ Models/DTOs/DanhMuc/DanhMucResponse.cs
 - [ ] 9.2 Công thức khả dụng:
   - Chưa chọn ngày → chỉ hiện giá tham khảo, không khẳng định còn hàng
   - Kiểm tra giờ trả > giờ nhận; không cho bắt đầu trong quá khứ
-  - Đếm tổng ThietBi đủ điều kiện từ phiếu nhập đã xác nhận (`DaNhapKho`)
+  - Đếm tổng ThietBi đủ điều kiện (có `MaSanPhamHienTai == MaSanPham`) từ phiếu nhập đã xác nhận (`DaNhapKho`) thay vì join qua `ChiTietPhieuNhap`
   - **Giữ chỗ tạm chiếm lịch khi ĐỒNG THỜI:**
     - Đơn đang `ChoThanhToan`
     - `GiuCho.TrangThai = DangGiu`
@@ -327,7 +327,7 @@ Models/Enums/TrangThaiSuDungThietBi.cs
 - [ ] 5.1 `NhaCungCap.cs` (Cấp 0) — 10 trường: MaNhaCungCap, MaNhaCungCapHienThi (unique), TenNhaCungCap, NguoiLienHe, SoDienThoai, Email, DiaChi, MaSoThue, GhiChu, TrangThaiHopTac
 - [ ] 5.2 `PhieuNhapHang.cs` (Cấp 2) — FK: MaNhaCungCap, MaNguoiLap (NhanVien), MaNguoiXacNhan (NhanVien, nullable). Đủ **17 trường**: MaPhieuNhap, MaNhaCungCap, MaNguoiLap, MaNguoiXacNhan, MaPhieuHienThi, SoChungTuNhaCungCap, NgayLap, NgayNhapDuKien, NgayNhapThucTe, NgayXacNhan, TongTien, ThongTinNhaCungCapLucNhap (json), TenNguoiLapLucNhap, TenNguoiXacNhanLucNhap, TrangThai, LyDoHuy, GhiChu
 - [ ] 5.3 `ChiTietPhieuNhap.cs` (Cấp 3) — FK: MaPhieuNhap, MaSanPham. Đủ trường: MaChiTietPhieuNhap, MaPhieuNhap, MaSanPham, TenSanPhamLucNhap, SoLuong, DonGiaNhap, TinhTrangKhiNhap, GhiChu
-- [ ] 5.4 `ThietBi.cs` (Cấp 4) — FK: MaChiTietPhieuNhap (NOT NULL). Đủ **9 trường**: MaThietBi, MaChiTietPhieuNhap, MaThietBiHienThi, NgayNhap, GiaNhap, TinhTrang, PhuKienDiKem (json), TrangThaiSuDung, GhiChu
+- [ ] 5.4 `ThietBi.cs` (Cấp 4) — FK: MaChiTietPhieuNhap (NOT NULL), MaSanPhamHienTai (NOT NULL). Đủ **10 trường**: MaThietBi, MaChiTietPhieuNhap, MaSanPhamHienTai, MaThietBiHienThi, NgayNhap, GiaNhap, TinhTrang, PhuKienDiKem (json), TrangThaiSuDung, GhiChu
 - [ ] 5.5 Enum `TrangThaiSuDungThietBi`: SanSang, DangThue, DangBaoTri, ThatLac, NgungSuDung; giữ chỗ quản lý ở `GIU_CHO`
 - [ ] 5.6 Fluent API unique: NhaCungCap.MaNhaCungCapHienThi, PhieuNhapHang.MaPhieuHienThi, ThietBi.MaThietBiHienThi
 - [ ] 5.7 Hoàn thiện entity và Fluent API → báo Người 1 tích hợp và tạo migration → cả nhóm cập nhật database bằng migration đã thống nhất

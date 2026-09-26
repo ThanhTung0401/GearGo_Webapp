@@ -45,6 +45,7 @@ public class ChiTietDonThue
 
     // -- Navigation Properties --
     [ForeignKey(nameof(MaDonThue))]
+    [InverseProperty(nameof(DonThue.ChiTietDonThues))]
     public DonThue DonThue { get; set; } = null!;
 
     [ForeignKey(nameof(MaSanPham))]
@@ -52,4 +53,7 @@ public class ChiTietDonThue
 
     // Quan hệ 1-1 với Giữ Chỗ
     public GiuCho? GiuCho { get; set; }
+
+    // Quan hệ 1-1 với Đánh Giá
+    public DanhGia? DanhGia { get; set; }
 }

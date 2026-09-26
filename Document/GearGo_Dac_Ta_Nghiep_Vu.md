@@ -39,7 +39,7 @@ Tên thực thể và thông tin nghiệp vụ được ghi bằng tiếng Việ
 | Nhân viên | Mã nhân viên, họ tên, liên hệ, vai trò và trạng thái làm việc. |
 | Danh mục sản phẩm | Tên nhóm đồ, danh mục cha nếu có, mô tả, thứ tự và trạng thái hiển thị. |
 | Sản phẩm | Mẫu đồ cho thuê: mã, tên, danh mục, thương hiệu, mô tả, sức chứa hoặc kích thước, giá thuê mỗi ngày, mức cọc mỗi thiết bị, giá trị bồi thường, hình ảnh và trạng thái kinh doanh. |
-| Thiết bị | Từng vật phẩm thực tế thuộc một sản phẩm: mã riêng, nguồn nhập, ngày nhập, giá nhập, tình trạng, phụ kiện đi kèm, số lần cho thuê và trạng thái sử dụng. |
+| Thiết bị | Từng vật phẩm thực tế thuộc một sản phẩm: mã riêng, nguồn nhập, sản phẩm đang cho thuê hiện tại (cho phép giáng cấp), ngày nhập, giá nhập, tình trạng, phụ kiện đi kèm, số lần cho thuê và trạng thái sử dụng. |
 | Nhà cung cấp | Mã, tên, người liên hệ, số điện thoại, email, địa chỉ, mã số thuế nếu có, ghi chú và trạng thái hợp tác. |
 | Phiếu nhập hàng | Chứng từ nhập thiết bị: mã phiếu, nhà cung cấp, ngày lập, ngày nhập thực tế, người lập, người xác nhận, số chứng từ của nhà cung cấp nếu có, tổng tiền, trạng thái và ghi chú. |
 | Chi tiết phiếu nhập | Từng dòng hàng của phiếu: sản phẩm, số lượng nhập được chấp nhận, đơn giá nhập, thành tiền, tình trạng và ghi chú. Danh sách thiết bị nhận về được gắn với dòng tương ứng. |
@@ -49,7 +49,7 @@ Tên thực thể và thông tin nghiệp vụ được ghi bằng tiếng Việ
 | Chi tiết đơn thuê | Sản phẩm, số lượng, số ngày tính tiền, đơn giá, tiền thuê, mức cọc và giá trị bồi thường tại thời điểm đặt. |
 | Phân công thiết bị | Thiết bị cụ thể được chọn cho từng dòng đơn, lịch sử thay thế, người thực hiện và thời gian. |
 | Phiếu bàn giao; Chi tiết bàn giao | Đơn thuê, nhân viên, thời điểm giao, xác nhận của khách; từng thiết bị, phụ kiện, tình trạng, ảnh và số lượng thực giao. |
-| Phiếu nhận trả; Chi tiết nhận trả | Đơn thuê, nhân viên, thời điểm nhận; thiết bị được trả, phụ kiện, tình trạng sau thuê, ảnh, ghi chú và phần còn thiếu. |
+| Phiếu nhận trả; Chi tiết nhận trả | Một đơn thuê có thể có 1 hoặc nhiều phiếu nhận trả (1-N, tương ứng từng đợt trả). Mỗi phiếu có mã hiển thị theo đợt (PNT-{MaDonHienThi}-{lan_tra}), số thứ tự đợt (lan_tra), đánh dấu đợt cuối (la_lan_tra_cuoi); chi tiết nhận trả gắn với từng thiết bị đã bàn giao, tình trạng sau thuê, ảnh và kết luận xử lý. |
 | Phụ phí | Loại phí, đơn và thiết bị liên quan, số tiền, lý do, bằng chứng, người lập, người duyệt và trạng thái duyệt. |
 | Thanh toán | Khoản tiền thuê, cọc hoặc thu bổ sung: số tiền, mục đích, phương thức, mã giao dịch, thời điểm và kết quả. |
 | Hoàn tiền | Khoản hoàn cọc hoặc hoàn do hủy, giao dịch thu gốc, số tiền, lý do, người xử lý và kết quả. |
@@ -61,7 +61,7 @@ Tên thực thể và thông tin nghiệp vụ được ghi bằng tiếng Việ
 | Thông báo | Người nhận, nội dung, sự kiện liên quan, thời điểm, kênh gửi và tình trạng gửi hoặc đọc. |
 | Lịch sử trạng thái đơn; Lịch sử tình trạng thiết bị; Nhật ký thao tác | Đối tượng thay đổi, nội dung trước và sau, người thực hiện, thời gian và lý do. |
 
-**Phân biệt sản phẩm và thiết bị:** “Lều 4 người” là một sản phẩm; năm chiếc lều mang mã L001–L005 là năm thiết bị. Phiếu nhập mua thêm thiết bị thuộc sản phẩm đó. Khách đặt theo sản phẩm và số lượng; nhân viên chọn mã thiết bị cụ thể khi chuẩn bị đơn.
+**Phân biệt sản phẩm và thiết bị:** “Lều 4 người” là một sản phẩm; năm chiếc lều mang mã L001–L005 là năm thiết bị. Phiếu nhập mua thêm thiết bị thuộc sản phẩm đó. Khi thiết bị bị cũ, quản trị viên có thể điều chuyển nó sang một mã sản phẩm khác rẻ hơn (ví dụ: "Lều 4 người - Cũ 80%") bằng cách đổi sản phẩm hiện tại của thiết bị mà vẫn giữ nguyên lịch sử nhập kho ban đầu. Khách đặt theo sản phẩm và số lượng; nhân viên chọn mã thiết bị cụ thể khi chuẩn bị đơn.
 
 ## 4. Use case khách hàng
 
@@ -157,12 +157,15 @@ Tên thực thể và thông tin nghiệp vụ được ghi bằng tiếng Việ
 - **Tác nhân:** Nhân viên; khách hàng trả đồ.
 - **Điều kiện:** Đơn đang thuê và đã có phiếu bàn giao.
 - **Cách hoạt động:**
-  1. Tra cứu đơn, đối chiếu thiết bị và phụ kiện đã giao.
-  2. Ghi thời điểm trả thực tế của từng thiết bị; kiểm tra và phân loại: bình thường, cần vệ sinh, hỏng nhẹ, hỏng nặng, thiếu phụ kiện hoặc mất thiết bị.
-  3. Lập phiếu nhận trả, lưu ảnh và ghi chú; chuyển đồ đạt kiểm tra về sẵn sàng, đồ cần xử lý sang bảo trì hoặc ngừng sử dụng.
-  4. Khi mọi thiết bị đã có kết luận, chuyển đơn **Đã nhận trả**, sau đó **Chờ đối soát**.
-- **Ngoại lệ:** Khách trả thiếu thì ghi nhận phần đã trả và phần còn phải trả; đơn tiếp tục đang thuê, có nhãn trả một phần. Thiết bị chưa trả không được coi là đã về kho. Nếu xác nhận mất, phải có biên bản, phụ phí bồi thường được duyệt và kết luận xử lý thay cho nghĩa vụ trả thiết bị đó. Không ghi nhận cùng một thiết bị được trả hai lần.
-- **Kết quả:** Có bằng chứng sau thuê và kết luận cho từng thiết bị; không hoàn tất đơn khi còn đồ chưa có hướng xử lý.
+  1. Tra cứu đơn thuê, đối chiếu danh sách thiết bị và phụ kiện đã bàn giao với các thiết bị khách mang đến trả đợt này.
+  2. Xác định đợt trả: Hệ thống tự động tính số thứ tự đợt trả `lan_tra` (1, 2, 3...) và mã phiếu hiển thị dạng `PNT-{MaDonHienThi}-{lan_tra}`.
+  3. Ghi nhận thời điểm trả thực tế cho từng thiết bị; kiểm tra và phân loại tình trạng: bình thường, cần vệ sinh, hỏng nhẹ, hỏng nặng, thiếu phụ kiện hoặc mất thiết bị. Mỗi thiết bị bàn giao chỉ được ghi nhận trả 1 lần duy nhất trong toàn bộ các đợt.
+  4. Lập phiếu nhận trả, lưu ảnh, phụ kiện thực nhận và ghi chú; chuyển thiết bị đạt kiểm tra về sẵn sàng, thiết bị cần xử lý sang bảo trì hoặc ngừng sử dụng.
+  5. Đối soát danh sách thiết bị còn lại của đơn:
+     - **Nếu khách chỉ trả một phần:** Phiếu nhận trả được chốt với `la_lan_tra_cuoi = false`; đơn thuê tiếp tục ở trạng thái **Đang thuê** kèm nhãn **Trả một phần**; hệ thống hiển thị rõ danh sách các thiết bị còn nợ để tiếp tục theo dõi và nhắc trả.
+     - **Nếu đây là đợt trả cuối** (tất cả thiết bị trong phiếu bàn giao đều đã được ghi nhận trả hoặc có kết luận xử lý mất): Phiếu nhận trả được chốt với `la_lan_tra_cuoi = true`; đơn chuyển sang trạng thái **Đã nhận trả**, sau đó chuyển **Chờ đối soát**.
+- **Ngoại lệ:** Khách trả thiếu thì chỉ ghi nhận phần đã trả vào phiếu đợt đó; thiết bị chưa trả không được coi là đã về kho và tiếp tục bị tính quá hạn nếu quá giờ quy định. Nếu xác nhận mất, phải có biên bản, phụ phí bồi thường được duyệt và kết luận xử lý thay cho nghĩa vụ trả thiết bị đó. Không ghi nhận cùng một thiết bị được trả hai lần trên nhiều phiếu khác nhau.
+- **Kết quả:** Có bằng chứng và phiếu nhận trả cho từng đợt; nhân viên theo dõi được lịch sử các lần trả (đợt 1, đợt 2...); không hoàn tất đơn khi còn đồ chưa có kết luận xử lý.
 
 ### UC13 — Quản lý đơn quá hạn
 

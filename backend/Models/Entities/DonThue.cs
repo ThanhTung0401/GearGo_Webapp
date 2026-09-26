@@ -93,5 +93,12 @@ public class DonThue
     public LuotSuDungKhuyenMai? LuotSuDungKhuyenMai { get; set; }
 
     // @OneToMany
+    [InverseProperty(nameof(ChiTietDonThue.DonThue))]
     public ICollection<ChiTietDonThue> ChiTietDonThues { get; set; } = new List<ChiTietDonThue>();
+
+    // @OneToMany: Một đơn thuê có thể có nhiều phiếu nhận trả (trả nhiều lần)
+    public ICollection<PhieuNhanTra> PhieuNhanTras { get; set; } = new List<PhieuNhanTra>();
+
+    // @OneToOne: Một đơn thuê có 1 phiếu bàn giao
+    public PhieuBanGiao? PhieuBanGiao { get; set; }
 }

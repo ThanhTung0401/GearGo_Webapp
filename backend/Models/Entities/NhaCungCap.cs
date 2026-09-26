@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 namespace GearGo.Models.Entities;
 [Table("NHA_CUNG_CAP")]
@@ -12,5 +12,5 @@ public class NhaCungCap {
     [Column("dia_chi")] public string? DiaChi { get; set; }
     [Column("ma_so_thue")] [MaxLength(50)] public string? MaSoThue { get; set; }
     [Column("ghi_chu")] public string? GhiChu { get; set; }
-    [Column("trang_thai_hop_tac")] public bool TrangThaiHopTac { get; set; } = true;
+    [Column("trang_thai_hop_tac")] [MaxLength(50)] public string TrangThaiHopTac { get; set; } = "DangHopTac";
 }

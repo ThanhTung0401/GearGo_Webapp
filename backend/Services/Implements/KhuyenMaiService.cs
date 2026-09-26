@@ -25,7 +25,7 @@ public class KhuyenMaiService : IKhuyenMaiService
 
         if (km == null) throw new KhuyenMaiKhongHopLeException("Mã giảm giá không tồn tại.");
         if (km.TrangThai == TrangThaiKhuyenMai.TamAn) throw new KhuyenMaiKhongHopLeException("Mã giảm giá đang tạm ẩn.");
-        if (km.TrangThai == TrangThaiKhuyenMai.HetHan || now < km.NgayBatDau || now > km.NgayKetThuc)
+        if (km.TrangThai == TrangThaiKhuyenMai.HetHan || now < km.BatDau || now > km.KetThuc)
             throw new KhuyenMaiKhongHopLeException("Mã giảm giá đã hết hạn hoặc chưa đến thời gian áp dụng.");
 
         if (tienThueTruocGiam < km.TienThueToiThieu)
@@ -37,7 +37,7 @@ public class KhuyenMaiService : IKhuyenMaiService
                         (l.TrangThai == "DaSuDung" || (l.TrangThai == "DangGiu" && l.ThoiDiemHetHan > now)))
             .CountAsync();
 
-        if (km.TongLuotSuDung.HasValue && tongLuot >= km.TongLuotSuDung.Value)
+        if (km.GioiHanTongLuot.HasValue && tongLuot >= km.GioiHanTongLuot.Value)
             throw new KhuyenMaiKhongHopLeException("Mã giảm giá đã hết lượt sử dụng.");
 
         // Đếm lượt của khách này

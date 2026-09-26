@@ -2,6 +2,7 @@ using GearGo.Data;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi;
 using System.Text;
 using GearGo.BackgroundJobs;
 using GearGo.Services.Implements;
@@ -11,10 +12,32 @@ var builder = WebApplication.CreateBuilder(args);
 
 // ── 1. API Controllers ────────────────────────────────────────────────────────
 // Sử dụng AddControllers cho kiến trúc Web API (React) thay vì AddControllersWithViews (MVC)
-builder.Services.AddControllers();
-// Hỗ trợ sinh tài liệu Swagger/OpenAPI (nếu cài thêm Swagger)
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
+    });
+// Hỗ trợ sinh tài liệu Swagger/OpenAPI
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(options =>
+{
+    // 1. Định nghĩa chuẩn xác thực JWT Bearer
+    options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Name = "Authorization",
+        Type = SecuritySchemeType.Http,
+        Scheme = "Bearer",
+        BearerFormat = "JWT",
+        In = ParameterLocation.Header,
+        Description = "Nhập trực tiếp chuỗi JWT Token vào ô bên dưới (không cần gõ thêm chữ 'Bearer ')"
+    });
+
+    // 2. Áp dụng bảo mật cho toàn bộ endpoint
+    options.AddSecurityRequirement(document => new OpenApiSecurityRequirement
+    {
+        [new OpenApiSecuritySchemeReference("Bearer", document)] = new List<string>()
+    });
+});
 
 // ── 2. Database Context ───────────────────────────────────────────────────────
 // Cấu hình kết nối SQL Server thông qua Entity Framework Core
@@ -61,10 +84,10 @@ builder.Services.AddCors(opt =>
 // ── 6. Application Services (Dependency Injection) ────────────────────────────
 // Bỏ comment khi hoàn thành từng Task tương ứng theo Plan
 // builder.Services.AddScoped<IXacThucService, XacThucService>();
-// builder.Services.AddScoped<IDanhMucService, DanhMucService>();
-// builder.Services.AddScoped<ISanPhamService, SanPhamService>();
-// builder.Services.AddScoped<IKhaDungService, KhaDungService>();
-// builder.Services.AddScoped<IGioThueService, GioThueService>();
+builder.Services.AddScoped<IDanhMucService, DanhMucService>();
+builder.Services.AddScoped<ISanPhamService, SanPhamService>();
+builder.Services.AddScoped<IKhaDungService, KhaDungService>();
+builder.Services.AddScoped<IGioThueService, GioThueService>();
 builder.Services.AddScoped<IDonThueService, DonThueService>();
 builder.Services.AddScoped<IThanhToanService, ThanhToanService>();
 builder.Services.AddScoped<IKhuyenMaiService, KhuyenMaiService>();
@@ -72,7 +95,7 @@ builder.Services.AddScoped<IInventoryService, InventoryService>();
 builder.Services.AddScoped<ICheckoutService, CheckoutService>();
 
 builder.Services.AddHostedService<DonThueExpirationJob>();
-
+builder.Services.AddScoped<GearGo.Services.Interfaces.IBaoGiaService, GearGo.Services.BaoGiaService>();
 // Bật lại khi thêm AutoMapper package
 // builder.Services.AddAutoMapper(typeof(Program));
 
@@ -80,6 +103,8 @@ builder.Services.AddHostedService<DonThueExpirationJob>();
 builder.Services.AddMemoryCache();
 builder.Services.AddScoped<GearGo.Services.Interfaces.IJwtService, GearGo.Services.Implements.JwtService>();
 builder.Services.AddScoped<GearGo.Services.Interfaces.IXacThucService, GearGo.Services.Implements.XacThucService>();
+builder.Services.AddScoped<GearGo.Services.Interfaces.IAdminSanPhamService, GearGo.Services.Admin.AdminSanPhamService>();
+builder.Services.AddScoped<GearGo.Services.Interfaces.IAdminDanhMucService, GearGo.Services.Admin.AdminDanhMucService>();
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
