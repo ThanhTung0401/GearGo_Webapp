@@ -103,9 +103,18 @@ builder.Services.AddScoped<GearGo.Services.Interfaces.IBaoGiaService, GearGo.Ser
 builder.Services.AddMemoryCache();
 builder.Services.AddScoped<GearGo.Services.Interfaces.IJwtService, GearGo.Services.Implements.JwtService>();
 builder.Services.AddScoped<GearGo.Services.Interfaces.IXacThucService, GearGo.Services.Implements.XacThucService>();
+builder.Services.AddScoped<INhaCungCapService, NhaCungCapService>();
+builder.Services.AddScoped<IPhieuNhapService, PhieuNhapService>();
 builder.Services.AddScoped<GearGo.Services.Interfaces.IAdminSanPhamService, GearGo.Services.Admin.AdminSanPhamService>();
 builder.Services.AddScoped<GearGo.Services.Interfaces.IAdminDanhMucService, GearGo.Services.Admin.AdminDanhMucService>();
 var app = builder.Build();
+
+// Tự động áp dụng Migration vào database nếu chưa có
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    db.Database.Migrate();
+}
 
 if (app.Environment.IsDevelopment())
 {
