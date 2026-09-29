@@ -1,4 +1,4 @@
-namespace GearGo.Models.DTOs;
+namespace GearGo.Models.DTOs.DonThue;
 
 public record TaoDonThueRequest(
     long MaKhachHang,

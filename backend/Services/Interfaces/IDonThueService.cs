@@ -1,5 +1,5 @@
 using GearGo.Models.Common;
-using GearGo.Models.DTOs;
+using GearGo.Models.DTOs.DonThue;
 
 namespace GearGo.Services.Interfaces;
 

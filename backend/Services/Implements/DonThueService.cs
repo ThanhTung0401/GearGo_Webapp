@@ -2,7 +2,7 @@ using System.Data;
 using Microsoft.EntityFrameworkCore;
 using GearGo.Data;
 using GearGo.Models.Common;
-using GearGo.Models.DTOs;
+using GearGo.Models.DTOs.DonThue;
 using GearGo.Models.Entities;
 using GearGo.Models.Enums;
 using GearGo.Services.Interfaces;
