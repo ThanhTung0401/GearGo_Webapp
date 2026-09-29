@@ -93,6 +93,7 @@ builder.Services.AddScoped<IThanhToanService, ThanhToanService>();
 builder.Services.AddScoped<IKhuyenMaiService, KhuyenMaiService>();
 builder.Services.AddScoped<IInventoryService, InventoryService>();
 builder.Services.AddScoped<ICheckoutService, CheckoutService>();
+builder.Services.AddScoped<IBanGiaoService, BanGiaoService>();
 
 builder.Services.AddHostedService<DonThueExpirationJob>();
 builder.Services.AddScoped<GearGo.Services.Interfaces.IBaoGiaService, GearGo.Services.BaoGiaService>();

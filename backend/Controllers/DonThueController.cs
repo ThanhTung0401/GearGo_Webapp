@@ -1,4 +1,4 @@
-using GearGo.Models.DTOs;
+using GearGo.Models.DTOs.DonThue;
 using GearGo.Services.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 
