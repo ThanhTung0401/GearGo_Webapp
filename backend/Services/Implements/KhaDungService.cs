@@ -41,10 +41,25 @@ public class KhaDungService : IKhaDungService
         // - Trạng thái sử dụng: SanSang hoặc DangThue
         // - Nguồn gốc: Phiếu nhập đã hoàn tất (DaNhapKho)
         // - Sản phẩm cho thuê: Dùng MaSanPhamHienTai để hỗ trợ thiết bị đã qua giáng cấp/phân loại lại
-        var totalEligible = await _context.ThietBis
+        var totalEligibleQuery = _context.ThietBis
             .Where(t => t.TrangThaiSuDung == TrangThaiThietBi.SanSang || t.TrangThaiSuDung == TrangThaiThietBi.DangThue)
             .Where(t => t.ChiTietPhieuNhap.PhieuNhapHang.TrangThai == TrangThaiPhieuNhap.DaNhapKho)
-            .Where(t => sanPhamList.Contains(t.MaSanPhamHienTai))
+            .Where(t => sanPhamList.Contains(t.MaSanPhamHienTai));
+
+        // Loại trừ thiết bị đang thuê nhưng đã quá hạn (chưa trả)
+        // Vì TrangThaiSuDung = DangThue, ta kiểm tra xem có phân công nào đang hiệu lực và quá hạn không
+        var thietBiQuaHanIds = await _context.PhanCongThietBis
+            .Include(pc => pc.ChiTietDon)
+                .ThenInclude(c => c.DonThue)
+            .Where(pc => pc.TrangThai == "DaPhanCong")
+            .Where(pc => pc.ChiTietDon.DonThue.TrangThai == TrangThaiDonThue.DangThue)
+            .Where(pc => pc.ChiTietDon.DonThue.GioTraDuKien < DateTime.UtcNow)
+            .Select(pc => pc.MaThietBi)
+            .Distinct()
+            .ToListAsync();
+
+        var totalEligible = await totalEligibleQuery
+            .Where(t => !thietBiQuaHanIds.Contains(t.MaThietBi))
             .GroupBy(t => t.MaSanPhamHienTai)
             .Select(g => new { MaSanPham = g.Key, Total = g.Count() })
             .ToDictionaryAsync(x => x.MaSanPham, x => x.Total);
