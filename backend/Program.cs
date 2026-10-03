@@ -106,6 +106,8 @@ builder.Services.AddScoped<GearGo.Services.Interfaces.IJwtService, GearGo.Servic
 builder.Services.AddScoped<GearGo.Services.Interfaces.IXacThucService, GearGo.Services.Implements.XacThucService>();
 builder.Services.AddScoped<INhaCungCapService, NhaCungCapService>();
 builder.Services.AddScoped<IPhieuNhapService, PhieuNhapService>();
+builder.Services.AddScoped<INhapKhoService, NhapKhoService>();
+builder.Services.AddScoped<IThietBiService, ThietBiService>();
 builder.Services.AddScoped<GearGo.Services.Interfaces.IAdminSanPhamService, GearGo.Services.Admin.AdminSanPhamService>();
 builder.Services.AddScoped<GearGo.Services.Interfaces.IAdminDanhMucService, GearGo.Services.Admin.AdminDanhMucService>();
 var app = builder.Build();
