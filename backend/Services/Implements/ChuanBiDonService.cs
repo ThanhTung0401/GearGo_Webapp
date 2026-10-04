@@ -76,10 +76,19 @@ public class ChuanBiDonService : IChuanBiDonService
                     $"Chỉ bắt đầu chuẩn bị được đơn ở trạng thái DaXacNhan. Hiện tại: {don.TrangThai}.");
 
             don.TrangThai = TrangThaiDonThue.DangChuanBi;
+
+            // Ghi lịch sử chuyển trạng thái đơn (Mục 10.0, W3-T2)
+            _db.LichSuTrangThaiDons.Add(new LichSuTrangThaiDon
+            {
+                MaDonThue = donId,
+                MaNguoiThucHien = maTaiKhoan,
+                TrangThaiTruoc = TrangThaiDonThue.DaXacNhan.ToString(),
+                TrangThaiSau = TrangThaiDonThue.DangChuanBi.ToString(),
+                ThoiDiem = DateTime.UtcNow,
+                LyDo = "Bắt đầu chuẩn bị đơn thuê"
+            });
+
             await _db.SaveChangesAsync(ct);
-
-            // TODO: await _lichSuService.GhiChuyenTrangThaiDon(...) khi Thanh Tùng bàn giao
-
             await tx.CommitAsync(ct);
             return Result<ChuanBiResponse>.Ok(XayDungResponse(don, new List<PhanCongThietBi>()));
         }
@@ -264,14 +273,22 @@ public class ChuanBiDonService : IChuanBiDonService
                 }
             }
 
-            // Nếu đơn SanSangNhan → quay về DangChuanBi
+            // Nếu đơn SanSangNhan → quay về DangChuanBi (Mục 10.0: đơn sẵn sàng đổi thiết bị phải quay về kiểm tra)
             if (don.TrangThai == TrangThaiDonThue.SanSangNhan)
+            {
                 don.TrangThai = TrangThaiDonThue.DangChuanBi;
+                _db.LichSuTrangThaiDons.Add(new LichSuTrangThaiDon
+                {
+                    MaDonThue = donId,
+                    MaNguoiThucHien = maTaiKhoan,
+                    TrangThaiTruoc = TrangThaiDonThue.SanSangNhan.ToString(),
+                    TrangThaiSau = TrangThaiDonThue.DangChuanBi.ToString(),
+                    ThoiDiem = DateTime.UtcNow,
+                    LyDo = $"Hủy phân công #{phanCongId}: {request.LyDo}"
+                });
+            }
 
             await _db.SaveChangesAsync(ct);
-
-            // TODO: Ghi lịch sử khi Thanh Tùng bàn giao
-
             await tx.CommitAsync(ct);
 
             var tatCa = await _db.PhanCongThietBis
@@ -357,7 +374,18 @@ public class ChuanBiDonService : IChuanBiDonService
 
             // Đơn SanSangNhan → quay về DangChuanBi trước khi gán chiếc mới
             if (don.TrangThai == TrangThaiDonThue.SanSangNhan)
+            {
                 don.TrangThai = TrangThaiDonThue.DangChuanBi;
+                _db.LichSuTrangThaiDons.Add(new LichSuTrangThaiDon
+                {
+                    MaDonThue = donId,
+                    MaNguoiThucHien = maTaiKhoan,
+                    TrangThaiTruoc = TrangThaiDonThue.SanSangNhan.ToString(),
+                    TrangThaiSau = TrangThaiDonThue.DangChuanBi.ToString(),
+                    ThoiDiem = DateTime.UtcNow,
+                    LyDo = $"Thay thế thiết bị phân công #{phanCongId}: {request.LyDo}"
+                });
+            }
 
             // Tạo phân công mới
             var phanCongMoi = new PhanCongThietBi
@@ -464,12 +492,38 @@ public class ChuanBiDonService : IChuanBiDonService
                     "Chưa đủ điều kiện xác nhận sẵn sàng: " + string.Join("; ", lyDoChuaDu), lyDoChuaDu);
 
             don.TrangThai = TrangThaiDonThue.SanSangNhan;
+
+            // Ghi lịch sử chuyển trạng thái đơn (Mục 10.0)
+            _db.LichSuTrangThaiDons.Add(new LichSuTrangThaiDon
+            {
+                MaDonThue = donId,
+                MaNguoiThucHien = maTaiKhoan,
+                TrangThaiTruoc = TrangThaiDonThue.DangChuanBi.ToString(),
+                TrangThaiSau = TrangThaiDonThue.SanSangNhan.ToString(),
+                ThoiDiem = DateTime.UtcNow,
+                LyDo = request.GhiChu ?? "Đã chuẩn bị đủ thiết bị và sẵn sàng bàn giao"
+            });
+
+            // Ghi thông báo trong ứng dụng cho khách hàng (Mục 10.0, W3-T2)
+            var khachHang = await _db.KhachHangs.FirstOrDefaultAsync(k => k.MaKhachHang == don.MaKhachHang, ct);
+            if (khachHang != null)
+            {
+                _db.ThongBaos.Add(new ThongBao
+                {
+                    MaTaiKhoan = khachHang.MaTaiKhoan,
+                    MaDonThue = donId,
+                    MaSuKien = $"SAN_SANG_{donId}_{DateTime.UtcNow.Ticks}",
+                    LoaiSuKien = "DonThueSanSang",
+                    TieuDe = "Đơn thuê đã sẵn sàng nhận hàng",
+                    NoiDung = $"Đơn thuê #{don.MaDonHienThi} của bạn đã được chuẩn bị đầy đủ thiết bị và sẵn sàng bàn giao.",
+                    KenhGui = "InApp",
+                    TrangThaiGui = "DaGui",
+                    ThoiDiemTao = DateTime.UtcNow,
+                    ThoiDiemGui = DateTime.UtcNow
+                });
+            }
+
             await _db.SaveChangesAsync(ct);
-
-            // TODO: Ghi lịch sử + tạo thông báo khi Thanh Tùng bàn giao
-            // await _lichSuService.GhiChuyenTrangThaiDon(...)
-            // await _thongBaoService.TaoThongBaoSanSangNhan(donId, $"SAN_SANG_{donId}")
-
             await tx.CommitAsync(ct);
             return Result<ChuanBiResponse>.Ok(XayDungResponse(don, phanCongs));
         }
