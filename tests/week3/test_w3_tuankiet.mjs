@@ -47,7 +47,8 @@ async function request(method, path, body = null, token = adminToken) {
 
   const status = res.status;
   let data;
-  try { data = await res.json(); } catch { data = await res.text(); }
+  const text = await res.text();
+  try { data = JSON.parse(text); } catch { data = text; }
   return { status, data };
 }
 
@@ -79,35 +80,52 @@ async function runTests() {
   });
   
   assert(taoDonRes.status === 200 || (taoDonRes.status === 400 && taoDonRes.data.maLoi === "HET_HANG"), "Tạo đơn thuê (Pass nếu Thành công hoặc Báo Hết Hàng do DB trống)", taoDonRes.data);
-  if (taoDonRes.status !== 200) {
-    console.log(`\n${colors.yellow}⚠️ DB đang trống (Chưa có thiết bị khả dụng). Test dừng sớm nhưng Logic Đã Báo Lỗi Hết Hàng Rất Chuẩn Xác!${colors.reset}`);
-    return;
-  }
-  const maDonThue = taoDonRes.data.maDonThue;
-  
-  // NOTE: Vì test cần đơn ở trạng thái SanSangNhan (đã phân công thiết bị),
-  // nhưng Tạo Đơn mới tạo ra đơn ở trạng thái ChoThanhToan, nên ta phải thanh toán trước.
-  
-  console.log(`\n${colors.yellow}2. Test Thanh Toán Đơn Thuê${colors.reset}`);
-  const thanhToanRes = await request('POST', '/api/v1/thanh-toan/xac-nhan', {
-    maDonThue: maDonThue,
-    phuongThucThanhToan: "ChuyenKhoan",
-    tongSoTien: 5000000, // Cố tình đóng dư dả để chắc chắn qua bài test thanh toán
-    maGiaoDichCong: "TEST_BANK_001",
-    ghiChu: "Test thanh toan"
-  });
-  assert(thanhToanRes.status === 200, "Thanh toán thành công (Chuyển trạng thái sang DaXacNhan)", thanhToanRes.data);
+  if (taoDonRes.status === 200) {
+    const maDonThue = taoDonRes.data.maDonThue;
+    console.log(`\n${colors.yellow}2. Test Thanh Toán Đơn Thuê${colors.reset}`);
+    const thanhToanRes = await request('POST', '/api/v1/thanh-toan/xac-nhan', {
+      maDonThue: maDonThue,
+      phuongThucThanhToan: "ChuyenKhoan",
+      tongSoTien: 5000000,
+      maGiaoDichCong: "TEST_BANK_001",
+      ghiChu: "Test thanh toan"
+    });
+    assert(thanhToanRes.status === 200, "Thanh toán thành công (Chuyển trạng thái sang DaXacNhan)", thanhToanRes.data);
 
-  console.log(`\n${colors.yellow}3. Test Bàn Giao (Nháp)${colors.reset}`);
-  // Lập phiếu bàn giao nháp (API sẽ báo lỗi INVALID_STATE vì đơn mới chỉ DaXacNhan, chưa SanSangNhan - do đồng đội chưa phân công thiết bị)
-  const nhapRes = await request('POST', `/api/v1/ban-giao/nhap/${maDonThue}`);
-  
-  // Mong đợi lỗi vì Đơn chưa được Phân công (Status = DaXacNhan, chưa phải SanSangNhan)
-  assert(
-    nhapRes.status === 400 && nhapRes.data.maLoi === "INVALID_STATE", 
-    "Từ chối tạo phiếu bàn giao nếu đơn chưa sẵn sàng (Bảo mật luồng nghiệp vụ tốt!)", 
-    nhapRes.data
-  );
+    console.log(`\n${colors.yellow}3. Test Bàn Giao (Nháp theo đơn thật)${colors.reset}`);
+    const nhapRes = await request('POST', `/api/v1/ban-giao/nhap/${maDonThue}`);
+    assert(
+      nhapRes.status === 400 && nhapRes.data.maLoi === "INVALID_STATE", 
+      "Từ chối tạo phiếu bàn giao nếu đơn chưa sẵn sàng", 
+      nhapRes.data
+    );
+  } else {
+    console.log(`  ${colors.yellow}ℹ DB hiện trống, tiếp tục kiểm thử bảo mật & validation trực tiếp các API Bàn Giao...${colors.reset}`);
+  }
+
+  // 4. Kiểm thử trực tiếp toàn bộ các endpoint bàn giao (Phân quyền & Validation)
+  console.log(`\n${colors.yellow}4. Kiểm thử phân quyền & hợp đồng các API Bàn Giao (W3-T8)${colors.reset}`);
+
+  // Khách hàng bị chặn 403 khi lập bàn giao
+  const customerToken = generateToken('KhachHang', 3, 'khach@geargo.vn');
+  const khachBanGiao = await request('POST', '/api/v1/ban-giao/nhap/1', {}, customerToken);
+  assert(khachBanGiao.status === 403, "Khách hàng bị từ chối truy cập API bàn giao (HTTP 403)");
+
+  // Tra cứu bàn giao theo đơn không tồn tại -> 400 hoặc 404
+  const bgTheoDon = await request('GET', '/api/v1/ban-giao/don-thue/999999');
+  assert(bgTheoDon.status === 400 || bgTheoDon.status === 404, "Tra cứu bàn giao theo đơn không tồn tại (HTTP 400/404)");
+
+  // Tạo phiếu bàn giao nháp với đơn không tồn tại -> 400 hoặc 404
+  const taoNhapFake = await request('POST', '/api/v1/ban-giao/nhap/999999');
+  assert(taoNhapFake.status === 400 || taoNhapFake.status === 404, "Tạo phiếu bàn giao nháp với đơn không tồn tại (HTTP 400/404)");
+
+  // Cập nhật phiếu bàn giao nháp không tồn tại -> 400 hoặc 404
+  const capNhatNhapFake = await request('PUT', '/api/v1/ban-giao/nhap/999999', { ghiChu: 'Test' });
+  assert(capNhatNhapFake.status === 400 || capNhatNhapFake.status === 404, "Cập nhật phiếu bàn giao nháp không tồn tại (HTTP 400/404)");
+
+  // Chốt phiếu bàn giao không tồn tại -> 400 hoặc 404
+  const chotBgFake = await request('POST', '/api/v1/ban-giao/999999/chot', { xacNhanKhachHang: true });
+  assert(chotBgFake.status === 400 || chotBgFake.status === 404, "Chốt phiếu bàn giao không tồn tại (HTTP 400/404)");
 
   console.log(`\n${colors.cyan}${colors.bold}=== TỔNG KẾT ===${colors.reset}`);
   console.log(`Passed: ${colors.green}${passedCount}${colors.reset}`);

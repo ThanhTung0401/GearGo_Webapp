@@ -1,4 +1,5 @@
 using GearGo.Data;
+using GearGo.Exceptions;
 using GearGo.Models.DTOs.Admin;
 using GearGo.Models.Entities;
 using GearGo.Services.Interfaces;
@@ -82,11 +83,11 @@ namespace GearGo.Services.Admin
         {
             // Ràng buộc 1: Không có sản phẩm
             bool hasProducts = await _context.Set<SanPham>().AnyAsync(s => s.MaDanhMuc == id);
-            if (hasProducts) throw new Exception("Không thể xóa danh mục đang chứa sản phẩm.");
+            if (hasProducts) throw new XungDotDuLieuException("DANH_MUC_DANG_CO_SAN_PHAM", "Không thể xóa danh mục đang chứa sản phẩm.");
 
             // Ràng buộc 2: Không có danh mục con
             bool hasChildren = await _context.Set<DanhMucSanPham>().AnyAsync(d => d.MaDanhMucCha == id);
-            if (hasChildren) throw new Exception("Không thể xóa danh mục đang chứa danh mục con.");
+            if (hasChildren) throw new XungDotDuLieuException("DANH_MUC_DANG_CO_CON", "Không thể xóa danh mục đang chứa danh mục con.");
 
             var danhMuc = await _context.Set<DanhMucSanPham>().FindAsync(id);
             if (danhMuc != null)

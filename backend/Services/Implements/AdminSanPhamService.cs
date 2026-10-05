@@ -1,4 +1,5 @@
 using GearGo.Data;
+using GearGo.Exceptions;
 using GearGo.Models.DTOs.Admin;
 using GearGo.Models.Entities;
 using GearGo.Services.Interfaces;
@@ -159,7 +160,7 @@ namespace GearGo.Services.Admin
         public async Task XoaHinhAnhAsync(long maHinhAnh)
         {
             var hinhAnh = await _context.Set<HinhAnhSanPham>().FindAsync(maHinhAnh);
-            if (hinhAnh == null) throw new Exception("Không tìm thấy hình ảnh.");
+            if (hinhAnh == null) throw new KhongTimThayException("Không tìm thấy hình ảnh.");
 
             var rootPath = _env.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
             var fullPath = Path.Combine(rootPath, hinhAnh.DuongDan.TrimStart('/'));

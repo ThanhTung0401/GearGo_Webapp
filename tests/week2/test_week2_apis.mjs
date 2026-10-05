@@ -1,6 +1,6 @@
 /**
- * Script kiểm thử tự động toàn diện TẤT CẢ 28 endpoints Swagger của GearGo Backend
- * Chạy: node tests/test_all_apis.mjs
+ * Script kiểm thử tự động toàn diện TẤT CẢ 28 endpoints Swagger của GearGo Backend (Week 2)
+ * Chạy: node tests/week2/test_week2_apis.mjs
  */
 
 import crypto from 'node:crypto';
@@ -80,7 +80,7 @@ function assertTest(testName, isPassed, details = '') {
 
 async function runAllTests() {
   console.log(`\n${colors.bold}${colors.cyan}================================================================${colors.reset}`);
-  console.log(`${colors.bold}${colors.cyan}   KIỂM THỬ TOÀN BỘ 28 ENDPOINTS SWAGGER CỦA HỆ THỐNG GEARGO    ${colors.reset}`);
+  console.log(`${colors.bold}${colors.cyan}   KIỂM THỬ TOÀN BỘ 28 ENDPOINTS SWAGGER CỦA HỆ THỐNG GEARGO (W2)${colors.reset}`);
   console.log(`${colors.cyan}   Mục tiêu: ${BASE_URL}${colors.reset}`);
   console.log(`${colors.bold}${colors.cyan}================================================================${colors.reset}\n`);
 
@@ -396,7 +396,7 @@ async function runAllTests() {
     headers: { Authorization: `Bearer ${customerToken}` },
     body: JSON.stringify({ maGiamGia: 'KHONG_TON_TAI' })
   });
-  assertTest('POST /api/gio-thue/ma-giam-gia (Xử lý mã giảm giá không hợp lệ)', resApKM.status === 400 || resApKM.status === 500, `Status: ${resApKM.status}`);
+  assertTest('POST /api/gio-thue/ma-giam-gia (Xử lý mã giảm giá không hợp lệ)', resApKM.status === 400 || resApKM.status === 409, `Status: ${resApKM.status}`);
 
   // ==========================================
   // MODULE 6: DonThue (2 endpoints)

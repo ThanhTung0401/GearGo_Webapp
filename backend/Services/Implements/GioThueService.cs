@@ -1,4 +1,5 @@
 using GearGo.Data;
+using GearGo.Exceptions;
 using GearGo.Models.Entities;
 using GearGo.Models.DTOs.GioThue;
 using GearGo.Services.Interfaces;
@@ -21,18 +22,48 @@ namespace GearGo.Services.Implements
             _baoGiaService = baoGiaService;
         }
 
+        // Chuyển đổi linh hoạt giữa MaTaiKhoan hoặc MaKhachHang để đảm bảo ràng buộc ngoại khóa KHACH_HANG
+        private async Task<long> ResolveMaKhachHangAsync(long actorId)
+        {
+            // 1. Kiểm tra trực tiếp xem actorId có phải là MaKhachHang hợp lệ đã tồn tại
+            var khByMa = await _context.KhachHangs.FirstOrDefaultAsync(k => k.MaKhachHang == actorId);
+            if (khByMa != null) return khByMa.MaKhachHang;
+
+            // 2. Kiểm tra xem actorId có phải là MaTaiKhoan (từ JWT claim) không
+            var khByTk = await _context.KhachHangs.FirstOrDefaultAsync(k => k.MaTaiKhoan == actorId);
+            if (khByTk != null) return khByTk.MaKhachHang;
+
+            // 3. Nếu tài khoản tồn tại trong TAI_KHOAN nhưng chưa có bản ghi KHACH_HANG
+            var tk = await _context.TaiKhoans.FirstOrDefaultAsync(t => t.MaTaiKhoan == actorId);
+            if (tk != null)
+            {
+                var newKh = new KhachHang
+                {
+                    MaTaiKhoan = tk.MaTaiKhoan,
+                    HoTen = tk.Email?.Split('@')[0] ?? "KhachHang"
+                };
+                _context.KhachHangs.Add(newKh);
+                await _context.SaveChangesAsync();
+                return newKh.MaKhachHang;
+            }
+
+            return actorId;
+        }
+
         // Hàm dùng chung: Lấy Giỏ hoặc Tạo mới nếu chưa có
         private async Task<GioThue> GetOrCreateGioAsync(long maKhachHang)
         {
+            var trueMaKhachHang = await ResolveMaKhachHangAsync(maKhachHang);
+
             var gio = await _context.GioThues
                 .Include(g => g.ChiTietGioThues)
                     .ThenInclude(c => c.SanPham) // Lấy kèm thông tin giá sản phẩm
                 .Include(g => g.KhuyenMai)
-                .FirstOrDefaultAsync(g => g.MaKhachHang == maKhachHang);
+                .FirstOrDefaultAsync(g => g.MaKhachHang == trueMaKhachHang);
 
             if (gio == null)
             {
-                gio = new GioThue { MaKhachHang = maKhachHang, NgayCapNhat = DateTime.UtcNow };
+                gio = new GioThue { MaKhachHang = trueMaKhachHang, NgayCapNhat = DateTime.UtcNow };
                 _context.GioThues.Add(gio);
                 await _context.SaveChangesAsync();
             }
@@ -114,7 +145,7 @@ namespace GearGo.Services.Implements
             else
             {
                 var sp = await _context.Set<SanPham>().FindAsync(req.MaSanPham);
-                if (sp == null) throw new Exception("Không tìm thấy sản phẩm");
+                if (sp == null) throw new KhongTimThayException("Không tìm thấy sản phẩm");
 
                 gio.ChiTietGioThues.Add(new ChiTietGioThue
                 {
@@ -133,7 +164,7 @@ namespace GearGo.Services.Implements
             var gio = await GetOrCreateGioAsync(maKhachHang);
             var chiTiet = gio.ChiTietGioThues.FirstOrDefault(c => c.MaChiTietGio == maChiTiet);
             
-            if (chiTiet == null) throw new Exception("Không tìm thấy dòng trong giỏ");
+            if (chiTiet == null) throw new KhongTimThayException("Không tìm thấy dòng trong giỏ");
 
             chiTiet.SoLuong = req.SoLuongMoi;
             gio.NgayCapNhat = DateTime.UtcNow;
@@ -171,7 +202,7 @@ namespace GearGo.Services.Implements
             var gio = await GetOrCreateGioAsync(maKhachHang);
             
             var km = await _context.Set<KhuyenMai>().FirstOrDefaultAsync(k => k.MaGiamGia == req.MaGiamGia);
-            if (km == null) throw new Exception("Mã giảm giá không hợp lệ");
+            if (km == null) throw new DuLieuKhongHopLeException("MA_GIAM_GIA_KHONG_HOP_LE", "Mã giảm giá không hợp lệ");
 
             gio.MaKhuyenMai = km.MaKhuyenMai;
             gio.NgayCapNhat = DateTime.UtcNow;

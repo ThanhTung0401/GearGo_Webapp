@@ -133,6 +133,14 @@ async function runTests() {
   });
   assert(t8.status === 400 || t8.status === 404, `Thay thế thiết bị không có lý do bị từ chối (HTTP ${t8.status})`);
 
+  // 6. Xác nhận sẵn sàng nhận thiết bị
+  const t9 = await callApi('/api/chuan-bi-don/999999/san-sang', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${staffToken}` },
+    body: JSON.stringify({ ghiChu: 'San sang' })
+  });
+  assert(t9.status === 404 || t9.status === 400, `Xác nhận sẵn sàng nhận đơn không tồn tại (HTTP ${t9.status})`);
+
   console.log(`\n${colors.bold}=== TỔNG KẾT KIỂM THỬ: ${colors.green}${passedCount} PASS${colors.reset}, ${colors.red}${failedCount} FAIL${colors.reset} ===\n`);
 }
 
