@@ -28,3 +28,18 @@ namespace GearGo.Exceptions;
 
   public class KhongCoQuyenException : NghiepVuException
   { public KhongCoQuyenException(string msg, object? ct = null) : base("KHONG_CO_QUYEN", msg, ct) {} }
+
+  public class XungDotDuLieuException : NghiepVuException
+  { public XungDotDuLieuException(string maLoi, string msg, object? ct = null) : base(maLoi, msg, ct) {} }
+
+  public class DuLieuKhongHopLeException : NghiepVuException
+  { public DuLieuKhongHopLeException(string maLoi, string msg, object? ct = null) : base(maLoi, msg, ct) {} }
+
+  public class DongKhongThuocPhieuException : NghiepVuException
+  { public DongKhongThuocPhieuException(string msg, object? ct = null) : base("DONG_KHONG_THUOC_PHIEU", msg, ct) {} }
+
+  public class PhanCongKhongThuocDonException : NghiepVuException
+  { public PhanCongKhongThuocDonException(string msg, object? ct = null) : base("PHAN_CONG_KHONG_THUOC_DON", msg, ct) {} }
+
+  public class KhongDuDieuKienSanSangException : NghiepVuException
+  { public KhongDuDieuKienSanSangException(string msg, object? ct = null) : base("KHONG_DU_DIEU_KIEN_SAN_SANG", msg, ct) {} }
