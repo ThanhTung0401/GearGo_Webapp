@@ -28,9 +28,8 @@ public class BanGiaoController : ControllerBase
     [HttpPost("/nhap/{maDonThue}")]
     public async Task<IActionResult> TaoHoacLayPhieuBanGiaoNhap(long maDonThue)
     {
-        // TODO: Trong thực tế, mã nhân viên lấy từ User Claims (JWT Token)
-        // var maNhanVien = long.Parse(User.FindFirst("MaNhanVien")?.Value ?? "1");
-        long maNhanVien = 1;
+        var maTaiKhoanClaim = User.FindFirst("MaTaiKhoan")?.Value;
+        long maNhanVien = long.TryParse(maTaiKhoanClaim, out var m) ? m : 1;
 
         var result = await _banGiaoService
             .TaoHoacLayPhieuBanGiaoNhapAsync(maDonThue,maNhanVien);
@@ -53,7 +52,8 @@ public class BanGiaoController : ControllerBase
     public async Task<IActionResult> ChotBanGiao(
             long maPhieuBanGiao, [FromBody] ChotBanGiaoRequest request)
     {
-        long maNhanVien = 1; // TODO
+        var maTaiKhoanClaim = User.FindFirst("MaTaiKhoan")?.Value;
+        long maNhanVien = long.TryParse(maTaiKhoanClaim, out var m) ? m : 1;
         var result = await _banGiaoService.ChotBanGiaoAsync(maPhieuBanGiao, request, maNhanVien);
         if (!result.ThanhCong)
             return BadRequest(new { result.MaLoi, result.ThongDiep });
