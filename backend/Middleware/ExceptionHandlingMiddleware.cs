@@ -35,6 +35,10 @@ using GearGo.Exceptions;
       private static int GetStatusCode(NghiepVuException ex) => ex switch
       {
           KhongTimThayException      => 404,
+          DonKhongTimThayException   => 404,
+          ThongBaoKhongTimThayException => 404,
+          LienHeDaTonTaiException    => 409,
+          XungDotSuKienException     => 409,
           KhongCoQuyenException      => 403,
           TaiKhoanBiKhoaException    => 403,
           KhongDuHangException       => 409,

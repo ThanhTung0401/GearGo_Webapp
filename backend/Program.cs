@@ -94,6 +94,11 @@ builder.Services.AddScoped<IKhuyenMaiService, KhuyenMaiService>();
 builder.Services.AddScoped<IInventoryService, InventoryService>();
 builder.Services.AddScoped<ICheckoutService, CheckoutService>();
 builder.Services.AddScoped<IBanGiaoService, BanGiaoService>();
+// W3 — Thanh Tùng: hồ sơ, truy vấn đơn, lịch sử, thông báo
+builder.Services.AddScoped<IHoSoService, HoSoService>();
+builder.Services.AddScoped<ITruyVanDonThueService, TruyVanDonThueService>();
+builder.Services.AddScoped<ILichSuNghiepVuService, LichSuNghiepVuService>();
+builder.Services.AddScoped<IThongBaoService, ThongBaoService>();
 
 builder.Services.AddHostedService<DonThueExpirationJob>();
 builder.Services.AddScoped<GearGo.Services.Interfaces.IBaoGiaService, GearGo.Services.BaoGiaService>();
