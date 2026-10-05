@@ -133,4 +133,19 @@ public class DonThue
 
         TrangThai = TrangThaiDonThue.DangThue;
     }
+
+    // 3. Xac nhan thanh toan
+    public void XacNhanThanhToan()
+    {
+        if (TrangThai != TrangThaiDonThue.ChoThanhToan)
+            throw new Exception("Đơn chưa sẵn sàng để thanh toán.");
+
+        TrangThai = TrangThaiDonThue.DaXacNhan;
+        foreach (var chiTiet in ChiTietDonThues)
+        {
+            if (chiTiet.GiuCho != null) {
+                chiTiet.GiuCho.TrangThai = TrangThaiGiuCho.DaXacNhan;
+            }
+        }
+    }
 }
