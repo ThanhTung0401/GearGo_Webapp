@@ -31,9 +31,6 @@ public class ThanhToanService : IThanhToanService
             if (donThue == null)
                 return Result<string>.Loi("DON_THUE_NOT_FOUND", "Không tìm thấy đơn thuê.");
 
-            if (donThue.TrangThai != TrangThaiDonThue.ChoThanhToan)
-                return Result<string>.Loi("INVALID_STATE",
-                    "Đơn thuê không ở trạng thái Chờ thanh toán.");
 
             // 2. Tạo bản ghi Thanh toán theo đúng chuẩn thuộc tính ERD (ma_yeu_cau, tong_so_tien, phuong_thuc, ma_giao_dich_cong)
             var maYeuCau = $"PAY_{DateTime.UtcNow:yyyyMMddHHmmss}_{Guid.NewGuid().ToString("N")[..8]}";
@@ -50,17 +47,8 @@ public class ThanhToanService : IThanhToanService
             };
             _context.ThanhToans.Add(thanhToanMoi);
 
-            // 3. Cập nhật trạng thái Đơn Thuê
-            donThue.TrangThai = TrangThaiDonThue.DaXacNhan;
-
-            // 4. Cập nhật trạng thái Giữ Chỗ thành Đã Xác Nhận
-            foreach (var chiTiet in donThue.ChiTietDonThues)
-            {
-                if (chiTiet.GiuCho != null)
-                {
-                    chiTiet.GiuCho.TrangThai = TrangThaiGiuCho.DaXacNhan;
-                }
-            }
+            // 3. Xác nhận thanh toán
+            donThue.XacNhanThanhToan();
 
             // 5. Lưu vào Lịch sử đơn
             var lichSu = new Models.Entities.LichSuTrangThaiDon
