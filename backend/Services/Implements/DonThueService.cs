@@ -30,7 +30,7 @@ public class DonThueService : IDonThueService
             // Check inventory using KhaDungService
             var danhSachSpIds = request.ChiTiet.Select(c => c.MaSanPham).ToList();
             var khaDungData = await _khaDungService.LayKhaDungNhieuAsync(danhSachSpIds, request.GioNhanDuKien, request.GioTraDuKien);
-            
+
             bool duHang = true;
             foreach (var item in request.ChiTiet)
             {
@@ -62,7 +62,7 @@ public class DonThueService : IDonThueService
                 NgayDat = DateTime.UtcNow,
                 GioNhanDuKien = request.GioNhanDuKien,
                 GioTraDuKien = request.GioTraDuKien,
-                HanThanhToan = DateTime.UtcNow.AddMinutes(15), 
+                HanThanhToan = DateTime.UtcNow.AddMinutes(15),
                 TenNguoiNhan = request.TenNguoiNhan,
                 SoDienThoaiNguoiNhan = request.SoDienThoaiNguoiNhan,
                 EmailLienHe = request.EmailLienHe,
@@ -145,22 +145,10 @@ public class DonThueService : IDonThueService
             if (donThue.TrangThai != TrangThaiDonThue.ChoThanhToan)
                 return Result<bool>.Loi("INVALID_STATE", "Không thể hủy đơn ở trạng thái này.");
 
-            // 1. Cập nhật Đơn
-            donThue.TrangThai = TrangThaiDonThue.KhachHuy;
-            donThue.ThoiDiemHuy = DateTime.UtcNow;
-            donThue.LyDoHuy = lyDo;
+            // 1. Cập nhật Đơn & Nhả hàng
+            donThue.KhachHangHuyDon(lyDo);
 
-            // 2. Nhả hàng
-            foreach (var chiTiet in donThue.ChiTietDonThues)
-            {
-                if (chiTiet.GiuCho != null)
-                {
-                    chiTiet.GiuCho.TrangThai = TrangThaiGiuCho.DaGiaiPhong;
-                    chiTiet.GiuCho.ThoiDiemGiaiPhong = DateTime.UtcNow;
-                }
-            }
-
-            // 3. Ghi log lịch sử
+            // 2. Ghi log lịch sử
             _context.LichSuTrangThaiDons.Add(new LichSuTrangThaiDon
             {
                 MaDonThue = donThue.MaDonThue,

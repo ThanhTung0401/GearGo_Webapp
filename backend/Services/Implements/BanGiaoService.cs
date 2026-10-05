@@ -153,25 +153,10 @@ public class BanGiaoService : IBanGiaoService
             if (phieu.TrangThai == "DaGiao")
                 return Result<bool>.Loi("LOCKED", "Phiếu đã chốt.");
 
-            // 1. Cập nhật phiếu bàn giao
-            phieu.TrangThai = "DaGiao";
-            phieu.TenNhanVienLucGiao = "Nhan vien " + maNhanVienChot;
-            phieu.ThoiDiemGiaoThucTe = DateTime.UtcNow;
-            phieu.TenNguoiNhanThucTe = request.TenNguoiNhanThucTe;
+            // Chốt phiếu
+            phieu.ChotPhieu(request.TenNguoiNhanThucTe, "Nhân viên " + maNhanVienChot);
 
-            // 2. Chuyển trạng thái Đơn Thuê
-            phieu.DonThue.TrangThai = TrangThaiDonThue.DangThue;
-
-            // 3. Chuyển trạng thái Thiết Bị sang Đang Thuê
-            foreach (var ct in phieu.ChiTietBanGiaos)
-            {
-                if (ct.PhanCongThietBi.ThietBi != null)
-                {
-                    ct.PhanCongThietBi.ThietBi.TrangThaiSuDung = TrangThaiThietBi.DangThue;
-                }
-            }
-
-            // 4. Ghi lịch sử đơn
+            // Ghi lịch sử đơn
             _context.LichSuTrangThaiDons.Add(new LichSuTrangThaiDon
             {
                 MaDonThue = phieu.MaDonThue,

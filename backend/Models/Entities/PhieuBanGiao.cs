@@ -1,6 +1,6 @@
-using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using GearGo.Models.Enums;
 
 namespace GearGo.Models.Entities;
 
@@ -55,4 +55,25 @@ public class PhieuBanGiao
     public NhanVien NhanVien { get; set; } = null!;
 
     public ICollection<ChiTietBanGiao> ChiTietBanGiaos { get; set; } = new List<ChiTietBanGiao>();
+
+    // ----- RICH DOMAIN -----
+    public void ChotPhieu(string tenNguoiNhan, string tenNhanVienLucGiao)
+    {
+        if (TrangThai == "DaGiao")
+            throw new Exception("Phiếu đã được chốt từ trước.");
+
+        TrangThai = "DaGiao";
+        ThoiDiemGiaoThucTe = DateTime.UtcNow;
+        TenNguoiNhanThucTe = tenNguoiNhan;
+        TenNhanVienLucGiao = tenNhanVienLucGiao;
+
+        // Tự động chuyển đơn thuê
+        DonThue.BatDauThue();
+
+        // Tự động chuyển trạng thái thiết bị
+        foreach (var chiTiet in ChiTietBanGiaos)
+        {
+            chiTiet.PhanCongThietBi.ThietBi.TrangThaiSuDung = TrangThaiThietBi.DangThue;
+        }
+    }
 }
