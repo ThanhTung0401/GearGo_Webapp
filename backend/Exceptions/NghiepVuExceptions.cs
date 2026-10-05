@@ -43,3 +43,21 @@ namespace GearGo.Exceptions;
 
   public class KhongDuDieuKienSanSangException : NghiepVuException
   { public KhongDuDieuKienSanSangException(string msg, object? ct = null) : base("KHONG_DU_DIEU_KIEN_SAN_SANG", msg, ct) {} }
+
+  public class LienHeDaTonTaiException : NghiepVuException
+  { public LienHeDaTonTaiException(string msg, object? ct = null) : base("LIEN_HE_DA_TON_TAI", msg, ct) {} }
+
+  public class HoSoKhongHopLeException : NghiepVuException
+  { public HoSoKhongHopLeException(string msg, object? ct = null) : base("HO_SO_KHONG_HOP_LE", msg, ct) {} }
+
+  public class DonKhongTimThayException : NghiepVuException
+  { public DonKhongTimThayException(string msg = "Không tìm thấy đơn thuê.", object? ct = null) : base("DON_KHONG_TIM_THAY", msg, ct) {} }
+
+  public class ThongBaoKhongTimThayException : NghiepVuException
+  { public ThongBaoKhongTimThayException(string msg = "Không tìm thấy thông báo.", object? ct = null) : base("THONG_BAO_KHONG_TIM_THAY", msg, ct) {} }
+
+  public class SuKienKhongHopLeException : NghiepVuException
+  { public SuKienKhongHopLeException(string msg, object? ct = null) : base("SU_KIEN_KHONG_HOP_LE", msg, ct) {} }
+
+  public class XungDotSuKienException : NghiepVuException
+  { public XungDotSuKienException(string msg, object? ct = null) : base("XUNG_DOT_SU_KIEN", msg, ct) {} }

@@ -19,10 +19,12 @@ namespace GearGo.Controllers;
 public class PhieuNhapController : ControllerBase
 {
     private readonly IPhieuNhapService _phieuNhapService;
+    private readonly INhapKhoService _nhapKhoService;
 
-    public PhieuNhapController(IPhieuNhapService phieuNhapService)
+    public PhieuNhapController(IPhieuNhapService phieuNhapService, INhapKhoService nhapKhoService)
     {
         _phieuNhapService = phieuNhapService;
+        _nhapKhoService = nhapKhoService;
     }
 
     /// <summary>
@@ -141,6 +143,29 @@ public class PhieuNhapController : ControllerBase
         var maTaiKhoan = LayMaTaiKhoanHienTai();
         var result = await _phieuNhapService.HuyNhapAsync(id, request, maTaiKhoan, ct);
         return Ok(result);
+    }
+
+    /// <summary>
+    /// Xác nhận nhập kho: kiểm tra hàng thực nhận, sinh thiết bị, cập nhật trạng thái đã nhập kho (Chỉ Quản trị viên)
+    /// </summary>
+    [HttpPost("{id:long}/xac-nhan")]
+    [Authorize(Policy = "AdminOnly")]
+    public async Task<IActionResult> XacNhanNhapKho(
+        [FromRoute] long id, 
+        [FromBody] XacNhanNhapKhoRequest request)
+    {
+        var maTaiKhoan = LayMaTaiKhoanHienTai();
+        var result = await _nhapKhoService.XacNhanNhapKhoAsync(id, request, maTaiKhoan);
+        if (!result.ThanhCong)
+        {
+            return BadRequest(new 
+            { 
+                maLoi = result.MaLoi, 
+                thongDiep = result.ThongDiep, 
+                chiTiet = result.ChiTiet 
+            });
+        }
+        return Ok(result.DuLieu);
     }
 
     private long LayMaTaiKhoanHienTai()

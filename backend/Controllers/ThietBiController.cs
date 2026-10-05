@@ -4,6 +4,8 @@ using GearGo.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
+using GearGo.Helpers;
+
 namespace GearGo.Controllers;
 
 [ApiController]
@@ -22,8 +24,7 @@ public class ThietBiController : ControllerBase
 
     private long GetActorId()
     {
-        // Giả sử có logic lấy ID người dùng hiện tại
-        return 1; // placeholder
+        return User.LayMaTaiKhoan();
     }
 
     [HttpGet]

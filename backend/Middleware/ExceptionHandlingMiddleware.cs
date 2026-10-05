@@ -34,17 +34,21 @@ using GearGo.Exceptions;
 
       private static int GetStatusCode(NghiepVuException ex) => ex switch
       {
-          KhongTimThayException        => 404,
-          DongKhongThuocPhieuException => 404,
+          KhongTimThayException          => 404,
+          DongKhongThuocPhieuException   => 404,
           PhanCongKhongThuocDonException => 404,
-          KhongCoQuyenException        => 403,
-          TaiKhoanBiKhoaException      => 403,
-          KhongDuHangException         => 409,
-          BaogiaThayDoiException       => 409,
-          TrangThaiKhongHopLeException => 409,
-          KhuyenMaiKhongHopLeException => 409,
+          DonKhongTimThayException       => 404,
+          ThongBaoKhongTimThayException  => 404,
+          KhongCoQuyenException          => 403,
+          TaiKhoanBiKhoaException        => 403,
+          KhongDuHangException           => 409,
+          BaogiaThayDoiException         => 409,
+          LienHeDaTonTaiException        => 409,
+          XungDotSuKienException         => 409,
+          TrangThaiKhongHopLeException   => 409,
+          KhuyenMaiKhongHopLeException   => 409,
           XungDotDuLieuException         => 409,
           KhongDuDieuKienSanSangException => 409,
-          _                            => 400
+          _                              => 400
       };
   }

@@ -1,0 +1,47 @@
+# Thanh Tùng — W3. Thay {{...}} bằng dữ liệu seed thực tế. Thanh toán hiện vẫn là MOCK (Tuần 2).
+@host = http://localhost:5000
+@khach = <JWT khách>
+@nhanvien = <JWT nhân viên>
+
+### Hồ sơ
+GET {{host}}/api/v1/ho-so/toi
+Authorization: Bearer {{khach}}
+
+###
+PUT {{host}}/api/v1/ho-so/toi
+Authorization: Bearer {{khach}}
+Content-Type: application/json
+
+{"hoTen":"Khách Demo","email":"khach@example.com","soDienThoai":"0900000001","diaChi":"TP.HCM"}
+
+### Đơn của tôi
+GET {{host}}/api/v1/don-thue?trang=1&soMoiTrang=20
+Authorization: Bearer {{khach}}
+
+###
+GET {{host}}/api/v1/don-thue/1
+Authorization: Bearer {{khach}}
+
+###
+GET {{host}}/api/v1/don-thue/1/lich-su
+Authorization: Bearer {{khach}}
+
+###
+GET {{host}}/api/v1/don-thue/1/ban-giao
+Authorization: Bearer {{khach}}
+
+### Vận hành
+GET {{host}}/api/v1/van-hanh/don-thue?canChuanBi=true
+Authorization: Bearer {{nhanvien}}
+
+###
+GET {{host}}/api/v1/van-hanh/don-thue/1
+Authorization: Bearer {{nhanvien}}
+
+### Thông báo
+GET {{host}}/api/v1/thong-bao?chuaDoc=true
+Authorization: Bearer {{khach}}
+
+###
+POST {{host}}/api/v1/thong-bao/1/da-doc
+Authorization: Bearer {{khach}}

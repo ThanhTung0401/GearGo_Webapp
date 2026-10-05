@@ -57,10 +57,14 @@ public class BanGiaoService : IBanGiaoService
                 return Result<PhieuBanGiaoResponse>.Ok(MapToResponse(phieuDaCo));
 
             // Khởi tạo phiếu nháp
+            var nhanVienTao = await _context.NhanViens
+                .FirstOrDefaultAsync(n => n.MaNhanVien == maNhanVienTao || n.MaTaiKhoan == maNhanVienTao);
+            var maNv = nhanVienTao?.MaNhanVien ?? maNhanVienTao;
+
             var phieuMoi = new PhieuBanGiao
             {
                 MaDonThue = maDonThue,
-                MaNhanVien = maNhanVienTao,
+                MaNhanVien = maNv,
                 TrangThai = "ChoGiao",
                 ThoiDiemLap = DateTime.UtcNow
             };
@@ -155,11 +159,15 @@ public class BanGiaoService : IBanGiaoService
                 return Result<bool>.Loi("LOCKED", "Phiếu đã chốt.");
 
             var nhanVienThucHien = await _context.NhanViens
-                .FirstOrDefaultAsync(n => n.MaNhanVien == maNhanVienChot);
-            var tenNhanVien = nhanVienThucHien?.HoTen ?? "Nhân viên ?";
+                .FirstOrDefaultAsync(n => n.MaNhanVien == maNhanVienChot || n.MaTaiKhoan == maNhanVienChot);
+            var tenNhanVien = nhanVienThucHien?.HoTen ?? "Nhân viên " + maNhanVienChot;
 
             // Chốt phiếu
             phieu.ChotPhieu(request.TenNguoiNhanThucTe, tenNhanVien);
+            if (nhanVienThucHien != null)
+            {
+                phieu.MaNhanVien = nhanVienThucHien.MaNhanVien;
+            }
 
             // Kiểm tra thanh toán
             decimal tongTienYeuCau = phieu.DonThue.ChiTietDonThues.Sum(c =>
