@@ -1,11 +1,13 @@
 using GearGo.Models.DTOs.DonThue;
 using GearGo.Services.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace GearGo.Controllers;
 
 [ApiController]
 [Route("api/v1/don-thue")]
+[Authorize]
 public class DonThueController : ControllerBase
 {
     private readonly IDonThueService _donThueService;
