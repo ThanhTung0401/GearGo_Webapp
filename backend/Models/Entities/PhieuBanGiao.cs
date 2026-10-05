@@ -61,6 +61,10 @@ public class PhieuBanGiao
     {
         if (TrangThai == "DaGiao")
             throw new Exception("Phiếu đã được chốt từ trước.");
+        if (ThoiDiemKhachXacNhan == null)
+            throw new Exception("Khách hàng chưa xác nhận bàn giao.");
+        if (string.IsNullOrWhiteSpace(BangChungXacNhan))
+            throw new Exception("Thiếu bằng chứng xác nhận của khách.");
 
         TrangThai = "DaGiao";
         ThoiDiemGiaoThucTe = DateTime.UtcNow;
