@@ -155,7 +155,7 @@ public class BanGiaoService : IBanGiaoService
 
             // 1. Cập nhật phiếu bàn giao
             phieu.TrangThai = "DaGiao";
-            phieu.TenNhanVienLucGiao = "Nhan vien " + maNhanVienChot; // TODO: fetch ten nhan vien
+            phieu.TenNhanVienLucGiao = "Nhan vien " + maNhanVienChot;
             phieu.ThoiDiemGiaoThucTe = DateTime.UtcNow;
             phieu.TenNguoiNhanThucTe = request.TenNguoiNhanThucTe;
 

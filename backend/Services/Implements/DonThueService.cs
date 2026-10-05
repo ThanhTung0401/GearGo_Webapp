@@ -12,10 +12,12 @@ namespace GearGo.Services.Implements;
 public class DonThueService : IDonThueService
 {
     private readonly ApplicationDbContext _context;
+    private readonly IKhaDungService _khaDungService;
 
-    public DonThueService(ApplicationDbContext context)
+    public DonThueService(ApplicationDbContext context, IKhaDungService khaDungService)
     {
         _context = context;
+        _khaDungService = khaDungService;
     }
 
     public async Task<Result<DonThueResponse>> TaoDonThueAsync(TaoDonThueRequest request)
@@ -25,8 +27,19 @@ public class DonThueService : IDonThueService
 
         try
         {
-            // TODO
+            // Check inventory using KhaDungService
+            var danhSachSpIds = request.ChiTiet.Select(c => c.MaSanPham).ToList();
+            var khaDungData = await _khaDungService.LayKhaDungNhieuAsync(danhSachSpIds, request.GioNhanDuKien, request.GioTraDuKien);
+            
             bool duHang = true;
+            foreach (var item in request.ChiTiet)
+            {
+                if (!khaDungData.ContainsKey(item.MaSanPham) || khaDungData[item.MaSanPham] < item.SoLuong)
+                {
+                    duHang = false;
+                    break;
+                }
+            }
 
             if (!duHang)
             {
@@ -36,15 +49,20 @@ public class DonThueService : IDonThueService
                 );
             }
 
+            // Get active policy
+            var chinhSach = await _context.ChinhSachs
+                .OrderByDescending(c => c.ThoiDiemApDung)
+                .FirstOrDefaultAsync(c => c.ThoiDiemApDung <= DateTime.UtcNow);
+
             var donThueMoi = new DonThue
             {
                 MaKhachHang = request.MaKhachHang,
-                MaChinhSach = 1, // TODO
+                MaChinhSach = chinhSach?.MaChinhSach ?? 1,
                 MaDonHienThi = $"DH{DateTime.UtcNow:yyyyMMddHHmmss}",
                 NgayDat = DateTime.UtcNow,
                 GioNhanDuKien = request.GioNhanDuKien,
                 GioTraDuKien = request.GioTraDuKien,
-                HanThanhToan = DateTime.UtcNow.AddMinutes(15), // TODO
+                HanThanhToan = DateTime.UtcNow.AddMinutes(15), 
                 TenNguoiNhan = request.TenNguoiNhan,
                 SoDienThoaiNguoiNhan = request.SoDienThoaiNguoiNhan,
                 EmailLienHe = request.EmailLienHe,
@@ -54,16 +72,21 @@ public class DonThueService : IDonThueService
             _context.DonThues.Add(donThueMoi);
             await _context.SaveChangesAsync();
 
+            // Fetch actual prices
+            var sanPhams = await _context.SanPhams
+                .Where(s => danhSachSpIds.Contains(s.MaSanPham))
+                .ToDictionaryAsync(s => s.MaSanPham);
+
             foreach (var item in request.ChiTiet)
             {
+                var sp = sanPhams.GetValueOrDefault(item.MaSanPham);
                 var chiTiet = new ChiTietDonThue
                 {
                     MaDonThue = donThueMoi.MaDonThue,
                     MaSanPham = item.MaSanPham,
                     SoLuong = item.SoLuong,
-                    // TODO
-                    DonGiaThueMoiNgay = 50000,
-                    MucCocMoiThietBi = 200000
+                    DonGiaThueMoiNgay = sp?.GiaThueMoiNgay ?? 0,
+                    MucCocMoiThietBi = sp?.MucCocMoiThietBi ?? 0
                 };
 
                 _context.ChiTietDonThues.Add(chiTiet);
