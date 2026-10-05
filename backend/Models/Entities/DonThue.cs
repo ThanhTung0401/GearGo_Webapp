@@ -101,4 +101,36 @@ public class DonThue
 
     // @OneToOne: Một đơn thuê có 1 phiếu bàn giao
     public PhieuBanGiao? PhieuBanGiao { get; set; }
+
+    // ----- RICH DOMAIN -----
+
+    // 1. Khach hang huy don
+    public void KhachHangHuyDon(string lyDo)
+    {
+        if (TrangThai != TrangThaiDonThue.ChoThanhToan)
+            throw new Exception("Chỉ có thể hủy đơn khi đang ở trạng thái Chờ thanh toán.");
+
+        TrangThai = TrangThaiDonThue.KhachHuy;
+        ThoiDiemHuy = DateTime.UtcNow;
+        LyDoHuy = lyDo;
+
+        // Tự động giải phóng các giữ chỗ
+        foreach (var chiTiet in ChiTietDonThues)
+        {
+            if (chiTiet.GiuCho != null)
+            {
+                chiTiet.GiuCho.TrangThai = TrangThaiGiuCho.DaGiaiPhong;
+                chiTiet.GiuCho.ThoiDiemGiaiPhong = DateTime.UtcNow;
+            }
+        }
+    }
+
+    // 2. Chuyen trang thai sang dang thue (khi ban giao)
+    public void BatDauThue()
+    {
+        if (TrangThai != TrangThaiDonThue.SanSangNhan)
+            throw new Exception("Đơn chưa sẵn sàng để giao.");
+
+        TrangThai = TrangThaiDonThue.DangThue;
+    }
 }
