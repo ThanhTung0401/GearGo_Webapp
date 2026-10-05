@@ -37,3 +37,9 @@ namespace GearGo.Exceptions;
 
   public class DongKhongThuocPhieuException : NghiepVuException
   { public DongKhongThuocPhieuException(string msg, object? ct = null) : base("DONG_KHONG_THUOC_PHIEU", msg, ct) {} }
+
+  public class PhanCongKhongThuocDonException : NghiepVuException
+  { public PhanCongKhongThuocDonException(string msg, object? ct = null) : base("PHAN_CONG_KHONG_THUOC_DON", msg, ct) {} }
+
+  public class KhongDuDieuKienSanSangException : NghiepVuException
+  { public KhongDuDieuKienSanSangException(string msg, object? ct = null) : base("KHONG_DU_DIEU_KIEN_SAN_SANG", msg, ct) {} }
