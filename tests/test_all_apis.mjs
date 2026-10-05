@@ -427,6 +427,7 @@ async function runAllTests() {
   // 31. POST /api/v1/thanh-toan/xac-nhan
   const resThanhToan = await callApi('/api/v1/thanh-toan/xac-nhan', {
     method: 'POST',
+    headers: { 'Authorization': `Bearer ${adminToken}` },
     body: JSON.stringify({ maDonThue: 999999, phuongThuc: 'ChuyenKhoan', soTien: 100000 })
   });
   assertTest('POST /api/v1/thanh-toan/xac-nhan (Xác nhận thanh toán)', resThanhToan.status === 400, `Status: ${resThanhToan.status}`);

@@ -1,12 +1,14 @@
 using GearGo.Models.DTOs.BanGiao;
 using GearGo.Services.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace GearGo.Controllers;
 
 
 [ApiController]
-[Route("/api/v1/ban-giao")]
+[Route("api/v1/ban-giao")]
+[Authorize(Policy = "StaffOrAdmin")]
 public class BanGiaoController : ControllerBase
 {
     private readonly IBanGiaoService _banGiaoService;
@@ -16,7 +18,7 @@ public class BanGiaoController : ControllerBase
         _banGiaoService = banGiaoService;
     }
 
-    [HttpGet("/don-thue/{maDonThue}")]
+    [HttpGet("don-thue/{maDonThue}")]
     public async Task<IActionResult> LayTheoDon(long maDonThue)
     {
         var result = await _banGiaoService.LayTheoDonAsync(maDonThue);
@@ -25,7 +27,7 @@ public class BanGiaoController : ControllerBase
         return Ok(result.DuLieu);
     }
 
-    [HttpPost("/nhap/{maDonThue}")]
+    [HttpPost("nhap/{maDonThue}")]
     public async Task<IActionResult> TaoHoacLayPhieuBanGiaoNhap(long maDonThue)
     {
         var maTaiKhoanClaim = User.FindFirst("MaTaiKhoan")?.Value;
@@ -38,7 +40,7 @@ public class BanGiaoController : ControllerBase
         return Ok(result.DuLieu);
     }
 
-    [HttpPut("/nhap/{maPhieuBanGiao}")]
+    [HttpPut("nhap/{maPhieuBanGiao}")]
     public async Task<IActionResult> CapNhatPhieuBanGiaoNhap(
             long maPhieuBanGiao, [FromBody] CapNhatPhieuBanGiaoRequest request)
     {
@@ -48,7 +50,7 @@ public class BanGiaoController : ControllerBase
         return Ok(result.DuLieu);
     }
 
-    [HttpPost("/{maPhieuBanGiao}/chot")]
+    [HttpPost("{maPhieuBanGiao}/chot")]
     public async Task<IActionResult> ChotBanGiao(
             long maPhieuBanGiao, [FromBody] ChotBanGiaoRequest request)
     {
