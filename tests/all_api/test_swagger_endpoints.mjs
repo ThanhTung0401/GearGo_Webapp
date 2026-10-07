@@ -36,7 +36,7 @@ const adminToken = generateToken('QuanTriVien', 1, 'admin@geargo.vn');
 
 async function testAllSwaggerEndpoints() {
   console.log(`${colors.cyan}${colors.bold}================================================================${colors.reset}`);
-  console.log(`${colors.cyan}${colors.bold}    QUÉT & KIỂM THỬ TRỰC TIẾP TỪ SWAGGER JSON (80 ENDPOINTS)    ${colors.reset}`);
+  console.log(`${colors.cyan}${colors.bold}    QUÉT & KIỂM THỬ TRỰC TIẾP TỪ SWAGGER JSON    ${colors.reset}`);
   console.log(`${colors.cyan}    Mục tiêu: ${BASE_URL}/swagger/v1/swagger.json${colors.reset}`);
   console.log(`${colors.cyan}${colors.bold}================================================================${colors.reset}\n`);
 

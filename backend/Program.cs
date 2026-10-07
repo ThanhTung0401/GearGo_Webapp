@@ -98,6 +98,7 @@ builder.Services.AddScoped<IBanGiaoService, BanGiaoService>();
 // W3 — Thanh Tùng: hồ sơ, truy vấn đơn, lịch sử, thông báo
 builder.Services.AddScoped<IHoSoService, HoSoService>();
 builder.Services.AddScoped<ITruyVanDonThueService, TruyVanDonThueService>();
+builder.Services.AddScoped<IPhuPhiService, PhuPhiService>(); // W4-T3 Kiện Minh
 builder.Services.AddScoped<ILichSuNghiepVuService, LichSuNghiepVuService>();
 builder.Services.AddScoped<IThongBaoService, ThongBaoService>();
 
@@ -125,6 +126,7 @@ using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
     db.Database.Migrate();
+    await DbSeeder.SeedAllAsync(db);
 }
 
 if (app.Environment.IsDevelopment())
