@@ -90,6 +90,7 @@ builder.Services.AddScoped<IKhaDungService, KhaDungService>();
 builder.Services.AddScoped<IGioThueService, GioThueService>();
 builder.Services.AddScoped<IDonThueService, DonThueService>();
 builder.Services.AddScoped<IThanhToanService, ThanhToanService>();
+builder.Services.AddScoped<IQuaHanService, QuaHanService>();
 builder.Services.AddScoped<IKhuyenMaiService, KhuyenMaiService>();
 builder.Services.AddScoped<IInventoryService, InventoryService>();
 builder.Services.AddScoped<ICheckoutService, CheckoutService>();
