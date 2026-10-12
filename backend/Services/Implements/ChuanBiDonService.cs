@@ -585,4 +585,56 @@ public class ChuanBiDonService : IChuanBiDonService
             LyDoChuaDuDieuKien = lyDo
         };
     }
+
+    /// <summary>
+    /// Giải phóng toàn bộ phân công thiết bị chưa bàn giao khi đơn bị hủy (W4 contract cho Thanh Tùng)
+    /// </summary>
+    public async Task<Result> GiaiPhongPhanCongKhiHuyDonAsync(
+        long donId, long maTaiKhoan, string? lyDo = null, CancellationToken ct = default)
+    {
+        var phanCongs = await _db.PhanCongThietBis
+            .Include(pc => pc.ThietBi)
+            .Include(pc => pc.ChiTietDon)
+            .Where(pc => pc.ChiTietDon.MaDonThue == donId && pc.TrangThai == "DaPhanCong")
+            .ToListAsync(ct);
+
+        if (!phanCongs.Any())
+            return Result.Ok();
+
+        // Không giải phóng phân công của thiết bị đã bàn giao trong phiếu bàn giao chốt
+        var daBanGiaoPcIds = await _db.ChiTietBanGiaos
+            .Include(ctbg => ctbg.PhieuBanGiao)
+            .Where(ctbg => ctbg.PhieuBanGiao.MaDonThue == donId && ctbg.PhieuBanGiao.TrangThai == "DaBanGiao")
+            .Select(ctbg => ctbg.MaPhanCong)
+            .ToListAsync(ct);
+
+        long? maNhanVien = null;
+        try
+        {
+            var nv = await LayNhanVienAsync(maTaiKhoan, ct);
+            maNhanVien = nv.MaNhanVien;
+        }
+        catch { /* Tài khoản khách hàng hoặc hệ thống hủy */ }
+
+        foreach (var pc in phanCongs)
+        {
+            if (daBanGiaoPcIds.Contains(pc.MaPhanCong))
+                continue;
+
+            pc.TrangThai = "DaHuy";
+            pc.LyDoHuyPhanCong = lyDo ?? "Đơn thuê đã hủy trước bàn giao";
+            pc.ThoiDiemHuyPhanCong = DateTime.UtcNow;
+            if (maNhanVien.HasValue)
+                pc.MaNguoiHuyPhanCong = maNhanVien.Value;
+
+            if (pc.ThietBi != null)
+            {
+                pc.ThietBi.TrangThaiSuDung = TrangThaiThietBi.SanSang;
+            }
+        }
+
+        await _db.SaveChangesAsync(ct);
+        return Result.Ok();
+    }
 }
+

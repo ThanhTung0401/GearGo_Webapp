@@ -39,4 +39,10 @@ public interface IChuanBiDonService
     /// Kiểm tra điều kiện và xác nhận đơn sẵn sàng nhận (DangChuanBi → SanSangNhan)
     /// </summary>
     Task<Result<ChuanBiResponse>> XacNhanSanSangAsync(long donId, XacNhanSanSangRequest request, long maTaiKhoan, CancellationToken ct = default);
+
+    /// <summary>
+    /// Giải phóng toàn bộ phân công thiết bị chưa bàn giao khi đơn bị hủy (W4 contract cho Thanh Tùng)
+    /// </summary>
+    Task<Result> GiaiPhongPhanCongKhiHuyDonAsync(long donId, long maTaiKhoan, string? lyDo = null, CancellationToken ct = default);
 }
+
