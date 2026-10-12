@@ -1,0 +1,401 @@
+/* ==========================================================================
+   GearGo Component Library - Thiết kế chuẩn Impeccable Craft
+   Các class tái sử dụng: Nút bấm, Form, Thẻ Card, Hộp thoại, Bảng dữ liệu
+   ========================================================================== */
+
+/* ─── Nút bấm (Buttons) ─────────────────────────────────────────────────── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-family: var(--font-body);
+  font-weight: 600;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  text-decoration: none;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.btn:active {
+  transform: scale(0.98);
+}
+
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Nút chính: Xanh rừng thám hiểm */
+.btn-primary {
+  background: var(--color-forest);
+  color: #ffffff;
+  border-color: var(--color-forest);
+  box-shadow: 0 2px 6px rgba(27, 63, 47, 0.18);
+}
+.btn-primary:hover:not(:disabled) {
+  background: var(--color-moss);
+  border-color: var(--color-moss);
+  box-shadow: 0 4px 12px rgba(27, 63, 47, 0.25);
+}
+
+/* Nút phụ: Trắng viền cát tự nhiên */
+.btn-secondary {
+  background: #ffffff;
+  color: var(--color-bark);
+  border-color: var(--color-bone);
+  box-shadow: 0 1px 3px rgba(17, 35, 27, 0.04);
+}
+.btn-secondary:hover:not(:disabled) {
+  background: var(--color-parchment);
+  border-color: #D2C9B8;
+  color: var(--color-forest);
+}
+
+/* Nút điểm nhấn: Ánh lửa trại ấm áp */
+.btn-accent {
+  background: var(--color-amber);
+  color: #ffffff;
+  border-color: var(--color-amber);
+  box-shadow: 0 2px 8px rgba(224, 122, 67, 0.28);
+}
+.btn-accent:hover:not(:disabled) {
+  background: var(--color-amber-hover);
+  border-color: var(--color-amber-hover);
+  box-shadow: 0 4px 14px rgba(224, 122, 67, 0.35);
+}
+
+/* Nút cảnh báo / Nguy hiểm */
+.btn-danger {
+  background: #DC2626;
+  color: #ffffff;
+  border-color: #DC2626;
+}
+.btn-danger:hover:not(:disabled) {
+  background: #B91C1C;
+  border-color: #B91C1C;
+}
+
+/* Nút trong suốt nhẹ nhàng */
+.btn-ghost {
+  background: transparent;
+  color: var(--color-bark);
+  border-color: transparent;
+}
+.btn-ghost:hover:not(:disabled) {
+  background: var(--color-parchment);
+  color: var(--color-forest);
+}
+
+/* Kích cỡ nút bấm */
+.btn-sm {
+  padding: 6px 12px;
+  font-size: 0.8rem;
+  border-radius: 8px;
+}
+.btn-md {
+  padding: 10px 18px;
+  font-size: 0.9rem;
+}
+.btn-lg {
+  padding: 13px 26px;
+  font-size: 1rem;
+  border-radius: 12px;
+}
+.btn-full {
+  width: 100%;
+}
+
+/* ─── Trường nhập liệu Form ──────────────────────────────────────────────── */
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-bark);
+}
+
+.form-input,
+.form-select,
+.form-textarea {
+  width: 100%;
+  background: #ffffff;
+  border: 1px solid var(--color-bone);
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 0.92rem;
+  color: var(--color-charcoal);
+  font-family: var(--font-body);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.form-input::placeholder,
+.form-textarea::placeholder {
+  color: #9CA3AF;
+  font-size: 0.88rem;
+}
+
+.form-input:hover,
+.form-select:hover,
+.form-textarea:hover {
+  border-color: #D2C9B8;
+}
+
+.form-input:focus,
+.form-select:focus,
+.form-textarea:focus {
+  outline: none;
+  border-color: var(--color-forest);
+  box-shadow: 0 0 0 3px rgba(27, 63, 47, 0.12);
+}
+
+.form-input-error {
+  border-color: #EF4444 !important;
+}
+.form-input-error:focus {
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15) !important;
+}
+
+.form-error-msg {
+  font-size: 0.78rem;
+  color: #EF4444;
+  margin-top: 2px;
+}
+
+.form-hint {
+  font-size: 0.75rem;
+  color: #6B7280;
+}
+
+/* ─── Thẻ Card & Khối giao diện ─────────────────────────────────────────── */
+.card-panel {
+  background: #ffffff;
+  border: 1px solid var(--color-bone);
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(17, 35, 27, 0.04);
+}
+
+.card-panel-muted {
+  background: var(--color-parchment);
+  border: 1px solid var(--color-bone);
+  border-radius: 16px;
+  padding: 20px;
+}
+
+/* Thẻ chỉ số KPI */
+.kpi-card {
+  background: #ffffff;
+  border: 1px solid var(--color-bone);
+  border-radius: 16px;
+  padding: 18px 20px;
+  box-shadow: 0 2px 6px rgba(17, 35, 27, 0.03);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  position: relative;
+  overflow: hidden;
+}
+
+.kpi-card .kpi-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #6B7280;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.kpi-card .kpi-value {
+  font-family: var(--font-display);
+  font-size: 1.65rem;
+  font-weight: 700;
+  color: var(--color-bark);
+  line-height: 1.1;
+}
+
+.kpi-card .kpi-sub {
+  font-size: 0.78rem;
+  color: #9CA3AF;
+}
+
+/* ─── Huy hiệu trạng thái (Badges) ──────────────────────────────────────── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 9999px;
+  font-size: 0.74rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+
+.badge-success {
+  background: rgba(16, 185, 129, 0.14);
+  color: #065F46;
+}
+
+.badge-warning {
+  background: rgba(224, 122, 67, 0.16);
+  color: #9A3412;
+}
+
+.badge-danger {
+  background: rgba(239, 68, 68, 0.14);
+  color: #991B1B;
+}
+
+.badge-info {
+  background: rgba(53, 98, 118, 0.14);
+  color: #164E63;
+}
+
+.badge-neutral {
+  background: var(--color-parchment);
+  color: var(--color-bark);
+}
+
+/* ─── Hộp thoại Modal & Drawer ──────────────────────────────────────────── */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  background: rgba(17, 35, 27, 0.6);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  display: grid;
+  place-items: center;
+  padding: 20px;
+}
+
+.modal-container {
+  width: min(100%, 720px);
+  max-height: 90vh;
+  background: #ffffff;
+  border-radius: 20px;
+  border: 1px solid var(--color-bone);
+  box-shadow: 0 20px 48px rgba(17, 35, 27, 0.22);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: modalEnter 0.24s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes modalEnter {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.modal-header {
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--color-bone);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.modal-title {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--color-bark);
+  margin: 0;
+}
+
+.modal-body {
+  padding: 24px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.modal-footer {
+  padding: 16px 24px;
+  border-top: 1px solid var(--color-bone);
+  background: var(--color-parchment);
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+/* ─── Bảng dữ liệu (Data Table) ─────────────────────────────────────────── */
+.table-wrapper {
+  background: #ffffff;
+  border: 1px solid var(--color-bone);
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 1px 4px rgba(17, 35, 27, 0.03);
+}
+
+.table-scroll {
+  overflow-x: auto;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.85rem;
+}
+
+.data-table th {
+  background: var(--color-parchment);
+  color: #4B5563;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--color-bone);
+  white-space: nowrap;
+}
+
+.data-table td {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--color-bone);
+  color: var(--color-charcoal);
+  vertical-align: middle;
+}
+
+.data-table tr:last-child td {
+  border-bottom: none;
+}
+
+.data-table tr:hover td {
+  background: rgba(248, 246, 240, 0.7);
+}
+
+/* ─── Phân trang & Thanh tìm kiếm ────────────────────────────────────────── */
+.search-bar-wrap {
+  position: relative;
+  width: 100%;
+}
+.search-bar-wrap input {
+  padding-left: 38px;
+}
+.search-bar-wrap .search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #9CA3AF;
+  pointer-events: none;
+}

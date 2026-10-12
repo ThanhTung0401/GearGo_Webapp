@@ -1,0 +1,165 @@
+/* ==========================================================================
+   GearGo Auth Styles - Giao diện Đăng nhập / Đăng ký / Quên mật khẩu
+   ========================================================================== */
+
+.auth-page {
+  min-height: calc(85vh - 70px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 16px;
+  background-color: var(--color-cream);
+}
+
+.auth-wrapper {
+  width: 100%;
+  max-width: 440px;
+}
+
+.auth-wrapper-wide {
+  max-width: 480px;
+}
+
+.auth-header {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.auth-icon-badge {
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
+  background: var(--color-forest);
+  color: white;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  margin-bottom: 12px;
+  box-shadow: 0 4px 14px rgba(27, 63, 47, 0.2);
+}
+
+.auth-title {
+  font-family: var(--font-display);
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--color-bark);
+  margin-bottom: 6px;
+  letter-spacing: -0.02em;
+}
+
+.auth-subtitle {
+  color: #6B7280;
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+.auth-card {
+  background: #ffffff;
+  border: 1px solid var(--color-bone);
+  border-radius: 20px;
+  padding: 32px;
+  box-shadow: 0 8px 32px rgba(17, 35, 27, 0.06);
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.auth-pwd-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.auth-pwd-wrapper .form-input {
+  padding-right: 60px;
+}
+
+.auth-pwd-toggle {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  color: #6B7280;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 4px;
+}
+
+.auth-pwd-toggle:hover {
+  color: var(--color-forest);
+}
+
+.auth-link {
+  background: transparent;
+  border: none;
+  padding: 0;
+  color: var(--color-forest);
+  font-weight: 700;
+  cursor: pointer;
+  font-size: inherit;
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.auth-link:hover {
+  color: var(--color-amber);
+  text-decoration: underline;
+}
+
+.auth-terms-label {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 0.82rem;
+  color: #4B5563;
+  cursor: pointer;
+  line-height: 1.45;
+}
+
+.auth-terms-label input[type="checkbox"] {
+  margin-top: 3px;
+  width: 16px;
+  height: 16px;
+  accent-color: var(--color-forest);
+  border-radius: 4px;
+}
+
+.auth-demo-notice {
+  text-align: center;
+  margin-top: 20px;
+  font-size: 0.76rem;
+  color: #9CA3AF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.auth-success-card {
+  text-align: center;
+  background: #ffffff;
+  border: 1px solid var(--color-bone);
+  border-radius: 20px;
+  padding: 40px 32px;
+  box-shadow: 0 8px 32px rgba(17, 35, 27, 0.06);
+}
+
+.auth-success-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: rgba(16, 185, 129, 0.12);
+  color: #10B981;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  margin-bottom: 16px;
+}
