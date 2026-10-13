@@ -1,24 +1,67 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Outfit:wght@500;600;700;800;900&display=swap');
 @import 'tailwindcss';
+@import './styles/components.css';
+@import './styles/auth.css';
+@import './styles/customer.css';
+@import './styles/staff.css';
+@import './styles/admin.css';
 
 @theme {
-  --font-display: 'Manrope', system-ui, sans-serif;
-  --font-body: 'Inter', system-ui, sans-serif;
-  --font-mono: 'Inter', system-ui, sans-serif;
+  --font-display: 'Outfit', system-ui, sans-serif;
+  --font-body: 'Be Vietnam Pro', system-ui, sans-serif;
+  --font-mono: 'Outfit', monospace;
 
-  --color-bark: #172E23;
-  --color-forest: #244C3A;
-  --color-moss: #2D6A4F;
-  --color-fern: #3F6C87;
-  --color-sage: #6F8D7D;
-  --color-amber: #D98550;
-  --color-clay: #C04A3E;
-  --color-cream: #F6F4ED;
-  --color-parchment: #F0EEE7;
-  --color-bone: #E2DED4;
-  --color-charcoal: #172E23;
+  --color-bark: #11231B;
+  --color-forest: #1B3F2F;
+  --color-moss: #285A41;
+  --color-fern: #3A6475;
+  --color-sage: #6B8B7B;
+  --color-amber: #E07A43;
+  --color-amber-hover: #D46931;
+  --color-clay: #BD4337;
+  --color-cream: #F8F6F0;
+  --color-parchment: #F1ECE2;
+  --color-bone: #E2DDD1;
+  --color-charcoal: #14261C;
   --color-warning: #D97736;
-  --color-info: #3F6C87;
+  --color-info: #356276;
+}
+
+/* Các lớp hiệu ứng vi tương tác và giao diện nổi chuẩn Impeccable */
+.card-hover-lift {
+  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.28s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.25s ease;
+}
+.card-hover-lift:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 16px 32px -8px rgba(17, 35, 27, 0.12), 0 4px 12px -2px rgba(17, 35, 27, 0.06);
+  border-color: #D2C9B8 !important;
+}
+
+.glass-panel {
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.glass-dark {
+  background: rgba(27, 63, 47, 0.88);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.glow-badge {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.glow-badge::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #10B981;
+  box-shadow: 0 0 10px #10B981;
 }
 
 * {

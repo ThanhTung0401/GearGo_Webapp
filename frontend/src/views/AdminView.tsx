@@ -10,26 +10,33 @@ type AdminTab = "dashboard" | "categories" | "products" | "equipment" | "invento
 
 function FormModal({ title, description, onClose, children }: { title: string; description: string; onClose: () => void; children: React.ReactNode }) {
   return (
-    <div role="dialog" aria-modal="true" aria-label={title} style={{ position: "fixed", inset: 0, zIndex: 250, background: "rgba(23,46,35,0.58)", display: "grid", placeItems: "center", padding: "20px" }}>
-      <div style={{ width: "min(100%, 760px)", maxHeight: "92vh", overflowY: "auto", background: "white", borderRadius: "16px", padding: "22px", boxShadow: "0 18px 48px rgba(23,46,35,0.24)" }}>
-        <div className="flex justify-between items-start gap-4">
+    <div role="dialog" aria-modal="true" aria-label={title} className="modal-overlay">
+      <div className="modal-container">
+        <div className="modal-header">
           <div>
-            <h2 style={{ fontSize: "1.15rem", color: "var(--color-bark)", marginBottom: "5px" }}>{title}</h2>
-            <p style={{ color: "#6B7280", fontSize: "0.8rem", lineHeight: 1.5 }}>{description}</p>
+            <h2 className="modal-title">{title}</h2>
+            <p className="text-xs text-gray-500 mt-1">{description}</p>
           </div>
-          <button type="button" onClick={onClose} aria-label="Đóng" style={{ border: "none", background: "transparent", color: "#6B7280", cursor: "pointer", fontSize: "1.2rem" }}>×</button>
+          <button type="button" onClick={onClose} aria-label="Đóng" className="btn btn-ghost btn-sm text-lg leading-none">×</button>
         </div>
-        {children}
+        <div className="modal-body">
+          {children}
+        </div>
       </div>
     </div>
   );
 }
 
-const fieldStyle = { width: "100%", border: "1px solid var(--color-bone)", borderRadius: "8px", padding: "10px 12px", background: "white" };
-const labelStyle = { display: "grid", gap: "6px", fontSize: "0.78rem", fontWeight: 600, color: "var(--color-bark)" };
+const fieldStyle = { width: "100%", border: "1px solid var(--color-bone)", borderRadius: "10px", padding: "10px 14px", background: "white", fontSize: "0.9rem" };
+const labelStyle = { display: "grid", gap: "6px", fontSize: "0.8rem", fontWeight: 600, color: "var(--color-bark)" };
 
 function FormActions({ onClose }: { onClose: () => void }) {
-  return <div className="flex gap-2 mt-5"><button type="button" onClick={onClose} style={{ flex: 1, border: "1px solid var(--color-bone)", borderRadius: "8px", padding: "10px", background: "white", cursor: "pointer", fontWeight: 600 }}>Hủy</button><button type="submit" style={{ flex: 1, border: "none", borderRadius: "8px", padding: "10px", background: "var(--color-forest)", color: "white", cursor: "pointer", fontWeight: 700 }}>Lưu dữ liệu</button></div>;
+  return (
+    <div className="modal-footer mt-4">
+      <button type="button" onClick={onClose} className="btn btn-secondary btn-md">Hủy</button>
+      <button type="submit" className="btn btn-primary btn-md">Lưu dữ liệu</button>
+    </div>
+  );
 }
 
 function CategoryForm({ app, category, onClose }: { app: ReturnType<typeof useApp>; category?: Category; onClose: () => void }) {
@@ -287,42 +294,44 @@ function DashboardTab({ app }: { app: ReturnType<typeof useApp> }) {
   );
   return (
     <div>
-      <h2 style={{ fontFamily: "var(--font-display)", fontSize: "1.4rem", color: "var(--color-bark)", marginBottom: "18px" }}>Tổng quan hệ thống</h2>
-      <div className="responsive-kpi-grid grid gap-4 mb-6" style={{ gridTemplateColumns: "repeat(4, 1fr)" }}>
+      <h2 className="admin-title text-xl mb-4">Tổng quan hệ thống</h2>
+      <div className="admin-stats-grid">
         {([
           { label: "Doanh thu tháng 12", value: "14.200.000đ", sub: "+18% tháng trước", icon: "wallet", color: "var(--color-forest)" },
           { label: "Đơn đang xử lý", value: app.orders.filter((o) => !["Hoàn tất", "Khách hủy", "Cửa hàng hủy", "Hết hạn"].includes(o.status)).length.toString(), sub: "Chưa hoàn tất", icon: "clipboard", color: "var(--color-amber)" },
           { label: "Thiết bị đang thuê", value: app.equipment.filter((e) => e.equipmentStatus === "Đang thuê").length.toString(), sub: `/ ${app.equipment.length} tổng cộng`, icon: "tent", color: "#1D4ED8" },
-          { label: "Cọc đang giữ", value: fmt(app.orders.filter((o) => o.status === "Đang thuê").reduce((s, o) => s + o.depositTotal, 0)), sub: "Không phải doanh thu", icon: "shield", color: "#9CA3AF" },
+          { label: "Cọc đang giữ", value: fmt(app.orders.filter((o) => o.status === "Đang thuê").reduce((s, o) => s + o.depositTotal, 0)), sub: "Không phải doanh thu", icon: "shield", color: "#6B7280" },
         ] as { label: string; value: string; sub: string; icon: IconName; color: string }[]).map((k) => (
-          <div key={k.label} style={{ background: "white", borderRadius: "12px", padding: "16px", border: "1px solid var(--color-bone)" }}>
-            <div style={{ color: k.color, marginBottom: "6px" }}><Icon name={k.icon} size={22} /></div>
-            <div style={{ fontFamily: "var(--font-mono)", fontSize: "1.2rem", fontWeight: 700, color: k.color, marginBottom: "2px" }}>{k.value}</div>
-            <div style={{ fontSize: "0.78rem", fontWeight: 600, color: "var(--color-bark)", marginBottom: "2px" }}>{k.label}</div>
-            <div style={{ fontSize: "0.68rem", color: "#9CA3AF" }}>{k.sub}</div>
+          <div key={k.label} className="kpi-card">
+            <div style={{ color: k.color }}><Icon name={k.icon} size={22} /></div>
+            <div className="kpi-value" style={{ color: k.color, fontSize: "1.3rem" }}>{k.value}</div>
+            <div className="kpi-label">{k.label}</div>
+            <div className="kpi-sub">{k.sub}</div>
           </div>
         ))}
       </div>
 
-      <div style={{ background: "white", borderRadius: "12px", border: "1px solid var(--color-bone)", overflow: "hidden", marginBottom: "18px" }}>
-        <div className="flex justify-between items-center" style={{ background: "var(--color-parchment)", padding: "12px 16px" }}>
+      <div className="card-panel p-0 overflow-hidden mb-5">
+        <div className="flex justify-between items-center bg-parchment p-3 px-4 border-b border-bone">
           <div>
-            <div style={{ fontWeight: 700, fontSize: "0.9rem", color: "var(--color-bark)" }}>Phụ phí chờ phê duyệt</div>
-            <div style={{ fontSize: "0.72rem", color: "#6B7280" }}>Nhân viên chỉ lập đề xuất; quản trị viên quyết định duyệt hoặc từ chối.</div>
+            <div className="font-bold text-sm text-bark">Phụ phí chờ phê duyệt</div>
+            <div className="text-xs text-gray-500">Nhân viên chỉ lập đề xuất; quản trị viên quyết định duyệt hoặc từ chối.</div>
           </div>
-          <span style={{ background: pendingSurcharges.length ? "#FEF3C7" : "#DCFCE7", color: pendingSurcharges.length ? "#B45309" : "#15803D", borderRadius: "999px", padding: "4px 10px", fontWeight: 700, fontSize: "0.75rem" }}>{pendingSurcharges.length}</span>
+          <span className={`badge ${pendingSurcharges.length ? "badge-warning" : "badge-success"}`}>
+            {pendingSurcharges.length}
+          </span>
         </div>
         {pendingSurcharges.length === 0 ? (
-          <div style={{ padding: "18px", textAlign: "center", color: "#6B7280", fontSize: "0.84rem" }}>Không có phụ phí đang chờ duyệt.</div>
+          <div className="p-4 text-center text-gray-500 text-sm">Không có phụ phí đang chờ duyệt.</div>
         ) : pendingSurcharges.map(({ order, surcharge }) => (
-          <div key={surcharge.id} className="flex items-center gap-3 flex-wrap" style={{ padding: "12px 16px", borderTop: "1px solid var(--color-bone)" }}>
-            <div style={{ flex: 1, minWidth: 220 }}>
-              <div style={{ fontWeight: 700, fontSize: "0.84rem" }}>{surcharge.type} · {surcharge.equipmentId}</div>
-              <div style={{ fontSize: "0.72rem", color: "#6B7280" }}>{order.id} · {order.customerName} · {surcharge.reason}</div>
+          <div key={surcharge.id} className="flex items-center gap-3 flex-wrap p-3 px-4 border-t border-bone">
+            <div className="flex-1 min-w-[220px]">
+              <div className="font-bold text-sm">{surcharge.type} · {surcharge.equipmentId}</div>
+              <div className="text-xs text-gray-500">{order.id} · {order.customerName} · {surcharge.reason}</div>
             </div>
-            <strong style={{ color: "#B91C1C" }}>+{fmt(surcharge.amount)}</strong>
-            <button onClick={() => app.rejectSurcharge(order.id, surcharge.id)} style={{ border: "1px solid #FECACA", background: "white", color: "#B91C1C", borderRadius: "7px", padding: "7px 11px", cursor: "pointer", fontWeight: 600 }}>Từ chối</button>
-            <button onClick={() => app.approveSurcharge(order.id, surcharge.id)} style={{ border: "none", background: "var(--color-forest)", color: "white", borderRadius: "7px", padding: "8px 12px", cursor: "pointer", fontWeight: 700 }}>Duyệt phụ phí</button>
+            <strong className="text-red-600 font-mono">+{fmt(surcharge.amount)}</strong>
+            <button onClick={() => app.rejectSurcharge(order.id, surcharge.id)} className="btn btn-secondary btn-sm text-red-600">Từ chối</button>
+            <button onClick={() => app.approveSurcharge(order.id, surcharge.id)} className="btn btn-primary btn-sm">Duyệt phụ phí</button>
           </div>
         ))}
       </div>

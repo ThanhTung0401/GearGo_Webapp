@@ -165,8 +165,9 @@ export default function ProductsView() {
                         "{rev.comment}"
                       </p>
                       {rev.response && (
-                        <div style={{ background: "#F3F4F6", borderRadius: 8, padding: "8px 12px", fontSize: "0.78rem", color: "#374151", borderLeft: "3px solid var(--color-forest)" }}>
-                          <strong style={{ color: "var(--color-forest)" }}>GearGo phản hồi:</strong> {rev.response}
+                        <div style={{ background: "var(--color-parchment)", borderRadius: 10, padding: "10px 14px", fontSize: "0.8rem", color: "var(--color-bark)", border: "1px solid var(--color-bone)" }}>
+                          <span style={{ display: "inline-block", background: "var(--color-forest)", color: "white", padding: "2px 8px", borderRadius: 4, fontSize: "0.7rem", fontWeight: 700, marginRight: 6 }}>GearGo phản hồi</span>
+                          {rev.response}
                         </div>
                       )}
                     </div>
@@ -271,48 +272,93 @@ export default function ProductsView() {
             style={{ border: 0, borderRadius: 8, padding: "9px 14px", background: "var(--color-forest)", color: "white", cursor: "pointer", fontWeight: 700 }}>Xóa bộ lọc</button>
         </div>
       )}
-      <div className="grid gap-5" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(270px, 1fr))" }}>
+      <div className="grid gap-6" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))" }}>
         {filtered.map((p) => {
           const avail = app.getAvailable(p.id);
           const inCart = app.cart.find((c) => c.productId === p.id);
           const days = app.getDays();
           return (
-            <div key={p.id} style={{ background: "white", borderRadius: "12px", overflow: "hidden", border: "1px solid var(--color-bone)" }} className="hover:shadow-lg transition-shadow">
-              <div style={{ position: "relative", height: 180, background: "var(--color-parchment)", cursor: "pointer" }} onClick={() => app.setSelectedProduct(p.id)}>
-                <img src={p.image} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                <span style={{
-                  position: "absolute", top: 10, right: 10,
-                  background: !datesSelected ? "#6B7280" : avail > 0 ? "var(--color-forest)" : "#EF4444",
-                  color: "white", fontSize: "0.7rem", padding: "2px 9px", borderRadius: "10px", fontFamily: "var(--font-mono)"
+            <div key={p.id}
+              className="card-hover-lift"
+              style={{
+                background: "white",
+                borderRadius: "16px",
+                overflow: "hidden",
+                border: "1px solid var(--color-bone)",
+                display: "flex",
+                flexDirection: "column"
+              }}
+            >
+              <div style={{ position: "relative", height: 200, background: "var(--color-parchment)", overflow: "hidden", cursor: "pointer" }} onClick={() => app.setSelectedProduct(p.id)}>
+                <img src={p.image} alt={p.name}
+                  style={{ width: "100%", height: "100%", objectFit: "cover", transition: "transform 0.4s ease" }}
+                  onMouseEnter={(e) => (e.currentTarget.style.transform = "scale(1.05)")}
+                  onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
+                />
+                <div style={{
+                  position: "absolute", top: 12, right: 12,
+                  background: !datesSelected ? "rgba(107, 114, 128, 0.9)" : avail > 0 ? "rgba(27, 63, 47, 0.92)" : "rgba(239, 68, 68, 0.92)",
+                  backdropFilter: "blur(6px)",
+                  color: "white", fontSize: "0.72rem", fontWeight: 700, padding: "3px 10px", borderRadius: "999px"
                 }}>
-                  {!datesSelected ? "Giá tham khảo" : avail > 0 ? `Còn ${avail}` : "Hết hàng"}
-                </span>
+                  {!datesSelected ? "Giá tham khảo" : avail > 0 ? `● Còn ${avail}` : "Hết hàng"}
+                </div>
                 {p.name.includes("Tiết kiệm") && (
-                  <span style={{ position: "absolute", top: 10, left: 10, background: "var(--color-amber)", color: "white", fontSize: "0.65rem", padding: "2px 7px", borderRadius: "8px", fontWeight: 700 }}>
+                  <div style={{
+                    position: "absolute", top: 12, left: 12,
+                    background: "linear-gradient(135deg, #E07A43 0%, #D46931 100%)",
+                    color: "white", fontSize: "0.68rem", padding: "3px 9px", borderRadius: "8px", fontWeight: 800,
+                    boxShadow: "0 2px 8px rgba(224, 122, 67, 0.35)"
+                  }}>
                     TIẾT KIỆM
-                  </span>
+                  </div>
                 )}
               </div>
-              <div style={{ padding: "14px" }}>
-                <div style={{ fontSize: "0.68rem", color: "var(--color-moss)", fontWeight: 700, textTransform: "uppercase" }}>{p.category}</div>
-                <div style={{ fontFamily: "var(--font-display)", fontWeight: 600, fontSize: "1rem", color: "var(--color-bark)", cursor: "pointer" }} onClick={() => app.setSelectedProduct(p.id)}>{p.name}</div>
-                <div style={{ fontSize: "0.72rem", color: "#9CA3AF", marginBottom: "6px" }}>{p.brand}</div>
-                <div className="flex items-center gap-1 mb-3">
-                  <span style={{ color: "#F59E0B", fontSize: "0.75rem" }}>{"★".repeat(Math.floor(p.rating))}</span>
-                  <span style={{ fontSize: "0.7rem", color: "#9CA3AF" }}>{p.rating} ({p.reviews})</span>
+              <div style={{ padding: "16px", flex: 1, display: "flex", flexDirection: "column" }}>
+                <div style={{ fontSize: "0.7rem", color: "var(--color-moss)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 3 }}>
+                  {p.category}
                 </div>
-                <div className="flex justify-between items-end">
+                <div style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: "1.05rem", color: "var(--color-bark)", cursor: "pointer", marginBottom: 3 }} onClick={() => app.setSelectedProduct(p.id)}>
+                  {p.name}
+                </div>
+                <div style={{ fontSize: "0.74rem", color: "#6B7280", marginBottom: "8px" }}>
+                  Thương hiệu: <strong style={{ color: "var(--color-bark)" }}>{p.brand}</strong>
+                </div>
+                <div className="flex items-center gap-1.5 mb-4">
+                  <span style={{ color: "#F59E0B", fontSize: "0.8rem" }}>{"★".repeat(Math.floor(p.rating))}</span>
+                  <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--color-bark)" }}>{p.rating}</span>
+                  <span style={{ fontSize: "0.72rem", color: "#9CA3AF" }}>({p.reviews} đánh giá)</span>
+                </div>
+                <div className="flex justify-between items-end mt-auto pt-3" style={{ borderTop: "1px solid var(--color-parchment)" }}>
                   <div>
-                    <div style={{ fontFamily: "var(--font-mono)", fontWeight: 700, color: "var(--color-forest)", fontSize: "0.95rem" }}>{fmt(p.pricePerDay)}<span style={{ fontSize: "0.68rem", fontWeight: 400 }}>/ngày</span></div>
-                    <div style={{ fontSize: "0.68rem", color: "#9CA3AF" }}>Cọc {fmt(p.deposit)}</div>
-                    {datesSelected && days > 1 && <div style={{ fontSize: "0.75rem", color: "var(--color-amber)", fontWeight: 600 }}>{days}n = {fmt(p.pricePerDay * days)}</div>}
+                    <div style={{ fontWeight: 800, color: "var(--color-forest)", fontSize: "1.05rem" }}>
+                      {fmt(p.pricePerDay)}<span style={{ fontSize: "0.72rem", fontWeight: 500, color: "#6B7280" }}> / ngày</span>
+                    </div>
+                    <div style={{ fontSize: "0.7rem", color: "#9CA3AF" }}>Cọc: {fmt(p.deposit)}</div>
+                    {datesSelected && days > 1 && (
+                      <div style={{ fontSize: "0.74rem", color: "var(--color-amber)", fontWeight: 700, marginTop: 2 }}>
+                        Tổng {days} ngày: {fmt(p.pricePerDay * days)}
+                      </div>
+                    )}
                   </div>
                   <button
                     disabled={!datesSelected || avail === 0}
                     onClick={() => app.addToCart(p.id)}
-                    style={{ background: inCart ? "var(--color-moss)" : "var(--color-forest)", color: "white", padding: "8px 12px", borderRadius: "8px", border: "none", cursor: (!datesSelected || avail === 0) ? "not-allowed" : "pointer", fontSize: "0.8rem", fontWeight: 600, opacity: (!datesSelected || avail === 0) ? 0.5 : 1 }}
+                    style={{
+                      background: inCart ? "var(--color-moss)" : "var(--color-forest)",
+                      color: "white",
+                      padding: "9px 16px",
+                      borderRadius: "10px",
+                      border: "none",
+                      cursor: (!datesSelected || avail === 0) ? "not-allowed" : "pointer",
+                      fontSize: "0.84rem",
+                      fontWeight: 700,
+                      opacity: (!datesSelected || avail === 0) ? 0.5 : 1,
+                      boxShadow: (!datesSelected || avail === 0) ? "none" : "0 4px 12px rgba(27, 63, 47, 0.25)",
+                      transition: "all 0.2s ease"
+                    }}
                   >
-                    {inCart ? `✓ ×${inCart.qty}` : "+ Thêm"}
+                    {inCart ? `✓ ×${inCart.qty}` : "+ Thuê ngay"}
                   </button>
                 </div>
               </div>

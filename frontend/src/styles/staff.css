@@ -1,0 +1,160 @@
+/* ==========================================================================
+   GearGo Staff Workspace Styles - Nghiệp vụ Vận hành Cửa hàng & Kho
+   Chuẩn bị hàng, Bàn giao (Handover), Nhận trả (Return) & Phụ phí
+   ========================================================================== */
+
+.staff-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.staff-title {
+  font-family: var(--font-display);
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--color-bark);
+}
+
+.staff-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.staff-kpi-card {
+  border-radius: 14px;
+  padding: 16px;
+  border: 1px solid var(--color-bone);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.staff-kpi-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 14px rgba(17, 35, 27, 0.05);
+}
+
+.staff-kpi-val {
+  font-family: var(--font-mono);
+  font-size: 1.85rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.staff-kpi-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+/* ─── Cảnh báo đơn quá hạn ─────────────────────────────────────────────── */
+.staff-alert-banner {
+  background: #FEF2F2;
+  border: 1px solid #FECACA;
+  border-radius: 14px;
+  padding: 16px 20px;
+  margin-bottom: 24px;
+}
+
+.staff-alert-item {
+  background: #ffffff;
+  border-radius: 10px;
+  padding: 12px 16px;
+  border: 1px solid #FCA5A5;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+/* ─── Bảng nghiệp vụ nhân viên ─────────────────────────────────────────── */
+.staff-table-wrap {
+  background: #ffffff;
+  border-radius: 14px;
+  border: 1px solid var(--color-bone);
+  overflow: hidden;
+  box-shadow: 0 1px 4px rgba(17, 35, 27, 0.03);
+}
+
+.staff-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.staff-table th {
+  background: var(--color-parchment);
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--color-bark);
+  padding: 12px 16px;
+  text-align: left;
+  border-bottom: 1px solid var(--color-bone);
+  white-space: nowrap;
+}
+
+.staff-table td {
+  padding: 12px 16px;
+  border-top: 1px solid var(--color-bone);
+  vertical-align: middle;
+}
+
+.staff-table tr:hover td {
+  background: rgba(248, 246, 240, 0.6);
+}
+
+/* ─── Form Đợt trả đồ & Tình trạng thiết bị ─────────────────────────────── */
+.return-round-box {
+  background: #ffffff;
+  border-radius: 16px;
+  border: 2px solid var(--color-forest);
+  padding: 22px;
+  margin-bottom: 24px;
+  box-shadow: 0 4px 18px rgba(27, 63, 47, 0.06);
+}
+
+.return-item-card {
+  border-radius: 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--color-bone);
+  transition: all 0.2s ease;
+}
+
+.return-item-card.is-selected {
+  background: #F0FDF4;
+  border-color: #86EFAC;
+}
+
+.condition-pill {
+  border: 1px solid var(--color-bone);
+  background: #ffffff;
+  color: var(--color-bark);
+  border-radius: 8px;
+  padding: 4px 10px;
+  font-size: 0.75rem;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.15s ease;
+}
+
+.condition-pill.active {
+  background: var(--color-forest);
+  color: #ffffff;
+  border-color: var(--color-forest);
+  font-weight: 700;
+}
+
+/* ─── Hộp đối soát & Hoàn cọc ───────────────────────────────────────────── */
+.reconcile-box {
+  background: #ffffff;
+  border-radius: 16px;
+  border: 1px solid var(--color-bone);
+  padding: 24px;
+  box-shadow: 0 2px 10px rgba(17, 35, 27, 0.04);
+}

@@ -101,8 +101,8 @@ function OverviewTab({ app, openOrder }: { app: ReturnType<typeof useApp>; openO
 
   return (
     <div>
-      <h2 style={{ fontFamily: "var(--font-display)", fontSize: "1.4rem", color: "var(--color-bark)", marginBottom: "16px" }}>Tổng quan ca làm việc</h2>
-      <div className="grid gap-4 mb-6" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))" }}>
+      <h2 className="staff-title text-xl mb-4">Tổng quan ca làm việc</h2>
+      <div className="staff-kpi-grid">
         {[
           { label: "Cần chuẩn bị", value: preparing.length, color: "#B45309", bg: "#FEF3C7", icon: "settings" as IconName, tab: "handover" as StaffTab },
           { label: "Sẵn sàng giao", value: readyToHandover.length, color: "#15803D", bg: "#DCFCE7", icon: "arrow-up" as IconName, tab: "handover" as StaffTab },
@@ -112,10 +112,10 @@ function OverviewTab({ app, openOrder }: { app: ReturnType<typeof useApp>; openO
           { label: "Chờ đối soát", value: reconcile.length, color: "#374151", bg: "#F3F4F6", icon: "wallet" as IconName, tab: "return" as StaffTab },
           { label: "Cần bảo trì", value: maintenanceCount, color: "#7C3AED", bg: "#F5F3FF", icon: "tool" as IconName, tab: "equipment" as StaffTab },
         ].map((s) => (
-          <div key={s.label} style={{ background: s.bg, borderRadius: "12px", padding: "16px", border: "1px solid var(--color-bone)" }}>
-            <div style={{ color: s.color, marginBottom: "6px" }}><Icon name={s.icon} size={22} /></div>
-            <div style={{ fontFamily: "var(--font-mono)", fontSize: "1.8rem", fontWeight: 700, color: s.color }}>{s.value}</div>
-            <div style={{ fontSize: "0.78rem", color: s.color, fontWeight: 600 }}>{s.label}</div>
+          <div key={s.label} className="staff-kpi-card" style={{ background: s.bg }}>
+            <div style={{ color: s.color }}><Icon name={s.icon} size={22} /></div>
+            <div className="staff-kpi-val" style={{ color: s.color }}>{s.value}</div>
+            <div className="staff-kpi-label" style={{ color: s.color }}>{s.label}</div>
           </div>
         ))}
       </div>
@@ -229,23 +229,28 @@ function OrdersTab({ app, selectedOrderId, setSelectedOrderId, openOrder }: { ap
   return (
     <div>
       <div className="flex gap-3 mb-4 flex-wrap">
-        <input placeholder="🔍 Tìm mã đơn, tên khách, SĐT..." value={search} onChange={(e) => setSearch(e.target.value)}
-          style={{ border: "1px solid var(--color-bone)", borderRadius: "8px", padding: "8px 14px", fontSize: "0.85rem", flex: 1, minWidth: 220 }}
+        <input
+          placeholder="🔍 Tìm mã đơn, tên khách, SĐT..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="form-input flex-1 min-w-[220px]"
         />
-        <select value={filter} onChange={(e) => setFilter(e.target.value)}
+        <select
+          value={filter}
+          onChange={(e) => setFilter(e.target.value)}
           aria-label="Lọc trạng thái đơn"
-          style={{ border: "1px solid var(--color-bone)", borderRadius: "8px", padding: "8px 14px", fontSize: "0.85rem", background: "white" }}
+          className="form-select max-w-[200px]"
         >
           {statuses.map((s) => <option key={s}>{s}</option>)}
         </select>
       </div>
 
-      <div style={{ background: "white", borderRadius: "12px", border: "1px solid var(--color-bone)", overflow: "hidden" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+      <div className="staff-table-wrap">
+        <table className="staff-table">
           <thead>
-            <tr style={{ background: "var(--color-parchment)", fontSize: "0.8rem", fontWeight: 600, color: "var(--color-bark)" }}>
+            <tr>
               {["Mã đơn", "Khách hàng", "Sản phẩm", "Lịch thuê", "Tổng thu", "Trạng thái", "Thao tác"].map((h) => (
-                <th key={h} style={{ padding: "10px 14px", textAlign: "left" }}>{h}</th>
+                <th key={h}>{h}</th>
               ))}
             </tr>
           </thead>
@@ -283,8 +288,9 @@ function OrdersTab({ app, selectedOrderId, setSelectedOrderId, openOrder }: { ap
                     </div>
                   </td>
                   <td style={{ padding: "11px 14px" }}>
-                    <button onClick={() => openOrder(o.id, o.status === "Đang thuê" || o.status === "Chờ đối soát" ? "return" : "handover")}
-                      style={{ background: "var(--color-forest)", color: "white", border: "none", borderRadius: "6px", padding: "5px 12px", fontSize: "0.78rem", cursor: "pointer", fontWeight: 600 }}
+                    <button
+                      onClick={() => openOrder(o.id, o.status === "Đang thuê" || o.status === "Chờ đối soát" ? "return" : "handover")}
+                      className="btn btn-primary btn-sm"
                     >
                       {o.status === "Đang thuê" ? "Nhận trả" : o.status === "Chờ đối soát" ? "Đối soát" : "Chuẩn bị"}
                     </button>

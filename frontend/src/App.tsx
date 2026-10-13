@@ -1206,23 +1206,59 @@ export default function App() {
     <AppContext.Provider value={state}>
       <div style={{ minHeight: "100vh", background: "var(--color-cream)", fontFamily: "var(--font-body)" }}>
         {/* Global Header */}
-        <header style={{ background: "var(--color-forest)", borderBottom: "3px solid var(--color-amber)", position: "sticky", top: 0, zIndex: 100 }}>
-          <div className="app-header-inner max-w-7xl mx-auto px-4 py-3 flex items-center gap-4">
+        <header style={{
+          background: "rgba(22, 53, 40, 0.92)",
+          backdropFilter: "blur(16px)",
+          WebkitBackdropFilter: "blur(16px)",
+          borderBottom: "1px solid rgba(255, 255, 255, 0.1)",
+          position: "sticky",
+          top: 0,
+          zIndex: 100,
+          boxShadow: "0 8px 32px rgba(17, 35, 27, 0.2)"
+        }}>
+          <div className="app-header-inner max-w-7xl mx-auto px-5 py-3.5 flex items-center gap-4">
             {/* Logo */}
-            <button onClick={() => state.setRole("customer")} aria-label="Về trang chủ GearGo" style={{ display: "flex", alignItems: "center", gap: "9px", background: "none", border: "none", cursor: "pointer" }}>
-              <span style={{ width: 36, height: 36, borderRadius: 10, display: "grid", placeItems: "center", color: "var(--color-bark)", background: "var(--color-amber)" }}><Icon name="tent" size={22} /></span>
+            <button onClick={() => state.setRole("customer")} aria-label="Về trang chủ GearGo" style={{ display: "flex", alignItems: "center", gap: "10px", background: "none", border: "none", cursor: "pointer" }}>
+              <span style={{
+                width: 38,
+                height: 38,
+                borderRadius: 12,
+                display: "grid",
+                placeItems: "center",
+                color: "white",
+                background: "linear-gradient(135deg, #E07A43 0%, #D46931 100%)",
+                boxShadow: "0 4px 14px rgba(224, 122, 67, 0.4)"
+              }}>
+                <Icon name="tent" size={22} />
+              </span>
               <div style={{ textAlign: "left" }}>
-                <div style={{ fontFamily: "var(--font-display)", color: "var(--color-cream)", fontSize: "1.3rem", fontWeight: 700, lineHeight: 1 }}>GearGo</div>
-                <div style={{ color: "#B9C9C0", fontSize: "0.65rem" }}>Cho thuê đồ cắm trại</div>
+                <div style={{ fontFamily: "var(--font-display)", color: "white", fontSize: "1.35rem", fontWeight: 800, lineHeight: 1, letterSpacing: "-0.01em" }}>GearGo</div>
+                <div style={{ color: "#D1DDD5", fontSize: "0.68rem", fontWeight: 500, marginTop: 2 }}>Outdoor Rental & Gear</div>
               </div>
             </button>
 
             {/* Customer nav */}
             {isCustomerPage && (
-              <nav className="customer-nav flex items-center gap-1 ml-4">
+              <nav className="customer-nav flex items-center gap-1.5 ml-6">
                 {customerNavigation.map((n) => (
                   <button key={n.label} onClick={() => setPage(n.p)}
-                    style={{ padding: "6px 12px", borderRadius: "6px", border: "none", background: page === n.p ? "rgba(255,255,255,0.15)" : "transparent", color: "var(--color-cream)", cursor: "pointer", fontSize: "0.85rem", fontWeight: page === n.p ? 600 : 400 }}
+                    style={{
+                      padding: "7px 15px",
+                      borderRadius: "10px",
+                      border: page === n.p ? "1px solid rgba(255,255,255,0.2)" : "1px solid transparent",
+                      background: page === n.p ? "rgba(255,255,255,0.12)" : "transparent",
+                      color: page === n.p ? "#FFFFFF" : "#C7D5CC",
+                      cursor: "pointer",
+                      fontSize: "0.86rem",
+                      fontWeight: page === n.p ? 700 : 500,
+                      transition: "all 0.2s ease"
+                    }}
+                    onMouseEnter={(e) => {
+                      if (page !== n.p) e.currentTarget.style.background = "rgba(255,255,255,0.08)";
+                    }}
+                    onMouseLeave={(e) => {
+                      if (page !== n.p) e.currentTarget.style.background = "transparent";
+                    }}
                   >{n.label}</button>
                 ))}
               </nav>
@@ -1232,14 +1268,39 @@ export default function App() {
 
             {/* Login / Register buttons */}
             {isCustomerPage && !["login", "register", "forgot-password"].includes(page) && (
-              <div className="auth-actions flex items-center gap-2">
+              <div className="auth-actions flex items-center gap-2.5">
                 <button onClick={() => setPage("login")}
-                  style={{ padding: "6px 12px", borderRadius: "6px", border: "1px solid rgba(255,255,255,0.3)", background: "transparent", color: "var(--color-cream)", cursor: "pointer", fontSize: "0.82rem" }}
+                  style={{
+                    padding: "8px 14px",
+                    borderRadius: "10px",
+                    border: "1px solid rgba(255,255,255,0.25)",
+                    background: "rgba(255, 255, 255, 0.05)",
+                    color: "white",
+                    cursor: "pointer",
+                    fontSize: "0.84rem",
+                    fontWeight: 600,
+                    transition: "all 0.2s ease"
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255, 255, 255, 0.12)")}
+                  onMouseLeave={(e) => (e.currentTarget.style.background = "rgba(255, 255, 255, 0.05)")}
                 >
                   Đăng nhập
                 </button>
                 <button onClick={() => setPage("register")}
-                  style={{ padding: "6px 12px", borderRadius: "6px", border: "none", background: "var(--color-amber)", color: "white", cursor: "pointer", fontSize: "0.82rem", fontWeight: 600 }}
+                  style={{
+                    padding: "8px 16px",
+                    borderRadius: "10px",
+                    border: "none",
+                    background: "linear-gradient(135deg, #E07A43 0%, #D46931 100%)",
+                    color: "white",
+                    cursor: "pointer",
+                    fontSize: "0.84rem",
+                    fontWeight: 700,
+                    boxShadow: "0 4px 14px rgba(224, 122, 67, 0.35)",
+                    transition: "all 0.2s ease"
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.transform = "translateY(-1px)")}
+                  onMouseLeave={(e) => (e.currentTarget.style.transform = "translateY(0)")}
                 >
                   Đăng ký
                 </button>
@@ -1249,18 +1310,49 @@ export default function App() {
             {/* Cart button */}
             {isCustomerPage && cart.length > 0 && (
               <button onClick={() => setPage("cart")}
-                style={{ background: "var(--color-amber)", color: "white", padding: "7px 14px", borderRadius: "8px", border: "none", cursor: "pointer", fontWeight: 600, fontSize: "0.85rem", display: "flex", alignItems: "center", gap: "6px" }}
+                style={{
+                  background: "linear-gradient(135deg, #E07A43 0%, #D46931 100%)",
+                  color: "white",
+                  padding: "8px 16px",
+                  borderRadius: "10px",
+                  border: "none",
+                  cursor: "pointer",
+                  fontWeight: 700,
+                  fontSize: "0.88rem",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "7px",
+                  boxShadow: "0 4px 14px rgba(224, 122, 67, 0.4)"
+                }}
               >
-                <Icon name="cart" size={17} /> {cart.reduce((s, c) => s + c.qty, 0)}
+                <Icon name="cart" size={18} /> {cart.reduce((s, c) => s + c.qty, 0)}
               </button>
             )}
 
             {/* Role switcher */}
-            <div className="role-switcher" style={{ display: "flex", alignItems: "center", gap: "4px", background: "rgba(0,0,0,0.3)", borderRadius: "10px", padding: "4px" }}>
-              <span className="desktop-only-label" style={{ color: "var(--color-sage)", fontSize: "0.68rem", paddingLeft: "6px", fontFamily: "var(--font-mono)" }}>Vai trò:</span>
+            <div className="role-switcher" style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "4px",
+              background: "rgba(0,0,0,0.35)",
+              border: "1px solid rgba(255,255,255,0.12)",
+              borderRadius: "12px",
+              padding: "4px"
+            }}>
+              <span className="desktop-only-label" style={{ color: "#B9C9C0", fontSize: "0.7rem", paddingLeft: "8px", fontWeight: 600 }}>Vai trò:</span>
               {(["customer", "staff", "admin"] as Role[]).map((r) => (
                 <button key={r} onClick={() => state.setRole(r)}
-                  style={{ padding: "5px 10px", borderRadius: "7px", border: "none", cursor: "pointer", fontSize: "0.78rem", fontWeight: 600, background: role === r ? "var(--color-amber)" : "transparent", color: role === r ? "var(--color-charcoal)" : "var(--color-sage)" }}
+                  style={{
+                    padding: "6px 12px",
+                    borderRadius: "8px",
+                    border: "none",
+                    cursor: "pointer",
+                    fontSize: "0.8rem",
+                    fontWeight: 700,
+                    background: role === r ? "var(--color-amber)" : "transparent",
+                    color: role === r ? "white" : "#B9C9C0",
+                    transition: "all 0.2s ease"
+                  }}
                 >
                   {r === "customer" ? "Khách" : r === "staff" ? "Nhân viên" : "Admin"}
                 </button>
@@ -1269,7 +1361,7 @@ export default function App() {
 
             {/* Reset */}
             <button className="demo-reset" onClick={() => setShowResetConfirm(true)}
-              style={{ background: "#EF4444", color: "white", padding: "5px 10px", borderRadius: "6px", border: "none", cursor: "pointer", fontSize: "0.72rem", fontFamily: "var(--font-mono)" }}
+              style={{ background: "rgba(239, 68, 68, 0.2)", border: "1px solid rgba(239, 68, 68, 0.4)", color: "#FCA5A5", padding: "6px 12px", borderRadius: "8px", cursor: "pointer", fontSize: "0.75rem", fontWeight: 600 }}
               title="Đặt lại dữ liệu demo"
             ><span className="icon-label"><Icon name="refresh" size={14} /> Reset</span></button>
             {isCustomerPage && (
