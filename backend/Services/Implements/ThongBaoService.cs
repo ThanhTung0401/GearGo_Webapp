@@ -19,36 +19,52 @@ public class ThongBaoService : IThongBaoService
 
     public async Task<ThongBao> TaoThongBaoSanSangNhanAsync(long maDonThue, string eventKey)
     {
-        if (string.IsNullOrWhiteSpace(eventKey) || eventKey.Length > 100)
+        var maDonHienThi = await _context.DonThues.Where(d => d.MaDonThue == maDonThue)
+            .Select(d => d.MaDonHienThi).FirstOrDefaultAsync();
+        return await TaoThongBaoSuKienAsync(new SuKienThongBaoCommand(
+            maDonThue, LoaiSanSangNhan, eventKey,
+            "Đơn thuê đã sẵn sàng nhận",
+            $"Đơn {maDonHienThi} đã được chuẩn bị xong, bạn có thể đến nhận thiết bị theo lịch hẹn."));
+    }
+
+    public async Task<ThongBao> TaoThongBaoSuKienAsync(SuKienThongBaoCommand c)
+    {
+        if (string.IsNullOrWhiteSpace(c.MaSuKien) || c.MaSuKien.Length > 100)
             throw new SuKienKhongHopLeException("Mã sự kiện thiếu hoặc quá dài (tối đa 100 ký tự).");
+        if (string.IsNullOrWhiteSpace(c.LoaiSuKien) || c.LoaiSuKien.Length > 50)
+            throw new SuKienKhongHopLeException("Loại sự kiện thiếu hoặc quá dài (tối đa 50 ký tự).");
+        if (string.IsNullOrWhiteSpace(c.TieuDe) || c.TieuDe.Length > 255)
+            throw new SuKienKhongHopLeException("Tiêu đề thông báo thiếu hoặc quá dài (tối đa 255 ký tự).");
 
         var don = await _context.DonThues
-            .Where(d => d.MaDonThue == maDonThue)
-            .Select(d => new { d.MaDonThue, d.MaDonHienThi, MaTaiKhoan = d.KhachHang.MaTaiKhoan })
+            .Where(d => d.MaDonThue == c.MaDonThue)
+            .Select(d => new { d.MaDonThue, MaTaiKhoan = d.KhachHang.MaTaiKhoan })
             .FirstOrDefaultAsync()
             ?? throw new SuKienKhongHopLeException("Đơn thuê không tồn tại.");
+        // Mặc định gửi chủ đơn; người nhận khác (vd. quản trị viên) do service nghiệp vụ chỉ định.
+        var maNhan = c.MaTaiKhoanNhan ?? don.MaTaiKhoan;
 
         // Kiểm tra cả bản ghi vừa thêm (chưa SaveChanges) lẫn database; ERD không có unique ma_su_kien.
         var daCo = _context.ThongBaos.Local.FirstOrDefault(t =>
-                       t.MaTaiKhoan == don.MaTaiKhoan && t.MaSuKien == eventKey && t.KenhGui == KenhTrongUngDung)
+                       t.MaTaiKhoan == maNhan && t.MaSuKien == c.MaSuKien && t.KenhGui == KenhTrongUngDung)
                    ?? await _context.ThongBaos.FirstOrDefaultAsync(t =>
-                       t.MaTaiKhoan == don.MaTaiKhoan && t.MaSuKien == eventKey && t.KenhGui == KenhTrongUngDung);
+                       t.MaTaiKhoan == maNhan && t.MaSuKien == c.MaSuKien && t.KenhGui == KenhTrongUngDung);
 
         if (daCo != null)
         {
-            if (daCo.MaDonThue != maDonThue)
+            if (daCo.MaDonThue != c.MaDonThue)
                 throw new XungDotSuKienException("Mã sự kiện đã dùng cho đơn khác; không ghi đè thông báo cũ.");
             return daCo;
         }
 
         var tb = new ThongBao
         {
-            MaTaiKhoan = don.MaTaiKhoan,
-            MaDonThue = maDonThue,
-            MaSuKien = eventKey,
-            LoaiSuKien = LoaiSanSangNhan,
-            TieuDe = "Đơn thuê đã sẵn sàng nhận",
-            NoiDung = $"Đơn {don.MaDonHienThi} đã được chuẩn bị xong, bạn có thể đến nhận thiết bị theo lịch hẹn.",
+            MaTaiKhoan = maNhan,
+            MaDonThue = c.MaDonThue,
+            MaSuKien = c.MaSuKien,
+            LoaiSuKien = c.LoaiSuKien,
+            TieuDe = c.TieuDe,
+            NoiDung = c.NoiDung,
             KenhGui = KenhTrongUngDung,
             // Chỉ lưu trong ứng dụng; email/SMS và retry để giai đoạn thông báo sau.
             TrangThaiGui = "ChuaGui",

@@ -46,3 +46,38 @@ namespace GearGo.Exceptions;
 
   public class XungDotSuKienException : NghiepVuException
   { public XungDotSuKienException(string msg, object? ct = null) : base("XUNG_DOT_SU_KIEN", msg, ct) {} }
+
+  // ── Week 4: hoàn tiền (W4-T6) ──
+
+  public class HoanTienKhongTimThayException : NghiepVuException
+  { public HoanTienKhongTimThayException(string msg = "Không tìm thấy khoản hoàn.", object? ct = null) : base("HOAN_TIEN_KHONG_TIM_THAY", msg, ct) {} }
+
+  public class NguonHoanKhongHopLeException : NghiepVuException
+  { public NguonHoanKhongHopLeException(string msg, object? ct = null) : base("NGUON_HOAN_KHONG_HOP_LE", msg, ct) {} }
+
+  public class VuotHanMucHoanException : NghiepVuException
+  { public VuotHanMucHoanException(string msg, object? ct = null) : base("VUOT_HAN_MUC_HOAN", msg, ct) {} }
+
+  public class HoanChuaRoKetQuaException : NghiepVuException
+  { public HoanChuaRoKetQuaException(string msg, object? ct = null) : base("HOAN_CHUA_RO_KET_QUA", msg, ct) {} }
+
+  public class KetQuaHoanKhongKhopException : NghiepVuException
+  { public KetQuaHoanKhongKhopException(string msg, object? ct = null) : base("KET_QUA_HOAN_KHONG_KHOP", msg, ct) {} }
+
+  // ── Week 4: hủy đơn (W4-T7) ──
+
+  public class DonDaBanGiaoException : NghiepVuException
+  { public DonDaBanGiaoException(string msg = "Đơn đã bàn giao hoặc đã qua giai đoạn nhận; phải xử lý nhận trả/đối soát, không hủy.", object? ct = null) : base("DON_DA_BAN_GIAO", msg, ct) {} }
+
+  public class ChiPhiHuyDaThayDoiException : NghiepVuException
+  { public ChiPhiHuyDaThayDoiException(string msg, object? ct = null) : base("CHI_PHI_HUY_DA_THAY_DOI", msg, ct) {} }
+
+  public class KhongCoQuyenHuyException : NghiepVuException
+  { public KhongCoQuyenHuyException(string msg, object? ct = null) : base("KHONG_CO_QUYEN_HUY", msg, ct) {} }
+
+  public class ChinhSachHuyChuaDuException : NghiepVuException
+  { public ChinhSachHuyChuaDuException(string msg, object? ct = null) : base("CHINH_SACH_HUY_CHUA_DU", msg, ct) {} }
+
+  public class DonDaHuyKhacYDinhException : NghiepVuException
+  { public DonDaHuyKhacYDinhException(string msg, object? ct = null) : base("DON_DA_HUY_KHAC_Y_DINH", msg, ct) {} }
+

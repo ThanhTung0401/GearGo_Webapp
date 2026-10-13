@@ -45,6 +45,16 @@ using GearGo.Exceptions;
           BaogiaThayDoiException     => 409,
           TrangThaiKhongHopLeException => 409,
           KhuyenMaiKhongHopLeException => 409,
+          HoanTienKhongTimThayException => 404,
+          NguonHoanKhongHopLeException => 409,
+          VuotHanMucHoanException    => 409,
+          HoanChuaRoKetQuaException  => 409,
+          KetQuaHoanKhongKhopException => 400,
+          DonDaBanGiaoException      => 409,
+          ChiPhiHuyDaThayDoiException => 409,
+          KhongCoQuyenHuyException   => 403,
+          ChinhSachHuyChuaDuException => 409,
+          DonDaHuyKhacYDinhException => 409,
           _                          => 400
       };
   }

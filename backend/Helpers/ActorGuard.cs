@@ -53,4 +53,21 @@ public static class ActorGuard
         if (nv != null && nv != "DangLamViec")
             throw new KhongCoQuyenException("Nhân viên đã ngừng làm việc.");
     }
+
+    /// <summary>Chỉ quản trị viên đang hoạt động (kiểm tra vai trò hiện tại trong database).</summary>
+    public static async Task<TaiKhoan> EnsureQuanTriVienAsync(ApplicationDbContext ctx, long maTaiKhoan, CancellationToken ct = default)
+    {
+        var tk = await LayTaiKhoanHoatDongAsync(ctx, maTaiKhoan, ct);
+        if (tk.VaiTro != "QuanTriVien")
+            throw new KhongCoQuyenException("Chỉ quản trị viên được dùng chức năng này.");
+        return tk;
+    }
+
+    /// <summary>
+    /// MaNhanVien cho các FK chứng từ (vd. HOAN_TIEN.ma_nguoi_xu_ly, PHAN_CONG.ma_nguoi_huy_phan_cong).
+    /// Quản trị viên chưa có hồ sơ NHAN_VIEN trả null; lịch sử vẫn ghi MaTaiKhoan.
+    /// </summary>
+    public static Task<long?> LayMaNhanVienAsync(ApplicationDbContext ctx, long maTaiKhoan, CancellationToken ct = default)
+        => ctx.NhanViens.Where(n => n.MaTaiKhoan == maTaiKhoan)
+            .Select(n => (long?)n.MaNhanVien).FirstOrDefaultAsync(ct);
 }

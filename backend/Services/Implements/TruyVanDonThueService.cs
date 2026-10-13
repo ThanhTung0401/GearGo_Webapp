@@ -13,10 +13,24 @@ public class TruyVanDonThueService : ITruyVanDonThueService
 {
     private const string BanGiaoDaGiao = "DaGiao";
     private const string PhanCongDaPhanCong = "DaPhanCong";
+    private const string PhuPhiChoDuyet = "ChoDuyet";
+    private const string PhuPhiDaDuyet = "DaDuyet";
+    private const string PhuPhiTuChoi = "TuChoi";
+
+    /// <summary>Giá trị CHI_TIET_NHAN_TRA.ket_luan coi là mất (cùng với biên bản mất có dữ liệu).</summary>
+    private static readonly HashSet<string> KetLuanMat = new(StringComparer.OrdinalIgnoreCase) { "Mất thiết bị", "MatThietBi", "Mat" };
+
+    private static readonly TrangThaiDonThue[] TruocBanGiao =
+        { TrangThaiDonThue.ChoThanhToan, TrangThaiDonThue.DaXacNhan, TrangThaiDonThue.DangChuanBi, TrangThaiDonThue.SanSangNhan };
 
     private readonly ApplicationDbContext _context;
+    private readonly TimeProvider _clock;
 
-    public TruyVanDonThueService(ApplicationDbContext context) => _context = context;
+    public TruyVanDonThueService(ApplicationDbContext context, TimeProvider clock)
+    {
+        _context = context;
+        _clock = clock;
+    }
 
     // ───────────────────────── KHÁCH HÀNG ─────────────────────────
 
@@ -128,7 +142,27 @@ public class TruyVanDonThueService : ITruyVanDonThueService
                 viec.Add(daGan < tong ? $"Gán đủ thiết bị ({daGan}/{tong})" : "Xác nhận sẵn sàng nhận"); break;
             case TrangThaiDonThue.SanSangNhan:
                 viec.Add(don.BanGiao.Count == 0 ? "Lập phiếu bàn giao" : "Chốt bàn giao"); break;
+            case TrangThaiDonThue.DangThue:
+                if (don.TaiChinh.NhanTra.SoConNo > 0)
+                    viec.Add($"Nhận trả ({don.TaiChinh.NhanTra.SoConNo}/{don.TaiChinh.NhanTra.TongThietBiDaGiao} thiết bị còn nợ)");
+                break;
+            case TrangThaiDonThue.DaNhanTra:
+            case TrangThaiDonThue.ChoDoiSoat:
+                viec.Add(don.TaiChinh.DoiSoat.Count == 0 ? "Lập đối soát tiền cọc" : "Xử lý/chốt đối soát"); break;
         }
+
+        // Vướng mắc liên module (W4-T9): mỗi việc chỉ ra chứng từ cần xử lý.
+        var tc = don.TaiChinh;
+        if (tc.NhanTra.SoDangXuLyMat > 0) viec.Add($"Duyệt kết luận mất ({tc.NhanTra.SoDangXuLyMat} thiết bị)");
+        if (tc.PhuPhi.TongDeNghi > 0) viec.Add("Duyệt phụ phí đang chờ");
+        if (tc.PhuPhi.SoTranhChapDangMo > 0) viec.Add($"Giải quyết tranh chấp phụ phí ({tc.PhuPhi.SoTranhChapDangMo})");
+        foreach (var h in tc.Hoan.Items)
+        {
+            if (h.NhanHienThi is "ChuaRoKetQua" or "DangXuLy") viec.Add($"Đối chiếu khoản hoàn #{h.MaHoanTien}");
+            else if (h.NhanHienThi == "CanXuLyLai") viec.Add($"Xử lý lại khoản hoàn thất bại #{h.MaHoanTien}");
+            else if (h.NhanHienThi == "DuKien") viec.Add($"Gửi khoản hoàn #{h.MaHoanTien}");
+        }
+        if (tc.Thu.ChuaPhanLoai != 0) viec.Add("Đối chiếu khoản thu chưa phân loại tiền thuê/cọc");
 
         return new DonVanHanhChiTietResponse(don, kh.MaKhachHang, kh.HoTen, kh.GhiChu, phanCong, viec);
     }
@@ -199,31 +233,149 @@ public class TruyVanDonThueService : ITruyVanDonThueService
             .Select(p => new PhieuNhanTraTomTatResponse(p.MaPhieuNhanTra, p.MaPhieuHienThi, p.LanTra, p.TrangThai.ToString(), p.ThoiDiemChot))
             .ToListAsync();
 
-        // Phụ phí còn chờ duyệt là dữ liệu nội bộ, khách chỉ thấy khoản đã duyệt.
-        var phuPhiQ = _context.PhuPhis.AsNoTracking().Where(p => p.MaDonThue == maDonThue);
-        if (!laNoiBo) phuPhiQ = phuPhiQ.Where(p => p.TrangThaiDuyet == "DaDuyet");
-        var phuPhi = await phuPhiQ.OrderBy(p => p.MaPhuPhi)
-            .Select(p => new PhuPhiKhachResponse(p.MaPhuPhi, p.LoaiPhi, p.SoTien, p.LyDo, p.TrangThaiDuyet))
-            .ToListAsync();
+        var taiChinh = await XayDungTaiChinhAsync(don, laNoiBo);
 
-        var hoanTien = await _context.HoanTiens.AsNoTracking()
-            .Where(h => h.ChiTietThanhToanGoc.ThanhToan.MaDonThue == maDonThue)
-            .OrderBy(h => h.MaHoanTien)
-            .Select(h => new HoanTienKhachResponse(h.MaHoanTien, h.LoaiHoan, h.SoTien, h.TrangThai, h.ThoiDiemThanhCong))
-            .ToListAsync();
+        // Giữ các mảng Tuần 3 cho tương thích; khách chỉ thấy phụ phí đã duyệt.
+        var phuPhi = taiChinh.PhuPhi.Items
+            .Select(p => new PhuPhiKhachResponse(p.MaPhuPhi, p.LoaiPhi, p.SoTien, p.LyDo, p.TrangThaiDuyet))
+            .ToList();
 
         var thaoTac = new List<string>();
-        if (!laNoiBo && don.TrangThai == TrangThaiDonThue.ChoThanhToan)
+        if (!laNoiBo)
         {
-            thaoTac.Add("ThanhToan");
-            thaoTac.Add("HuyDon");
+            if (don.TrangThai == TrangThaiDonThue.ChoThanhToan) thaoTac.Add("ThanhToan");
+            if (TruocBanGiao.Contains(don.TrangThai))
+            {
+                thaoTac.Add("XemTruocHuy");
+                thaoTac.Add("HuyDon");
+            }
+            var daChotDoiSoat = taiChinh.DoiSoat.Any(d => d.ThoiDiemChot != null);
+            if (!daChotDoiSoat && taiChinh.PhuPhi.Items.Any(p => p.TrangThaiDuyet == PhuPhiDaDuyet && string.IsNullOrEmpty(p.TrangThaiTranhChap)))
+                thaoTac.Add("TranhChapPhuPhi");
+            if (taiChinh.Nhan.Contains("CanThuBoSung")) thaoTac.Add("ThanhToanBoSung");
         }
 
         return new DonChiTietResponse(
             don.MaDonThue, don.MaDonHienThi, don.TrangThai.ToString(), don.NgayDat, don.GioNhanDuKien, don.GioTraDuKien,
             don.HanThanhToan, don.TenNguoiNhan, don.SoDienThoaiNguoiNhan, don.EmailLienHe,
             don.TongTienThueTruocGiam, don.TongTienGiam, don.TongTienCoc, daThu,
-            dong, thanhToan, lichSu, banGiao, nhanTra, phuPhi, hoanTien, thaoTac);
+            dong, thanhToan, lichSu, banGiao, nhanTra, phuPhi, taiChinh.Hoan.Items, thaoTac, taiChinh);
+    }
+
+    /// <summary>
+    /// W4-T9: mỗi tập (bàn giao, nhận trả, phí, đối soát, thu, hoàn) đọc bằng projection riêng rồi cộng trong bộ nhớ,
+    /// nên đơn có nhiều đợt trả × nhiều phí × nhiều nguồn không bị nhân số tiền do JOIN.
+    /// </summary>
+    private async Task<DonTaiChinhResponse> XayDungTaiChinhAsync(Models.Entities.DonThue don, bool laNoiBo)
+    {
+        var maDonThue = don.MaDonThue;
+        var now = _clock.GetUtcNow().UtcDateTime;
+
+        // ── Nhận trả: thiết bị đã giao vs dòng nhận trả đã kết luận ──
+        var daGiao = await _context.ChiTietBanGiaos.AsNoTracking()
+            .Where(c => c.PhieuBanGiao.MaDonThue == maDonThue && c.PhieuBanGiao.TrangThai == BanGiaoDaGiao)
+            .OrderBy(c => c.MaChiTietBanGiao)
+            .Select(c => new { c.MaChiTietBanGiao, c.PhanCongThietBi.ThietBi.MaThietBiHienThi, c.PhanCongThietBi.ChiTietDon.TenSanPhamLucDat })
+            .ToListAsync();
+        var dongTra = await _context.ChiTietNhanTras.AsNoTracking()
+            .Where(c => c.PhieuNhanTra.MaDonThue == maDonThue && c.PhieuNhanTra.TrangThai != TrangThaiPhieuNhanTra.DaHuy)
+            .Select(c => new { c.MaChiTietBanGiao, c.MaPhieuNhanTra, PhieuDaChot = c.PhieuNhanTra.TrangThai == TrangThaiPhieuNhanTra.DaChot,
+                c.KetLuan, c.BienBanMat, c.ThoiDiemDuyetMat })
+            .ToListAsync();
+        var phieuDaChot = await _context.PhieuNhanTras.AsNoTracking()
+            .Where(p => p.MaDonThue == maDonThue && p.TrangThai == TrangThaiPhieuNhanTra.DaChot)
+            .OrderBy(p => p.LanTra)
+            .Select(p => new { p.MaPhieuNhanTra, p.MaPhieuHienThi, p.LanTra, p.LaLanTraCuoi, p.ThoiDiemChot })
+            .ToListAsync();
+
+        bool LaMat(string? ketLuan, string? bienBan) => !string.IsNullOrEmpty(bienBan) || KetLuanMat.Contains(ketLuan ?? "");
+        var daTra = dongTra.Where(d => d.PhieuDaChot && !LaMat(d.KetLuan, d.BienBanMat)).Select(d => d.MaChiTietBanGiao).ToHashSet();
+        var matDaDuyet = dongTra.Where(d => d.PhieuDaChot && LaMat(d.KetLuan, d.BienBanMat) && d.ThoiDiemDuyetMat != null)
+            .Select(d => d.MaChiTietBanGiao).ToHashSet();
+        var dangXuLyMat = dongTra.Where(d => LaMat(d.KetLuan, d.BienBanMat) && d.ThoiDiemDuyetMat == null)
+            .Select(d => d.MaChiTietBanGiao).ToHashSet();
+        var conNo = daGiao.Where(g => !daTra.Contains(g.MaChiTietBanGiao) && !matDaDuyet.Contains(g.MaChiTietBanGiao))
+            .Select(g => new ThietBiConNoResponse(g.MaChiTietBanGiao, g.MaThietBiHienThi, g.TenSanPhamLucDat, dangXuLyMat.Contains(g.MaChiTietBanGiao)))
+            .ToList();
+        var cacDot = phieuDaChot.Select(p =>
+        {
+            var cuaPhieu = dongTra.Where(d => d.MaPhieuNhanTra == p.MaPhieuNhanTra).ToList();
+            return new DotTraResponse(p.MaPhieuNhanTra, p.MaPhieuHienThi, p.LanTra, p.LaLanTraCuoi, p.ThoiDiemChot,
+                cuaPhieu.Count(d => !LaMat(d.KetLuan, d.BienBanMat)), cuaPhieu.Count(d => LaMat(d.KetLuan, d.BienBanMat)));
+        }).ToList();
+        var nhanTra = new TienDoNhanTraResponse(daGiao.Count, daTra.Count, matDaDuyet.Count, dangXuLyMat.Count, conNo.Count, cacDot, conNo);
+
+        // ── Phụ phí: phí chờ duyệt là nội bộ ──
+        var phiAll = await _context.PhuPhis.AsNoTracking()
+            .Where(p => p.MaDonThue == maDonThue).OrderBy(p => p.MaPhuPhi)
+            .Select(p => new PhuPhiDonResponse(p.MaPhuPhi, p.LoaiPhi, p.SoTien, p.LyDo, p.TrangThaiDuyet, p.TrangThaiTranhChap,
+                p.KetQuaGiaiQuyet, p.MaPhuPhiGoc, p.MaDoiSoat, p.MaPhuPhiGoc != null))
+            .ToListAsync();
+        bool TranhChapMo(PhuPhiDonResponse p) => !string.IsNullOrEmpty(p.TrangThaiTranhChap) && string.IsNullOrEmpty(p.KetQuaGiaiQuyet);
+        var phiHienThi = laNoiBo ? phiAll : phiAll.Where(p => p.TrangThaiDuyet == PhuPhiDaDuyet).ToList();
+        var phuPhi = new PhuPhiTongHopResponse(
+            laNoiBo ? phiAll.Where(p => p.TrangThaiDuyet == PhuPhiChoDuyet).Sum(p => p.SoTien) : 0,
+            phiAll.Where(p => p.TrangThaiDuyet == PhuPhiDaDuyet && !TranhChapMo(p)).Sum(p => p.SoTien),
+            phiHienThi.Where(TranhChapMo).Sum(p => p.SoTien),
+            laNoiBo ? phiAll.Where(p => p.TrangThaiDuyet == PhuPhiTuChoi).Sum(p => p.SoTien) : 0,
+            phiHienThi.Count(TranhChapMo),
+            phiHienThi);
+
+        // ── Đối soát gốc/điều chỉnh ──
+        var doiSoat = await _context.DoiSoatTienCocs.AsNoTracking()
+            .Where(d => d.MaDonThue == maDonThue).OrderBy(d => d.ThoiDiemLap).ThenBy(d => d.MaDoiSoat)
+            .Select(d => new DoiSoatDonResponse(d.MaDoiSoat, d.MaDoiSoatGoc, d.MaDoiSoatGoc != null, d.LoaiDoiSoat,
+                d.TienCocDuocDoiSoat, d.TongPhuPhiDuocDuyet, d.SoTienCanHoan, d.SoTienCanThuThem, d.TrangThai,
+                d.ThoiDiemLap, d.ThoiDiemChot, d.LyDoDieuChinh))
+            .ToListAsync();
+
+        // ── Thu theo mục đích (chỉ giao dịch thành công) ──
+        var tts = await _context.ThanhToans.AsNoTracking().Where(t => t.MaDonThue == maDonThue)
+            .Select(t => new { t.TrangThai, t.TongSoTien }).ToListAsync();
+        var ctThu = await _context.ChiTietThanhToans.AsNoTracking()
+            .Where(c => c.ThanhToan.MaDonThue == maDonThue && c.ThanhToan.TrangThai == TrangThaiThanhToan.ThanhCong)
+            .Select(c => new { c.MucDich, c.SoTien }).ToListAsync();
+        decimal ThuTheo(string mucDich) => ctThu.Where(c => c.MucDich == mucDich).Sum(c => c.SoTien);
+        var thu = new ThuTienTongHopResponse(
+            ThuTheo(MucDichThanhToan.TienThue), ThuTheo(MucDichThanhToan.TienCoc), ThuTheo(MucDichThanhToan.ThuBoSung),
+            tts.Where(t => t.TrangThai == TrangThaiThanhToan.ThanhCong).Sum(t => t.TongSoTien) - ctThu.Sum(c => c.SoTien),
+            tts.Where(t => t.TrangThai != TrangThaiThanhToan.ThanhCong && t.TrangThai != TrangThaiThanhToan.ThatBai).Sum(t => t.TongSoTien));
+
+        // ── Hoàn: HOAN_TIEN → CHI_TIET_THANH_TOAN → THANH_TOAN → đơn ──
+        var hoanRows = await _context.HoanTiens.AsNoTracking()
+            .Where(h => h.ChiTietThanhToanGoc.ThanhToan.MaDonThue == maDonThue)
+            .OrderBy(h => h.MaHoanTien)
+            .Select(h => new { h.MaHoanTien, h.MaYeuCau, h.LoaiHoan, h.SoTien, h.TrangThai, h.ThoiDiemThanhCong })
+            .ToListAsync();
+        var dongHoan = hoanRows.Select(h => new HoanTienTongHop.Dong(h.MaHoanTien, h.MaYeuCau, h.LoaiHoan, h.SoTien, h.TrangThai)).ToList();
+        var thayThe = HoanTienTongHop.CacLanDaThayThe(dongHoan);
+        var tongHoan = HoanTienTongHop.Tong(dongHoan);
+        var hoan = new HoanTienTongHopResponse(tongHoan.DuKien, tongHoan.DangXuLy, tongHoan.DaHoan, tongHoan.CanXuLyLai,
+            hoanRows.Select(h => new HoanTienKhachResponse(h.MaHoanTien, h.LoaiHoan, h.SoTien, h.TrangThai, h.ThoiDiemThanhCong,
+                HoanTienTongHop.NhanHienThi(h.TrangThai, thayThe.Contains(h.MaHoanTien)))).ToList());
+
+        // ── Hủy ──
+        HuyDonTomTatResponse? huy = don.TrangThai is TrangThaiDonThue.KhachHuy or TrangThaiDonThue.CuaHangHuy or TrangThaiDonThue.HetHan
+            ? new HuyDonTomTatResponse(don.TrangThai.ToString(), don.ThoiDiemHuy, don.LyDoHuy, don.TienThueGiuLaiKhiHuy)
+            : null;
+
+        var coDieuChinhSauHoanTat = don.ThoiDiemHoanTat != null
+            && doiSoat.Any(d => d.LaDieuChinh && d.ThoiDiemLap > don.ThoiDiemHoanTat);
+
+        // ── Nhãn tính từ dữ liệu (không phải cột trạng thái) ──
+        var nhan = new List<string>();
+        if (don.TrangThai == TrangThaiDonThue.DangThue && conNo.Count > 0)
+        {
+            if (daTra.Count + matDaDuyet.Count > 0) nhan.Add("TraMotPhan");
+            if (now > don.GioTraDuKien) nhan.Add("QuaHan");
+        }
+        if (dangXuLyMat.Count > 0) nhan.Add("DangXuLyMat");
+        if (tongHoan.DuKien + tongHoan.DangXuLy + tongHoan.CanXuLyLai > 0) nhan.Add("ChoHoanTien");
+        var canThu = doiSoat.Where(d => d.ThoiDiemChot != null || d.TrangThai != "ChoChot").Sum(d => d.SoTienCanThuThem);
+        if (canThu > thu.ThuBoSungDaThu) nhan.Add("CanThuBoSung");
+        if (phuPhi.SoTranhChapDangMo > 0) nhan.Add("CoTranhChap");
+
+        return new DonTaiChinhResponse(nhanTra, phuPhi, doiSoat, thu, hoan, huy, don.ThoiDiemHoanTat, coDieuChinhSauHoanTat, nhan);
     }
 
     private async Task<List<SuKienDonResponse>> LayLichSuAsync(long maDonThue, bool laNoiBo, long maTaiKhoanXem)
