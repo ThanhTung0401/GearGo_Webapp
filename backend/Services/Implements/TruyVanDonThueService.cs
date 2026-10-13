@@ -16,6 +16,7 @@ public class TruyVanDonThueService : ITruyVanDonThueService
     private const string PhuPhiChoDuyet = "ChoDuyet";
     private const string PhuPhiDaDuyet = "DaDuyet";
     private const string PhuPhiTuChoi = "TuChoi";
+    private const string PhuPhiDangTranhChap = "DangTranhChap"; // PhuPhiService (Kiện Minh)
 
     /// <summary>Giá trị CHI_TIET_NHAN_TRA.ket_luan coi là mất (cùng với biên bản mất có dữ liệu).</summary>
     private static readonly HashSet<string> KetLuanMat = new(StringComparer.OrdinalIgnoreCase) { "Mất thiết bị", "MatThietBi", "Mat" };
@@ -311,7 +312,7 @@ public class TruyVanDonThueService : ITruyVanDonThueService
             .Select(p => new PhuPhiDonResponse(p.MaPhuPhi, p.LoaiPhi, p.SoTien, p.LyDo, p.TrangThaiDuyet, p.TrangThaiTranhChap,
                 p.KetQuaGiaiQuyet, p.MaPhuPhiGoc, p.MaDoiSoat, p.MaPhuPhiGoc != null))
             .ToListAsync();
-        bool TranhChapMo(PhuPhiDonResponse p) => !string.IsNullOrEmpty(p.TrangThaiTranhChap) && string.IsNullOrEmpty(p.KetQuaGiaiQuyet);
+        bool TranhChapMo(PhuPhiDonResponse p) => p.TrangThaiTranhChap == PhuPhiDangTranhChap;
         var phiHienThi = laNoiBo ? phiAll : phiAll.Where(p => p.TrangThaiDuyet == PhuPhiDaDuyet).ToList();
         var phuPhi = new PhuPhiTongHopResponse(
             laNoiBo ? phiAll.Where(p => p.TrangThaiDuyet == PhuPhiChoDuyet).Sum(p => p.SoTien) : 0,

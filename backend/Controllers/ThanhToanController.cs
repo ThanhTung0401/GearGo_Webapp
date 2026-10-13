@@ -1,11 +1,13 @@
 using GearGo.Models.DTOs.ThanhToan;
 using GearGo.Services.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace GearGo.Controllers;
 
 [ApiController]
 [Route("api/v1/thanh-toan")]
+[Authorize]
 public class ThanhToanController : ControllerBase
 {
     private readonly IThanhToanService _thanhToanService;

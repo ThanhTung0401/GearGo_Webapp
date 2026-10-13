@@ -10,6 +10,7 @@ namespace GearGo.Controllers;
 
 [ApiController]
 [Route("api/v1/don-thue")]
+[Authorize]
 public class DonThueController : ControllerBase
 {
     private readonly IDonThueService _donThueService;

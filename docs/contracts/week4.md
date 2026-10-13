@@ -148,7 +148,7 @@ Trước `gioNhan + soPhutChoSauGioNhan` → 409 `TRANG_THAI_KHONG_HOP_LE`. Chí
 | Phần | Nguồn | Ghi chú |
 |---|---|---|
 | `nhanTra` | `CHI_TIET_BAN_GIAO` (phiếu `DaGiao`) vs `CHI_TIET_NHAN_TRA` | đã trả = dòng không mất trong phiếu `DaChot`; mất chỉ tính kết luận khi có `thoi_diem_duyet_mat`; còn nợ = đã giao − đã trả − mất đã duyệt; `cacDot` chỉ phiếu đã chốt |
-| `phuPhi` | `PHU_PHI` | khách chỉ thấy `DaDuyet`; `tongDeNghi/tongTuChoi` chỉ cho nhân viên; tranh chấp mở = có `trang_thai_tranh_chap` và chưa có `ket_qua_giai_quyet` |
+| `phuPhi` | `PHU_PHI` | khách chỉ thấy `DaDuyet`; `tongDeNghi/tongTuChoi` chỉ cho nhân viên; tranh chấp mở = `trang_thai_tranh_chap = DangTranhChap` (PhuPhiService) |
 | `doiSoat[]` | `DOI_SOAT_TIEN_COC` | `laDieuChinh` theo `ma_doi_soat_goc`; `soTienCanHoan` là số cần hoàn, không phải đã hoàn |
 | `thu` | `CHI_TIET_THANH_TOAN` của giao dịch `ThanhCong` | tách thuê/cọc/thu bổ sung; `chuaPhanLoai` cần đối chiếu |
 | `hoan` | `HOAN_TIEN` qua chi tiết thu gốc | `duKien` / `dangXuLy` / `daHoan` / `canXuLyLai` (thất bại đã có lần thử thay thế không tính) |
@@ -160,7 +160,7 @@ Mỗi tập được đọc bằng projection riêng rồi cộng trong bộ nh�
 `thaoTacKhaDung` (khách): `ThanhToan`, `XemTruocHuy`, `HuyDon`, `TranhChapPhuPhi`, `ThanhToanBoSung`.
 `viecCanXuLy` (vận hành) thêm: nhận trả còn nợ, lập/chốt đối soát, duyệt mất, duyệt phí, giải quyết tranh chấp, gửi/đối chiếu/xử lý lại từng khoản hoàn, đối chiếu thu chưa phân loại.
 
-**Giá trị phụ thuộc module khác (cần chủ module xác nhận):** `CHI_TIET_NHAN_TRA.ket_luan` mất = `"Mất thiết bị"` hoặc có `bien_ban_mat` (Tuấn Kiệt); `PHU_PHI.trang_thai_duyet` = `ChoDuyet|DaDuyet|TuChoi` (Kiện Minh); `DOI_SOAT_TIEN_COC.trang_thai` khác `ChoChot` coi là đã xác nhận (Kim Xuyến).
+**Giá trị phụ thuộc module khác (cần chủ module xác nhận):** `CHI_TIET_NHAN_TRA.ket_luan` mất = `"Mất thiết bị"` hoặc có `bien_ban_mat` (Tuấn Kiệt); `PHU_PHI.trang_thai_duyet` = `ChoDuyet|DaDuyet|TuChoi`, `trang_thai_tranh_chap` = `DangTranhChap|DaGiaiQuyet` (Kiện Minh — đã khớp với PhuPhiService trên main); `DOI_SOAT_TIEN_COC.trang_thai` khác `ChoChot` coi là đã xác nhận (Kim Xuyến).
 
 ## 6. Thông báo sự kiện Week 4
 

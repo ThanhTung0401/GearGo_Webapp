@@ -165,7 +165,13 @@ public static class Seed
         ctx.ChiTietPhieuNhaps.Add(ctpn);
         ctx.SaveChanges();
 
-        var phieu = new PhieuBanGiao { MaDonThue = maDon, MaNhanVien = du.NhanVien, TrangThai = daGiao ? "DaGiao" : "ChoGiao", ThoiDiemGiaoThucTe = daGiao ? new DateTime(2026, 9, 20) : null };
+        // Khách đã xác nhận + có bằng chứng: điều kiện chốt bàn giao từ Tuần 3 (PhieuBanGiao.ChotPhieu).
+        var phieu = new PhieuBanGiao
+        {
+            MaDonThue = maDon, MaNhanVien = du.NhanVien, TrangThai = daGiao ? "DaGiao" : "ChoGiao",
+            ThoiDiemGiaoThucTe = daGiao ? new DateTime(2026, 9, 20) : null,
+            ThoiDiemKhachXacNhan = new DateTime(2026, 9, 20), BangChungXacNhan = """{"chuKy":"khach.png"}"""
+        };
         ctx.PhieuBanGiaos.Add(phieu);
         ctx.SaveChanges();
 

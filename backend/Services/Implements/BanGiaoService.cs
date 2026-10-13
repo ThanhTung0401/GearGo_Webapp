@@ -57,10 +57,14 @@ public class BanGiaoService : IBanGiaoService
                 return Result<PhieuBanGiaoResponse>.Ok(MapToResponse(phieuDaCo));
 
             // Khởi tạo phiếu nháp
+            var nhanVienTao = await _context.NhanViens
+                .FirstOrDefaultAsync(n => n.MaNhanVien == maNhanVienTao || n.MaTaiKhoan == maNhanVienTao);
+            var maNv = nhanVienTao?.MaNhanVien ?? maNhanVienTao;
+
             var phieuMoi = new PhieuBanGiao
             {
                 MaDonThue = maDonThue,
-                MaNhanVien = maNhanVienTao,
+                MaNhanVien = maNv,
                 TrangThai = "ChoGiao",
                 ThoiDiemLap = DateTime.UtcNow
             };
@@ -143,6 +147,7 @@ public class BanGiaoService : IBanGiaoService
         {
             var phieu = await _context.PhieuBanGiaos
                 .Include(p => p.DonThue)
+                .ThenInclude(d => d.ChiTietDonThues)
                 .Include(p => p.ChiTietBanGiaos)
                 .ThenInclude(c => c.PhanCongThietBi)
                 .ThenInclude(pc => pc.ThietBi)
@@ -153,8 +158,28 @@ public class BanGiaoService : IBanGiaoService
             if (phieu.TrangThai == "DaGiao")
                 return Result<bool>.Loi("LOCKED", "Phiếu đã chốt.");
 
+            var nhanVienThucHien = await _context.NhanViens
+                .FirstOrDefaultAsync(n => n.MaNhanVien == maNhanVienChot || n.MaTaiKhoan == maNhanVienChot);
+            var tenNhanVien = nhanVienThucHien?.HoTen ?? "Nhân viên " + maNhanVienChot;
+
             // Chốt phiếu
-            phieu.ChotPhieu(request.TenNguoiNhanThucTe, "Nhân viên " + maNhanVienChot);
+            phieu.ChotPhieu(request.TenNguoiNhanThucTe, tenNhanVien);
+            if (nhanVienThucHien != null)
+            {
+                phieu.MaNhanVien = nhanVienThucHien.MaNhanVien;
+            }
+
+            // Kiểm tra thanh toán
+            decimal tongTienYeuCau = phieu.DonThue.ChiTietDonThues.Sum(c =>
+                c.DonGiaThueMoiNgay * c.SoNgayTinhTien + c.MucCocMoiThietBi - c.TienGiam);
+            decimal tongDaDong = await _context.ThanhToans
+                .Where(t => t.MaDonThue == phieu.MaDonThue && t.TrangThai == "ThanhCong")
+                .SumAsync(t => t.TongSoTien);
+            if (tongDaDong < tongTienYeuCau)
+            {
+                return Result<bool>.Loi("CHUA_THANH_TOAN_DU",
+                    $"Đơn thuê này chưa thanh toán đủ. Yêu cầu: {tongTienYeuCau}, Đã đóng: {tongDaDong}");
+            }
 
             // Ghi lịch sử đơn
             _context.LichSuTrangThaiDons.Add(new LichSuTrangThaiDon

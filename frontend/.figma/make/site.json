@@ -1,0 +1,10 @@
+{
+  "description": "Simulates website functionality to help users visualize and understand its operation, enhancing planning and design decisions effectively.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}
