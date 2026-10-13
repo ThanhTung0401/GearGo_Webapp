@@ -15,8 +15,6 @@ namespace GearGo.Services.Implements;
 public class HuyDonService : IHuyDonService
 {
     private const int DoDaiLyDoToiDa = 1000;
-    private const string PhanCongDaPhanCong = "DaPhanCong";
-    private const string PhanCongDaHuy = "DaHuy";
     private const string BanGiaoDaGiao = "DaGiao";
     private const string BanGiaoDaHuy = "DaHuy";
     private const string LuotDangGiu = "DangGiu";
@@ -30,16 +28,18 @@ public class HuyDonService : IHuyDonService
 
     private readonly ApplicationDbContext _context;
     private readonly IHoanTienService _hoanTien;
+    private readonly IChuanBiDonService _chuanBiDon;
     private readonly ILichSuNghiepVuService _lichSu;
     private readonly IThongBaoService _thongBao;
     private readonly TimeProvider _clock;
     private readonly ILogger<HuyDonService> _logger;
 
-    public HuyDonService(ApplicationDbContext context, IHoanTienService hoanTien, ILichSuNghiepVuService lichSu,
-        IThongBaoService thongBao, TimeProvider clock, ILogger<HuyDonService> logger)
+    public HuyDonService(ApplicationDbContext context, IHoanTienService hoanTien, IChuanBiDonService chuanBiDon,
+        ILichSuNghiepVuService lichSu, IThongBaoService thongBao, TimeProvider clock, ILogger<HuyDonService> logger)
     {
         _context = context;
         _hoanTien = hoanTien;
+        _chuanBiDon = chuanBiDon;
         _lichSu = lichSu;
         _thongBao = thongBao;
         _clock = clock;
@@ -192,16 +192,11 @@ public class HuyDonService : IHuyDonService
                     gc.ThoiDiemGiaiPhong = now;
                 }
 
-            // Hủy phân công còn hiệu lực trước giao (giữ người/thời điểm/lý do); thiết bị chưa rời kho nên vẫn SanSang.
-            var phanCongs = await _context.PhanCongThietBis
-                .Where(pc => pc.ChiTietDon.MaDonThue == maDonThue && pc.TrangThai == PhanCongDaPhanCong).ToListAsync(ct);
-            foreach (var pc in phanCongs)
-            {
-                pc.TrangThai = PhanCongDaHuy;
-                pc.MaNguoiHuyPhanCong = maNhanVien;
-                pc.ThoiDiemHuyPhanCong = now;
-                pc.LyDoHuyPhanCong = $"Hủy đơn ({loaiHuy}): {lyDo}";
-            }
+            // Hủy phân công còn hiệu lực trước giao qua contract của Kim Xuyến (ChuanBiDonService):
+            // chỉ SaveChanges trong transaction này, không commit riêng; không đụng phân công đã bàn giao.
+            var giaiPhong = await _chuanBiDon.GiaiPhongPhanCongKhiHuyDonAsync(maDonThue, actor.MaTaiKhoan, $"Hủy đơn ({loaiHuy}): {lyDo}", ct);
+            if (!giaiPhong.ThanhCong)
+                throw new TrangThaiKhongHopLeException(giaiPhong.ThongDiep ?? "Không giải phóng được phân công thiết bị.", giaiPhong.ChiTiet);
 
             // Phiếu bàn giao nháp bị vô hiệu, không xóa.
             var nhapBanGiao = await _context.PhieuBanGiaos

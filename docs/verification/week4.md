@@ -1,7 +1,7 @@
 # Biên bản nghiệm thu Week 4 — phần Thanh Tùng (W4-T6, W4-T7, W4-T9)
 
-**Môi trường đã chạy:** `tests/GearGo.Tests` (xUnit, 61 test) trên SQLite in-memory — có transaction, `ExecuteUpdate`, unique/FK thật — và một nhóm test HTTP qua `WebApplicationFactory` (route, JWT policy, `ExceptionHandlingMiddleware`).
-Máy dev chỉ có .NET SDK 8 nên đã build/test trên bản sao đổi `TargetFramework=net8.0`, `JwtBearer 8.*`, `Mvc.Testing 8.*` → **61/61 Passed**. Cần chạy lại `dotnet test` bằng SDK 10 của nhóm.
+**Môi trường đã chạy:** `tests/GearGo.Tests` (xUnit, 65 test) trên SQLite in-memory — có transaction, `ExecuteUpdate`, unique/FK thật — và một nhóm test HTTP qua `WebApplicationFactory` (route, JWT policy, `ExceptionHandlingMiddleware`).
+Máy dev chỉ có .NET SDK 8 nên đã build/test trên bản sao đổi `TargetFramework=net8.0`, `JwtBearer 8.*`, `Mvc.Testing 8.*` → **65/65 Passed**. Cần chạy lại `dotnet test` bằng SDK 10 của nhóm.
 Đã thử mutation (bỏ phần "đang giữ" khỏi hạn mức; đổi mốc `>= 24h` thành `> 24h`) → 5 test đỏ đúng chỗ, sau đó khôi phục.
 
 **Chưa chạy trên SQL Server thật.** SQLite khóa cả database khi ghi nên chỉ kiểm được thứ tự tuần tự của các ca đồng thời; ca "đồng thời thật" ghi Blocked.
@@ -56,11 +56,22 @@ Máy dev chỉ có .NET SDK 8 nên đã build/test trên bản sao đổi `Targe
 | Bổ sung | Đơn hủy hiện phí giữ lại + từng khoản hoàn; khách B | Đủ dữ liệu; 404 | Pass | Pass |
 | Luồng liên module (15.1 demo 1–3, 5) | Nhận trả → phí → đối soát → hoàn | — | `NhanTraService`, `PhuPhiService`, `DoiSoatService`, W4-T5/T8 chưa có trong repo; DTO đọc đã sẵn sàng | Blocked |
 
+## Tích hợp sau khi merge `main` + `feature/w4-doi-soat` + `feat/w4-task2_5_8`
+
+| Ca | Expected | Actual (test) | Kết quả |
+|---|---|---|---|
+| Xem trước đối soát có phí `DaDuyet` 200.000, cọc 1.000.000 | Cần hoàn 800.000 | `DoiSoatHoanTienTichHopTests.XemTruoc_TruPhuPhiDaDuyet` (trước khi sửa `"Duyet"`→`"DaDuyet"` phí bị bỏ qua, hoàn đủ 1.000.000) | Pass |
+| Đối soát phát lệnh hoàn | Qua `HoanTienService`, mã `HT:DS:{maDoiSoat}:{nguồn}:L1`, gửi sau commit, bấm lại không lập thêm | Pass | Pass |
+| Nguồn cọc đang bị khoản hoàn khác giữ | `VUOT_HAN_MUC_HOAN`, đối soát không đổi trạng thái | Pass | Pass |
+| Chốt đối soát khi hoàn còn `DangXuLy` | Bị chặn | Pass | Pass |
+| Hủy đơn giải phóng phân công qua `ChuanBiDonService.GiaiPhongPhanCongKhiHuyDonAsync` | Phân công `DaHuy`, thiết bị `SanSang`, cùng transaction | `HuyDonServiceTests.A03_HuyTruoc_...` | Pass |
+
 ## Việc còn chờ thành viên khác
 
 | Chủ | Việc | Ảnh hưởng |
 |---|---|---|
 | Minh Tú | Ghi `CHI_TIET_THANH_TOAN` (TienThue/TienCoc) khi thu thành công; W4-T8 gọi `LapYeuCauHoanAsync(LoaiHoanTien.HoanThuThua, "TT:{maChiTiet}")` | Không có chi tiết thì hủy có hoàn bị chặn "thu chưa phân loại" |
-| Kim Xuyến | Method giải phóng phân công trước giao (không tự commit); đối soát gọi `LapYeuCauHoanAsync(HoanCocDoiSoat, "DS:{maDoiSoat}")` rồi `GuiYeuCauDaLapAsync` sau commit | Hiện hủy phân công làm trực tiếp trong `HuyDonService` |
+| Kim Xuyến + Minh Tú | Nhánh thu thêm của `DoiSoatService.YeuCauXuLyTienAsync` gọi `ThanhToanService.TaoThuBoSungAsync`, method này tự mở transaction thứ hai trong transaction của đối soát → EF báo lỗi transaction lồng nhau | Thu bổ sung từ đối soát chưa chạy được; cần thống nhất ai mở transaction |
+| Kim Xuyến | `LapDoiSoatDieuChinhAsync` cộng mọi phí `DaDuyet` (gồm cả phí gốc đã bị điều chỉnh) và chỉ trừ hoàn thành công của đối soát gốc | Cần rà lại công thức ví dụ 13.2 (chỉ hoàn thêm phần chênh) |
 | Tuấn Kiệt / Kiện Minh | Xác nhận giá trị `ket_luan` mất, `trang_thai_duyet`, `trang_thai_tranh_chap` | DTO theo dõi đơn đọc theo giá trị ghi ở contract mục 5 |
 | Cả nhóm | Chạy `dotnet test` bằng SDK 10; chạy ca đồng thời trên SQL Server | Các dòng "Blocked (đồng thời thật)" |

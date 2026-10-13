@@ -83,7 +83,8 @@ public sealed class PhamVi : IDisposable
         LichSu = new LichSuNghiepVuService(ctx);
         ThongBao = new ThongBaoService(ctx);
         HoanTien = new HoanTienService(ctx, gateway, LichSu, ThongBao, clock, NullLogger<HoanTienService>.Instance);
-        HuyDon = new HuyDonService(ctx, HoanTien, LichSu, ThongBao, clock, NullLogger<HuyDonService>.Instance);
+        HuyDon = new HuyDonService(ctx, HoanTien, new ChuanBiDonService(ctx, new ThietBiService(ctx)), LichSu, ThongBao, clock,
+            NullLogger<HuyDonService>.Instance);
         TruyVan = new TruyVanDonThueService(ctx, clock);
     }
 

@@ -134,7 +134,7 @@ Khóa `DON_THUE` (`UPDATE ... SET trang_thai = trang_thai`) → đọc lại tr�
 
 - Bấm lại cùng quyết định (cùng trạng thái đích, cùng người hủy) → trả kết quả cũ, không thêm bộ hoàn. Quyết định khác → 409 `DON_DA_HUY_KHAC_Y_DINH`.
 - Hủy và chốt bàn giao cùng cập nhật hàng `DON_THUE`: bên thắng quyết định; `BanGiaoService.ChotPhieu` gọi `DonThue.BatDauThue()` nên thất bại khi đơn đã hủy; hủy sau bàn giao trả `DON_DA_BAN_GIAO`.
-- **Phụ thuộc Kim Xuyến:** hủy phân công đang làm trực tiếp trong `HuyDonService` (cùng transaction) vì method giải phóng phân công chưa có trong repo. Khi Kim Xuyến bàn giao method dùng chung (không tự commit), thay đoạn này bằng lời gọi method đó.
+- Hủy phân công gọi `IChuanBiDonService.GiaiPhongPhanCongKhiHuyDonAsync` (Kim Xuyến) trong cùng transaction hủy (method chỉ SaveChanges, không commit).
 
 ### 4.4 Không đến nhận
 
