@@ -129,6 +129,8 @@ builder.Services.AddScoped<IChuanBiDonService, ChuanBiDonService>(); // W3-T7 Ki
 builder.Services.AddScoped<IPhanCongThietBiService, PhanCongThietBiService>();
 builder.Services.AddScoped<GearGo.Services.Interfaces.IAdminSanPhamService, GearGo.Services.Admin.AdminSanPhamService>();
 builder.Services.AddScoped<GearGo.Services.Interfaces.IAdminDanhMucService, GearGo.Services.Admin.AdminDanhMucService>();
+builder.Services.AddScoped<IBaoTriService, BaoTriService>();
+builder.Services.AddScoped<INhanTraService, NhanTraService>();
 var app = builder.Build();
 
 // Tự động áp dụng Migration vào database nếu chưa có
