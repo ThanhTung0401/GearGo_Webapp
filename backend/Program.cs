@@ -99,8 +99,18 @@ builder.Services.AddScoped<IBanGiaoService, BanGiaoService>();
 builder.Services.AddScoped<IHoSoService, HoSoService>();
 builder.Services.AddScoped<ITruyVanDonThueService, TruyVanDonThueService>();
 builder.Services.AddScoped<IPhuPhiService, PhuPhiService>(); // W4-T3 Kiện Minh
+builder.Services.AddScoped<IDoiSoatService, DoiSoatService>(); // W4-T4 Kim Xuyến
 builder.Services.AddScoped<ILichSuNghiepVuService, LichSuNghiepVuService>();
 builder.Services.AddScoped<IThongBaoService, ThongBaoService>();
+// W4 — Thanh Tùng: hoàn tiền dùng chung, hủy đơn
+builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddSingleton(builder.Configuration.GetSection(GearGo.Integrations.Payments.MockRefundGatewayOptions.Section)
+    .Get<GearGo.Integrations.Payments.MockRefundGatewayOptions>() ?? new GearGo.Integrations.Payments.MockRefundGatewayOptions());
+// Gateway hoàn giả lập cho môi trường phát triển; thay bằng adapter cổng thật khi tích hợp.
+builder.Services.AddSingleton<GearGo.Integrations.Payments.IRefundGateway, GearGo.Integrations.Payments.MockRefundGateway>();
+builder.Services.AddScoped<IHoanTienService, HoanTienService>();
+builder.Services.AddScoped<IHuyDonService, HuyDonService>();
+builder.Services.AddHostedService<HoanTienDoiChieuJob>();
 
 builder.Services.AddHostedService<DonThueExpirationJob>();
 builder.Services.AddScoped<GearGo.Services.Interfaces.IBaoGiaService, GearGo.Services.BaoGiaService>();
@@ -163,3 +173,6 @@ app.MapGet("/api/test", () => new {
 });
 
 app.Run();
+
+// Cho phép WebApplicationFactory<Program> trong tests/GearGo.Tests truy cập entry point.
+public partial class Program { }

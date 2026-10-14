@@ -417,7 +417,8 @@ async function runAllTests() {
     headers: { Authorization: `Bearer ${customerToken}` },
     body: JSON.stringify('Hủy kiểm thử')
   });
-  assertTest('PUT /api/v1/don-thue/{id}/huy (Hủy đơn thuê)', resHuyDon.status === 400, `Status: ${resHuyDon.status}`);
+  // W4-T7: endpoint đi qua HuyDonService, kiểm tra chủ đơn → đơn không tồn tại/của người khác trả 404.
+  assertTest('PUT /api/v1/don-thue/{id}/huy (Hủy đơn thuê)', resHuyDon.status === 404, `Status: ${resHuyDon.status}`);
 
   // ==========================================
   // MODULE 7: ThanhToan (1 endpoint)

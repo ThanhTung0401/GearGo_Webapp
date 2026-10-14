@@ -101,7 +101,8 @@ public record HoanTienKhachResponse(
     string? LoaiHoan,
     decimal SoTien,
     string TrangThai,
-    DateTime? ThoiDiemThanhCong
+    DateTime? ThoiDiemThanhCong,
+    string NhanHienThi = ""             // DuKien | DangXuLy | ChuaRoKetQua | DaHoan | CanXuLyLai | DaThayThe
 );
 
 /// <summary>
@@ -130,7 +131,8 @@ public record DonChiTietResponse(
     List<PhieuNhanTraTomTatResponse> NhanTra,
     List<PhuPhiKhachResponse> PhuPhi,
     List<HoanTienKhachResponse> HoanTien,
-    List<string> ThaoTacKhaDung
+    List<string> ThaoTacKhaDung,
+    DonTaiChinhResponse TaiChinh
 );
 
 public record PhieuBanGiaoKhachResponse(
@@ -167,4 +169,107 @@ public record PhanCongVanHanhResponse(
     long MaThietBi,
     string? MaThietBiHienThi,
     string TrangThai
+);
+
+// ───────────── W4-T9: tiến độ nhận trả và tài chính của đơn (DonTaiChinhResponse) ─────────────
+// Mỗi tập con được đọc bằng truy vấn riêng rồi cộng phía ứng dụng, không JOIN nhiều tập (tránh nhân số tiền).
+// Số đề nghị / đã duyệt / đã thu / đã hoàn luôn tách riêng; "cần hoàn" trong đối soát KHÔNG có nghĩa là đã hoàn.
+
+public record DonTaiChinhResponse(
+    TienDoNhanTraResponse NhanTra,
+    PhuPhiTongHopResponse PhuPhi,
+    List<DoiSoatDonResponse> DoiSoat,
+    ThuTienTongHopResponse Thu,
+    HoanTienTongHopResponse Hoan,
+    HuyDonTomTatResponse? Huy,
+    DateTime? ThoiDiemHoanTat,          // mốc hoàn tất gốc; phiếu điều chỉnh sau đó không đổi mốc này
+    bool CoDieuChinhSauHoanTat,
+    List<string> Nhan                   // TraMotPhan | QuaHan | DangXuLyMat | ChoHoanTien | CanThuBoSung | CoTranhChap
+);
+
+public record TienDoNhanTraResponse(
+    int TongThietBiDaGiao,
+    int SoDaTra,
+    int SoDaKetLuanMat,
+    int SoDangXuLyMat,
+    int SoConNo,
+    List<DotTraResponse> CacDot,
+    List<ThietBiConNoResponse> ThietBiConNo
+);
+
+public record DotTraResponse(
+    long MaPhieuNhanTra,
+    string MaPhieuHienThi,
+    int LanTra,
+    bool LaLanTraCuoi,
+    DateTime? ThoiDiemChot,
+    int SoThietBiTra,
+    int SoThietBiMat
+);
+
+public record ThietBiConNoResponse(
+    long MaChiTietBanGiao,
+    string? MaThietBiHienThi,
+    string? TenSanPham,
+    bool DangXuLyMat
+);
+
+public record PhuPhiTongHopResponse(
+    decimal TongDeNghi,                 // chờ duyệt — chỉ nhân viên thấy
+    decimal TongDaDuyet,
+    decimal TongDangTranhChap,
+    decimal TongTuChoi,
+    int SoTranhChapDangMo,
+    List<PhuPhiDonResponse> Items
+);
+
+public record PhuPhiDonResponse(
+    long MaPhuPhi,
+    string LoaiPhi,
+    decimal SoTien,
+    string? LyDo,
+    string TrangThaiDuyet,
+    string? TrangThaiTranhChap,
+    string? KetQuaGiaiQuyet,
+    long? MaPhuPhiGoc,
+    long? MaDoiSoat,
+    bool LaDieuChinh
+);
+
+public record DoiSoatDonResponse(
+    long MaDoiSoat,
+    long? MaDoiSoatGoc,
+    bool LaDieuChinh,
+    string LoaiDoiSoat,
+    decimal TienCocDuocDoiSoat,
+    decimal TongPhuPhiDuocDuyet,
+    decimal SoTienCanHoan,
+    decimal SoTienCanThuThem,
+    string TrangThai,
+    DateTime ThoiDiemLap,
+    DateTime? ThoiDiemChot,
+    string? LyDoDieuChinh
+);
+
+public record ThuTienTongHopResponse(
+    decimal TienThueDaThu,
+    decimal TienCocDaThu,
+    decimal ThuBoSungDaThu,
+    decimal ChuaPhanLoai,               // thu thành công nhưng chưa tách mục đích — cần đối chiếu
+    decimal DangXuLy                    // giao dịch thu chưa có kết quả cuối
+);
+
+public record HoanTienTongHopResponse(
+    decimal DuKien,
+    decimal DangXuLy,
+    decimal DaHoan,
+    decimal CanXuLyLai,
+    List<HoanTienKhachResponse> Items
+);
+
+public record HuyDonTomTatResponse(
+    string LoaiHuy,
+    DateTime? ThoiDiemHuy,
+    string? LyDo,
+    decimal TienThueGiuLai
 );

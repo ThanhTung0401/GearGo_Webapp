@@ -45,3 +45,63 @@ Authorization: Bearer {{khach}}
 ###
 POST {{host}}/api/v1/thong-bao/1/da-doc
 Authorization: Bearer {{khach}}
+
+# ───────────── Thanh Tùng — W4 (hủy đơn, hoàn tiền). Gateway hoàn là MOCK (Payments:MockRefund). ─────────────
+@quantri = <JWT quản trị viên>
+
+### Khách xem trước hủy (lấy dauVanTay)
+GET {{host}}/api/v1/don-thue/1/huy/xem-truoc
+Authorization: Bearer {{khach}}
+
+### Khách xác nhận hủy với dấu bảng đã xem
+POST {{host}}/api/v1/don-thue/1/huy
+Authorization: Bearer {{khach}}
+Content-Type: application/json
+
+{"lyDo":"Đổi lịch đi","xacNhanChiPhi":true,"dauVanTayXemTruoc":"<dauVanTay từ xem-truoc>"}
+
+### Cửa hàng hủy (quản trị viên)
+GET {{host}}/api/v1/van-hanh/don-thue/1/cua-hang-huy/xem-truoc
+Authorization: Bearer {{quantri}}
+
+###
+POST {{host}}/api/v1/van-hanh/don-thue/1/cua-hang-huy
+Authorization: Bearer {{quantri}}
+Content-Type: application/json
+
+{"lyDo":"Không đủ lều 4 người","xacNhanChiPhi":true,"dauVanTayXemTruoc":"<dauVanTay>"}
+
+### Khách không đến nhận — nhân viên ghi nhận
+POST {{host}}/api/v1/van-hanh/don-thue/1/khong-den-nhan
+Authorization: Bearer {{nhanvien}}
+Content-Type: application/json
+
+{"ghiChu":"Gọi 3 lần không liên lạc được","bangChung":"call-log-2026-10-01.png"}
+
+### Khách không đến nhận — quản trị viên xử lý theo chính sách
+POST {{host}}/api/v1/van-hanh/don-thue/1/khong-den-nhan
+Authorization: Bearer {{quantri}}
+Content-Type: application/json
+
+{"ghiChu":"Xử lý theo chính sách không đến nhận","xuLyHuy":true,"xacNhanChiPhi":true,"dauVanTayXemTruoc":"<dauVanTay từ khong-den-nhan/xem-truoc>"}
+
+### Hoàn tiền theo đơn (chủ đơn hoặc nhân viên)
+GET {{host}}/api/v1/hoan-tien/theo-don/1
+Authorization: Bearer {{khach}}
+
+### Gửi/lập lại khoản hoàn (nhân viên)
+POST {{host}}/api/v1/hoan-tien/1/xu-ly
+Authorization: Bearer {{nhanvien}}
+Content-Type: application/json
+
+{"ghiChuXuLy":"Gửi lại sau khi xác minh thất bại"}
+
+### Đối chiếu bằng cùng mã yêu cầu
+POST {{host}}/api/v1/hoan-tien/1/doi-chieu
+Authorization: Bearer {{nhanvien}}
+
+### Callback gateway (chuKy = HMAC-SHA256 hex của "maYeuCau|maGiaoDich|soTien|trangThai" với Payments:MockRefund:SecretKey)
+POST {{host}}/api/v1/hoan-tien/ket-qua
+Content-Type: application/json
+
+{"maYeuCau":"HT:HUY:1:COC:2:L1","maGiaoDichHoanCong":"MOCKRF-1","soTien":1000000,"trangThai":"ThanhCong","chuKy":"<hmac>"}

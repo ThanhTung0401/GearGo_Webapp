@@ -13,6 +13,14 @@ public interface IThongBaoService
     /// </summary>
     Task<ThongBao> TaoThongBaoSanSangNhanAsync(long maDonThue, string eventKey);
 
+    /// <summary>
+    /// Helper sự kiện Week 4 (nhận trả, quá hạn, phụ phí, thu bổ sung, hoàn tiền, hoàn tất, hủy).
+    /// Cùng quy tắc: chỉ Add vào DbContext của bên gọi, không SaveChanges; gọi lại cùng
+    /// (người nhận, MaSuKien, kênh) trả bản cũ. MaSuKien phải gắn với chứng từ/đợt/giao dịch cụ thể —
+    /// xem <see cref="MaSuKienThongBao"/> — để đợt trả thứ hai không bị coi là trùng đợt đầu.
+    /// </summary>
+    Task<ThongBao> TaoThongBaoSuKienAsync(SuKienThongBaoCommand command);
+
     Task<PagedResult<ThongBaoResponse>> LayThongBaoCuaToiAsync(TimThongBaoRequest filter, long maTaiKhoan);
     Task<ThongBaoResponse> DanhDauDaDocAsync(long maThongBao, long maTaiKhoan);
 }

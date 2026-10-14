@@ -39,8 +39,10 @@ using GearGo.Exceptions;
           PhanCongKhongThuocDonException => 404,
           DonKhongTimThayException       => 404,
           ThongBaoKhongTimThayException  => 404,
+          HoanTienKhongTimThayException  => 404,
           KhongCoQuyenException          => 403,
           TaiKhoanBiKhoaException        => 403,
+          KhongCoQuyenHuyException       => 403,
           KhongDuHangException           => 409,
           BaogiaThayDoiException         => 409,
           LienHeDaTonTaiException        => 409,
@@ -49,6 +51,14 @@ using GearGo.Exceptions;
           KhuyenMaiKhongHopLeException   => 409,
           XungDotDuLieuException         => 409,
           KhongDuDieuKienSanSangException => 409,
+          NguonHoanKhongHopLeException   => 409,
+          VuotHanMucHoanException        => 409,
+          HoanChuaRoKetQuaException      => 409,
+          DonDaBanGiaoException          => 409,
+          ChiPhiHuyDaThayDoiException    => 409,
+          ChinhSachHuyChuaDuException    => 409,
+          DonDaHuyKhacYDinhException     => 409,
+          KetQuaHoanKhongKhopException   => 400,
           _                              => 400
       };
   }

@@ -1,5 +1,7 @@
 using GearGo.Helpers;
 using GearGo.Models.DTOs.DonThue;
+using GearGo.Models.DTOs.HuyDon;
+using GearGo.Models.Enums;
 using GearGo.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -13,11 +15,13 @@ public class DonThueController : ControllerBase
 {
     private readonly IDonThueService _donThueService;
     private readonly ITruyVanDonThueService _truyVanService;
+    private readonly IHuyDonService _huyDonService;
 
-    public DonThueController(IDonThueService donThueService, ITruyVanDonThueService truyVanService)
+    public DonThueController(IDonThueService donThueService, ITruyVanDonThueService truyVanService, IHuyDonService huyDonService)
     {
         _donThueService = donThueService;
         _truyVanService = truyVanService;
+        _huyDonService = huyDonService;
     }
 
     // ── W3-T1: truy vấn đơn của khách (mã khách lấy từ JWT, không nhận từ request) ──
@@ -59,13 +63,24 @@ public class DonThueController : ControllerBase
         return Ok(result.DuLieu);
     }
 
-    [HttpPut("{id}/huy")]
-    public async Task<IActionResult> HuyDonThue(long id, [FromBody] string lyDo)
-    {
-        var result = await _donThueService.HuyDonAsync(id, lyDo);
-        if (!result.ThanhCong)
-            return BadRequest(new { result.MaLoi, result.ThongDiep });
+    // ── W4-T7: hủy đơn của khách (chủ đơn lấy từ JWT) ──
 
-        return Ok(new { Message = "Đã hủy đơn thành công!" });
-    }
+    [HttpGet("{id:long}/huy/xem-truoc")]
+    [Authorize(Policy = "CustomerOnly")]
+    public async Task<IActionResult> XemTruocHuy(long id, CancellationToken ct)
+        => Ok(await _huyDonService.XemTruocHuyAsync(id, User.LayMaTaiKhoan(), LoaiHuyDon.KhachHuy, ct));
+
+    [HttpPost("{id:long}/huy")]
+    [Authorize(Policy = "CustomerOnly")]
+    public async Task<IActionResult> HuyDon(long id, [FromBody] HuyDonRequest request, CancellationToken ct)
+        => Ok(await _huyDonService.KhachHuyAsync(id, request, User.LayMaTaiKhoan(), ct));
+
+    /// <summary>
+    /// Endpoint Tuần 2 giữ cho tương thích (body là chuỗi lý do). Nay đi qua cùng HuyDonService và kiểm tra chủ đơn;
+    /// đơn đã thanh toán sẽ nhận 409 CHI_PHI_HUY_DA_THAY_DOI kèm bảng chi phí — dùng POST {id}/huy để xác nhận.
+    /// </summary>
+    [HttpPut("{id:long}/huy")]
+    [Authorize(Policy = "CustomerOnly")]
+    public async Task<IActionResult> HuyDonThue(long id, [FromBody] string lyDo, CancellationToken ct)
+        => Ok(await _huyDonService.KhachHuyAsync(id, new HuyDonRequest(lyDo), User.LayMaTaiKhoan(), ct));
 }

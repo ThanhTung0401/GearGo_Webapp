@@ -372,7 +372,10 @@ public static class DbSeeder
                 TenChinhSach = "Chính sách thuê tiêu chuẩn 2026",
                 PhienBan = 1,
                 ThoiDiemApDung = DateTime.UtcNow.AddMonths(-3),
-                NoiDungChinhSach = "{\"heSoTre\": 1.5, \"hanMucStaff\": 500000, \"tyLeCoc\": 100}",
+                // huyDon/khongDenNhan: khóa HuyDonService (W4-T7) đọc — xem docs/contracts/week4.md mục 4.1.
+                NoiDungChinhSach = "{\"heSoTre\": 1.5, \"hanMucStaff\": 500000, \"tyLeCoc\": 100, "
+                                   + "\"huyDon\": {\"tyLeGiuLaiTu24Den48Gio\": 0.5, \"tyLeGiuLaiDuoi24Gio\": 1.0}, "
+                                   + "\"khongDenNhan\": {\"soPhutChoSauGioNhan\": 120, \"tyLeGiuLaiTienThue\": 1.0}}",
                 NgayTao = DateTime.UtcNow.AddMonths(-3)
             };
             context.ChinhSachs.Add(chinhSach1);
@@ -744,8 +747,9 @@ public static class DbSeeder
                     MaChiTietThanhToanGoc = ctttCocDefault.MaChiTietThanhToan,
                     MaDoiSoat = doiSoat1.MaDoiSoat,
                     MaNguoiXuLy = nhanVien1.MaNhanVien,
-                    MaYeuCau = "REF_ORD001_01",
-                    LoaiHoan = "HoanCoc",
+                    // Quy ước mã/loại của HoanTienService: HT:{khoaNghiaVu}:{maChiTietThanhToanGoc}:L{lanThu}
+                    MaYeuCau = $"HT:DS:{doiSoat1.MaDoiSoat}:{ctttCocDefault.MaChiTietThanhToan}:L1",
+                    LoaiHoan = LoaiHoanTien.HoanCocDoiSoat,
                     SoTien = 600000,
                     LyDo = "Hoàn cọc sau đối soát trừ phí vệ sinh",
                     ThoiDiemYeuCau = DateTime.UtcNow,
