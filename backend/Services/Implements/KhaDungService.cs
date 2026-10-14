@@ -47,13 +47,21 @@ public class KhaDungService : IKhaDungService
             .Where(t => sanPhamList.Contains(t.MaSanPhamHienTai));
 
         // Loại trừ thiết bị đang thuê nhưng đã quá hạn (chưa trả)
-        // Vì TrangThaiSuDung = DangThue, ta kiểm tra xem có phân công nào đang hiệu lực và quá hạn không
+        // Lưu ý W4-T2: Không tính các thiết bị đã được kết luận trả hoặc mất trong phiếu nhận trả đã chốt
+        var settledThietBiIds = await _context.ChiTietNhanTras
+            .Where(nt => nt.PhieuNhanTra.TrangThai == TrangThaiPhieuNhanTra.DaChot &&
+                         (nt.ThoiDiemTraThucTe != null || nt.KetLuan == "MatThietBi" || nt.ThoiDiemDuyetMat != null))
+            .Select(nt => nt.ChiTietBanGiao.PhanCongThietBi.MaThietBi)
+            .Distinct()
+            .ToListAsync();
+
         var thietBiQuaHanIds = await _context.PhanCongThietBis
             .Include(pc => pc.ChiTietDon)
                 .ThenInclude(c => c.DonThue)
             .Where(pc => pc.TrangThai == "DaPhanCong")
             .Where(pc => pc.ChiTietDon.DonThue.TrangThai == TrangThaiDonThue.DangThue)
             .Where(pc => pc.ChiTietDon.DonThue.GioTraDuKien < DateTime.UtcNow)
+            .Where(pc => !settledThietBiIds.Contains(pc.MaThietBi))
             .Select(pc => pc.MaThietBi)
             .Distinct()
             .ToListAsync();
@@ -65,6 +73,14 @@ public class KhaDungService : IKhaDungService
             .ToDictionaryAsync(x => x.MaSanPham, x => x.Total);
 
         var now = DateTime.UtcNow;
+
+        // Lấy số lượng thiết bị đã kết luận trả/mất theo từng chi tiết đơn của các phiếu nhận trả đã chốt (W4-T2)
+        var settledCountByChiTietDon = await _context.ChiTietNhanTras
+            .Where(nt => nt.PhieuNhanTra.TrangThai == TrangThaiPhieuNhanTra.DaChot &&
+                         (nt.ThoiDiemTraThucTe != null || nt.KetLuan == "MatThietBi" || nt.ThoiDiemDuyetMat != null))
+            .GroupBy(nt => nt.ChiTietBanGiao.PhanCongThietBi.MaChiTietDon)
+            .Select(g => new { MaChiTietDon = g.Key, Count = g.Count() })
+            .ToDictionaryAsync(x => x.MaChiTietDon, x => x.Count);
 
         // 2. Lấy các khoảng thời gian bị chiếm
         var overlappingDetails = await _context.ChiTietDonThues
@@ -83,16 +99,26 @@ public class KhaDungService : IKhaDungService
                  c.GiuCho != null && 
                  c.GiuCho.TrangThai == TrangThaiGiuCho.DangGiu && 
                  c.GiuCho.ThoiDiemHetHan > now))
-            .Select(c => new
-            {
-                c.MaSanPham,
-                Start = c.DonThue.GioNhanDuKien,
-                End = c.DonThue.GioTraDuKien,
-                c.SoLuong
-            })
             .ToListAsync();
 
-        var groupedOverlaps = overlappingDetails.GroupBy(x => x.MaSanPham);
+        var computedIntervals = new List<(long MaSanPham, DateTime Start, DateTime End, int SoLuong)>();
+        foreach (var c in overlappingDetails)
+        {
+            int soLuongChiPhi = c.SoLuong;
+            // W4-T2: Với đơn trả 1 phần, giảm phần nghĩa vụ còn chiếm lịch theo từng thiết bị đã kết luận
+            if (c.DonThue.TrangThai == TrangThaiDonThue.DangThue)
+            {
+                int daKetLuan = settledCountByChiTietDon.GetValueOrDefault(c.MaChiTietDon, 0);
+                soLuongChiPhi = Math.Max(0, c.SoLuong - daKetLuan);
+            }
+
+            if (soLuongChiPhi > 0)
+            {
+                computedIntervals.Add((c.MaSanPham, c.DonThue.GioNhanDuKien, c.DonThue.GioTraDuKien, soLuongChiPhi));
+            }
+        }
+
+        var groupedOverlaps = computedIntervals.GroupBy(x => x.MaSanPham);
 
         // 3. Tính toán max concurrent với Sweep Line Algorithm
         foreach (var sp in sanPhamList)
