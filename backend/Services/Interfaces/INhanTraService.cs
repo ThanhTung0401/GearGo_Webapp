@@ -6,16 +6,6 @@ namespace GearGo.Services.Interfaces;
 public interface INhanTraService
 {
     /// <summary>
-    /// Lấy danh sách các đợt nhận trả theo đơn thuê
-    /// </summary>
-    Task<Result<List<NhanTraResponse>>> LayDanhSachDotTraAsync(long donId, long actorId);
-
-    /// <summary>
-    /// Lấy danh sách các thiết bị còn nợ chưa được chốt nhận trả hoặc chưa kết luận mất
-    /// </summary>
-    Task<Result<List<ThietBiConNoResponse>>> LayThietBiConNoAsync(long donId, long actorId);
-
-    /// <summary>
     /// Tạo phiếu nhận trả nháp mới cho danh sách chi tiết bàn giao được chọn
     /// </summary>
     Task<Result<NhanTraResponse>> TaoPhieuNhanTraNhapAsync(

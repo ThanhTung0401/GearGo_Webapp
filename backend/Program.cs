@@ -122,6 +122,7 @@ builder.Services.AddScoped<GearGo.Services.Interfaces.IAdminSanPhamService, Gear
 builder.Services.AddScoped<GearGo.Services.Interfaces.IAdminDanhMucService, GearGo.Services.Admin.AdminDanhMucService>();
 builder.Services.AddScoped<IBaoTriService, BaoTriService>();
 builder.Services.AddScoped<INhanTraService, NhanTraService>();
+builder.Services.AddScoped<ITruyVanNhanTraService, TruyVanNhanTraService>();
 builder.Services.AddScoped<IInspectionStrategy, PassInspectionStrategy>();
 builder.Services.AddScoped<IInspectionStrategy, CleaningInspectionStrategy>();
 builder.Services.AddScoped<IInspectionStrategy, DamageInspectionStrategy>();
