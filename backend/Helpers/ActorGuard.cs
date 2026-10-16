@@ -53,4 +53,13 @@ public static class ActorGuard
         if (nv != null && nv != "DangLamViec")
             throw new KhongCoQuyenException("Nhân viên đã ngừng làm việc.");
     }
+
+    /// <summary>
+    /// Lấy thông tin nhân viên theo MaTaiKhoan hoặc MaNhanVien (hỗ trợ linh hoạt cả 2 định dạng id)
+    /// </summary>
+    public static async Task<NhanVien?> LayNhanVienAsync(this ApplicationDbContext ctx, long actorId, CancellationToken ct = default)
+    {
+        return await ctx.NhanViens
+            .FirstOrDefaultAsync(n => n.MaTaiKhoan == actorId || n.MaNhanVien == actorId, ct);
+    }
 }

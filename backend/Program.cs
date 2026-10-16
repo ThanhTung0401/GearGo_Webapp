@@ -127,6 +127,7 @@ builder.Services.AddScoped<IInspectionStrategy, PassInspectionStrategy>();
 builder.Services.AddScoped<IInspectionStrategy, CleaningInspectionStrategy>();
 builder.Services.AddScoped<IInspectionStrategy, DamageInspectionStrategy>();
 builder.Services.AddScoped<IInspectionStrategy, LostInspectionStrategy>();
+builder.Services.AddScoped<IDeviceConflictDetector, DeviceConflictDetector>();
 builder.Services.AddScoped<IBaoCaoVanHanhService, BaoCaoVanHanhService>();
 var app = builder.Build();
 
