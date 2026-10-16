@@ -6,6 +6,7 @@ using GearGo.Models.DTOs.NhanTra;
 using GearGo.Models.Entities;
 using GearGo.Models.Enums;
 using GearGo.Services.Interfaces;
+using GearGo.Services.Strategies;
 using Microsoft.EntityFrameworkCore;
 
 namespace GearGo.Services.Implements;
@@ -16,16 +17,16 @@ namespace GearGo.Services.Implements;
 public class NhanTraService : INhanTraService
 {
     private readonly ApplicationDbContext _context;
-    private readonly IBaoTriService _baoTriService;
+    private readonly IEnumerable<IInspectionStrategy> _strategies;
     private readonly ILogger<NhanTraService> _logger;
 
     public NhanTraService(
         ApplicationDbContext context,
-        IBaoTriService baoTriService,
+        IEnumerable<IInspectionStrategy> strategies,
         ILogger<NhanTraService> logger)
     {
         _context = context;
-        _baoTriService = baoTriService;
+        _strategies = strategies;
         _logger = logger;
     }
 
@@ -504,37 +505,11 @@ public class NhanTraService : INhanTraService
                 var thietBi = ct.ChiTietBanGiao.PhanCongThietBi.ThietBi;
                 var trangThaiCu = thietBi.TrangThaiSuDung;
 
-                if (ct.KetLuan == "Dat")
+                // Tìm Strategy phù hợp với kết luận kiểm tra
+                var strategy = _strategies.FirstOrDefault(s => s.CanHandle(ct.KetLuan ?? ""));
+                if (strategy != null)
                 {
-                    thietBi.TrangThaiSuDung = TrangThaiThietBi.SanSang;
-                }
-                else if (ct.KetLuan == "CanVeSinh")
-                {
-                    thietBi.TrangThaiSuDung = TrangThaiThietBi.DangBaoTri;
-                    await _baoTriService.TaoPhieuBaoTriToiThieuAsync(
-                        thietBi.MaThietBi,
-                        phieu.MaDonThue,
-                        nhanVien.MaNhanVien,
-                        "VeSinh",
-                        $"Cần vệ sinh sau thuê: {ct.TinhTrangSauThue}",
-                        "Nhe");
-                }
-                else if (ct.KetLuan == "HongNhe" || ct.KetLuan == "HongNang")
-                {
-                    thietBi.TrangThaiSuDung = TrangThaiThietBi.DangBaoTri;
-                    string mucDo = ct.KetLuan == "HongNang" ? "Nang" : "Nhe";
-                    await _baoTriService.TaoPhieuBaoTriToiThieuAsync(
-                        thietBi.MaThietBi,
-                        phieu.MaDonThue,
-                        nhanVien.MaNhanVien,
-                        "SuaChua",
-                        $"Hư hỏng sau thuê: {ct.TinhTrangSauThue}",
-                        mucDo);
-                }
-                else if (ct.KetLuan == "MatThietBi")
-                {
-                    thietBi.TrangThaiSuDung = TrangThaiThietBi.ThatLac;
-                    ct.ThoiDiemTraThucTe = null; // Giữ null cho đồ thất lạc
+                    await strategy.XuLySauKiemTraAsync(ct, thietBi, nhanVien, phieu.MaDonThue);
                 }
 
                 _context.LichSuTinhTrangThietBis.Add(new LichSuTinhTrangThietBi
@@ -568,11 +543,6 @@ public class NhanTraService : INhanTraService
                 }
             }
 
-            // Chốt phiếu
-            phieu.TrangThai = TrangThaiPhieuNhanTra.DaChot;
-            phieu.ThoiDiemChot = DateTime.UtcNow;
-            phieu.TenNhanVienLucNhan = nhanVien.HoTen;
-
             // Đếm lại tổng số đồ còn nợ trên toàn đơn
             int tongGiao = await _context.ChiTietBanGiaos
                 .CountAsync(ctb => ctb.PhieuBanGiao.MaDonThue == phieu.MaDonThue);
@@ -586,14 +556,15 @@ public class NhanTraService : INhanTraService
 
             int soConNo = Math.Max(0, tongGiao - allSettledCtbIds);
 
+            // Gọi phương thức nghiệp vụ đóng gói trên Entity
+            phieu.ChotPhieu(nhanVien.HoTen ?? "Nhân viên", soConNo == 0);
+
             if (soConNo > 0)
             {
-                phieu.LaLanTraCuoi = false;
                 phieu.DonThue.TrangThai = TrangThaiDonThue.DangThue; // Giữ nguyên đang thuê
             }
             else
             {
-                phieu.LaLanTraCuoi = true;
                 phieu.DonThue.TrangThai = TrangThaiDonThue.ChoDoiSoat; // Chuyển sang chờ đối soát
 
                 _context.LichSuTrangThaiDons.Add(new LichSuTrangThaiDon

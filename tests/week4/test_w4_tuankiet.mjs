@@ -5,6 +5,7 @@
  */
 
 import crypto from 'node:crypto';
+import { execSync } from 'node:child_process';
 
 const BASE_URL = process.env.API_URL || 'http://localhost:5000';
 const JWT_SECRET = 'GearGoSecretKey2026_ThisKeyMustBeAtLeast32Chars!';
@@ -94,6 +95,10 @@ async function detectAccountTokens() {
 
 async function runTests() {
   console.log(`${colors.bold}${colors.cyan}=== BẮT ĐẦU KIỂM THỬ WEEK 4 - TUẤN KIỆT (W4-T1: NHẬN TRẢ NHIỀU ĐỢT & KẾT LUẬN MẤT) ===${colors.reset}\n`);
+
+  try {
+    execSync('docker exec -i geargo-sql /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "GearGo@123" -C -d GearGoDb -Q "DELETE FROM CHI_TIET_NHAN_TRA WHERE ma_phieu_nhan_tra > 1; DELETE FROM PHIEU_NHAN_TRA WHERE ma_phieu_nhan_tra > 1; UPDATE DON_THUE SET trang_thai = \'DangThue\' WHERE ma_don_thue = 1;"', { stdio: 'ignore' });
+  } catch {}
 
   await detectAccountTokens();
 
