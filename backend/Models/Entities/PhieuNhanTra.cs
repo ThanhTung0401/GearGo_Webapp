@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using GearGo.Exceptions;
 using GearGo.Models.Enums;
 
 namespace GearGo.Models.Entities;
@@ -61,4 +62,23 @@ public class PhieuNhanTra
 
     // 1 phiếu nhận trả có danh sách các thiết bị được trả trong đợt này
     public ICollection<ChiTietNhanTra> ChiTietNhanTras { get; set; } = new List<ChiTietNhanTra>();
+
+    // ─── RICH DOMAIN METHODS ───
+
+    /// <summary>
+    /// Đóng gói nghiệp vụ chốt phiếu nhận trả theo nguyên tắc Idempotent
+    /// </summary>
+    public void ChotPhieu(string tenNhanVien, bool laLanCuoi)
+    {
+        if (TrangThai == TrangThaiPhieuNhanTra.DaChot)
+            return; // Idempotency
+
+        if (TrangThai != TrangThaiPhieuNhanTra.Nhap)
+            throw new TrangThaiKhongHopLeException("Chỉ có thể chốt phiếu khi đang ở trạng thái Nháp.");
+
+        TrangThai = TrangThaiPhieuNhanTra.DaChot;
+        ThoiDiemChot = DateTime.UtcNow;
+        TenNhanVienLucNhan = tenNhanVien;
+        LaLanTraCuoi = laLanCuoi;
+    }
 }
