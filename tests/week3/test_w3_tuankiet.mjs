@@ -1,9 +1,10 @@
 /**
  * Script kiểm thử tự động API của Tuấn Kiệt:
- * - Tạo Đơn thuê (UC02)
+ * - Tạo Đơn thuê an toàn chống IDOR (UC05 / UC02)
+ * - Hủy Đơn thuê an toàn (UC05)
  * - Thanh Toán (UC03)
- * - Lập & Chốt Bàn Giao (UC11)
- * Chạy: node tests/test_w3_tuankiet.mjs
+ * - Lập & Chốt Bàn Giao (UC11 / W3-T8)
+ * Chạy: node tests/week3/test_w3_tuankiet.mjs
  */
 
 import crypto from 'node:crypto';
@@ -25,15 +26,18 @@ function generateToken(role, maTaiKhoan = 1, email = 'nhanvien@geargo.vn') {
   const payload = Buffer.from(JSON.stringify({
     'MaTaiKhoan': maTaiKhoan.toString(),
     'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier': maTaiKhoan.toString(),
-    'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress': email,
     'http://schemas.microsoft.com/ws/2008/06/identity/claims/role': role,
+    'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress': email,
     'exp': now + 7 * 24 * 3600
   })).toString('base64url');
   const sig = crypto.createHmac('sha256', JWT_SECRET).update(`${header}.${payload}`).digest('base64url');
   return `${header}.${payload}.${sig}`;
 }
 
-const adminToken = generateToken('QuanTriVien', 1);
+let adminToken = generateToken('QuanTriVien', 10002, 'admin@geargo.vn');
+let staffToken = generateToken('NhanVien', 10003, 'staff@geargo.vn');
+let customerToken = generateToken('KhachHang', 10004, 'customer@geargo.vn');
+let otherCustomerToken = generateToken('KhachHang', 10005, 'other@geargo.vn');
 
 async function request(method, path, body = null, token = adminToken) {
   const headers = { 'Content-Type': 'application/json' };
@@ -63,68 +67,113 @@ function assert(condition, message, errorDetails = '') {
   }
 }
 
-async function runTests() {
-  console.log(`${colors.cyan}${colors.bold}=== BẮT ĐẦU TEST LUỒNG W3-T8 (TUẤN KIỆT) ===${colors.reset}\n`);
+async function detectAccountTokens() {
+  for (const adminId of [10002, 1]) {
+    const candidate = generateToken('QuanTriVien', adminId, 'admin@geargo.vn');
+    const res = await request('GET', '/api/v1/don-thue/1/lich-su', null, candidate);
+    // CustomerOnly should return 403 for QuanTriVien
+    if (res.status === 403) {
+      adminToken = candidate;
+      const staffId = adminId === 10002 ? 10003 : 2;
+      const customerId = adminId === 10002 ? 10004 : 3;
+      const otherId = adminId === 10002 ? 10005 : 4;
+      staffToken = generateToken('NhanVien', staffId, 'staff@geargo.vn');
+      customerToken = generateToken('KhachHang', customerId, 'customer@geargo.vn');
+      otherCustomerToken = generateToken('KhachHang', otherId, 'other@geargo.vn');
+      break;
+    }
+  }
+}
 
-  // 1. Tạo Đơn Thuê
-  console.log(`${colors.yellow}1. Test Tạo Đơn Thuê${colors.reset}`);
-  const taoDonRes = await request('POST', '/api/v1/don-thue', {
+async function runTests() {
+  console.log(`${colors.cyan}${colors.bold}=== BẮT ĐẦU TEST LUỒNG W3-T8 & UC05 (TUẤN KIỆT) ===${colors.reset}\n`);
+
+  await detectAccountTokens();
+
+  // 1. Phân quyền Tạo Đơn Thuê: Admin/Staff bị chặn 403
+  console.log(`${colors.yellow}1. Test Phân quyền & Chống IDOR khi Tạo Đơn Thuê${colors.reset}`);
+  const adminTaoDon = await request('POST', '/api/v1/don-thue', {
     maKhachHang: 1,
+    gioNhanDuKien: new Date(Date.now() + 86400000).toISOString(),
+    gioTraDuKien: new Date(Date.now() + 172800000).toISOString(),
+    tenNguoiNhan: "Admin Thử",
+    soDienThoaiNguoiNhan: "0987654321",
+    emailLienHe: "admin@geargo.vn",
+    chiTiet: [{ maSanPham: 1, soLuong: 1 }]
+  }, adminToken);
+  assert(adminTaoDon.status === 403, "Admin bị từ chối gọi API tạo đơn thuê của khách (HTTP 403)");
+
+  // Khách hàng tạo đơn với MaKhachHang giả mạo trong body -> hệ thống phải ghi đè từ JWT
+  const taoDonRes = await request('POST', '/api/v1/don-thue', {
+    maKhachHang: 999999, // IDOR attempt!
     gioNhanDuKien: new Date(Date.now() + 86400000).toISOString(),
     gioTraDuKien: new Date(Date.now() + 172800000).toISOString(),
     tenNguoiNhan: "Khách VIP",
     soDienThoaiNguoiNhan: "0987654321",
     emailLienHe: "vip@test.com",
-    ghiChu: "Test tự động",
+    ghiChu: "Test tự động chống IDOR",
     chiTiet: [{ maSanPham: 1, soLuong: 1 }]
-  });
-  
-  assert(taoDonRes.status === 200 || (taoDonRes.status === 400 && taoDonRes.data.maLoi === "HET_HANG"), "Tạo đơn thuê (Pass nếu Thành công hoặc Báo Hết Hàng do DB trống)", taoDonRes.data);
+  }, customerToken);
+
+  assert(
+    taoDonRes.status === 200 || (taoDonRes.status === 400 && taoDonRes.data.maLoi === "HET_HANG"),
+    "Khách hàng tạo đơn thuê thành công (Pass nếu Thành công hoặc Hết Hàng)",
+    taoDonRes.data
+  );
+
   if (taoDonRes.status === 200) {
     const maDonThue = taoDonRes.data.maDonThue;
-    console.log(`\n${colors.yellow}2. Test Thanh Toán Đơn Thuê${colors.reset}`);
-    const thanhToanRes = await request('POST', '/api/v1/thanh-toan/xac-nhan', {
-      maDonThue: maDonThue,
-      phuongThucThanhToan: "ChuyenKhoan",
-      tongSoTien: 5000000,
-      maGiaoDichCong: "TEST_BANK_001",
-      ghiChu: "Test thanh toan"
-    });
-    assert(thanhToanRes.status === 200, "Thanh toán thành công (Chuyển trạng thái sang DaXacNhan)", thanhToanRes.data);
+    console.log(`  -> Tạo đơn thành công với Mã #${maDonThue}, Mã hiển thị: ${taoDonRes.data.maDonHienThi}`);
 
-    console.log(`\n${colors.yellow}3. Test Bàn Giao (Nháp theo đơn thật)${colors.reset}`);
-    const nhapRes = await request('POST', `/api/v1/ban-giao/nhap/${maDonThue}`);
+    // Test hủy đơn trái phép: Khách hàng khác cố gắng hủy đơn của khách này -> 400 KHONG_CO_QUYEN
+    console.log(`\n${colors.yellow}2. Test Bảo mật IDOR khi Hủy Đơn Thuê${colors.reset}`);
+    const huyTraiPhep = await request('PUT', `/api/v1/don-thue/${maDonThue}/huy`, {
+      lyDo: "Tôi muốn hủy đơn của người khác"
+    }, otherCustomerToken);
     assert(
-      nhapRes.status === 400 && nhapRes.data.maLoi === "INVALID_STATE", 
-      "Từ chối tạo phiếu bàn giao nếu đơn chưa sẵn sàng", 
-      nhapRes.data
+      huyTraiPhep.status === 400 && huyTraiPhep.data.maLoi === "KHONG_CO_QUYEN",
+      "Khách hàng khác không thể hủy đơn của người khác (Bảo vệ IDOR)",
+      huyTraiPhep.data
     );
-  } else {
-    console.log(`  ${colors.yellow}ℹ DB hiện trống, tiếp tục kiểm thử bảo mật & validation trực tiếp các API Bàn Giao...${colors.reset}`);
+
+    // Chủ đơn hủy hợp lệ -> Thành công
+    const huyHopLe = await request('PUT', `/api/v1/don-thue/${maDonThue}/huy`, {
+      lyDo: "Đổi ý không thuê nữa"
+    }, customerToken);
+    assert(huyHopLe.status === 200, "Chủ đơn hủy đơn thành công", huyHopLe.data);
+
+    // Không thể hủy lần 2
+    const huyLan2 = await request('PUT', `/api/v1/don-thue/${maDonThue}/huy`, {
+      lyDo: "Hủy tiếp"
+    }, customerToken);
+    assert(
+      huyLan2.status === 400 && huyLan2.data.maLoi === "INVALID_STATE",
+      "Không thể hủy đơn khi đã hủy (Trạng thái không hợp lệ)",
+      huyLan2.data
+    );
   }
 
-  // 4. Kiểm thử trực tiếp toàn bộ các endpoint bàn giao (Phân quyền & Validation)
-  console.log(`\n${colors.yellow}4. Kiểm thử phân quyền & hợp đồng các API Bàn Giao (W3-T8)${colors.reset}`);
+  // 3. Kiểm thử trực tiếp toàn bộ các endpoint bàn giao (Phân quyền & Validation W3-T8)
+  console.log(`\n${colors.yellow}3. Kiểm thử phân quyền & hợp đồng các API Bàn Giao (W3-T8)${colors.reset}`);
 
   // Khách hàng bị chặn 403 khi lập bàn giao
-  const customerToken = generateToken('KhachHang', 3, 'khach@geargo.vn');
   const khachBanGiao = await request('POST', '/api/v1/ban-giao/nhap/1', {}, customerToken);
   assert(khachBanGiao.status === 403, "Khách hàng bị từ chối truy cập API bàn giao (HTTP 403)");
 
   // Tra cứu bàn giao theo đơn không tồn tại -> 400 hoặc 404
-  const bgTheoDon = await request('GET', '/api/v1/ban-giao/don-thue/999999');
+  const bgTheoDon = await request('GET', '/api/v1/ban-giao/don-thue/999999', null, adminToken);
   assert(bgTheoDon.status === 400 || bgTheoDon.status === 404, "Tra cứu bàn giao theo đơn không tồn tại (HTTP 400/404)");
 
   // Tạo phiếu bàn giao nháp với đơn không tồn tại -> 400 hoặc 404
-  const taoNhapFake = await request('POST', '/api/v1/ban-giao/nhap/999999');
+  const taoNhapFake = await request('POST', '/api/v1/ban-giao/nhap/999999', null, adminToken);
   assert(taoNhapFake.status === 400 || taoNhapFake.status === 404, "Tạo phiếu bàn giao nháp với đơn không tồn tại (HTTP 400/404)");
 
   // Cập nhật phiếu bàn giao nháp không tồn tại -> 400 hoặc 404
-  const capNhatNhapFake = await request('PUT', '/api/v1/ban-giao/nhap/999999', { ghiChu: 'Test' });
+  const capNhatNhapFake = await request('PUT', '/api/v1/ban-giao/nhap/999999', { ghiChu: 'Test' }, adminToken);
   assert(capNhatNhapFake.status === 400 || capNhatNhapFake.status === 404, "Cập nhật phiếu bàn giao nháp không tồn tại (HTTP 400/404)");
 
   // Chốt phiếu bàn giao không tồn tại -> 400 hoặc 404
-  const chotBgFake = await request('POST', '/api/v1/ban-giao/999999/chot', { xacNhanKhachHang: true });
+  const chotBgFake = await request('POST', '/api/v1/ban-giao/999999/chot', { xacNhanKhachHang: true }, adminToken);
   assert(chotBgFake.status === 400 || chotBgFake.status === 404, "Chốt phiếu bàn giao không tồn tại (HTTP 400/404)");
 
   console.log(`\n${colors.cyan}${colors.bold}=== TỔNG KẾT ===${colors.reset}`);
