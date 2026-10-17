@@ -18,8 +18,10 @@ public static class DbSeeder
     public static async Task SeedAllAsync(ApplicationDbContext context)
     {
         // ─────────────────────────────────────────────────────────────────────────────
-        // 1. TAI_KHOAN (Tài khoản người dùng)
+        // 1. TAI_KHOAN (Tài khoản người dùng với mật khẩu chuẩn BCrypt: GearGo@2026)
         // ─────────────────────────────────────────────────────────────────────────────
+        var defaultPasswordHash = BCrypt.Net.BCrypt.HashPassword("GearGo@2026", workFactor: 11);
+
         var adminTk = await context.TaiKhoans.FirstOrDefaultAsync(t => t.Email == "admin@geargo.vn");
         if (adminTk == null)
         {
@@ -27,7 +29,7 @@ public static class DbSeeder
             {
                 Email = "admin@geargo.vn",
                 SoDienThoai = "0901000001",
-                MatKhauBam = "hash_geargo_admin",
+                MatKhauBam = defaultPasswordHash,
                 VaiTro = "QuanTriVien",
                 TrangThai = "HoatDong"
             };
@@ -35,6 +37,7 @@ public static class DbSeeder
         }
         else
         {
+            adminTk.MatKhauBam = defaultPasswordHash;
             adminTk.VaiTro = "QuanTriVien";
             adminTk.TrangThai = "HoatDong";
         }
@@ -46,7 +49,7 @@ public static class DbSeeder
             {
                 Email = "staff@geargo.vn",
                 SoDienThoai = "0901000002",
-                MatKhauBam = "hash_geargo_staff",
+                MatKhauBam = defaultPasswordHash,
                 VaiTro = "NhanVien",
                 TrangThai = "HoatDong"
             };
@@ -54,8 +57,27 @@ public static class DbSeeder
         }
         else
         {
+            staffTk.MatKhauBam = defaultPasswordHash;
             staffTk.VaiTro = "NhanVien";
             staffTk.TrangThai = "HoatDong";
+        }
+
+        var staffTk2 = await context.TaiKhoans.FirstOrDefaultAsync(t => t.Email == "tuan.staff@geargo.vn");
+        if (staffTk2 == null)
+        {
+            staffTk2 = new TaiKhoan
+            {
+                Email = "tuan.staff@geargo.vn",
+                SoDienThoai = "0901000005",
+                MatKhauBam = defaultPasswordHash,
+                VaiTro = "NhanVien",
+                TrangThai = "HoatDong"
+            };
+            context.TaiKhoans.Add(staffTk2);
+        }
+        else
+        {
+            staffTk2.MatKhauBam = defaultPasswordHash;
         }
 
         var customerTk1 = await context.TaiKhoans.FirstOrDefaultAsync(t => t.Email == "customer@geargo.vn");
@@ -65,25 +87,54 @@ public static class DbSeeder
             {
                 Email = "customer@geargo.vn",
                 SoDienThoai = "0901000003",
-                MatKhauBam = "hash_geargo_customer",
+                MatKhauBam = defaultPasswordHash,
                 VaiTro = "KhachHang",
                 TrangThai = "HoatDong"
             };
             context.TaiKhoans.Add(customerTk1);
         }
+        else
+        {
+            customerTk1.MatKhauBam = defaultPasswordHash;
+        }
 
-        var customerTk2 = await context.TaiKhoans.FirstOrDefaultAsync(t => t.Email == "other@geargo.vn");
+        var customerTk2 = await context.TaiKhoans.FirstOrDefaultAsync(t => t.Email == "quang.kh@geargo.vn" || t.Email == "other@geargo.vn");
         if (customerTk2 == null)
         {
             customerTk2 = new TaiKhoan
             {
-                Email = "other@geargo.vn",
-                SoDienThoai = "0901000004",
-                MatKhauBam = "hash_geargo_customer2",
+                Email = "quang.kh@geargo.vn",
+                SoDienThoai = "0918765432",
+                MatKhauBam = defaultPasswordHash,
                 VaiTro = "KhachHang",
                 TrangThai = "HoatDong"
             };
             context.TaiKhoans.Add(customerTk2);
+        }
+        else
+        {
+            customerTk2.Email = "quang.kh@geargo.vn";
+            customerTk2.SoDienThoai = "0918765432";
+            customerTk2.MatKhauBam = defaultPasswordHash;
+        }
+
+        var lockedTk = await context.TaiKhoans.FirstOrDefaultAsync(t => t.Email == "locked.kh@geargo.vn");
+        if (lockedTk == null)
+        {
+            lockedTk = new TaiKhoan
+            {
+                Email = "locked.kh@geargo.vn",
+                SoDienThoai = "0909999888",
+                MatKhauBam = defaultPasswordHash,
+                VaiTro = "KhachHang",
+                TrangThai = "BiKhoa",
+                LyDoKhoa = "Vi phạm điều khoản nhiều lần làm hỏng thiết bị không bồi thường"
+            };
+            context.TaiKhoans.Add(lockedTk);
+        }
+        else
+        {
+            lockedTk.MatKhauBam = defaultPasswordHash;
         }
 
         await context.SaveChangesAsync();
@@ -97,10 +148,14 @@ public static class DbSeeder
             khach1 = new KhachHang
             {
                 MaTaiKhoan = customerTk1.MaTaiKhoan,
-                HoTen = "Nguyễn Văn Khách Hàng",
-                DiaChi = "123 Cầu Giấy, Hà Nội"
+                HoTen = "Nguyễn Văn An",
+                DiaChi = "123 Cầu Giấy, Phường Dịch Vọng, Hà Nội"
             };
             context.KhachHangs.Add(khach1);
+        }
+        else
+        {
+            khach1.HoTen = "Nguyễn Văn An";
         }
 
         var khach2 = await context.KhachHangs.FirstOrDefaultAsync(k => k.MaTaiKhoan == customerTk2.MaTaiKhoan);
@@ -109,10 +164,26 @@ public static class DbSeeder
             khach2 = new KhachHang
             {
                 MaTaiKhoan = customerTk2.MaTaiKhoan,
-                HoTen = "Trần Thị Lan",
-                DiaChi = "456 Lê Lợi, TP. Hồ Chí Minh"
+                HoTen = "Trần Minh Quang",
+                DiaChi = "456 Lê Lợi, Quận 1, TP. Hồ Chí Minh"
             };
             context.KhachHangs.Add(khach2);
+        }
+        else
+        {
+            khach2.HoTen = "Trần Minh Quang";
+        }
+
+        var khach3 = await context.KhachHangs.FirstOrDefaultAsync(k => k.MaTaiKhoan == lockedTk.MaTaiKhoan);
+        if (khach3 == null)
+        {
+            khach3 = new KhachHang
+            {
+                MaTaiKhoan = lockedTk.MaTaiKhoan,
+                HoTen = "Hoàng Văn Khóa",
+                DiaChi = "789 Nguyễn Trãi, Thanh Xuân, Hà Nội"
+            };
+            context.KhachHangs.Add(khach3);
         }
 
         var nhanVien1 = await context.NhanViens.FirstOrDefaultAsync(n => n.MaTaiKhoan == adminTk.MaTaiKhoan);
@@ -121,7 +192,7 @@ public static class DbSeeder
             nhanVien1 = new NhanVien
             {
                 MaTaiKhoan = adminTk.MaTaiKhoan,
-                HoTen = "Quản trị viên hệ thống",
+                HoTen = "Nguyễn Văn Quản Trị",
                 TrangThaiLamViec = "DangLamViec"
             };
             context.NhanViens.Add(nhanVien1);
@@ -133,10 +204,22 @@ public static class DbSeeder
             nhanVien2 = new NhanVien
             {
                 MaTaiKhoan = staffTk.MaTaiKhoan,
-                HoTen = "Nguyễn Văn Vận Hành",
+                HoTen = "Lê Thị Mai (NV Kho)",
                 TrangThaiLamViec = "DangLamViec"
             };
             context.NhanViens.Add(nhanVien2);
+        }
+
+        var nhanVien3 = await context.NhanViens.FirstOrDefaultAsync(n => n.MaTaiKhoan == staffTk2.MaTaiKhoan);
+        if (nhanVien3 == null)
+        {
+            nhanVien3 = new NhanVien
+            {
+                MaTaiKhoan = staffTk2.MaTaiKhoan,
+                HoTen = "Trần Tuấn (NV Vận Hành)",
+                TrangThaiLamViec = "DangLamViec"
+            };
+            context.NhanViens.Add(nhanVien3);
         }
 
         await context.SaveChangesAsync();
@@ -894,6 +977,615 @@ public static class DbSeeder
                     LyDo = "Lập phụ phí vệ sinh đặc biệt"
                 }
             );
+            await context.SaveChangesAsync();
+        }
+
+        // 40. BỔ SUNG CÁC ĐƠN HÀNG VÀ KỊCH BẢN THỰC TẾ THEO 71 SEQUENCE DIAGRAMS
+        await SeedScenarioOrdersAsync(context, adminTk, staffTk, customerTk1, customerTk2, chinhSach1, nhanVien1, nhanVien2);
+    }
+
+    /// <summary>
+    /// Khởi tạo các đơn hàng mẫu phủ toàn diện 10 phân hệ nghiệp vụ / 71 Sequence Diagrams:
+    /// - DT-20241120-008: Hoàn tất (Đã nhận trả, đối soát hoàn cọc 100%, có Đánh giá 5 sao kèm ảnh)
+    /// - DT-20241210-042: Đã xác nhận (Đã thanh toán cọc và tiền thuê, giữ chỗ DaXacNhan, chờ kho chuẩn bị)
+    /// - DT-20241208-015: Đang thuê - Trả một phần (Đã trả đèn đợt 1, lều vẫn đang giữ thuê)
+    /// - DT-20241201-099: Quá hạn (Quá giờ trả 48 giờ chưa trả, cảnh báo phạt trễ 150%)
+    /// - DT-20241205-003: Khách hủy (Hủy trước 48h, hoàn 100% tiền cọc)
+    /// </summary>
+    private static async Task SeedScenarioOrdersAsync(
+        ApplicationDbContext context,
+        TaiKhoan adminTk,
+        TaiKhoan staffTk,
+        TaiKhoan customerTk1,
+        TaiKhoan customerTk2,
+        ChinhSach chinhSach1,
+        NhanVien nhanVien1,
+        NhanVien nhanVien2)
+    {
+        // ── 1. Đảm bảo danh mục và sản phẩm bổ sung (Đèn & Túi ngủ) ──
+        var dmBanGhe = await context.DanhMucSanPhams.FirstAsync(d => d.TenDanhMuc == "Bàn ghế & Đèn cắm trại");
+        
+        var dmSleep = await context.DanhMucSanPhams.FirstOrDefaultAsync(d => d.TenDanhMuc == "Túi ngủ & Đệm hơi");
+        if (dmSleep == null)
+        {
+            dmSleep = new DanhMucSanPham
+            {
+                TenDanhMuc = "Túi ngủ & Đệm hơi",
+                MoTa = "Túi ngủ lông vũ mùa đông, đệm tự bơm hơi cách nhiệt",
+                ThuTuHienThi = 4,
+                TrangThai = "HoatDong"
+            };
+            context.DanhMucSanPhams.Add(dmSleep);
+            await context.SaveChangesAsync();
+        }
+
+        var spLeu4 = await context.SanPhams.FirstAsync(s => s.MaSanPhamHienThi == "SP-LEU-001");
+        var spBepGa = await context.SanPhams.FirstAsync(s => s.MaSanPhamHienThi == "SP-BEP-001");
+        var spGhe = await context.SanPhams.FirstAsync(s => s.MaSanPhamHienThi == "SP-GHE-001");
+
+        var spDen = await context.SanPhams.FirstOrDefaultAsync(s => s.MaSanPhamHienThi == "SP-DEN-001");
+        if (spDen == null)
+        {
+            spDen = new SanPham
+            {
+                MaDanhMuc = dmBanGhe.MaDanhMuc,
+                MaSanPhamHienThi = "SP-DEN-001",
+                TenSanPham = "Đèn Bão LED Vintage Dã Ngoại Barebones",
+                ThuongHieu = "Barebones",
+                MoTa = "Đèn LED ánh sáng vàng ấm vintage, pin dùng liên tục 20 giờ, chống nước nhẹ IPX4",
+                SucChua = 1,
+                KichThuoc = "15 x 15 x 24 cm",
+                ThongSo = "Độ sáng 200 Lumens, cổng sạc Type-C",
+                GiaThueMoiNgay = 40000,
+                MucCocMoiThietBi = 100000,
+                GiaTriBoiThuong = 400000,
+                TrangThaiKinhDoanh = TrangThaiKinhDoanh.DangKinhDoanh
+            };
+            context.SanPhams.Add(spDen);
+            await context.SaveChangesAsync();
+
+            context.HinhAnhSanPhams.Add(new HinhAnhSanPham
+            {
+                MaSanPham = spDen.MaSanPham,
+                DuongDan = "https://images.unsplash.com/photo-1510312305653-8ed496efae75?w=600",
+                LaAnhChinh = true,
+                ThuTu = 1
+            });
+            await context.SaveChangesAsync();
+        }
+
+        var spTui = await context.SanPhams.FirstOrDefaultAsync(s => s.MaSanPhamHienThi == "SP-TUI-001");
+        if (spTui == null)
+        {
+            spTui = new SanPham
+            {
+                MaDanhMuc = dmSleep.MaDanhMuc,
+                MaSanPhamHienThi = "SP-TUI-001",
+                TenSanPham = "Túi Ngủ Mùa Đông Naturehike Goose Down",
+                ThuongHieu = "Naturehike",
+                MoTa = "Túi ngủ lông ngỗng siêu nhẹ, giữ nhiệt nhiệt độ -5°C đến 5°C, chống thấm ẩm ngoài",
+                SucChua = 1,
+                KichThuoc = "210 x 80 cm",
+                ThongSo = "Trọng lượng 800g, nén nhỏ gọn",
+                GiaThueMoiNgay = 60000,
+                MucCocMoiThietBi = 200000,
+                GiaTriBoiThuong = 800000,
+                TrangThaiKinhDoanh = TrangThaiKinhDoanh.DangKinhDoanh
+            };
+            context.SanPhams.Add(spTui);
+            await context.SaveChangesAsync();
+
+            context.HinhAnhSanPhams.Add(new HinhAnhSanPham
+            {
+                MaSanPham = spTui.MaSanPham,
+                DuongDan = "https://images.unsplash.com/photo-1517824806704-9040b037703b?w=600",
+                LaAnhChinh = true,
+                ThuTu = 1
+            });
+            await context.SaveChangesAsync();
+        }
+
+        // ── 2. Đảm bảo thiết bị bổ sung trong kho ──
+        var ctpnFirst = await context.ChiTietPhieuNhaps.FirstAsync();
+
+        var tbLeu2 = await context.ThietBis.FirstOrDefaultAsync(t => t.MaThietBiHienThi == "TB-LEU-002");
+        var tbLeu3 = await context.ThietBis.FirstOrDefaultAsync(t => t.MaThietBiHienThi == "TB-LEU-003");
+        if (tbLeu3 == null)
+        {
+            tbLeu3 = new ThietBi
+            {
+                MaChiTietPhieuNhap = ctpnFirst.MaChiTietPhieuNhap,
+                MaSanPhamHienTai = spLeu4.MaSanPham,
+                MaThietBiHienThi = "TB-LEU-003",
+                NgayNhap = DateTime.UtcNow.AddMonths(-2),
+                GiaNhap = 1200000,
+                TinhTrang = "Mới 100%",
+                PhuKienDiKem = "Đầy đủ phụ kiện tiêu chuẩn",
+                TrangThaiSuDung = TrangThaiThietBi.SanSang,
+                GhiChu = "Thiết bị dự phòng sẵn sàng cho thuê"
+            };
+            context.ThietBis.Add(tbLeu3);
+            await context.SaveChangesAsync();
+        }
+
+        var tbDen1 = await context.ThietBis.FirstOrDefaultAsync(t => t.MaThietBiHienThi == "TB-DEN-001");
+        if (tbDen1 == null)
+        {
+            tbDen1 = new ThietBi
+            {
+                MaChiTietPhieuNhap = ctpnFirst.MaChiTietPhieuNhap,
+                MaSanPhamHienTai = spDen.MaSanPham,
+                MaThietBiHienThi = "TB-DEN-001",
+                NgayNhap = DateTime.UtcNow.AddMonths(-2),
+                GiaNhap = 280000,
+                TinhTrang = "Tốt",
+                PhuKienDiKem = "Cáp sạc Type-C, móc treo",
+                TrangThaiSuDung = TrangThaiThietBi.SanSang,
+                GhiChu = "Sẵn sàng"
+            };
+            context.ThietBis.Add(tbDen1);
+            await context.SaveChangesAsync();
+        }
+
+        var tbTui1 = await context.ThietBis.FirstOrDefaultAsync(t => t.MaThietBiHienThi == "TB-TUI-001");
+        if (tbTui1 == null)
+        {
+            tbTui1 = new ThietBi
+            {
+                MaChiTietPhieuNhap = ctpnFirst.MaChiTietPhieuNhap,
+                MaSanPhamHienTai = spTui.MaSanPham,
+                MaThietBiHienThi = "TB-TUI-001",
+                NgayNhap = DateTime.UtcNow.AddMonths(-2),
+                GiaNhap = 500000,
+                TinhTrang = "Tốt",
+                PhuKienDiKem = "Bao nén chống nước",
+                TrangThaiSuDung = TrangThaiThietBi.SanSang,
+                GhiChu = "Đã giặt sấy thơm tho"
+            };
+            context.ThietBis.Add(tbTui1);
+            await context.SaveChangesAsync();
+        }
+
+        var tbTui2 = await context.ThietBis.FirstOrDefaultAsync(t => t.MaThietBiHienThi == "TB-TUI-002");
+        if (tbTui2 == null)
+        {
+            tbTui2 = new ThietBi
+            {
+                MaChiTietPhieuNhap = ctpnFirst.MaChiTietPhieuNhap,
+                MaSanPhamHienTai = spTui.MaSanPham,
+                MaThietBiHienThi = "TB-TUI-002",
+                NgayNhap = DateTime.UtcNow.AddMonths(-2),
+                GiaNhap = 500000,
+                TinhTrang = "Tốt",
+                PhuKienDiKem = "Bao nén chống nước",
+                TrangThaiSuDung = TrangThaiThietBi.SanSang,
+                GhiChu = "Sẵn sàng"
+            };
+            context.ThietBis.Add(tbTui2);
+            await context.SaveChangesAsync();
+        }
+
+        var khach1 = await context.KhachHangs.FirstAsync(k => k.MaTaiKhoan == customerTk1.MaTaiKhoan);
+        var khach2 = await context.KhachHangs.FirstAsync(k => k.MaTaiKhoan == customerTk2.MaTaiKhoan);
+
+        // ── 3. Đơn hàng hoàn tất (DT-20241120-008) có Đánh giá 5 sao ──
+        var donComp = await context.DonThues.FirstOrDefaultAsync(d => d.MaDonHienThi == "DT-20241120-008");
+        if (donComp == null)
+        {
+            donComp = new DonThue
+            {
+                MaKhachHang = khach1.MaKhachHang,
+                MaChinhSach = chinhSach1.MaChinhSach,
+                MaDonHienThi = "DT-20241120-008",
+                NgayDat = DateTime.UtcNow.AddDays(-10),
+                GioNhanDuKien = DateTime.UtcNow.AddDays(-8),
+                GioTraDuKien = DateTime.UtcNow.AddDays(-5),
+                TenNguoiNhan = khach1.HoTen,
+                SoDienThoaiNguoiNhan = "0901000003",
+                EmailLienHe = customerTk1.Email,
+                TongTienThueTruocGiam = 750000,
+                TongTienGiam = 0,
+                TongTienCoc = 900000,
+                TrangThai = TrangThaiDonThue.HoanTat,
+                TienThueGiuLaiKhiHuy = 0,
+                ThoiDiemHoanTat = DateTime.UtcNow.AddDays(-5),
+                GhiChu = "Đơn cắm trại Ba Vì đã đối soát hoàn tất 100% cọc"
+            };
+            context.DonThues.Add(donComp);
+            await context.SaveChangesAsync();
+
+            var ctdComp1 = new ChiTietDonThue
+            {
+                MaDonThue = donComp.MaDonThue,
+                MaSanPham = spLeu4.MaSanPham,
+                TenSanPhamLucDat = spLeu4.TenSanPham,
+                SoLuong = 1,
+                SoNgayTinhTien = 3,
+                DonGiaThueMoiNgay = 150000,
+                TienGiam = 0,
+                MucCocMoiThietBi = 500000,
+                GiaTriBoiThuongMoiThietBi = 2500000,
+                PhuKienVaMucBoiThuongLucDat = "Cọc lều, dây chằng, bao đựng"
+            };
+            var ctdComp2 = new ChiTietDonThue
+            {
+                MaDonThue = donComp.MaDonThue,
+                MaSanPham = spTui.MaSanPham,
+                TenSanPhamLucDat = spTui.TenSanPham,
+                SoLuong = 2,
+                SoNgayTinhTien = 3,
+                DonGiaThueMoiNgay = 50000,
+                TienGiam = 0,
+                MucCocMoiThietBi = 200000,
+                GiaTriBoiThuongMoiThietBi = 800000,
+                PhuKienVaMucBoiThuongLucDat = "Bao nén chống nước"
+            };
+            context.ChiTietDonThues.AddRange(ctdComp1, ctdComp2);
+            await context.SaveChangesAsync();
+
+            // Thanh toán
+            var ttComp = new ThanhToan
+            {
+                MaDonThue = donComp.MaDonThue,
+                MaNguoiGhiNhan = nhanVien2.MaNhanVien,
+                MaYeuCau = "PAY_INIT_DT008",
+                CongThanhToan = "VNPay",
+                MaGiaoDichCong = "VNP_202411_008",
+                TongSoTien = 1650000,
+                PhuongThuc = "VNPayQR",
+                ThoiDiemTao = DateTime.UtcNow.AddDays(-10),
+                ThoiDiemThanhCong = DateTime.UtcNow.AddDays(-10),
+                TrangThai = "ThanhCong"
+            };
+            context.ThanhToans.Add(ttComp);
+            await context.SaveChangesAsync();
+
+            var ctttCompCoc = new ChiTietThanhToan { MaThanhToan = ttComp.MaThanhToan, MucDich = "TienCoc", SoTien = 900000 };
+            context.ChiTietThanhToans.AddRange(
+                new ChiTietThanhToan { MaThanhToan = ttComp.MaThanhToan, MucDich = "TienThue", SoTien = 750000 },
+                ctttCompCoc
+            );
+            await context.SaveChangesAsync();
+
+            // Phân công & Bàn giao
+            var pc1 = new PhanCongThietBi { MaChiTietDon = ctdComp1.MaChiTietDon, MaThietBi = tbLeu2?.MaThietBi ?? 2, MaNguoiPhanCong = nhanVien2.MaNhanVien, ThoiDiemPhanCong = DateTime.UtcNow.AddDays(-8), TrangThai = "DaBanGiao" };
+            var pc2 = new PhanCongThietBi { MaChiTietDon = ctdComp2.MaChiTietDon, MaThietBi = tbTui1.MaThietBi, MaNguoiPhanCong = nhanVien2.MaNhanVien, ThoiDiemPhanCong = DateTime.UtcNow.AddDays(-8), TrangThai = "DaBanGiao" };
+            context.PhanCongThietBis.AddRange(pc1, pc2);
+            await context.SaveChangesAsync();
+
+            var pbgComp = new PhieuBanGiao
+            {
+                MaDonThue = donComp.MaDonThue,
+                MaNhanVien = nhanVien2.MaNhanVien,
+                ThoiDiemLap = DateTime.UtcNow.AddDays(-8),
+                ThoiDiemGiaoThucTe = DateTime.UtcNow.AddDays(-8),
+                TenNhanVienLucGiao = nhanVien2.HoTen,
+                TenNguoiNhanThucTe = khach1.HoTen,
+                ThoiDiemKhachXacNhan = DateTime.UtcNow.AddDays(-8),
+                TrangThai = "DaGiao"
+            };
+            context.PhieuBanGiaos.Add(pbgComp);
+            await context.SaveChangesAsync();
+
+            var ctbg1 = new ChiTietBanGiao { MaPhieuBanGiao = pbgComp.MaPhieuBanGiao, MaPhanCong = pc1.MaPhanCong, TinhTrangTruocThue = "Lều tốt sạch sẽ", GhiChu = "Đủ 10 cọc và 4 dây" };
+            var ctbg2 = new ChiTietBanGiao { MaPhieuBanGiao = pbgComp.MaPhieuBanGiao, MaPhanCong = pc2.MaPhanCong, TinhTrangTruocThue = "Túi ngủ tốt", GhiChu = "Kèm bao nén" };
+            context.ChiTietBanGiaos.AddRange(ctbg1, ctbg2);
+            await context.SaveChangesAsync();
+
+            // Nhận trả
+            var pntComp = new PhieuNhanTra
+            {
+                MaDonThue = donComp.MaDonThue,
+                MaNhanVien = nhanVien2.MaNhanVien,
+                MaPhieuHienThi = "PNT-DT008-01",
+                LanTra = 1,
+                LaLanTraCuoi = true,
+                ThoiDiemLap = DateTime.UtcNow.AddDays(-5),
+                TenNhanVienLucNhan = nhanVien2.HoTen,
+                TrangThai = TrangThaiPhieuNhanTra.DaChot
+            };
+            context.PhieuNhanTras.Add(pntComp);
+            await context.SaveChangesAsync();
+
+            context.ChiTietNhanTras.AddRange(
+                new ChiTietNhanTra { MaPhieuNhanTra = pntComp.MaPhieuNhanTra, MaChiTietBanGiao = ctbg1.MaChiTietBanGiao, ThoiDiemTraThucTe = DateTime.UtcNow.AddDays(-5), KetLuan = "DatChuan", TinhTrangSauThue = "Lều nguyên vẹn sạch sẽ", TrangThaiXuLy = "DaXuLy" },
+                new ChiTietNhanTra { MaPhieuNhanTra = pntComp.MaPhieuNhanTra, MaChiTietBanGiao = ctbg2.MaChiTietBanGiao, ThoiDiemTraThucTe = DateTime.UtcNow.AddDays(-5), KetLuan = "DatChuan", TinhTrangSauThue = "Túi ngủ sạch sẽ", TrangThaiXuLy = "DaXuLy" }
+            );
+            await context.SaveChangesAsync();
+
+            // Đối soát hoàn cọc
+            var dsComp = new DoiSoatTienCoc
+            {
+                MaDonThue = donComp.MaDonThue,
+                MaNguoiLap = nhanVien2.MaNhanVien,
+                LoaiDoiSoat = "DoiSoatBanDau",
+                TienCocDuocDoiSoat = 900000,
+                TongPhuPhiDuocDuyet = 0,
+                SoTienCanHoan = 900000,
+                SoTienCanThuThem = 0,
+                BangTinhDoiSoat = "{\"tienCoc\":900000,\"phuPhi\":0,\"hoan\":900000}",
+                ThoiDiemLap = DateTime.UtcNow.AddDays(-5),
+                TrangThai = "HoanTat"
+            };
+            context.DoiSoatTienCocs.Add(dsComp);
+            await context.SaveChangesAsync();
+
+            context.GiaoDichDoiSoats.Add(new GiaoDichDoiSoat { MaDoiSoat = dsComp.MaDoiSoat, MaChiTietThanhToan = ctttCompCoc.MaChiTietThanhToan });
+            context.HoanTiens.Add(new HoanTien
+            {
+                MaChiTietThanhToanGoc = ctttCompCoc.MaChiTietThanhToan,
+                MaDoiSoat = dsComp.MaDoiSoat,
+                MaNguoiXuLy = nhanVien1.MaNhanVien,
+                MaYeuCau = $"HT:DS:{dsComp.MaDoiSoat}:{ctttCompCoc.MaChiTietThanhToan}:L1",
+                LoaiHoan = LoaiHoanTien.HoanCocDoiSoat,
+                SoTien = 900000,
+                LyDo = "Hoàn 100% tiền cọc đơn hoàn tất",
+                ThoiDiemYeuCau = DateTime.UtcNow.AddDays(-5),
+                ThoiDiemThanhCong = DateTime.UtcNow.AddDays(-5),
+                TrangThai = TrangThaiHoanTien.ThanhCong
+            });
+            await context.SaveChangesAsync();
+
+            // Đánh giá 5 sao
+            context.DanhGias.AddRange(
+                new DanhGia
+                {
+                    MaChiTietDon = ctdComp1.MaChiTietDon,
+                    SoSao = 5,
+                    NoiDung = "Lều rất chắc chắn, chống mưa tốt trong chuyến đi Ba Vì. Đầy đủ cọc và dây chằng phụ kiện!",
+                    DanhSachAnh = "[\"https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?w=600\"]",
+                    NgayTao = DateTime.UtcNow.AddDays(-5),
+                    TrangThaiHienThi = "HienThi"
+                },
+                new DanhGia
+                {
+                    MaChiTietDon = ctdComp2.MaChiTietDon,
+                    SoSao = 5,
+                    NoiDung = "Túi ngủ lông ngỗng rất ấm, giữ nhiệt ban đêm ở núi tuyệt vời, sạch sẽ và nén gọn gàng.",
+                    DanhSachAnh = "[\"https://images.unsplash.com/photo-1517824806704-9040b037703b?w=600\"]",
+                    NgayTao = DateTime.UtcNow.AddDays(-5),
+                    TrangThaiHienThi = "HienThi"
+                }
+            );
+            await context.SaveChangesAsync();
+        }
+
+        // ── 4. Đơn hàng đã xác nhận (DT-20241210-042) ──
+        var donConf = await context.DonThues.FirstOrDefaultAsync(d => d.MaDonHienThi == "DT-20241210-042");
+        if (donConf == null)
+        {
+            donConf = new DonThue
+            {
+                MaKhachHang = khach1.MaKhachHang,
+                MaChinhSach = chinhSach1.MaChinhSach,
+                MaDonHienThi = "DT-20241210-042",
+                NgayDat = DateTime.UtcNow.AddDays(-1),
+                GioNhanDuKien = DateTime.UtcNow.AddDays(2),
+                GioTraDuKien = DateTime.UtcNow.AddDays(5),
+                TenNguoiNhan = khach1.HoTen,
+                SoDienThoaiNguoiNhan = "0901000003",
+                EmailLienHe = customerTk1.Email,
+                TongTienThueTruocGiam = 900000,
+                TongTienGiam = 90000,
+                TongTienCoc = 1000000,
+                KhuyenMaiLucDat = "CAMPGO10",
+                TrangThai = TrangThaiDonThue.DaXacNhan,
+                TienThueGiuLaiKhiHuy = 0,
+                GhiChu = "Đã thanh toán cọc và tiền thuê, chờ chuẩn bị thiết bị"
+            };
+            context.DonThues.Add(donConf);
+            await context.SaveChangesAsync();
+
+            var ctdConf = new ChiTietDonThue
+            {
+                MaDonThue = donConf.MaDonThue,
+                MaSanPham = spLeu4.MaSanPham,
+                TenSanPhamLucDat = spLeu4.TenSanPham,
+                SoLuong = 2,
+                SoNgayTinhTien = 3,
+                DonGiaThueMoiNgay = 150000,
+                TienGiam = 90000,
+                MucCocMoiThietBi = 500000,
+                GiaTriBoiThuongMoiThietBi = 2500000
+            };
+            context.ChiTietDonThues.Add(ctdConf);
+            await context.SaveChangesAsync();
+
+            context.GiuChos.Add(new GiuCho
+            {
+                MaChiTietDon = ctdConf.MaChiTietDon,
+                ThoiDiemTao = DateTime.UtcNow.AddDays(-1),
+                ThoiDiemHetHan = DateTime.UtcNow.AddDays(5),
+                TrangThai = TrangThaiGiuCho.DaXacNhan
+            });
+
+            var ttConf = new ThanhToan
+            {
+                MaDonThue = donConf.MaDonThue,
+                MaNguoiGhiNhan = nhanVien2.MaNhanVien,
+                MaYeuCau = "PAY_INIT_DT042",
+                CongThanhToan = "VNPay",
+                MaGiaoDichCong = "VNP_202412_042",
+                TongSoTien = 1810000,
+                PhuongThuc = "VNPayQR",
+                ThoiDiemTao = DateTime.UtcNow.AddDays(-1),
+                ThoiDiemThanhCong = DateTime.UtcNow.AddDays(-1),
+                TrangThai = "ThanhCong"
+            };
+            context.ThanhToans.Add(ttConf);
+            await context.SaveChangesAsync();
+
+            context.ChiTietThanhToans.AddRange(
+                new ChiTietThanhToan { MaThanhToan = ttConf.MaThanhToan, MucDich = "TienThue", SoTien = 810000 },
+                new ChiTietThanhToan { MaThanhToan = ttConf.MaThanhToan, MucDich = "TienCoc", SoTien = 1000000 }
+            );
+            await context.SaveChangesAsync();
+        }
+
+        // ── 5. Đơn hàng đang thuê có trả một phần (DT-20241208-015) ──
+        var donPartial = await context.DonThues.FirstOrDefaultAsync(d => d.MaDonHienThi == "DT-20241208-015");
+        if (donPartial == null)
+        {
+            donPartial = new DonThue
+            {
+                MaKhachHang = khach2.MaKhachHang,
+                MaChinhSach = chinhSach1.MaChinhSach,
+                MaDonHienThi = "DT-20241208-015",
+                NgayDat = DateTime.UtcNow.AddDays(-4),
+                GioNhanDuKien = DateTime.UtcNow.AddDays(-3),
+                GioTraDuKien = DateTime.UtcNow.AddDays(2),
+                TenNguoiNhan = khach2.HoTen,
+                SoDienThoaiNguoiNhan = "0918765432",
+                EmailLienHe = customerTk2.Email,
+                TongTienThueTruocGiam = 760000,
+                TongTienGiam = 0,
+                TongTienCoc = 600000,
+                TrangThai = TrangThaiDonThue.DangThue,
+                GhiChu = "Đang thuê có trả 1 phần đèn trước đợt 1"
+            };
+            context.DonThues.Add(donPartial);
+            await context.SaveChangesAsync();
+
+            var ctdPart1 = new ChiTietDonThue
+            {
+                MaDonThue = donPartial.MaDonThue,
+                MaSanPham = spLeu4.MaSanPham,
+                TenSanPhamLucDat = spLeu4.TenSanPham,
+                SoLuong = 1,
+                SoNgayTinhTien = 4,
+                DonGiaThueMoiNgay = 150000,
+                MucCocMoiThietBi = 500000,
+                GiaTriBoiThuongMoiThietBi = 2500000
+            };
+            var ctdPart2 = new ChiTietDonThue
+            {
+                MaDonThue = donPartial.MaDonThue,
+                MaSanPham = spDen.MaSanPham,
+                TenSanPhamLucDat = spDen.TenSanPham,
+                SoLuong = 1,
+                SoNgayTinhTien = 4,
+                DonGiaThueMoiNgay = 40000,
+                MucCocMoiThietBi = 100000,
+                GiaTriBoiThuongMoiThietBi = 400000
+            };
+            context.ChiTietDonThues.AddRange(ctdPart1, ctdPart2);
+            await context.SaveChangesAsync();
+
+            var pcPart1 = new PhanCongThietBi { MaChiTietDon = ctdPart1.MaChiTietDon, MaThietBi = 1, MaNguoiPhanCong = nhanVien2.MaNhanVien, ThoiDiemPhanCong = DateTime.UtcNow.AddDays(-3), TrangThai = "DaBanGiao" };
+            var pcPart2 = new PhanCongThietBi { MaChiTietDon = ctdPart2.MaChiTietDon, MaThietBi = tbDen1.MaThietBi, MaNguoiPhanCong = nhanVien2.MaNhanVien, ThoiDiemPhanCong = DateTime.UtcNow.AddDays(-3), TrangThai = "DaBanGiao" };
+            context.PhanCongThietBis.AddRange(pcPart1, pcPart2);
+            await context.SaveChangesAsync();
+
+            var pbgPart = new PhieuBanGiao
+            {
+                MaDonThue = donPartial.MaDonThue,
+                MaNhanVien = nhanVien2.MaNhanVien,
+                ThoiDiemLap = DateTime.UtcNow.AddDays(-3),
+                ThoiDiemGiaoThucTe = DateTime.UtcNow.AddDays(-3),
+                TenNhanVienLucGiao = nhanVien2.HoTen,
+                TenNguoiNhanThucTe = khach2.HoTen,
+                ThoiDiemKhachXacNhan = DateTime.UtcNow.AddDays(-3),
+                TrangThai = "DaGiao"
+            };
+            context.PhieuBanGiaos.Add(pbgPart);
+            await context.SaveChangesAsync();
+
+            var ctbgPart2 = new ChiTietBanGiao { MaPhieuBanGiao = pbgPart.MaPhieuBanGiao, MaPhanCong = pcPart2.MaPhanCong, TinhTrangTruocThue = "Đèn pin đầy", GhiChu = "Cáp Type-C" };
+            context.ChiTietBanGiaos.Add(ctbgPart2);
+            await context.SaveChangesAsync();
+
+            var pntPart = new PhieuNhanTra
+            {
+                MaDonThue = donPartial.MaDonThue,
+                MaNhanVien = nhanVien2.MaNhanVien,
+                MaPhieuHienThi = "PNT-DT015-01",
+                LanTra = 1,
+                LaLanTraCuoi = false,
+                ThoiDiemLap = DateTime.UtcNow.AddDays(-1),
+                TenNhanVienLucNhan = nhanVien2.HoTen,
+                TrangThai = TrangThaiPhieuNhanTra.DaChot
+            };
+            context.PhieuNhanTras.Add(pntPart);
+            await context.SaveChangesAsync();
+
+            context.ChiTietNhanTras.Add(new ChiTietNhanTra
+            {
+                MaPhieuNhanTra = pntPart.MaPhieuNhanTra,
+                MaChiTietBanGiao = ctbgPart2.MaChiTietBanGiao,
+                ThoiDiemTraThucTe = DateTime.UtcNow.AddDays(-1),
+                KetLuan = "DatChuan",
+                TinhTrangSauThue = "Khách trả trước đèn LED, hoạt động tốt",
+                TrangThaiXuLy = "DaXuLy"
+            });
+            await context.SaveChangesAsync();
+        }
+
+        // ── 6. Đơn hàng quá hạn (DT-20241201-099) ──
+        var donOverdue = await context.DonThues.FirstOrDefaultAsync(d => d.MaDonHienThi == "DT-20241201-099");
+        if (donOverdue == null)
+        {
+            donOverdue = new DonThue
+            {
+                MaKhachHang = khach2.MaKhachHang,
+                MaChinhSach = chinhSach1.MaChinhSach,
+                MaDonHienThi = "DT-20241201-099",
+                NgayDat = DateTime.UtcNow.AddDays(-7),
+                GioNhanDuKien = DateTime.UtcNow.AddDays(-5),
+                GioTraDuKien = DateTime.UtcNow.AddDays(-2),
+                TenNguoiNhan = khach2.HoTen,
+                SoDienThoaiNguoiNhan = "0918765432",
+                EmailLienHe = customerTk2.Email,
+                TongTienThueTruocGiam = 240000,
+                TongTienGiam = 0,
+                TongTienCoc = 500000,
+                TrangThai = TrangThaiDonThue.DangThue,
+                GhiChu = "Quá hạn trả 48 giờ chưa liên hệ"
+            };
+            context.DonThues.Add(donOverdue);
+            await context.SaveChangesAsync();
+
+            context.ThongBaos.Add(new ThongBao
+            {
+                MaTaiKhoan = customerTk2.MaTaiKhoan,
+                MaDonThue = donOverdue.MaDonThue,
+                MaSuKien = "EVT_DT099_OVERDUE",
+                LoaiSuKien = "CanhBaoQuaHan",
+                TieuDe = "Cảnh báo: Đơn thuê DT-20241201-099 đã quá hạn",
+                NoiDung = "Đơn thuê của bạn đã quá hạn trả 48 giờ. Vui lòng mang thiết bị hoàn trả ngay để tránh phụ phí trễ 150%.",
+                KenhGui = "InApp",
+                TrangThaiGui = "DaGui",
+                ThoiDiemTao = DateTime.UtcNow.AddDays(-2),
+                ThoiDiemGui = DateTime.UtcNow.AddDays(-2)
+            });
+            await context.SaveChangesAsync();
+        }
+
+        // ── 7. Đơn hàng khách hủy (DT-20241205-003) ──
+        var donCancel = await context.DonThues.FirstOrDefaultAsync(d => d.MaDonHienThi == "DT-20241205-003");
+        if (donCancel == null)
+        {
+            donCancel = new DonThue
+            {
+                MaKhachHang = khach1.MaKhachHang,
+                MaChinhSach = chinhSach1.MaChinhSach,
+                MaNguoiHuy = customerTk1.MaTaiKhoan,
+                MaDonHienThi = "DT-20241205-003",
+                NgayDat = DateTime.UtcNow.AddDays(-6),
+                GioNhanDuKien = DateTime.UtcNow.AddDays(-2),
+                GioTraDuKien = DateTime.UtcNow.AddDays(1),
+                TenNguoiNhan = khach1.HoTen,
+                SoDienThoaiNguoiNhan = "0901000003",
+                EmailLienHe = customerTk1.Email,
+                TongTienThueTruocGiam = 350000,
+                TongTienGiam = 0,
+                TongTienCoc = 300000,
+                TrangThai = TrangThaiDonThue.KhachHuy,
+                ThoiDiemHuy = DateTime.UtcNow.AddDays(-5),
+                LyDoHuy = "Khách bận việc gia đình đột xuất",
+                TienThueGiuLaiKhiHuy = 0,
+                GhiChu = "Khách hủy trước 48h được hoàn 100% tiền cọc"
+            };
+            context.DonThues.Add(donCancel);
             await context.SaveChangesAsync();
         }
     }

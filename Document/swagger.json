@@ -573,6 +573,52 @@
         }
       }
     },
+    "/api/v1/admin/bao-cao-van-hanh": {
+      "get": {
+        "tags": [
+          "BaoCaoVanHanh"
+        ],
+        "parameters": [
+          {
+            "name": "TuNgay",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "DenNgay",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "MaDanhMuc",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "MaSanPham",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/api/chuan-bi-don/{donId}": {
       "get": {
         "tags": [
@@ -986,6 +1032,484 @@
         }
       }
     },
+    "/api/v1/doi-soat/theo-don/{donId}/xem-truoc": {
+      "get": {
+        "tags": [
+          "DoiSoat"
+        ],
+        "parameters": [
+          {
+            "name": "donId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/doi-soat/theo-don/{donId}/xem-truoc": {
+      "get": {
+        "tags": [
+          "DoiSoat"
+        ],
+        "parameters": [
+          {
+            "name": "donId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/doi-soat/theo-don/{donId}": {
+      "get": {
+        "tags": [
+          "DoiSoat"
+        ],
+        "parameters": [
+          {
+            "name": "donId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "DoiSoat"
+        ],
+        "parameters": [
+          {
+            "name": "donId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LapDoiSoatRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LapDoiSoatRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/LapDoiSoatRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/doi-soat/theo-don/{donId}": {
+      "get": {
+        "tags": [
+          "DoiSoat"
+        ],
+        "parameters": [
+          {
+            "name": "donId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "DoiSoat"
+        ],
+        "parameters": [
+          {
+            "name": "donId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LapDoiSoatRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LapDoiSoatRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/LapDoiSoatRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/doi-soat/{id}": {
+      "get": {
+        "tags": [
+          "DoiSoat"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/doi-soat/{id}": {
+      "get": {
+        "tags": [
+          "DoiSoat"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/doi-soat/{id}/xac-nhan": {
+      "post": {
+        "tags": [
+          "DoiSoat"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/XacNhanDoiSoatRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/XacNhanDoiSoatRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/XacNhanDoiSoatRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/doi-soat/{id}/xac-nhan": {
+      "post": {
+        "tags": [
+          "DoiSoat"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/XacNhanDoiSoatRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/XacNhanDoiSoatRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/XacNhanDoiSoatRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/doi-soat/{id}/xu-ly-tien": {
+      "post": {
+        "tags": [
+          "DoiSoat"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/doi-soat/{id}/xu-ly-tien": {
+      "post": {
+        "tags": [
+          "DoiSoat"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/doi-soat/{id}/chot": {
+      "post": {
+        "tags": [
+          "DoiSoat"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/doi-soat/{id}/chot": {
+      "post": {
+        "tags": [
+          "DoiSoat"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/doi-soat/{id}/dieu-chinh": {
+      "post": {
+        "tags": [
+          "DoiSoat"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DieuChinhDoiSoatRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DieuChinhDoiSoatRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/DieuChinhDoiSoatRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/doi-soat/{id}/dieu-chinh": {
+      "post": {
+        "tags": [
+          "DoiSoat"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DieuChinhDoiSoatRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DieuChinhDoiSoatRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/DieuChinhDoiSoatRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/api/v1/don-thue": {
       "get": {
         "tags": [
@@ -1144,8 +1668,31 @@
         }
       }
     },
+    "/api/v1/don-thue/{id}/huy/xem-truoc": {
+      "get": {
+        "tags": [
+          "DonThue"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/api/v1/don-thue/{id}/huy": {
-      "put": {
+      "post": {
         "tags": [
           "DonThue"
         ],
@@ -1164,18 +1711,52 @@
           "content": {
             "application/json": {
               "schema": {
-                "type": "string"
+                "$ref": "#/components/schemas/HuyDonRequest"
               }
             },
             "text/json": {
               "schema": {
-                "type": "string"
+                "$ref": "#/components/schemas/HuyDonRequest"
               }
             },
             "application/*+json": {
               "schema": {
-                "type": "string"
+                "$ref": "#/components/schemas/HuyDonRequest"
               }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "DonThue"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {}
+            },
+            "text/json": {
+              "schema": {}
+            },
+            "application/*+json": {
+              "schema": {}
             }
           }
         },
@@ -1290,6 +1871,136 @@
         }
       }
     },
+    "/api/v1/van-hanh/don-thue/{id}/cua-hang-huy/xem-truoc": {
+      "get": {
+        "tags": [
+          "DonThue"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/van-hanh/don-thue/{id}/cua-hang-huy": {
+      "post": {
+        "tags": [
+          "DonThue"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HuyDonRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HuyDonRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/HuyDonRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/van-hanh/don-thue/{id}/khong-den-nhan/xem-truoc": {
+      "get": {
+        "tags": [
+          "DonThue"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/van-hanh/don-thue/{id}/khong-den-nhan": {
+      "post": {
+        "tags": [
+          "DonThue"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KhongDenNhanRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KhongDenNhanRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/KhongDenNhanRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/": {
       "get": {
         "tags": [
@@ -1301,7 +2012,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/StringString<>f__AnonymousType49"
+                  "$ref": "#/components/schemas/StringString<>f__AnonymousType55"
                 }
               }
             }
@@ -1320,7 +2031,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/StringDateTime<>f__AnonymousType50"
+                  "$ref": "#/components/schemas/StringDateTime<>f__AnonymousType56"
                 }
               }
             }
@@ -1487,6 +2198,125 @@
             "application/*+json": {
               "schema": {
                 "$ref": "#/components/schemas/ApKhuyenMaiRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/hoan-tien/theo-don/{donId}": {
+      "get": {
+        "tags": [
+          "HoanTien"
+        ],
+        "parameters": [
+          {
+            "name": "donId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/hoan-tien/{id}/xu-ly": {
+      "post": {
+        "tags": [
+          "HoanTien"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/XuLyHoanRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/XuLyHoanRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/XuLyHoanRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/hoan-tien/{id}/doi-chieu": {
+      "post": {
+        "tags": [
+          "HoanTien"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/hoan-tien/ket-qua": {
+      "post": {
+        "tags": [
+          "HoanTien"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KetQuaHoanCallbackRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KetQuaHoanCallbackRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/KetQuaHoanCallbackRequest"
               }
             }
           }
@@ -1750,6 +2580,494 @@
               "type": "integer",
               "format": "int32",
               "default": 20
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/nhan-tra/theo-don/{donId}": {
+      "get": {
+        "tags": [
+          "NhanTra"
+        ],
+        "parameters": [
+          {
+            "name": "donId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "NhanTra"
+        ],
+        "parameters": [
+          {
+            "name": "donId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TaoNhanTraRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TaoNhanTraRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/TaoNhanTraRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/nhan-tra/theo-don/{donId}": {
+      "get": {
+        "tags": [
+          "NhanTra"
+        ],
+        "parameters": [
+          {
+            "name": "donId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "NhanTra"
+        ],
+        "parameters": [
+          {
+            "name": "donId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TaoNhanTraRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TaoNhanTraRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/TaoNhanTraRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/nhan-tra/theo-don/{donId}/con-no": {
+      "get": {
+        "tags": [
+          "NhanTra"
+        ],
+        "parameters": [
+          {
+            "name": "donId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/nhan-tra/theo-don/{donId}/con-no": {
+      "get": {
+        "tags": [
+          "NhanTra"
+        ],
+        "parameters": [
+          {
+            "name": "donId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/nhan-tra/{phieuId}": {
+      "put": {
+        "tags": [
+          "NhanTra"
+        ],
+        "parameters": [
+          {
+            "name": "phieuId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CapNhatPhieuNhanTraRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CapNhatPhieuNhanTraRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CapNhatPhieuNhanTraRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/nhan-tra/{phieuId}": {
+      "put": {
+        "tags": [
+          "NhanTra"
+        ],
+        "parameters": [
+          {
+            "name": "phieuId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CapNhatPhieuNhanTraRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CapNhatPhieuNhanTraRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CapNhatPhieuNhanTraRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/nhan-tra/{phieuId}/tach-cho-xu-ly": {
+      "post": {
+        "tags": [
+          "NhanTra"
+        ],
+        "parameters": [
+          {
+            "name": "phieuId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TachDongChoXuLyRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TachDongChoXuLyRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/TachDongChoXuLyRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/nhan-tra/{phieuId}/tach-cho-xu-ly": {
+      "post": {
+        "tags": [
+          "NhanTra"
+        ],
+        "parameters": [
+          {
+            "name": "phieuId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TachDongChoXuLyRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TachDongChoXuLyRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/TachDongChoXuLyRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/nhan-tra/{phieuId}/chi-tiet/{chiTietId}/duyet-mat": {
+      "post": {
+        "tags": [
+          "NhanTra"
+        ],
+        "parameters": [
+          {
+            "name": "phieuId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "chiTietId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DuyetMatRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DuyetMatRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/DuyetMatRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/nhan-tra/{phieuId}/chi-tiet/{chiTietId}/duyet-mat": {
+      "post": {
+        "tags": [
+          "NhanTra"
+        ],
+        "parameters": [
+          {
+            "name": "phieuId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "chiTietId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DuyetMatRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DuyetMatRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/DuyetMatRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/nhan-tra/{phieuId}/chot": {
+      "post": {
+        "tags": [
+          "NhanTra"
+        ],
+        "parameters": [
+          {
+            "name": "phieuId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/nhan-tra/{phieuId}/chot": {
+      "post": {
+        "tags": [
+          "NhanTra"
+        ],
+        "parameters": [
+          {
+            "name": "phieuId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
             }
           }
         ],
@@ -2122,6 +3440,906 @@
             }
           }
         },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/phu-phi/theo-don/{donId}": {
+      "get": {
+        "tags": [
+          "PhuPhi"
+        ],
+        "parameters": [
+          {
+            "name": "donId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/phu-phi/theo-don/{donId}": {
+      "get": {
+        "tags": [
+          "PhuPhi"
+        ],
+        "parameters": [
+          {
+            "name": "donId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/phu-phi/goi-y": {
+      "get": {
+        "tags": [
+          "PhuPhi"
+        ],
+        "parameters": [
+          {
+            "name": "maChiTietBanGiao",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/phu-phi/goi-y": {
+      "get": {
+        "tags": [
+          "PhuPhi"
+        ],
+        "parameters": [
+          {
+            "name": "maChiTietBanGiao",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/phu-phi": {
+      "post": {
+        "tags": [
+          "PhuPhi"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LapPhuPhiRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LapPhuPhiRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/LapPhuPhiRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/phu-phi": {
+      "post": {
+        "tags": [
+          "PhuPhi"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LapPhuPhiRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LapPhuPhiRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/LapPhuPhiRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/phu-phi/{id}": {
+      "put": {
+        "tags": [
+          "PhuPhi"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CapNhatPhuPhiRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CapNhatPhuPhiRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CapNhatPhuPhiRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/phu-phi/{id}": {
+      "put": {
+        "tags": [
+          "PhuPhi"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CapNhatPhuPhiRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CapNhatPhuPhiRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CapNhatPhuPhiRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/phu-phi/{id}/duyet": {
+      "post": {
+        "tags": [
+          "PhuPhi"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DuyetPhuPhiRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DuyetPhuPhiRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/DuyetPhuPhiRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/phu-phi/{id}/duyet": {
+      "post": {
+        "tags": [
+          "PhuPhi"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DuyetPhuPhiRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DuyetPhuPhiRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/DuyetPhuPhiRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/phu-phi/{id}/tu-choi": {
+      "post": {
+        "tags": [
+          "PhuPhi"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DuyetPhuPhiRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DuyetPhuPhiRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/DuyetPhuPhiRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/phu-phi/{id}/tu-choi": {
+      "post": {
+        "tags": [
+          "PhuPhi"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DuyetPhuPhiRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DuyetPhuPhiRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/DuyetPhuPhiRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/phu-phi/{id}/tranh-chap": {
+      "post": {
+        "tags": [
+          "PhuPhi"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TranhChapRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TranhChapRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/TranhChapRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/phu-phi/{id}/tranh-chap": {
+      "post": {
+        "tags": [
+          "PhuPhi"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TranhChapRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TranhChapRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/TranhChapRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/phu-phi/{id}/giai-quyet-tranh-chap": {
+      "post": {
+        "tags": [
+          "PhuPhi"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GiaiQuyetTranhChapRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GiaiQuyetTranhChapRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/GiaiQuyetTranhChapRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/phu-phi/{id}/giai-quyet-tranh-chap": {
+      "post": {
+        "tags": [
+          "PhuPhi"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GiaiQuyetTranhChapRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GiaiQuyetTranhChapRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/GiaiQuyetTranhChapRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/phu-phi/{id}/dieu-chinh": {
+      "post": {
+        "tags": [
+          "PhuPhi"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DieuChinhPhiRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DieuChinhPhiRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/DieuChinhPhiRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/phu-phi/{id}/dieu-chinh": {
+      "post": {
+        "tags": [
+          "PhuPhi"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DieuChinhPhiRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DieuChinhPhiRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/DieuChinhPhiRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/qua-han": {
+      "get": {
+        "tags": [
+          "QuaHan"
+        ],
+        "parameters": [
+          {
+            "name": "DenThoiDiem",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "MaDon",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "MaSanPham",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "Trang",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "SoMoiTrang",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/qua-han": {
+      "get": {
+        "tags": [
+          "QuaHan"
+        ],
+        "parameters": [
+          {
+            "name": "DenThoiDiem",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "MaDon",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "MaSanPham",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "Trang",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "SoMoiTrang",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/qua-han/{donId}": {
+      "get": {
+        "tags": [
+          "QuaHan"
+        ],
+        "parameters": [
+          {
+            "name": "donId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/qua-han/{donId}": {
+      "get": {
+        "tags": [
+          "QuaHan"
+        ],
+        "parameters": [
+          {
+            "name": "donId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/qua-han/{donId}/don-bi-anh-huong": {
+      "get": {
+        "tags": [
+          "QuaHan"
+        ],
+        "parameters": [
+          {
+            "name": "donId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/qua-han/{donId}/don-bi-anh-huong": {
+      "get": {
+        "tags": [
+          "QuaHan"
+        ],
+        "parameters": [
+          {
+            "name": "donId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/qua-han/quet-nhac": {
+      "post": {
+        "tags": [
+          "QuaHan"
+        ],
+        "parameters": [
+          {
+            "name": "mocQuet",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/qua-han/quet-nhac": {
+      "post": {
+        "tags": [
+          "QuaHan"
+        ],
+        "parameters": [
+          {
+            "name": "mocQuet",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "OK"
@@ -2585,6 +4803,335 @@
         }
       }
     },
+    "/api/thanh-toan/xac-nhan": {
+      "post": {
+        "tags": [
+          "ThanhToan"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/XacNhanThanhToanRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/XacNhanThanhToanRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/XacNhanThanhToanRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/thanh-toan/doi-soat/{doiSoatId}/thu-bo-sung": {
+      "post": {
+        "tags": [
+          "ThanhToan"
+        ],
+        "parameters": [
+          {
+            "name": "doiSoatId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TaoThuBoSungRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TaoThuBoSungRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/TaoThuBoSungRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/thanh-toan/doi-soat/{doiSoatId}/thu-bo-sung": {
+      "post": {
+        "tags": [
+          "ThanhToan"
+        ],
+        "parameters": [
+          {
+            "name": "doiSoatId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TaoThuBoSungRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TaoThuBoSungRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/TaoThuBoSungRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/thanh-toan/{id}/trang-thai": {
+      "get": {
+        "tags": [
+          "ThanhToan"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/thanh-toan/{id}/trang-thai": {
+      "get": {
+        "tags": [
+          "ThanhToan"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/thanh-toan/callback/thu-bo-sung": {
+      "post": {
+        "tags": [
+          "ThanhToan"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/XuLyCallbackRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/XuLyCallbackRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/XuLyCallbackRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/thanh-toan/callback/thu-bo-sung": {
+      "post": {
+        "tags": [
+          "ThanhToan"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/XuLyCallbackRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/XuLyCallbackRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/XuLyCallbackRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/thanh-toan/can-doi-chieu": {
+      "get": {
+        "tags": [
+          "ThanhToan"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/thanh-toan/can-doi-chieu": {
+      "get": {
+        "tags": [
+          "ThanhToan"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/thanh-toan/{id}/doi-chieu": {
+      "post": {
+        "tags": [
+          "ThanhToan"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DoiChieuGiaoDichRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DoiChieuGiaoDichRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/DoiChieuGiaoDichRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/thanh-toan/{id}/doi-chieu": {
+      "post": {
+        "tags": [
+          "ThanhToan"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DoiChieuGiaoDichRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DoiChieuGiaoDichRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/DoiChieuGiaoDichRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/api/thiet-bi": {
       "get": {
         "tags": [
@@ -2968,6 +5515,25 @@
         },
         "additionalProperties": false
       },
+      "CapNhatPhieuNhanTraRequest": {
+        "required": [
+          "danhSachDong"
+        ],
+        "type": "object",
+        "properties": {
+          "danhSachDong": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DongNhanTraRequest"
+            }
+          },
+          "ghiChu": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
       "CapNhatPhieuNhapRequest": {
         "required": [
           "maNhaCungCap"
@@ -2990,6 +5556,28 @@
           },
           "ghiChu": {
             "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "CapNhatPhuPhiRequest": {
+        "type": "object",
+        "properties": {
+          "soTien": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "lyDo": {
+            "type": "string",
+            "nullable": true
+          },
+          "danhSachAnh": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
             "nullable": true
           }
         },
@@ -3205,6 +5793,64 @@
         },
         "additionalProperties": false
       },
+      "DieuChinhDoiSoatRequest": {
+        "type": "object",
+        "properties": {
+          "danhSachMaPhuPhiDieuChinh": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "format": "int64"
+            },
+            "nullable": true
+          },
+          "lyDo": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "DieuChinhPhiRequest": {
+        "type": "object",
+        "properties": {
+          "soTienDieuChinhCoDau": {
+            "type": "number",
+            "format": "double"
+          },
+          "lyDo": {
+            "type": "string",
+            "nullable": true
+          },
+          "danhSachAnh": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "DoiChieuGiaoDichRequest": {
+        "type": "object",
+        "properties": {
+          "ketLuan": {
+            "type": "string",
+            "nullable": true
+          },
+          "ghiChu": {
+            "type": "string",
+            "nullable": true
+          },
+          "soTienHoan": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
       "DoiHopTacRequest": {
         "required": [
           "lyDo",
@@ -3233,6 +5879,61 @@
           "trangThaiMoi": {
             "minLength": 1,
             "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "DongNhanTraRequest": {
+        "required": [
+          "maChiTietBanGiao"
+        ],
+        "type": "object",
+        "properties": {
+          "maChiTietBanGiao": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "thoiDiemTraThucTe": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "ketLuan": {
+            "type": "string",
+            "nullable": true
+          },
+          "tinhTrangSauThue": {
+            "type": "string",
+            "nullable": true
+          },
+          "phuKienThucNhan": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PhuKienItemDto"
+            },
+            "nullable": true
+          },
+          "phuKienConThieu": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PhuKienItemDto"
+            },
+            "nullable": true
+          },
+          "danhSachAnh": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
+          },
+          "bienBanMat": {
+            "type": "string",
+            "nullable": true
+          },
+          "ghiChu": {
+            "type": "string",
+            "nullable": true
           }
         },
         "additionalProperties": false
@@ -3291,6 +5992,42 @@
         },
         "additionalProperties": false
       },
+      "DuyetMatRequest": {
+        "required": [
+          "lyDo",
+          "maPhuPhiBoiThuong"
+        ],
+        "type": "object",
+        "properties": {
+          "lyDo": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "bienBanMat": {
+            "type": "string",
+            "nullable": true
+          },
+          "maPhuPhiBoiThuong": {
+            "type": "integer",
+            "format": "int64"
+          }
+        },
+        "additionalProperties": false
+      },
+      "DuyetPhuPhiRequest": {
+        "type": "object",
+        "properties": {
+          "ketQua": {
+            "type": "string",
+            "nullable": true
+          },
+          "lyDo": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
       "GanThietBiRequest": {
         "type": "object",
         "properties": {
@@ -3304,6 +6041,42 @@
               "type": "integer",
               "format": "int64"
             },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "GiaiQuyetTranhChapRequest": {
+        "type": "object",
+        "properties": {
+          "ketQua": {
+            "type": "string",
+            "nullable": true
+          },
+          "lyDo": {
+            "type": "string",
+            "nullable": true
+          },
+          "soTienDeXuatSauXuLy": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "HuyDonRequest": {
+        "type": "object",
+        "properties": {
+          "lyDo": {
+            "type": "string",
+            "nullable": true
+          },
+          "xacNhanChiPhi": {
+            "type": "boolean"
+          },
+          "dauVanTayXemTruoc": {
+            "type": "string",
             "nullable": true
           }
         },
@@ -3332,6 +6105,124 @@
         },
         "additionalProperties": false
       },
+      "KetQuaHoanCallbackRequest": {
+        "type": "object",
+        "properties": {
+          "maYeuCau": {
+            "type": "string",
+            "nullable": true
+          },
+          "maGiaoDichHoanCong": {
+            "type": "string",
+            "nullable": true
+          },
+          "soTien": {
+            "type": "number",
+            "format": "double"
+          },
+          "trangThai": {
+            "type": "string",
+            "nullable": true
+          },
+          "thoiDiem": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "chuKy": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "KhongDenNhanRequest": {
+        "type": "object",
+        "properties": {
+          "ghiChu": {
+            "type": "string",
+            "nullable": true
+          },
+          "bangChung": {
+            "type": "string",
+            "nullable": true
+          },
+          "xuLyHuy": {
+            "type": "boolean"
+          },
+          "xacNhanChiPhi": {
+            "type": "boolean"
+          },
+          "dauVanTayXemTruoc": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "LapDoiSoatRequest": {
+        "type": "object",
+        "properties": {
+          "maDonThue": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "ghiChu": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "LapPhuPhiRequest": {
+        "type": "object",
+        "properties": {
+          "maDonThue": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "maChiTietBanGiao": {
+            "type": "integer",
+            "format": "int64",
+            "nullable": true
+          },
+          "loaiPhi": {
+            "type": "string",
+            "nullable": true
+          },
+          "soTienDeNghi": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "lyDo": {
+            "type": "string",
+            "nullable": true
+          },
+          "danhSachAnh": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "PhuKienItemDto": {
+        "type": "object",
+        "properties": {
+          "ten": {
+            "type": "string",
+            "nullable": true
+          },
+          "soLuong": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false
+      },
       "QuenMatKhauRequest": {
         "required": [
           "email"
@@ -3356,7 +6247,7 @@
         "type": "integer",
         "format": "int32"
       },
-      "StringDateTime<>f__AnonymousType50": {
+      "StringDateTime<>f__AnonymousType56": {
         "type": "object",
         "properties": {
           "message": {
@@ -3370,7 +6261,7 @@
         },
         "additionalProperties": false
       },
-      "StringString<>f__AnonymousType49": {
+      "StringString<>f__AnonymousType55": {
         "type": "object",
         "properties": {
           "message": {
@@ -3380,6 +6271,28 @@
           "testEndpoint": {
             "type": "string",
             "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "TachDongChoXuLyRequest": {
+        "required": [
+          "danhSachChiTietNhanTra",
+          "lyDo"
+        ],
+        "type": "object",
+        "properties": {
+          "danhSachChiTietNhanTra": {
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          "lyDo": {
+            "minLength": 1,
+            "type": "string"
           }
         },
         "additionalProperties": false
@@ -3445,6 +6358,14 @@
             "type": "string",
             "nullable": true
           },
+          "diaChiNhanHang": {
+            "type": "string",
+            "nullable": true
+          },
+          "maKhuyenMai": {
+            "type": "string",
+            "nullable": true
+          },
           "chiTiet": {
             "type": "array",
             "items": {
@@ -3496,6 +6417,27 @@
             "maxLength": 50,
             "type": "string",
             "nullable": true
+          },
+          "ghiChu": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "TaoNhanTraRequest": {
+        "required": [
+          "danhSachChiTietBanGiao"
+        ],
+        "type": "object",
+        "properties": {
+          "danhSachChiTietBanGiao": {
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "format": "int64"
+            }
           },
           "ghiChu": {
             "type": "string",
@@ -3598,6 +6540,20 @@
         },
         "additionalProperties": false
       },
+      "TaoThuBoSungRequest": {
+        "type": "object",
+        "properties": {
+          "maDoiSoat": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "phuongThucDuocHoTro": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
       "ThayTheRequest": {
         "type": "object",
         "properties": {
@@ -3682,6 +6638,40 @@
         "type": "integer",
         "format": "int32"
       },
+      "TranhChapRequest": {
+        "type": "object",
+        "properties": {
+          "noiDung": {
+            "type": "string",
+            "nullable": true
+          },
+          "danhSachAnh": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "XacNhanDoiSoatRequest": {
+        "type": "object",
+        "properties": {
+          "dauVanTayBangTinh": {
+            "type": "string",
+            "nullable": true
+          },
+          "xacNhan": {
+            "type": "boolean"
+          },
+          "ghiChu": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
       "XacNhanNhapKhoRequest": {
         "required": [
           "danhSachDong",
@@ -3733,6 +6723,46 @@
           }
         },
         "additionalProperties": false
+      },
+      "XuLyCallbackRequest": {
+        "type": "object",
+        "properties": {
+          "maYeuCau": {
+            "type": "string",
+            "nullable": true
+          },
+          "maGiaoDichCong": {
+            "type": "string",
+            "nullable": true
+          },
+          "soTien": {
+            "type": "number",
+            "format": "double"
+          },
+          "trangThai": {
+            "type": "string",
+            "nullable": true
+          },
+          "phuongThuc": {
+            "type": "string",
+            "nullable": true
+          },
+          "signature": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "XuLyHoanRequest": {
+        "type": "object",
+        "properties": {
+          "ghiChuXuLy": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
       }
     },
     "securitySchemes": {
@@ -3757,10 +6787,16 @@
       "name": "BanGiao"
     },
     {
+      "name": "BaoCaoVanHanh"
+    },
+    {
       "name": "ChuanBiDon"
     },
     {
       "name": "DanhMuc"
+    },
+    {
+      "name": "DoiSoat"
     },
     {
       "name": "DonThue"
@@ -3772,13 +6808,25 @@
       "name": "GioThue"
     },
     {
+      "name": "HoanTien"
+    },
+    {
       "name": "HoSo"
     },
     {
       "name": "NhaCungCap"
     },
     {
+      "name": "NhanTra"
+    },
+    {
       "name": "PhieuNhap"
+    },
+    {
+      "name": "PhuPhi"
+    },
+    {
+      "name": "QuaHan"
     },
     {
       "name": "SanPham"
