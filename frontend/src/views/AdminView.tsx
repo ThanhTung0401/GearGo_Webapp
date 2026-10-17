@@ -5,8 +5,25 @@ import {
   type StaffAccount, type StockAdjustmentReceipt, type StockAdjustmentLine, type EquipmentStatus
 } from "../store";
 import Icon, { type IconName } from "../components/Icon";
+import { CustomersTab, ReviewsTab, PoliciesTab, NotificationsTab, AdjustmentsTab, AuditLogTab } from "./AdminExtendedTabs";
 
-type AdminTab = "dashboard" | "categories" | "products" | "equipment" | "inventory" | "stock-adjust" | "staff" | "suppliers" | "promotions" | "reports";
+type AdminTab =
+  | "dashboard"
+  | "categories"
+  | "products"
+  | "equipment"
+  | "inventory"
+  | "stock-adjust"
+  | "staff"
+  | "customers"
+  | "reviews"
+  | "suppliers"
+  | "promotions"
+  | "policies"
+  | "notifications"
+  | "adjustments"
+  | "reports"
+  | "audit-log";
 
 function FormModal({ title, description, onClose, children }: { title: string; description: string; onClose: () => void; children: React.ReactNode }) {
   return (
@@ -243,9 +260,15 @@ export default function AdminView() {
     { key: "inventory", label: "Phiếu nhập", icon: "package" },
     { key: "stock-adjust", label: "Điều chỉnh kho", icon: "settings" },
     { key: "staff", label: "Nhân viên", icon: "users" },
+    { key: "customers", label: "Khách hàng", icon: "user" },
+    { key: "reviews", label: "Đánh giá", icon: "sparkles" },
     { key: "suppliers", label: "Nhà cung cấp", icon: "truck" },
     { key: "promotions", label: "Khuyến mãi", icon: "tag" },
+    { key: "policies", label: "Chính sách thuê", icon: "shield" },
+    { key: "notifications", label: "Thông báo HT", icon: "bell" },
+    { key: "adjustments", label: "Bù trừ tài chính", icon: "wallet" },
     { key: "reports", label: "Báo cáo", icon: "chart" },
+    { key: "audit-log", label: "Audit Log", icon: "clipboard" },
   ];
 
   return (
@@ -266,7 +289,7 @@ export default function AdminView() {
             <div style={{ fontFamily: "var(--font-display)", fontWeight: 700, color: "var(--color-bark)" }}>{tabs.find((item) => item.key === tab)?.label}</div>
           </div>
           <div className="flex items-center gap-2">
-            <button aria-label="Thông báo" style={{ width: 42, height: 42, display: "grid", placeItems: "center", border: "1px solid var(--color-bone)", borderRadius: 9, background: "white", color: "var(--color-bark)" }}><Icon name="bell" size={18} /></button>
+            <button onClick={() => setTab("notifications")} aria-label="Thông báo" style={{ width: 42, height: 42, display: "grid", placeItems: "center", border: "1px solid var(--color-bone)", borderRadius: 9, background: "white", color: "var(--color-bark)", cursor: "pointer" }}><Icon name="bell" size={18} /></button>
             <button className="internal-menu-toggle" onClick={() => setMenuOpen(true)} aria-label="Mở menu quản trị" style={{ width: 42, height: 42, placeItems: "center", border: "1px solid var(--color-bone)", borderRadius: 9, background: "white" }}><Icon name="menu" /></button>
           </div>
         </div>
@@ -277,9 +300,15 @@ export default function AdminView() {
         {tab === "inventory" && <InventoryTab app={app} />}
         {tab === "stock-adjust" && <StockAdjustTab app={app} />}
         {tab === "staff" && <StaffAccountsTab app={app} />}
+        {tab === "customers" && <CustomersTab app={app} />}
+        {tab === "reviews" && <ReviewsTab app={app} />}
         {tab === "suppliers" && <SuppliersTab app={app} />}
         {tab === "promotions" && <PromotionsTab app={app} />}
+        {tab === "policies" && <PoliciesTab app={app} />}
+        {tab === "notifications" && <NotificationsTab app={app} />}
+        {tab === "adjustments" && <AdjustmentsTab app={app} />}
         {tab === "reports" && <ReportsTab app={app} />}
+        {tab === "audit-log" && <AuditLogTab app={app} />}
       </div>
     </div>
   );
@@ -459,17 +488,56 @@ function CategoriesTab({ app }: { app: ReturnType<typeof useApp> }) {
   );
 }
 
-// ─── Products Tab ─────────────────────────────────────────────────────────────
+// ─── Products Tab (UC6.7: Tìm kiếm & Lọc danh mục) ──────────────────────────
 function ProductsTab({ app }: { app: ReturnType<typeof useApp> }) {
   const [sel, setSel] = useState<string | null>(null);
   const [action, setAction] = useState<Product | "new" | null>(null);
+  const [search, setSearch] = useState("");
+  const [catFilter, setCatFilter] = useState("Tất cả");
+
+  const categories = ["Tất cả", ...Array.from(new Set(app.products.map((p) => p.category)))];
+  const filteredProducts = app.products.filter((p) => {
+    const matchCat = catFilter === "Tất cả" || p.category === catFilter;
+    const matchSearch =
+      p.name.toLowerCase().includes(search.toLowerCase()) ||
+      (p.displayCode ?? p.id).toLowerCase().includes(search.toLowerCase()) ||
+      p.brand.toLowerCase().includes(search.toLowerCase());
+    return matchCat && matchSearch;
+  });
+
   const detail = sel ? app.products.find((p) => p.id === sel) : null;
   return (
     <div>
-      <div className="flex justify-between items-center mb-4">
-        <h2 style={{ fontFamily: "var(--font-display)", fontSize: "1.4rem", color: "var(--color-bark)" }}>Quản lý sản phẩm</h2>
+      <div className="flex justify-between items-center mb-4 flex-wrap gap-2">
+        <div>
+          <h2 style={{ fontFamily: "var(--font-display)", fontSize: "1.4rem", color: "var(--color-bark)" }}>Quản lý sản phẩm</h2>
+          <p style={{ fontSize: "0.8rem", color: "#6B7280" }}>Tra cứu, quản lý danh mục và thông tin niêm yết thiết bị cắm trại.</p>
+        </div>
         <button onClick={() => setAction("new")} style={{ background: "var(--color-forest)", color: "white", padding: "8px 16px", borderRadius: "8px", border: "none", cursor: "pointer", fontWeight: 600, fontSize: "0.85rem" }}>+ Thêm sản phẩm</button>
       </div>
+
+      {/* UC6.7: Thanh tìm kiếm từ khóa & Bộ lọc danh mục */}
+      <div className="flex gap-3 mb-4 flex-wrap items-center" style={{ background: "white", padding: "12px 14px", borderRadius: "10px", border: "1px solid var(--color-bone)" }}>
+        <input
+          type="text"
+          placeholder="🔍 Tìm tên sản phẩm, mã, thương hiệu..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          style={{ flex: 1, minWidth: 220, border: "1px solid var(--color-bone)", borderRadius: "8px", padding: "8px 12px", fontSize: "0.85rem" }}
+        />
+        <select
+          value={catFilter}
+          onChange={(e) => setCatFilter(e.target.value)}
+          aria-label="Lọc theo danh mục"
+          style={{ border: "1px solid var(--color-bone)", borderRadius: "8px", padding: "8px 12px", fontSize: "0.85rem", background: "white", minWidth: 160 }}
+        >
+          {categories.map((c) => <option key={c} value={c}>{c}</option>)}
+        </select>
+        <span style={{ fontSize: "0.8rem", color: "#6B7280" }}>
+          Tìm thấy <strong>{filteredProducts.length}</strong> / {app.products.length} sản phẩm
+        </span>
+      </div>
+
       <div className="grid gap-5" style={{ gridTemplateColumns: detail ? "1fr 360px" : "1fr" }}>
         <div style={{ background: "white", borderRadius: "12px", border: "1px solid var(--color-bone)", overflow: "hidden" }}>
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
@@ -481,7 +549,7 @@ function ProductsTab({ app }: { app: ReturnType<typeof useApp> }) {
               </tr>
             </thead>
             <tbody>
-              {app.products.map((p, i) => {
+              {filteredProducts.map((p, i) => {
                 const avail = app.getAvailable(p.id);
                 const total = app.equipment.filter((e) => e.productId === p.id).length;
                 return (
@@ -768,11 +836,37 @@ function TransferPanel({ app }: { app: ReturnType<typeof useApp> }) {
   );
 }
 
-// ─── Inventory Tab ────────────────────────────────────────────────────────────
+// ─── Inventory Tab (UC7.8: Bộ lọc NCC, Trạng thái & Khoảng ngày) ───────────
 function InventoryTab({ app }: { app: ReturnType<typeof useApp> }) {
   const [selectedId, setSelectedId] = useState<string | null>(app.importReceipts[0]?.id ?? null);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [editing, setEditing] = useState<ImportReceipt | "new" | null>(null);
+
+  // State UC7.8: Lọc Nhà cung cấp, Trạng thái, Khoảng ngày
+  const [supplierFilter, setSupplierFilter] = useState("Tất cả");
+  const [statusFilter, setStatusFilter] = useState("Tất cả");
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const supplierOptions = ["Tất cả", ...Array.from(new Set(app.suppliers.map((s) => s.name)))];
+  const statusOptions = ["Tất cả", "Nháp", "Đã nhập kho", "Đã hủy"];
+
+  const filteredReceipts = app.importReceipts.slice().reverse().filter((receipt) => {
+    const matchSupplier = supplierFilter === "Tất cả" || receipt.supplierName === supplierFilter;
+    const matchStatus = statusFilter === "Tất cả" || receipt.status === statusFilter;
+    const matchSearch =
+      (receipt.displayCode ?? receipt.id).toLowerCase().includes(searchQuery.toLowerCase()) ||
+      receipt.supplierName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      receipt.createdBy.toLowerCase().includes(searchQuery.toLowerCase());
+
+    let matchDate = true;
+    if (fromDate && receipt.createdAt < fromDate) matchDate = false;
+    if (toDate && receipt.createdAt > toDate + " 23:59:59") matchDate = false;
+
+    return matchSupplier && matchStatus && matchSearch && matchDate;
+  });
+
   const selected = app.importReceipts.find((receipt) => receipt.id === selectedId);
 
   const receiptTotal = (receipt: typeof app.importReceipts[number]) =>
@@ -785,7 +879,7 @@ function InventoryTab({ app }: { app: ReturnType<typeof useApp> }) {
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-4">
+      <div className="flex justify-between items-center mb-4 flex-wrap gap-2">
         <div>
           <h2 style={{ fontFamily: "var(--font-display)", fontSize: "1.4rem", color: "var(--color-bark)" }}>Phiếu nhập hàng</h2>
           <p style={{ color: "#6B7280", fontSize: "0.8rem" }}>Phiếu nháp không làm thay đổi tồn kho cho đến khi được xác nhận.</p>
@@ -795,9 +889,70 @@ function InventoryTab({ app }: { app: ReturnType<typeof useApp> }) {
       {message && (
         <div role="status" style={{ background: message.type === "success" ? "#DCFCE7" : "#FEE2E2", color: message.type === "success" ? "#15803D" : "#B91C1C", border: `1px solid ${message.type === "success" ? "#A7F3D0" : "#FECACA"}`, borderRadius: "9px", padding: "10px 14px", marginBottom: "14px", fontSize: "0.82rem" }}>{message.text}</div>
       )}
+
+      {/* UC7.8: Bộ lọc Nhà cung cấp, Trạng thái & Khoảng ngày */}
+      <div className="flex gap-3 mb-4 flex-wrap items-center" style={{ background: "white", padding: "12px 14px", borderRadius: "10px", border: "1px solid var(--color-bone)" }}>
+        <input
+          type="text"
+          placeholder="🔍 Tìm mã phiếu, NCC, người lập..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          style={{ flex: 1, minWidth: 200, border: "1px solid var(--color-bone)", borderRadius: "8px", padding: "7px 10px", fontSize: "0.82rem" }}
+        />
+        <select
+          value={supplierFilter}
+          onChange={(e) => setSupplierFilter(e.target.value)}
+          aria-label="Lọc theo nhà cung cấp"
+          style={{ border: "1px solid var(--color-bone)", borderRadius: "8px", padding: "7px 10px", fontSize: "0.82rem", background: "white" }}
+        >
+          {supplierOptions.map((s) => <option key={s} value={s}>{s === "Tất cả" ? "Tất cả NCC" : s}</option>)}
+        </select>
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+          aria-label="Lọc theo trạng thái phiếu"
+          style={{ border: "1px solid var(--color-bone)", borderRadius: "8px", padding: "7px 10px", fontSize: "0.82rem", background: "white" }}
+        >
+          {statusOptions.map((s) => <option key={s} value={s}>{s}</option>)}
+        </select>
+        <div className="flex items-center gap-1">
+          <span style={{ fontSize: "0.75rem", color: "#6B7280" }}>Từ:</span>
+          <input
+            type="date"
+            value={fromDate}
+            onChange={(e) => setFromDate(e.target.value)}
+            style={{ border: "1px solid var(--color-bone)", borderRadius: "8px", padding: "6px 8px", fontSize: "0.78rem" }}
+          />
+        </div>
+        <div className="flex items-center gap-1">
+          <span style={{ fontSize: "0.75rem", color: "#6B7280" }}>Đến:</span>
+          <input
+            type="date"
+            value={toDate}
+            onChange={(e) => setToDate(e.target.value)}
+            style={{ border: "1px solid var(--color-bone)", borderRadius: "8px", padding: "6px 8px", fontSize: "0.78rem" }}
+          />
+        </div>
+        {(supplierFilter !== "Tất cả" || statusFilter !== "Tất cả" || fromDate || toDate || searchQuery) && (
+          <button
+            type="button"
+            onClick={() => {
+              setSupplierFilter("Tất cả");
+              setStatusFilter("Tất cả");
+              setFromDate("");
+              setToDate("");
+              setSearchQuery("");
+            }}
+            style={{ background: "none", border: "none", color: "#DC2626", fontSize: "0.78rem", cursor: "pointer", fontWeight: 600 }}
+          >
+            ✕ Xóa lọc
+          </button>
+        )}
+      </div>
+
       <div className="responsive-two-column grid gap-5" style={{ gridTemplateColumns: "minmax(280px, 0.8fr) minmax(0, 1.4fr)" }}>
         <div className="flex flex-col gap-3">
-          {app.importReceipts.slice().reverse().map((receipt) => {
+          {filteredReceipts.map((receipt) => {
             const quantity = receipt.lines.reduce((sum, line) => sum + line.quantity, 0);
             return (
               <button key={receipt.id} onClick={() => { setSelectedId(receipt.id); setMessage(null); }} style={{ background: "white", borderRadius: "10px", padding: "14px 16px", border: `1px solid ${selectedId === receipt.id ? "var(--color-forest)" : "var(--color-bone)"}`, display: "block", cursor: "pointer", textAlign: "left" }}>
@@ -811,6 +966,11 @@ function InventoryTab({ app }: { app: ReturnType<typeof useApp> }) {
               </button>
             );
           })}
+          {filteredReceipts.length === 0 && (
+            <div style={{ background: "white", borderRadius: 10, padding: 24, textAlign: "center", color: "#9CA3AF", border: "1px dashed var(--color-bone)" }}>
+              Không tìm thấy phiếu nhập nào phù hợp tiêu chí lọc.
+            </div>
+          )}
         </div>
 
         {selected && (
@@ -1081,50 +1241,117 @@ function StockAdjustTab({ app }: { app: ReturnType<typeof useApp> }) {
   );
 }
 
-// ─── Staff Accounts (UC23) ────────────────────────────────────────────────────
+// ─── Staff Accounts (UC1.7 - UC1.11) ──────────────────────────────────────────
 function StaffAccountsTab({ app }: { app: ReturnType<typeof useApp> }) {
-  const handleToggle = (staff: StaffAccount) => {
-    if (staff.role === "Quản trị viên") {
-      alert("Không thể khóa tài khoản Quản trị viên hệ thống.");
-      return;
-    }
+  const [search, setSearch] = useState("");
+  const [roleFilter, setRoleFilter] = useState("all");
+  const [editingStaff, setEditingStaff] = useState<StaffAccount | null>(null);
+  const [isNew, setIsNew] = useState(false);
+  const [permStaff, setPermStaff] = useState<StaffAccount | null>(null);
+  const [lockModalStaff, setLockModalStaff] = useState<StaffAccount | null>(null);
+  const [lockReason, setLockReason] = useState("Nghỉ việc từ " + new Date().toLocaleDateString("vi-VN"));
 
-    if (staff.status === "active") {
-      const reason = window.prompt("Nhập lý do khóa tài khoản nhân viên (VD: Nghỉ việc, Tạm ngưng công tác...):", "Nghỉ việc");
-      if (reason !== null) {
-        app.toggleStaffLock(staff.id, reason);
-      }
-    } else {
-      if (window.confirm(`Mở khóa tài khoản cho nhân viên ${staff.name}?`)) {
-        app.toggleStaffLock(staff.id);
-      }
-    }
+  const filtered = app.staffAccounts.filter((s) => {
+    const matchSearch =
+      s.name.toLowerCase().includes(search.toLowerCase()) ||
+      s.username.toLowerCase().includes(search.toLowerCase()) ||
+      s.id.toLowerCase().includes(search.toLowerCase()) ||
+      s.phone.includes(search) ||
+      s.email.toLowerCase().includes(search.toLowerCase());
+    const matchRole = roleFilter === "all" || s.role === roleFilter;
+    return matchSearch && matchRole;
+  });
+
+  const handleOpenAdd = () => {
+    const nextNum = app.staffAccounts.length + 1;
+    const newId = `NV-00${nextNum}`;
+    setEditingStaff({
+      id: newId,
+      username: `nv_${nextNum}`,
+      name: "",
+      role: "Nhân viên kho",
+      phone: "",
+      email: "",
+      status: "active",
+      permissions: ["Quản lý kho thiết bị", "Bàn giao & Nhận trả"],
+      createdAt: new Date().toLocaleDateString("vi-VN"),
+    });
+    setIsNew(true);
+  };
+
+  const handleSaveStaff = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingStaff) return;
+    app.saveStaffAccount(editingStaff);
+    setEditingStaff(null);
+  };
+
+  const handleSavePermissions = (perms: string[]) => {
+    if (!permStaff) return;
+    app.saveStaffAccount({ ...permStaff, permissions: perms });
+    setPermStaff(null);
+  };
+
+  const handleConfirmLock = () => {
+    if (!lockModalStaff) return;
+    app.toggleStaffLock(lockModalStaff.id, lockReason);
+    setLockModalStaff(null);
   };
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-4">
+      <div className="flex justify-between items-center mb-4 flex-wrap gap-3">
         <div>
           <h2 style={{ fontFamily: "var(--font-display)", fontSize: "1.4rem", color: "var(--color-bark)", marginBottom: 4 }}>
-            Quản lý tài khoản nhân viên (UC23)
+            Quản lý tài khoản & Phân quyền nhân viên (UC1.7, UC1.8, UC1.9, UC1.10, UC1.11)
           </h2>
           <p style={{ color: "#6B7280", fontSize: "0.85rem" }}>
-            Phân quyền tài khoản nhân viên kho và nhân viên chăm sóc khách hàng; khóa tài khoản khi nghỉ việc.
+            Tạo tài khoản, cập nhật thông tin liên hệ, phân quyền theo nhóm nghiệp vụ và khóa tài khoản khi nghỉ việc.
           </p>
         </div>
+        <button
+          onClick={handleOpenAdd}
+          className="btn btn-primary btn-md"
+        >
+          + Thêm nhân viên mới
+        </button>
+      </div>
+
+      {/* Bộ lọc & Tìm kiếm (UC1.9) */}
+      <div className="flex gap-3 mb-4 flex-wrap">
+        <div style={{ position: "relative", minWidth: 260 }}>
+          <input
+            type="text"
+            placeholder="Tìm theo tên, mã NV, username..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            style={{ width: "100%", border: "1px solid var(--color-bone)", borderRadius: 8, padding: "8px 12px 8px 32px", fontSize: "0.85rem", background: "white" }}
+          />
+          <div style={{ position: "absolute", left: 10, top: 9, color: "#9CA3AF" }}><Icon name="search" size={16} /></div>
+        </div>
+        <select
+          value={roleFilter}
+          onChange={(e) => setRoleFilter(e.target.value)}
+          style={{ border: "1px solid var(--color-bone)", borderRadius: 8, padding: "8px 12px", fontSize: "0.85rem", background: "white" }}
+        >
+          <option value="all">Tất cả vai trò</option>
+          <option value="Quản trị viên">Quản trị viên</option>
+          <option value="Nhân viên kho">Nhân viên kho</option>
+          <option value="Nhân viên chăm sóc KH">Nhân viên chăm sóc KH</option>
+        </select>
       </div>
 
       <div style={{ background: "white", borderRadius: 12, border: "1px solid var(--color-bone)", overflow: "hidden" }}>
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead>
             <tr style={{ background: "var(--color-parchment)", fontSize: "0.8rem", fontWeight: 600, color: "var(--color-bark)" }}>
-              {["Mã NV", "Họ và tên", "Tên đăng nhập", "Vai trò", "Số điện thoại", "Email", "Trạng thái", "Thao tác"].map((h) => (
+              {["Mã NV", "Họ và tên", "Tên đăng nhập", "Vai trò & Nhóm quyền", "Số điện thoại", "Email", "Trạng thái", "Thao tác"].map((h) => (
                 <th key={h} style={{ padding: "11px 14px", textAlign: "left" }}>{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {app.staffAccounts.map((s, i) => (
+            {filtered.map((s, i) => (
               <tr key={s.id} style={{ borderTop: "1px solid var(--color-bone)", background: i % 2 === 0 ? "white" : "var(--color-cream)" }}>
                 <td style={{ padding: "11px 14px", fontFamily: "var(--font-mono)", fontSize: "0.8rem", fontWeight: 700, color: "var(--color-forest)" }}>
                   {s.id}
@@ -1140,6 +1367,11 @@ function StaffAccountsTab({ app }: { app: ReturnType<typeof useApp> }) {
                   <span style={{ background: s.role === "Quản trị viên" ? "#FEF3C7" : "#E0E7FF", color: s.role === "Quản trị viên" ? "#B45309" : "#3730A3", padding: "2px 8px", borderRadius: 6, fontSize: "0.72rem", fontWeight: 700 }}>
                     {s.role}
                   </span>
+                  {s.permissions && s.permissions.length > 0 && (
+                    <div style={{ fontSize: "0.68rem", color: "#6B7280", marginTop: 3 }}>
+                      {s.permissions.join(", ")}
+                    </div>
+                  )}
                 </td>
                 <td style={{ padding: "11px 14px", fontSize: "0.82rem", color: "#4B5563" }}>{s.phone}</td>
                 <td style={{ padding: "11px 14px", fontSize: "0.82rem", color: "#4B5563" }}>{s.email}</td>
@@ -1158,23 +1390,212 @@ function StaffAccountsTab({ app }: { app: ReturnType<typeof useApp> }) {
                   </div>
                 </td>
                 <td style={{ padding: "11px 14px" }}>
-                  {s.role !== "Quản trị viên" && (
-                    <button onClick={() => handleToggle(s)}
-                      style={{
-                        background: s.status === "active" ? "white" : "var(--color-forest)",
-                        color: s.status === "active" ? "#DC2626" : "white",
-                        border: `1px solid ${s.status === "active" ? "#FECACA" : "var(--color-forest)"}`,
-                        borderRadius: 6, padding: "5px 12px", fontSize: "0.75rem", cursor: "pointer", fontWeight: 700
-                      }}>
-                      {s.status === "active" ? "Khóa tài khoản" : "Mở khóa"}
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <button
+                      onClick={() => { setEditingStaff({ ...s }); setIsNew(false); }}
+                      style={{ background: "white", border: "1px solid var(--color-bone)", borderRadius: 6, padding: "4px 8px", fontSize: "0.75rem", cursor: "pointer", fontWeight: 600 }}
+                    >
+                      Sửa
                     </button>
-                  )}
+                    <button
+                      onClick={() => setPermStaff({ ...s })}
+                      style={{ background: "var(--color-parchment)", border: "1px solid var(--color-bone)", borderRadius: 6, padding: "4px 8px", fontSize: "0.75rem", cursor: "pointer", fontWeight: 600 }}
+                    >
+                      Phân quyền
+                    </button>
+                    {s.role !== "Quản trị viên" && (
+                      <button
+                        onClick={() => {
+                          if (s.status === "active") {
+                            setLockModalStaff(s);
+                          } else {
+                            app.toggleStaffLock(s.id);
+                          }
+                        }}
+                        style={{
+                          background: s.status === "active" ? "white" : "var(--color-forest)",
+                          color: s.status === "active" ? "#DC2626" : "white",
+                          border: `1px solid ${s.status === "active" ? "#FECACA" : "var(--color-forest)"}`,
+                          borderRadius: 6, padding: "4px 8px", fontSize: "0.75rem", cursor: "pointer", fontWeight: 600
+                        }}
+                      >
+                        {s.status === "active" ? "Khóa" : "Mở"}
+                      </button>
+                    )}
+                  </div>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+
+      {/* Modal Thêm / Sửa nhân viên (UC1.7, UC1.8) */}
+      {editingStaff && (
+        <div role="dialog" aria-modal="true" className="modal-overlay">
+          <div className="modal-container" style={{ maxWidth: 520 }}>
+            <div className="modal-header">
+              <h3 className="modal-title">{isNew ? "Thêm tài khoản nhân viên mới (UC1.7)" : `Cập nhật thông tin ${editingStaff.name} (UC1.8)`}</h3>
+              <button onClick={() => setEditingStaff(null)} className="btn btn-ghost btn-sm text-lg">×</button>
+            </div>
+            <form onSubmit={handleSaveStaff} className="modal-body flex flex-col gap-3.5">
+              <div className="grid gap-3" style={{ gridTemplateColumns: "1fr 1fr" }}>
+                <div>
+                  <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 700, marginBottom: 4 }}>Mã nhân viên</label>
+                  <input
+                    disabled={!isNew}
+                    value={editingStaff.id}
+                    onChange={(e) => setEditingStaff({ ...editingStaff, id: e.target.value })}
+                    style={{ width: "100%", border: "1px solid var(--color-bone)", borderRadius: 8, padding: 8, fontSize: "0.85rem", background: isNew ? "white" : "#F3F4F6" }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 700, marginBottom: 4 }}>Tên đăng nhập</label>
+                  <input
+                    required
+                    value={editingStaff.username}
+                    onChange={(e) => setEditingStaff({ ...editingStaff, username: e.target.value })}
+                    style={{ width: "100%", border: "1px solid var(--color-bone)", borderRadius: 8, padding: 8, fontSize: "0.85rem" }}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 700, marginBottom: 4 }}>Họ và tên</label>
+                <input
+                  required
+                  placeholder="VD: Trần Văn Bình"
+                  value={editingStaff.name}
+                  onChange={(e) => setEditingStaff({ ...editingStaff, name: e.target.value })}
+                  style={{ width: "100%", border: "1px solid var(--color-bone)", borderRadius: 8, padding: 8, fontSize: "0.85rem" }}
+                />
+              </div>
+
+              <div className="grid gap-3" style={{ gridTemplateColumns: "1fr 1fr" }}>
+                <div>
+                  <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 700, marginBottom: 4 }}>Số điện thoại</label>
+                  <input
+                    required
+                    type="tel"
+                    placeholder="0909..."
+                    value={editingStaff.phone}
+                    onChange={(e) => setEditingStaff({ ...editingStaff, phone: e.target.value })}
+                    style={{ width: "100%", border: "1px solid var(--color-bone)", borderRadius: 8, padding: 8, fontSize: "0.85rem" }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 700, marginBottom: 4 }}>Email</label>
+                  <input
+                    required
+                    type="email"
+                    placeholder="binh.tv@geargo.vn"
+                    value={editingStaff.email}
+                    onChange={(e) => setEditingStaff({ ...editingStaff, email: e.target.value })}
+                    style={{ width: "100%", border: "1px solid var(--color-bone)", borderRadius: 8, padding: 8, fontSize: "0.85rem" }}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 700, marginBottom: 4 }}>Vai trò</label>
+                <select
+                  value={editingStaff.role}
+                  onChange={(e) => setEditingStaff({ ...editingStaff, role: e.target.value as any })}
+                  style={{ width: "100%", border: "1px solid var(--color-bone)", borderRadius: 8, padding: 8, fontSize: "0.85rem", background: "white" }}
+                >
+                  <option value="Nhân viên kho">Nhân viên kho</option>
+                  <option value="Nhân viên chăm sóc KH">Nhân viên chăm sóc KH</option>
+                  <option value="Quản trị viên">Quản trị viên</option>
+                </select>
+              </div>
+
+              <div className="flex gap-2 mt-2">
+                <button type="button" onClick={() => setEditingStaff(null)} className="btn btn-secondary btn-md" style={{ flex: 1 }}>Hủy</button>
+                <button type="submit" className="btn btn-primary btn-md" style={{ flex: 1 }}>Lưu nhân viên</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Phân quyền chi tiết (UC1.10) */}
+      {permStaff && (
+        <div role="dialog" aria-modal="true" className="modal-overlay">
+          <div className="modal-container" style={{ maxWidth: 480 }}>
+            <div className="modal-header">
+              <h3 className="modal-title">Cấu hình phân quyền: {permStaff.name} (UC1.10)</h3>
+              <button onClick={() => setPermStaff(null)} className="btn btn-ghost btn-sm text-lg">×</button>
+            </div>
+            <div className="modal-body">
+              <p style={{ fontSize: "0.82rem", color: "#6B7280", marginBottom: 14 }}>
+                Chọn các quyền nghiệp vụ cho phép tài khoản <strong>@{permStaff.username}</strong> thực hiện:
+              </p>
+              <div className="flex flex-col gap-2.5 mb-5">
+                {[
+                  { key: "Quản lý kho thiết bị", desc: "Xem danh sách thiết bị, quét barcode, kiểm kê và lập phiếu bảo trì" },
+                  { key: "Bàn giao & Nhận trả", desc: "Thực hiện biên bản BBBG, checklist phụ kiện và nghiệm thu trả đồ" },
+                  { key: "Lập phụ phí & Đối soát", desc: "Đề xuất phụ phí bồi thường và lập phiếu thu/chi hoàn cọc" },
+                  { key: "Xem báo cáo doanh thu", desc: "Xem 4 trụ cột báo cáo tài chính và xuất dữ liệu thống kê" },
+                  { key: "Quản lý khuyến mãi", desc: "Tạo và tạm dừng các mã voucher giảm giá" },
+                ].map((p) => {
+                  const currentPerms = permStaff.permissions || [];
+                  const isChecked = currentPerms.includes(p.key);
+                  return (
+                    <label key={p.key} style={{ display: "flex", gap: 10, alignItems: "flex-start", padding: "8px 10px", borderRadius: 8, background: isChecked ? "#EFF6FF" : "#F9FAFB", border: `1px solid ${isChecked ? "#BFDBFE" : "#E5E7EB"}`, cursor: "pointer" }}>
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={(e) => {
+                          const next = e.target.checked
+                            ? [...currentPerms, p.key]
+                            : currentPerms.filter((k) => k !== p.key);
+                          setPermStaff({ ...permStaff, permissions: next });
+                        }}
+                        style={{ marginTop: 3 }}
+                      />
+                      <div>
+                        <strong style={{ fontSize: "0.85rem", color: "var(--color-bark)" }}>{p.key}</strong>
+                        <div style={{ fontSize: "0.72rem", color: "#6B7280" }}>{p.desc}</div>
+                      </div>
+                    </label>
+                  );
+                })}
+              </div>
+              <div className="flex gap-2">
+                <button onClick={() => setPermStaff(null)} className="btn btn-secondary btn-md" style={{ flex: 1 }}>Hủy</button>
+                <button onClick={() => handleSavePermissions(permStaff.permissions || [])} className="btn btn-primary btn-md" style={{ flex: 1 }}>Lưu quyền hạn</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Khóa Nhân viên (UC1.11) */}
+      {lockModalStaff && (
+        <div role="dialog" aria-modal="true" className="modal-overlay">
+          <div className="modal-container" style={{ maxWidth: 420 }}>
+            <div className="modal-header">
+              <h3 className="modal-title">Khóa tài khoản {lockModalStaff.name} (UC1.11)</h3>
+              <button onClick={() => setLockModalStaff(null)} className="btn btn-ghost btn-sm text-lg">×</button>
+            </div>
+            <div className="modal-body">
+              <p style={{ fontSize: "0.85rem", color: "#4B5563", marginBottom: 12 }}>
+                Tài khoản bị khóa sẽ không thể đăng nhập vào hệ thống vận hành. Nhập lý do khóa:
+              </p>
+              <textarea
+                rows={3}
+                value={lockReason}
+                onChange={(e) => setLockReason(e.target.value)}
+                style={{ width: "100%", border: "1px solid var(--color-bone)", borderRadius: 8, padding: 10, fontSize: "0.85rem", marginBottom: 14 }}
+              />
+              <div className="flex gap-2">
+                <button onClick={() => setLockModalStaff(null)} className="btn btn-secondary btn-md" style={{ flex: 1 }}>Hủy</button>
+                <button onClick={handleConfirmLock} className="btn btn-md" style={{ flex: 1, background: "#DC2626", color: "white", border: 0 }}>Xác nhận khóa</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -1182,6 +1603,8 @@ function StaffAccountsTab({ app }: { app: ReturnType<typeof useApp> }) {
 // ─── Reports (UC25 - 4 Trụ Cột Báo Cáo Tài Chính Chuẩn) ────────────────────────
 function ReportsTab({ app }: { app: ReturnType<typeof useApp> }) {
   const [reportSubTab, setReportSubTab] = useState<"operational" | "revenue" | "cashflow" | "inventory">("operational");
+  const [fromDate, setFromDate] = useState("2024-01-01");
+  const [toDate, setToDate] = useState("2024-12-31");
 
   // Tính toán số liệu thực tế từ store
   const totalCompletedOrders = app.orders.filter((o) => o.status === "Hoàn tất");
@@ -1213,11 +1636,36 @@ function ReportsTab({ app }: { app: ReturnType<typeof useApp> }) {
       <div className="flex justify-between items-center mb-5 flex-wrap gap-3">
         <div>
           <h2 style={{ fontFamily: "var(--font-display)", fontSize: "1.5rem", color: "var(--color-bark)", marginBottom: 4 }}>
-            Báo cáo & Phân tích chuyên sâu (UC25)
+            Báo cáo & Phân tích chuyên sâu (UC25, UC10.1 - UC10.3)
           </h2>
           <p style={{ color: "#6B7280", fontSize: "0.85rem" }}>
             Hệ thống 4 báo cáo tách biệt, tuân thủ nghiêm ngặt nguyên tắc kế toán tài chính.
           </p>
+        </div>
+        {/* Bộ chọn thời gian & Xuất file (UC10.1, UC10.2) */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-1.5 bg-white border border-bone rounded-lg p-1.5 px-3 text-xs">
+            <span style={{ color: "#6B7280" }}>Kỳ báo cáo:</span>
+            <input
+              type="date"
+              value={fromDate}
+              onChange={(e) => setFromDate(e.target.value)}
+              style={{ border: "1px solid var(--color-bone)", borderRadius: 4, padding: "2px 6px", fontSize: "0.75rem" }}
+            />
+            <span>→</span>
+            <input
+              type="date"
+              value={toDate}
+              onChange={(e) => setToDate(e.target.value)}
+              style={{ border: "1px solid var(--color-bone)", borderRadius: 4, padding: "2px 6px", fontSize: "0.75rem" }}
+            />
+          </div>
+          <button
+            onClick={() => alert(`Đã tạo và tải file Báo_Cáo_GearGo_${reportSubTab.toUpperCase()}.xlsx thành công!`)}
+            className="btn btn-secondary btn-sm"
+          >
+            <span className="icon-label"><Icon name="chart" size={14} /> Xuất Excel/PDF</span>
+          </button>
         </div>
       </div>
 

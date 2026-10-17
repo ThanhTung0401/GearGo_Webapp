@@ -120,6 +120,7 @@ button:disabled {
 .site-footer {
   background: var(--color-bark);
   color: var(--color-cream);
+  margin-top: auto;
 }
 
 .site-footer-grid {

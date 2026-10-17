@@ -207,27 +207,75 @@ function OverviewTab({ app, openOrder }: { app: ReturnType<typeof useApp>; openO
   );
 }
 
-// ─── Orders Tab ───────────────────────────────────────────────────────────────
+// ─── Orders Tab (UC4.5: Bộ lọc vận hành) ────────────────────────────────────
 function OrdersTab({ app, selectedOrderId, setSelectedOrderId, openOrder }: { app: ReturnType<typeof useApp>; selectedOrderId: string | null; setSelectedOrderId: (id: string | null) => void; openOrder: (id: string, tab: StaffTab) => void }) {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("Tất cả");
+  const [quickFilter, setQuickFilter] = useState<"all" | "delivery_today" | "pickup_today" | "overdue" | "partial">("all");
   const statuses = ["Tất cả", "Đã xác nhận", "Đang chuẩn bị", "Sẵn sàng nhận", "Đang thuê", "Trả một phần", "Quá hạn", "Chờ đối soát", "Hoàn tất"];
+
+  // Đếm nhanh số lượng theo nghiệp vụ vận hành (UC4.5)
+  const deliveryTodayCount = app.orders.filter((o) => ["Đã xác nhận", "Đang chuẩn bị", "Sẵn sàng nhận"].includes(o.status)).length;
+  const pickupTodayCount = app.orders.filter((o) => ["Đang thuê", "Quá hạn"].includes(o.status)).length;
+  const overdueCount = app.orders.filter((o) => app.checkOrderOverdue(o).isOverdue).length;
+  const partialCount = app.orders.filter((o) => {
+    if (o.status !== "Đang thuê") return false;
+    const returnedCnt = o.assignedEquipment.filter((ae) => ae.returnedAt).length;
+    return returnedCnt > 0 && returnedCnt < o.assignedEquipment.length;
+  }).length;
 
   const filtered = app.orders.filter((o) => {
     const isOverdue = app.checkOrderOverdue(o).isOverdue;
     const returnedCnt = o.assignedEquipment.filter((ae) => ae.returnedAt).length;
     const isPartial = o.status === "Đang thuê" && returnedCnt > 0 && returnedCnt < o.assignedEquipment.length;
 
+    let matchQuick = true;
+    if (quickFilter === "delivery_today") matchQuick = ["Đã xác nhận", "Đang chuẩn bị", "Sẵn sàng nhận"].includes(o.status);
+    if (quickFilter === "pickup_today") matchQuick = ["Đang thuê", "Quá hạn"].includes(o.status);
+    if (quickFilter === "overdue") matchQuick = isOverdue;
+    if (quickFilter === "partial") matchQuick = isPartial;
+
     let matchStatus = filter === "Tất cả" || o.status === filter;
     if (filter === "Quá hạn") matchStatus = isOverdue;
     if (filter === "Trả một phần") matchStatus = isPartial;
 
     const matchSearch = o.id.includes(search) || o.customerName.toLowerCase().includes(search.toLowerCase()) || o.customerPhone.includes(search);
-    return matchStatus && matchSearch;
+    return matchQuick && matchStatus && matchSearch;
   });
 
   return (
     <div>
+      {/* UC4.5: Thanh lọc nhanh vận hành trong ca */}
+      <div className="flex gap-2 mb-3 flex-wrap items-center">
+        <span style={{ fontSize: "0.78rem", fontWeight: 700, color: "var(--color-bark)" }}>Bộ lọc ca trực:</span>
+        {[
+          { key: "all", label: `Tất cả (${app.orders.length})` },
+          { key: "delivery_today", label: `🚚 Cần giao hôm nay (${deliveryTodayCount})` },
+          { key: "pickup_today", label: `📦 Cần thu hôm nay (${pickupTodayCount})` },
+          { key: "overdue", label: `⚠️ Quá hạn (${overdueCount})` },
+          { key: "partial", label: `🔄 Trả 1 phần (${partialCount})` },
+        ].map((btn) => (
+          <button
+            key={btn.key}
+            type="button"
+            onClick={() => { setQuickFilter(btn.key as typeof quickFilter); setFilter("Tất cả"); }}
+            style={{
+              padding: "5px 12px",
+              borderRadius: "20px",
+              border: quickFilter === btn.key ? "1px solid var(--color-forest)" : "1px solid var(--color-bone)",
+              background: quickFilter === btn.key ? "var(--color-forest)" : "white",
+              color: quickFilter === btn.key ? "white" : "var(--color-bark)",
+              fontWeight: quickFilter === btn.key ? 700 : 500,
+              fontSize: "0.78rem",
+              cursor: "pointer",
+              transition: "all 0.15s ease",
+            }}
+          >
+            {btn.label}
+          </button>
+        ))}
+      </div>
+
       <div className="flex gap-3 mb-4 flex-wrap">
         <input
           placeholder="🔍 Tìm mã đơn, tên khách, SĐT..."
@@ -237,7 +285,7 @@ function OrdersTab({ app, selectedOrderId, setSelectedOrderId, openOrder }: { ap
         />
         <select
           value={filter}
-          onChange={(e) => setFilter(e.target.value)}
+          onChange={(e) => { setFilter(e.target.value); setQuickFilter("all"); }}
           aria-label="Lọc trạng thái đơn"
           className="form-select max-w-[200px]"
         >
@@ -599,6 +647,22 @@ function ReturnTab({ app, selectedOrder, setSelectedOrderId }: { app: ReturnType
   const [returnStaffNote, setReturnStaffNote] = useState("");
   const [reconciled, setReconciled] = useState(false);
   const [viewingReceipt, setViewingReceipt] = useState<ReturnReceipt | null>(null);
+
+  // State cho UC5.5: Thanh toán thu thêm tại quầy (Tiền mặt, POS, QR)
+  const [showCollectModal, setShowCollectModal] = useState(false);
+  const [collectMethod, setCollectMethod] = useState<"cash" | "pos" | "qr">("cash");
+  const [cashTendered, setCashTendered] = useState<number>(0);
+  const [posTerminalCode, setPosTerminalCode] = useState("POS-T1-01");
+  const [posAuthCode, setPosAuthCode] = useState("AUTH99238");
+  const [collectNote, setCollectNote] = useState("");
+
+  // State cho UC5.6: Hoàn tiền cọc qua ngân hàng / tiền mặt
+  const [showRefundModal, setShowRefundModal] = useState(false);
+  const [refundMethod, setRefundMethod] = useState<"bank" | "cash">("bank");
+  const [bankName, setBankName] = useState("Vietcombank");
+  const [bankAccount, setBankAccount] = useState("1029384756");
+  const [bankHolder, setBankHolder] = useState("");
+  const [refundNote, setRefundNote] = useState("");
 
   const eligibleOrders = app.orders.filter((o) => ["Đang thuê", "Đã nhận trả", "Chờ đối soát"].includes(o.status));
   const order = selectedOrder;
@@ -970,11 +1034,30 @@ function ReturnTab({ app, selectedOrder, setSelectedOrderId }: { app: ReturnType
                   </div>
                 </div>
 
-                <div className="flex gap-2">
-                  <button onClick={() => { app.settleOrder(order.id, true); setReconciled(true); }}
-                    style={{ background: "var(--color-forest)", color: "white", padding: "10px 20px", borderRadius: 8, border: "none", cursor: "pointer", fontWeight: 700 }}>
-                    Xác nhận {refund > 0 ? "hoàn cọc" : "thu thêm"} thành công → Hoàn tất
-                  </button>
+                <div className="flex gap-2 flex-wrap">
+                  {extra > 0 ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCashTendered(extra);
+                        setShowCollectModal(true);
+                      }}
+                      style={{ background: "#DC2626", color: "white", padding: "10px 20px", borderRadius: 8, border: "none", cursor: "pointer", fontWeight: 700 }}
+                    >
+                      💳 Thu thêm tiền tại quầy (Tiền mặt / POS / QR) →
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setBankHolder(order.customerName.toUpperCase());
+                        setShowRefundModal(true);
+                      }}
+                      style={{ background: "var(--color-forest)", color: "white", padding: "10px 20px", borderRadius: 8, border: "none", cursor: "pointer", fontWeight: 700 }}
+                    >
+                      🏦 Lập lệnh hoàn tiền cọc (Chuyển khoản NH / Tiền mặt) →
+                    </button>
+                  )}
                   <button onClick={() => { app.settleOrder(order.id, false); }}
                     style={{ background: "white", color: "#B91C1C", padding: "10px 16px", borderRadius: 8, border: "1px solid #FECACA", cursor: "pointer", fontWeight: 700 }}>
                     Mô phỏng lỗi GD
@@ -982,6 +1065,298 @@ function ReturnTab({ app, selectedOrder, setSelectedOrderId }: { app: ReturnType
                 </div>
               </div>
             )}
+          </div>
+        )}
+
+        {/* UC5.5: Modal Thu Thêm Tiền Tại Quầy (Tiền mặt / Thẻ POS / QR) */}
+        {showCollectModal && order && (
+          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 9999, display: "grid", placeItems: "center", padding: 20 }}>
+            <div style={{ background: "white", borderRadius: 16, maxWidth: 520, width: "100%", padding: 24 }}>
+              <div className="flex justify-between items-start mb-3">
+                <div>
+                  <span style={{ fontSize: "0.72rem", background: "#FEE2E2", color: "#DC2626", padding: "2px 8px", borderRadius: 6, fontWeight: 700 }}>
+                    UC5.5: THANH TOÁN TẠI QUẦY
+                  </span>
+                  <h3 style={{ fontFamily: "var(--font-display)", fontSize: "1.25rem", color: "var(--color-bark)", marginTop: 4 }}>
+                    Thu tiền bổ sung: Đơn {order.id}
+                  </h3>
+                </div>
+                <button type="button" onClick={() => setShowCollectModal(false)} style={{ border: "none", background: "none", fontSize: "1.2rem", cursor: "pointer" }}>✕</button>
+              </div>
+
+              <div style={{ background: "var(--color-parchment)", borderRadius: 10, padding: 12, marginBottom: 16, border: "1px solid var(--color-bone)" }}>
+                <div className="flex justify-between items-center">
+                  <span style={{ fontSize: "0.85rem", color: "#4B5563" }}>Số tiền cần thu thêm:</span>
+                  <strong style={{ fontFamily: "var(--font-mono)", fontSize: "1.25rem", color: "#DC2626" }}>{fmt(extra)}</strong>
+                </div>
+                <div style={{ fontSize: "0.75rem", color: "#6B7280", marginTop: 4 }}>
+                  Khách hàng: <strong>{order.customerName}</strong> ({order.customerPhone})
+                </div>
+              </div>
+
+              {/* Lựa chọn phương thức thanh toán */}
+              <div style={{ marginBottom: 14 }}>
+                <label style={{ fontSize: "0.8rem", fontWeight: 700, display: "block", marginBottom: 6 }}>Phương thức thanh toán:</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { key: "cash", label: "💵 Tiền mặt" },
+                    { key: "pos", label: "💳 Thẻ POS" },
+                    { key: "qr", label: "📱 VietQR / MoMo" },
+                  ].map((m) => (
+                    <button
+                      key={m.key}
+                      type="button"
+                      onClick={() => setCollectMethod(m.key as typeof collectMethod)}
+                      style={{
+                        padding: "8px 6px",
+                        borderRadius: 8,
+                        border: collectMethod === m.key ? "2px solid var(--color-forest)" : "1px solid var(--color-bone)",
+                        background: collectMethod === m.key ? "#F0FDF4" : "white",
+                        fontWeight: collectMethod === m.key ? 700 : 500,
+                        fontSize: "0.8rem",
+                        cursor: "pointer",
+                      }}
+                    >
+                      {m.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Chi tiết theo phương thức */}
+              {collectMethod === "cash" && (
+                <div style={{ background: "#F9FAFB", borderRadius: 8, padding: 12, border: "1px solid var(--color-bone)", marginBottom: 14 }}>
+                  <label style={{ fontSize: "0.78rem", fontWeight: 600, display: "block", marginBottom: 4 }}>Số tiền khách đưa (đ):</label>
+                  <input
+                    type="number"
+                    value={cashTendered}
+                    onChange={(e) => setCashTendered(Number(e.target.value))}
+                    style={{ width: "100%", padding: "8px 10px", borderRadius: 6, border: "1px solid var(--color-bone)", fontFamily: "var(--font-mono)", fontSize: "0.95rem", fontWeight: 700, marginBottom: 8 }}
+                  />
+                  <div className="flex justify-between text-xs pt-1 border-t border-gray-200">
+                    <span style={{ color: "#6B7280" }}>Tiền thối lại cho khách:</span>
+                    <strong style={{ fontFamily: "var(--font-mono)", color: cashTendered >= extra ? "var(--color-forest)" : "#DC2626" }}>
+                      {cashTendered >= extra ? fmt(cashTendered - extra) : "Chưa đủ tiền"}
+                    </strong>
+                  </div>
+                </div>
+              )}
+
+              {collectMethod === "pos" && (
+                <div style={{ background: "#F9FAFB", borderRadius: 8, padding: 12, border: "1px solid var(--color-bone)", marginBottom: 14 }}>
+                  <div className="grid grid-cols-2 gap-2 mb-2">
+                    <div>
+                      <label style={{ fontSize: "0.75rem", color: "#6B7280", display: "block" }}>Mã máy POS:</label>
+                      <input
+                        value={posTerminalCode}
+                        onChange={(e) => setPosTerminalCode(e.target.value)}
+                        style={{ width: "100%", padding: "6px 8px", borderRadius: 6, border: "1px solid var(--color-bone)", fontSize: "0.82rem" }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: "0.75rem", color: "#6B7280", display: "block" }}>Mã chuẩn chi (Auth Code):</label>
+                      <input
+                        value={posAuthCode}
+                        onChange={(e) => setPosAuthCode(e.target.value)}
+                        style={{ width: "100%", padding: "6px 8px", borderRadius: 6, border: "1px solid var(--color-bone)", fontSize: "0.82rem" }}
+                      />
+                    </div>
+                  </div>
+                  <div style={{ fontSize: "0.75rem", color: "#15803D" }}>✓ Đã kết nối với máy POS tại quầy tiếp tân</div>
+                </div>
+              )}
+
+              {collectMethod === "qr" && (
+                <div style={{ background: "#F9FAFB", borderRadius: 8, padding: 14, border: "1px solid var(--color-bone)", marginBottom: 14, textAlign: "center" }}>
+                  <div style={{ width: 110, height: 110, margin: "0 auto 8px", background: "white", border: "1px solid var(--color-bone)", borderRadius: 8, display: "grid", placeItems: "center", fontSize: "2rem" }}>
+                    📱
+                  </div>
+                  <div style={{ fontSize: "0.8rem", fontWeight: 700, color: "var(--color-bark)" }}>Quét mã VietQR chuyển khoản nhanh</div>
+                  <div style={{ fontSize: "0.72rem", color: "#6B7280", fontFamily: "var(--font-mono)" }}>Nội dung: GG {order.id} THUTHEM</div>
+                </div>
+              )}
+
+              <div style={{ marginBottom: 16 }}>
+                <label style={{ fontSize: "0.78rem", fontWeight: 600, display: "block", marginBottom: 4 }}>Ghi chú chứng từ thu:</label>
+                <input
+                  placeholder="Ví dụ: Khách thanh toán phụ phí trễ hạn tại quầy..."
+                  value={collectNote}
+                  onChange={(e) => setCollectNote(e.target.value)}
+                  style={{ width: "100%", padding: "8px 10px", borderRadius: 6, border: "1px solid var(--color-bone)", fontSize: "0.82rem" }}
+                />
+              </div>
+
+              <div className="flex justify-end gap-2">
+                <button type="button" onClick={() => setShowCollectModal(false)} style={{ background: "white", border: "1px solid var(--color-bone)", borderRadius: 8, padding: "8px 16px", cursor: "pointer", fontSize: "0.85rem" }}>
+                  Hủy
+                </button>
+                <button
+                  type="button"
+                  disabled={collectMethod === "cash" && cashTendered < extra}
+                  onClick={() => {
+                    const methodStr = collectMethod === "cash" ? `Tiền mặt tại quầy` : collectMethod === "pos" ? `Thẻ POS (${posTerminalCode} / ${posAuthCode})` : "Quét VietQR";
+                    app.settleOrder(order.id, true, {
+                      method: methodStr,
+                      amount: extra,
+                      note: collectNote || `Thu thêm tại quầy qua ${methodStr}`,
+                    });
+                    setReconciled(true);
+                    setShowCollectModal(false);
+                  }}
+                  style={{
+                    background: (collectMethod === "cash" && cashTendered < extra) ? "#9CA3AF" : "var(--color-forest)",
+                    color: "white",
+                    border: "none",
+                    borderRadius: 8,
+                    padding: "8px 20px",
+                    fontWeight: 700,
+                    fontSize: "0.85rem",
+                    cursor: (collectMethod === "cash" && cashTendered < extra) ? "not-allowed" : "pointer",
+                  }}
+                >
+                  ✓ Xác nhận đã thu đủ tiền → Hoàn tất đơn
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* UC5.6: Modal Hoàn Tiền Cọc Qua Tài Khoản Ngân Hàng / Tiền Mặt */}
+        {showRefundModal && order && (
+          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 9999, display: "grid", placeItems: "center", padding: 20 }}>
+            <div style={{ background: "white", borderRadius: 16, maxWidth: 520, width: "100%", padding: 24 }}>
+              <div className="flex justify-between items-start mb-3">
+                <div>
+                  <span style={{ fontSize: "0.72rem", background: "#DCFCE7", color: "#15803D", padding: "2px 8px", borderRadius: 6, fontWeight: 700 }}>
+                    UC5.6: HOÀN CỌC ĐƠN THUÊ
+                  </span>
+                  <h3 style={{ fontFamily: "var(--font-display)", fontSize: "1.25rem", color: "var(--color-bark)", marginTop: 4 }}>
+                    Lập lệnh hoàn tiền cọc: Đơn {order.id}
+                  </h3>
+                </div>
+                <button type="button" onClick={() => setShowRefundModal(false)} style={{ border: "none", background: "none", fontSize: "1.2rem", cursor: "pointer" }}>✕</button>
+              </div>
+
+              <div style={{ background: "var(--color-parchment)", borderRadius: 10, padding: 12, marginBottom: 16, border: "1px solid var(--color-bone)" }}>
+                <div className="flex justify-between items-center">
+                  <span style={{ fontSize: "0.85rem", color: "#4B5563" }}>Số tiền hoàn cọc cho khách:</span>
+                  <strong style={{ fontFamily: "var(--font-mono)", fontSize: "1.3rem", color: "var(--color-forest)" }}>{fmt(refund)}</strong>
+                </div>
+                <div style={{ fontSize: "0.75rem", color: "#6B7280", marginTop: 4 }}>
+                  Khách thụ hưởng: <strong>{order.customerName}</strong> ({order.customerPhone})
+                </div>
+              </div>
+
+              {/* Lựa chọn phương thức hoàn */}
+              <div style={{ marginBottom: 14 }}>
+                <label style={{ fontSize: "0.8rem", fontWeight: 700, display: "block", marginBottom: 6 }}>Kênh hoàn tiền:</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { key: "bank", label: "🏦 Chuyển khoản ngân hàng" },
+                    { key: "cash", label: "💵 Tiền mặt tại quầy" },
+                  ].map((m) => (
+                    <button
+                      key={m.key}
+                      type="button"
+                      onClick={() => setRefundMethod(m.key as typeof refundMethod)}
+                      style={{
+                        padding: "8px 6px",
+                        borderRadius: 8,
+                        border: refundMethod === m.key ? "2px solid var(--color-forest)" : "1px solid var(--color-bone)",
+                        background: refundMethod === m.key ? "#F0FDF4" : "white",
+                        fontWeight: refundMethod === m.key ? 700 : 500,
+                        fontSize: "0.8rem",
+                        cursor: "pointer",
+                      }}
+                    >
+                      {m.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {refundMethod === "bank" && (
+                <div style={{ background: "#F9FAFB", borderRadius: 8, padding: 12, border: "1px solid var(--color-bone)", marginBottom: 14 }}>
+                  <div style={{ marginBottom: 8 }}>
+                    <label style={{ fontSize: "0.75rem", color: "#6B7280", display: "block", marginBottom: 2 }}>Ngân hàng thụ hưởng:</label>
+                    <select
+                      value={bankName}
+                      onChange={(e) => setBankName(e.target.value)}
+                      style={{ width: "100%", padding: "7px 10px", borderRadius: 6, border: "1px solid var(--color-bone)", fontSize: "0.82rem", background: "white" }}
+                    >
+                      {["Vietcombank", "MB Bank", "Techcombank", "ACB", "VPBank", "Vietinbank", "BIDV"].map((b) => (
+                        <option key={b}>{b}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label style={{ fontSize: "0.75rem", color: "#6B7280", display: "block", marginBottom: 2 }}>Số tài khoản:</label>
+                      <input
+                        value={bankAccount}
+                        onChange={(e) => setBankAccount(e.target.value)}
+                        style={{ width: "100%", padding: "7px 10px", borderRadius: 6, border: "1px solid var(--color-bone)", fontSize: "0.85rem", fontFamily: "var(--font-mono)" }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: "0.75rem", color: "#6B7280", display: "block", marginBottom: 2 }}>Tên chủ tài khoản:</label>
+                      <input
+                        value={bankHolder}
+                        onChange={(e) => setBankHolder(e.target.value)}
+                        style={{ width: "100%", padding: "7px 10px", borderRadius: 6, border: "1px solid var(--color-bone)", fontSize: "0.85rem", textTransform: "uppercase" }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {refundMethod === "cash" && (
+                <div style={{ background: "#F9FAFB", borderRadius: 8, padding: 12, border: "1px solid var(--color-bone)", marginBottom: 14, fontSize: "0.8rem", color: "#4B5563" }}>
+                  Khách hàng sẽ nhận <strong>{fmt(refund)}</strong> tiền mặt trực tiếp tại quầy và ký vào Phiếu chi hoàn tiền cọc.
+                </div>
+              )}
+
+              <div style={{ marginBottom: 16 }}>
+                <label style={{ fontSize: "0.78rem", fontWeight: 600, display: "block", marginBottom: 4 }}>Ghi chú hoàn cọc:</label>
+                <input
+                  placeholder="Ví dụ: Hoàn cọc thiết bị nguyên vẹn..."
+                  value={refundNote}
+                  onChange={(e) => setRefundNote(e.target.value)}
+                  style={{ width: "100%", padding: "8px 10px", borderRadius: 6, border: "1px solid var(--color-bone)", fontSize: "0.82rem" }}
+                />
+              </div>
+
+              <div className="flex justify-end gap-2">
+                <button type="button" onClick={() => setShowRefundModal(false)} style={{ background: "white", border: "1px solid var(--color-bone)", borderRadius: 8, padding: "8px 16px", cursor: "pointer", fontSize: "0.85rem" }}>
+                  Hủy
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const methodStr = refundMethod === "bank" ? `Chuyển khoản ${bankName} (${bankAccount} - ${bankHolder})` : "Tiền mặt tại quầy";
+                    app.settleOrder(order.id, true, {
+                      method: methodStr,
+                      amount: refund,
+                      note: refundNote || `Hoàn cọc đơn thuê ${order.id} qua ${methodStr}`,
+                    });
+                    setReconciled(true);
+                    setShowRefundModal(false);
+                  }}
+                  style={{
+                    background: "var(--color-forest)",
+                    color: "white",
+                    border: "none",
+                    borderRadius: 8,
+                    padding: "8px 20px",
+                    fontWeight: 700,
+                    fontSize: "0.85rem",
+                    cursor: "pointer",
+                  }}
+                >
+                  ✓ Xác nhận hoàn cọc thành công → Hoàn tất
+                </button>
+              </div>
+            </div>
           </div>
         )}
 
@@ -1048,6 +1423,20 @@ function EquipmentTab({ app }: { app: ReturnType<typeof useApp> }) {
   const [productFilter, setProductFilter] = useState("Tất cả");
   const [transferModal, setTransferModal] = useState<Equipment | null>(null);
   const [targetProductId, setTargetProductId] = useState("");
+
+  // State UC6.12: Tạo phiếu bảo trì
+  const [showCreateMaintenanceModal, setShowCreateMaintenanceModal] = useState(false);
+  const [createMaintEquipId, setCreateMaintEquipId] = useState("");
+  const [createMaintIssue, setCreateMaintIssue] = useState("");
+  const [createMaintCost, setCreateMaintCost] = useState(150000);
+  const [createMaintOrderId, setCreateMaintOrderId] = useState("");
+  const [createMaintNote, setCreateMaintNote] = useState("");
+
+  // State UC6.13: Nghiệm thu bảo trì
+  const [acceptingMaintenance, setAcceptingMaintenance] = useState<MaintenanceReceipt | null>(null);
+  const [actualRepairCost, setActualRepairCost] = useState(0);
+  const [repairOutcome, setRepairOutcome] = useState<"Hoàn tất" | "Không thể sửa">("Hoàn tất");
+  const [repairOutcomeNote, setRepairOutcomeNote] = useState("");
 
   const products = ["Tất cả", ...Array.from(new Set(app.products.map((p) => p.name)))];
   const statuses = ["Tất cả", "Sẵn sàng", "Đang thuê", "Đang bảo trì", "Thất lạc", "Ngừng sử dụng"];
@@ -1187,13 +1576,35 @@ function EquipmentTab({ app }: { app: ReturnType<typeof useApp> }) {
           )}
         </div>
       ) : (
-        /* Tab Phiếu bảo trì (UC16) */
+        /* Tab Phiếu bảo trì (UC6.12 & UC6.13) */
         <div>
+          <div className="flex justify-between items-center mb-4 flex-wrap gap-2">
+            <div>
+              <h3 style={{ fontFamily: "var(--font-display)", fontSize: "1.15rem", color: "var(--color-bark)" }}>
+                Hồ sơ bảo trì & sửa chữa thiết bị
+              </h3>
+              <p style={{ fontSize: "0.8rem", color: "#6B7280" }}>
+                Ghi nhận các thiết bị hư hỏng, ước tính kinh phí và nghiệm thu đưa về kho Sẵn sàng.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                const firstAvailable = app.equipment.find((e) => e.equipmentStatus !== "Ngừng sử dụng")?.id || "";
+                setCreateMaintEquipId(firstAvailable);
+                setShowCreateMaintenanceModal(true);
+              }}
+              style={{ background: "var(--color-forest)", color: "white", padding: "8px 16px", borderRadius: 8, border: "none", cursor: "pointer", fontWeight: 700, fontSize: "0.85rem" }}
+            >
+              + Tạo phiếu bảo trì (UC6.12)
+            </button>
+          </div>
+
           <div className="responsive-table" style={{ background: "white", borderRadius: "12px", border: "1px solid var(--color-bone)", overflow: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
                 <tr style={{ background: "var(--color-parchment)", fontSize: "0.78rem", fontWeight: 600, color: "var(--color-bark)" }}>
-                  {["Mã phiếu", "Mã thiết bị", "Mô tả lỗi / Hư hỏng", "Đơn liên quan", "Ngày tạo", "Chi phí dự tính", "Trạng thái", "Thao tác"].map((h) => (
+                  {["Mã phiếu", "Mã thiết bị", "Mô tả lỗi / Hư hỏng", "Đơn liên quan", "Ngày tạo", "Dự tính", "Thực tế", "Trạng thái", "Thao tác"].map((h) => (
                     <th key={h} style={{ padding: "9px 12px", textAlign: "left" }}>{h}</th>
                   ))}
                 </tr>
@@ -1210,6 +1621,9 @@ function EquipmentTab({ app }: { app: ReturnType<typeof useApp> }) {
                     <td style={{ padding: "9px 12px", fontSize: "0.78rem", fontFamily: "var(--font-mono)", color: "#6B7280" }}>{m.orderId || "—"}</td>
                     <td style={{ padding: "9px 12px", fontSize: "0.78rem", color: "#6B7280" }}>{m.createdAt}</td>
                     <td style={{ padding: "9px 12px", fontFamily: "var(--font-mono)", fontSize: "0.82rem", fontWeight: 700 }}>{fmt(m.estimatedCost)}</td>
+                    <td style={{ padding: "9px 12px", fontFamily: "var(--font-mono)", fontSize: "0.82rem", fontWeight: 700, color: m.actualCost ? "var(--color-forest)" : "#9CA3AF" }}>
+                      {m.actualCost !== undefined ? fmt(m.actualCost) : "—"}
+                    </td>
                     <td style={{ padding: "9px 12px" }}>
                       <span style={{
                         background: m.status === "Hoàn tất" ? "#DCFCE7" : m.status === "Đang bảo dưỡng" ? "#FEF3C7" : m.status === "Không thể sửa" ? "#FEE2E2" : "#F3F4F6",
@@ -1220,23 +1634,236 @@ function EquipmentTab({ app }: { app: ReturnType<typeof useApp> }) {
                       </span>
                     </td>
                     <td style={{ padding: "9px 12px" }}>
-                      {m.status !== "Hoàn tất" && m.status !== "Không thể sửa" && (
-                        <div className="flex gap-1">
-                          <button onClick={() => app.updateMaintenanceStatus(m.id, "Hoàn tất")}
-                            style={{ background: "#15803D", color: "white", border: "none", borderRadius: 6, padding: "3px 8px", fontSize: "0.72rem", cursor: "pointer", fontWeight: 700 }}>
-                            Đã sửa xong → Sẵn sàng
-                          </button>
-                          <button onClick={() => app.updateMaintenanceStatus(m.id, "Không thể sửa")}
-                            style={{ background: "#DC2626", color: "white", border: "none", borderRadius: 6, padding: "3px 6px", fontSize: "0.72rem", cursor: "pointer" }}>
-                            Hỏng hẳn
-                          </button>
-                        </div>
+                      {m.status !== "Hoàn tất" && m.status !== "Không thể sửa" ? (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setAcceptingMaintenance(m);
+                            setActualRepairCost(m.actualCost ?? m.estimatedCost);
+                            setRepairOutcome("Hoàn tất");
+                            setRepairOutcomeNote(m.note || "Đã kiểm tra kỹ thuật và vệ sinh đạt chuẩn.");
+                          }}
+                          style={{ background: "var(--color-forest)", color: "white", border: "none", borderRadius: 6, padding: "5px 10px", fontSize: "0.75rem", cursor: "pointer", fontWeight: 700 }}
+                        >
+                          Nghiệm thu (UC6.13) →
+                        </button>
+                      ) : (
+                        <span style={{ fontSize: "0.75rem", color: "#9CA3AF" }}>Đã chốt</span>
                       )}
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {/* UC6.12: Modal Tạo Phiếu Bảo Trì */}
+      {showCreateMaintenanceModal && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 9999, display: "grid", placeItems: "center", padding: 20 }}>
+          <div style={{ background: "white", borderRadius: 16, maxWidth: 500, width: "100%", padding: 24 }}>
+            <div className="flex justify-between items-start mb-3">
+              <div>
+                <span style={{ fontSize: "0.72rem", background: "#FEF3C7", color: "#B45309", padding: "2px 8px", borderRadius: 6, fontWeight: 700 }}>
+                  UC6.12: TẠO PHIẾU BẢO TRÌ
+                </span>
+                <h3 style={{ fontFamily: "var(--font-display)", fontSize: "1.25rem", color: "var(--color-bark)", marginTop: 4 }}>
+                  Lập phiếu sửa chữa thiết bị
+                </h3>
+              </div>
+              <button type="button" onClick={() => setShowCreateMaintenanceModal(false)} style={{ border: "none", background: "none", fontSize: "1.2rem", cursor: "pointer" }}>✕</button>
+            </div>
+
+            <div style={{ marginBottom: 12 }}>
+              <label style={{ fontSize: "0.78rem", fontWeight: 600, display: "block", marginBottom: 4 }}>Thiết bị cần bảo trì:</label>
+              <select
+                value={createMaintEquipId}
+                onChange={(e) => setCreateMaintEquipId(e.target.value)}
+                style={{ width: "100%", padding: "8px 10px", borderRadius: 8, border: "1px solid var(--color-bone)", fontSize: "0.82rem", background: "white" }}
+              >
+                {app.equipment.filter((e) => e.equipmentStatus !== "Ngừng sử dụng").map((e) => {
+                  const p = app.products.find((prod) => prod.id === e.productId);
+                  return (
+                    <option key={e.id} value={e.id}>
+                      {e.id} - {p?.name} (Hiện tại: {e.equipmentStatus})
+                    </option>
+                  );
+                })}
+              </select>
+            </div>
+
+            <div style={{ marginBottom: 12 }}>
+              <label style={{ fontSize: "0.78rem", fontWeight: 600, display: "block", marginBottom: 4 }}>Mô tả lỗi / Hư hỏng chi tiết:</label>
+              <textarea
+                rows={3}
+                placeholder="Ví dụ: Rách đường chỉ may bạt nóc 10cm, chốt khoá bị kẹt..."
+                value={createMaintIssue}
+                onChange={(e) => setCreateMaintIssue(e.target.value)}
+                style={{ width: "100%", padding: "8px 10px", borderRadius: 8, border: "1px solid var(--color-bone)", fontSize: "0.82rem", resize: "vertical" }}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 mb-12">
+              <div>
+                <label style={{ fontSize: "0.78rem", fontWeight: 600, display: "block", marginBottom: 4 }}>Chi phí dự tính (đ):</label>
+                <input
+                  type="number"
+                  value={createMaintCost}
+                  onChange={(e) => setCreateMaintCost(Number(e.target.value))}
+                  style={{ width: "100%", padding: "8px 10px", borderRadius: 8, border: "1px solid var(--color-bone)", fontSize: "0.85rem", fontFamily: "var(--font-mono)" }}
+                />
+              </div>
+              <div>
+                <label style={{ fontSize: "0.78rem", fontWeight: 600, display: "block", marginBottom: 4 }}>Đơn liên quan (nếu có):</label>
+                <input
+                  placeholder="Ví dụ: ORD-001"
+                  value={createMaintOrderId}
+                  onChange={(e) => setCreateMaintOrderId(e.target.value)}
+                  style={{ width: "100%", padding: "8px 10px", borderRadius: 8, border: "1px solid var(--color-bone)", fontSize: "0.85rem", fontFamily: "var(--font-mono)" }}
+                />
+              </div>
+            </div>
+
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ fontSize: "0.78rem", fontWeight: 600, display: "block", marginBottom: 4 }}>Ghi chú điều phối:</label>
+              <input
+                placeholder="Ví dụ: Gửi sang xưởng sửa chữa lều Q8..."
+                value={createMaintNote}
+                onChange={(e) => setCreateMaintNote(e.target.value)}
+                style={{ width: "100%", padding: "8px 10px", borderRadius: 8, border: "1px solid var(--color-bone)", fontSize: "0.82rem" }}
+              />
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <button type="button" onClick={() => setShowCreateMaintenanceModal(false)} style={{ background: "white", border: "1px solid var(--color-bone)", borderRadius: 8, padding: "8px 16px", cursor: "pointer", fontSize: "0.85rem" }}>
+                Hủy
+              </button>
+              <button
+                type="button"
+                disabled={!createMaintEquipId || !createMaintIssue.trim()}
+                onClick={() => {
+                  const newId = `BT-${Date.now().toString().slice(-6)}`;
+                  const now = new Date().toLocaleString("vi-VN");
+                  app.saveMaintenanceReceipt({
+                    id: newId,
+                    equipmentId: createMaintEquipId,
+                    issueDescription: createMaintIssue.trim(),
+                    estimatedCost: createMaintCost,
+                    orderId: createMaintOrderId.trim() || undefined,
+                    createdAt: now,
+                    status: "Đang bảo dưỡng",
+                    note: createMaintNote.trim(),
+                  });
+                  setCreateMaintIssue("");
+                  setCreateMaintNote("");
+                  setShowCreateMaintenanceModal(false);
+                }}
+                style={{
+                  background: (!createMaintEquipId || !createMaintIssue.trim()) ? "#9CA3AF" : "var(--color-forest)",
+                  color: "white",
+                  border: "none",
+                  borderRadius: 8,
+                  padding: "8px 20px",
+                  fontWeight: 700,
+                  fontSize: "0.85rem",
+                  cursor: (!createMaintEquipId || !createMaintIssue.trim()) ? "not-allowed" : "pointer",
+                }}
+              >
+                ✓ Tạo phiếu bảo trì
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* UC6.13: Modal Nghiệm Thu Bảo Trì */}
+      {acceptingMaintenance && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 9999, display: "grid", placeItems: "center", padding: 20 }}>
+          <div style={{ background: "white", borderRadius: 16, maxWidth: 480, width: "100%", padding: 24 }}>
+            <div className="flex justify-between items-start mb-3">
+              <div>
+                <span style={{ fontSize: "0.72rem", background: "#DCFCE7", color: "#15803D", padding: "2px 8px", borderRadius: 6, fontWeight: 700 }}>
+                  UC6.13: NGHIỆM THU BẢO TRÌ
+                </span>
+                <h3 style={{ fontFamily: "var(--font-display)", fontSize: "1.25rem", color: "var(--color-bark)", marginTop: 4 }}>
+                  Nghiệm thu phiếu: {acceptingMaintenance.id}
+                </h3>
+              </div>
+              <button type="button" onClick={() => setAcceptingMaintenance(null)} style={{ border: "none", background: "none", fontSize: "1.2rem", cursor: "pointer" }}>✕</button>
+            </div>
+
+            <div style={{ background: "var(--color-parchment)", borderRadius: 10, padding: 12, marginBottom: 14, fontSize: "0.82rem" }}>
+              <div>Thiết bị: <strong style={{ fontFamily: "var(--font-mono)" }}>{acceptingMaintenance.equipmentId}</strong></div>
+              <div>Lỗi ban đầu: <strong>{acceptingMaintenance.issueDescription}</strong></div>
+              <div>Dự tính: <strong>{fmt(acceptingMaintenance.estimatedCost)}</strong></div>
+            </div>
+
+            <div style={{ marginBottom: 12 }}>
+              <label style={{ fontSize: "0.78rem", fontWeight: 600, display: "block", marginBottom: 4 }}>Chi phí sửa chữa thực tế (đ):</label>
+              <input
+                type="number"
+                value={actualRepairCost}
+                onChange={(e) => setActualRepairCost(Number(e.target.value))}
+                style={{ width: "100%", padding: "8px 10px", borderRadius: 8, border: "1px solid var(--color-bone)", fontSize: "0.95rem", fontFamily: "var(--font-mono)", fontWeight: 700 }}
+              />
+            </div>
+
+            <div style={{ marginBottom: 14 }}>
+              <label style={{ fontSize: "0.78rem", fontWeight: 700, display: "block", marginBottom: 6 }}>Kết quả nghiệm thu:</label>
+              <div className="flex flex-col gap-2">
+                <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.82rem", cursor: "pointer" }}>
+                  <input
+                    type="radio"
+                    name="repairOutcome"
+                    checked={repairOutcome === "Hoàn tất"}
+                    onChange={() => setRepairOutcome("Hoàn tất")}
+                    style={{ accentColor: "var(--color-forest)" }}
+                  />
+                  <span>✓ <strong>Đạt chuẩn</strong> — Thiết bị hoạt động tốt, đưa về kho <strong>Sẵn sàng</strong></span>
+                </label>
+                <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.82rem", cursor: "pointer" }}>
+                  <input
+                    type="radio"
+                    name="repairOutcome"
+                    checked={repairOutcome === "Không thể sửa"}
+                    onChange={() => setRepairOutcome("Không thể sửa")}
+                    style={{ accentColor: "#DC2626" }}
+                  />
+                  <span style={{ color: "#DC2626" }}>✕ <strong>Không thể sửa</strong> — Hư hỏng nặng, chuyển sang <strong>Ngừng sử dụng</strong></span>
+                </label>
+              </div>
+            </div>
+
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ fontSize: "0.78rem", fontWeight: 600, display: "block", marginBottom: 4 }}>Ghi chú nghiệm thu:</label>
+              <input
+                value={repairOutcomeNote}
+                onChange={(e) => setRepairOutcomeNote(e.target.value)}
+                style={{ width: "100%", padding: "8px 10px", borderRadius: 8, border: "1px solid var(--color-bone)", fontSize: "0.82rem" }}
+              />
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <button type="button" onClick={() => setAcceptingMaintenance(null)} style={{ background: "white", border: "1px solid var(--color-bone)", borderRadius: 8, padding: "8px 16px", cursor: "pointer", fontSize: "0.85rem" }}>
+                Hủy
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  app.updateMaintenanceStatus(
+                    acceptingMaintenance.id,
+                    repairOutcome,
+                    actualRepairCost,
+                    repairOutcomeNote
+                  );
+                  setAcceptingMaintenance(null);
+                }}
+                style={{ background: repairOutcome === "Hoàn tất" ? "var(--color-forest)" : "#DC2626", color: "white", border: "none", borderRadius: 8, padding: "8px 20px", fontWeight: 700, fontSize: "0.85rem", cursor: "pointer" }}
+              >
+                ✓ Xác nhận nghiệm thu
+              </button>
+            </div>
           </div>
         </div>
       )}

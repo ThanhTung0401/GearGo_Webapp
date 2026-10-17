@@ -271,6 +271,7 @@ export interface StaffAccount {
   email: string;
   status: "active" | "locked";
   lockedReason?: string;
+  permissions?: string[];
   createdAt: string;
 }
 
@@ -318,6 +319,67 @@ export interface Review {
   status: "active" | "hidden";
   hiddenReason?: string;
   hiddenBy?: string;
+}
+
+export interface CustomerAccount {
+  id: string; // KH001
+  name: string;
+  phone: string;
+  email: string;
+  address: string;
+  status: "active" | "locked";
+  lockedReason?: string;
+  createdAt: string;
+  totalOrders: number;
+  totalSpent: number;
+  currentDeposit: number;
+}
+
+export interface AppNotification {
+  id: string;
+  title: string;
+  message: string;
+  type: "info" | "success" | "warning" | "alert";
+  targetRole: "all" | "customer" | "staff" | "admin";
+  createdAt: string;
+  isRead: boolean;
+  link?: string;
+}
+
+export interface RentalPolicyConfig {
+  holdMinutes: number; // Mặc định 15 phút
+  cancellationFreeHours: number; // Mặc định >48h miễn phí
+  cancellationTier1Hours: number; // 24-48h
+  cancellationTier1FeePercent: number; // 30%
+  cancellationTier2FeePercent: number; // 100% (<24h)
+  overdueMultiplier: number; // Hệ số phạt trễ 150%
+  minDepositPercentage: number; // 100%
+  updatedAt: string;
+  updatedBy: string;
+}
+
+export interface AuditLogEntry {
+  id: string;
+  timestamp: string;
+  actor: string;
+  role: string;
+  action: string;
+  targetEntity: string;
+  targetId: string;
+  detail: string;
+}
+
+export interface FinancialAdjustment {
+  id: string;
+  orderId?: string;
+  importReceiptId?: string;
+  type: "Thu bù" | "Hoàn trả" | "Bù trừ chiết khấu" | "Sai lệch kiểm kê";
+  amount: number;
+  reason: string;
+  status: "Đã duyệt" | "Chờ duyệt";
+  createdBy: string;
+  createdAt: string;
+  approvedBy?: string;
 }
 
 // ─── Initial data ─────────────────────────────────────────────────────────────
@@ -696,7 +758,131 @@ export const DEMO_ORDER_PARTIAL: Order = {
   ],
 };
 
-export const INITIAL_ORDERS: Order[] = [DEMO_ORDER, DEMO_ORDER_PARTIAL];
+// Đơn mẫu đã hoàn tất (UC15 & UC08 Đánh giá sản phẩm)
+export const DEMO_ORDER_COMPLETED: Order = {
+  id: "DT-20241120-008",
+  customerId: "KH001",
+  customerName: "Nguyễn Văn An",
+  customerPhone: "0901 234 567",
+  items: [
+    {
+      productId: "P001",
+      productName: "Lều 4 người – Tiêu chuẩn",
+      qty: 1,
+      days: 3,
+      pricePerDay: 150000,
+      depositPerUnit: 500000,
+      compensation: 2500000,
+    },
+    {
+      productId: "P004",
+      productName: "Túi ngủ mùa đông",
+      qty: 2,
+      days: 3,
+      pricePerDay: 50000,
+      depositPerUnit: 200000,
+      compensation: 800000,
+    },
+  ],
+  pickupTime: "2024-11-20 09:00",
+  returnTime: "2024-11-23 09:00",
+  rental: 750000,
+  discount: 0,
+  depositTotal: 900000,
+  status: "Hoàn tất",
+  createdAt: "2024-11-18 10:00",
+  paidAt: "2024-11-18 10:20",
+  handedOverAt: "2024-11-20 09:15",
+  assignedEquipment: [
+    {
+      equipmentId: "L001",
+      productId: "P001",
+      returnedAt: "23/11/2024 09:30",
+      returnCondition: "Bình thường",
+      returnNote: "Thiết bị nguyên vẹn, sạch sẽ",
+    },
+    {
+      equipmentId: "T001",
+      productId: "P004",
+      returnedAt: "23/11/2024 09:30",
+      returnCondition: "Bình thường",
+      returnNote: "Túi ngủ sạch, đủ bao đựng",
+    },
+    {
+      equipmentId: "T002",
+      productId: "P004",
+      returnedAt: "23/11/2024 09:30",
+      returnCondition: "Bình thường",
+      returnNote: "Túi ngủ sạch, đủ bao đựng",
+    },
+  ],
+  handoverRecord: {
+    id: "BBBG-DT-20241120-008",
+    orderId: "DT-20241120-008",
+    handedOverAt: "20/11/2024 09:15",
+    staffName: "NV Kho Tuấn",
+    customerConfirmedName: "Nguyễn Văn An",
+    items: [
+      { equipmentId: "L001", productId: "P001", condition: "Tốt", accessoriesChecked: true },
+      { equipmentId: "T001", productId: "P004", condition: "Tốt", accessoriesChecked: true },
+      { equipmentId: "T002", productId: "P004", condition: "Tốt", accessoriesChecked: true },
+    ],
+    accessoriesList: [
+      { name: "Cọc lều (8 chiếc)", checked: true },
+      { name: "Dây chằng lều", checked: true },
+      { name: "Bao đựng túi ngủ (2 chiếc)", checked: true },
+    ],
+    initialNotes: "Bàn giao đầy đủ phụ kiện theo đúng thỏa thuận",
+    signatureConfirmed: true,
+  },
+  returnReceipts: [
+    {
+      id: "PNT-DT-20241120-008-1",
+      orderId: "DT-20241120-008",
+      returnRound: 1,
+      returnedAt: "23/11/2024 09:30",
+      staffName: "NV Kho Tuấn",
+      isFinalReturn: true,
+      note: "Đã kiểm tra đầy đủ, thiết bị đạt chuẩn sẵn sàng đưa về kho",
+      items: [
+        { equipmentId: "L001", productId: "P001", condition: "Bình thường", surchargeAmount: 0, note: "Lều sạch sẽ" },
+        { equipmentId: "T001", productId: "P004", condition: "Bình thường", surchargeAmount: 0, note: "Túi ngủ tốt" },
+        { equipmentId: "T002", productId: "P004", condition: "Bình thường", surchargeAmount: 0, note: "Túi ngủ tốt" },
+      ],
+    },
+  ],
+  surcharges: [],
+  transactions: [
+    {
+      id: "GD-20241118-001",
+      type: "Thanh toán ban đầu",
+      amount: 1650000,
+      status: "Thành công",
+      createdAt: "2024-11-18 10:20",
+      completedAt: "2024-11-18 10:20",
+    },
+    {
+      id: "GD-20241123-002",
+      type: "Hoàn cọc",
+      amount: 900000,
+      status: "Thành công",
+      createdAt: "2024-11-23 09:40",
+      completedAt: "2024-11-23 09:45",
+    },
+  ],
+  statusHistory: [
+    { status: "Chờ thanh toán", at: "2024-11-18 10:00", by: "Hệ thống" },
+    { status: "Đã xác nhận", at: "2024-11-18 10:20", by: "Hệ thống" },
+    { status: "Đang chuẩn bị", at: "2024-11-19 14:00", by: "NV Kho Tuấn" },
+    { status: "Sẵn sàng nhận", at: "2024-11-19 16:00", by: "NV Kho Tuấn" },
+    { status: "Đang thuê", at: "2024-11-20 09:15", by: "NV Kho Tuấn" },
+    { status: "Đã nhận trả", at: "2024-11-23 09:30", by: "NV Kho Tuấn" },
+    { status: "Chờ đối soát", at: "2024-11-23 09:35", by: "Hệ thống" },
+    { status: "Hoàn tất", at: "2024-11-23 09:45", by: "NV Thu Ngân An" },
+  ],
+};
+
+export const INITIAL_ORDERS: Order[] = [DEMO_ORDER, DEMO_ORDER_PARTIAL, DEMO_ORDER_COMPLETED];
 
 export const INITIAL_MAINTENANCE_RECEIPTS: MaintenanceReceipt[] = [
   {
@@ -772,6 +958,157 @@ export const INITIAL_STOCK_ADJUSTMENTS: StockAdjustmentReceipt[] = [
     lines: [
       { equipmentId: "L004", previousStatus: "Sẵn sàng", newStatus: "Đang bảo trì", reason: "Phát hiện rách nhẹ cửa khi kiểm kê định kỳ" },
     ],
+  },
+];
+
+export const INITIAL_CUSTOMERS: CustomerAccount[] = [
+  {
+    id: "KH001",
+    name: "Nguyễn Văn An",
+    phone: "0901 234 567",
+    email: "an.nguyen@gmail.com",
+    address: "142 Hai Bà Trưng, Phường Đa Kao, Quận 1, TP.HCM",
+    status: "active",
+    createdAt: "01/10/2024",
+    totalOrders: 3,
+    totalSpent: 3500000,
+    currentDeposit: 1000000,
+  },
+  {
+    id: "KH002",
+    name: "Trần Minh Quang",
+    phone: "0918 765 432",
+    email: "quang.tm@gmail.com",
+    address: "88 Nguyễn Thị Minh Khai, Quận 3, TP.HCM",
+    status: "active",
+    createdAt: "15/10/2024",
+    totalOrders: 2,
+    totalSpent: 2120000,
+    currentDeposit: 600000,
+  },
+  {
+    id: "KH003",
+    name: "Lê Thị Bích Ngọc",
+    phone: "0933 888 999",
+    email: "bichngoc.le@gmail.com",
+    address: "24 Đường số 5, Phường An Phú, TP. Thủ Đức",
+    status: "active",
+    createdAt: "05/11/2024",
+    totalOrders: 1,
+    totalSpent: 850000,
+    currentDeposit: 0,
+  },
+  {
+    id: "KH004",
+    name: "Hoàng Đức Nam",
+    phone: "0977 112 233",
+    email: "nam.hd@yahoo.com",
+    address: "105 Lê Duẩn, Hoàn Kiếm, Hà Nội",
+    status: "locked",
+    lockedReason: "Chậm trả đồ >7 ngày và chưa thanh toán phụ phí bồi thường",
+    createdAt: "12/08/2024",
+    totalOrders: 1,
+    totalSpent: 450000,
+    currentDeposit: 0,
+  },
+];
+
+export const INITIAL_NOTIFICATIONS: AppNotification[] = [
+  {
+    id: "NOTIF-001",
+    title: "Đơn thuê đã được xác nhận!",
+    message: "Đơn hàng DT-20241210-042 của quý khách đã được xác nhận. Vui lòng nhận thiết bị đúng giờ vào 15/12/2024.",
+    type: "success",
+    targetRole: "customer",
+    createdAt: "10/12/2024 14:45",
+    isRead: false,
+  },
+  {
+    id: "NOTIF-002",
+    title: "Cảnh báo bảo dưỡng thiết bị",
+    message: "Lều L004 đang bảo trì quá 7 ngày chưa hoàn tất nghiệm thu.",
+    type: "warning",
+    targetRole: "staff",
+    createdAt: "11/12/2024 08:30",
+    isRead: false,
+  },
+  {
+    id: "NOTIF-003",
+    title: "Thông báo cập nhật chính sách cọc",
+    message: "Hệ thống GearGo cập nhật chính sách hoàn cọc tự động qua cổng thanh toán.",
+    type: "info",
+    targetRole: "all",
+    createdAt: "01/12/2024 09:00",
+    isRead: true,
+  },
+];
+
+export const INITIAL_POLICIES: RentalPolicyConfig = {
+  holdMinutes: 15,
+  cancellationFreeHours: 48,
+  cancellationTier1Hours: 24,
+  cancellationTier1FeePercent: 30,
+  cancellationTier2FeePercent: 100,
+  overdueMultiplier: 1.5,
+  minDepositPercentage: 100,
+  updatedAt: "01/12/2024 10:00",
+  updatedBy: "Nguyễn Văn Trưởng (Admin)",
+};
+
+export const INITIAL_AUDIT_LOGS: AuditLogEntry[] = [
+  {
+    id: "LOG-001",
+    timestamp: "10/12/2024 14:45:00",
+    actor: "Nguyễn Văn Trưởng",
+    role: "Quản trị viên",
+    action: "Cập nhật chính sách",
+    targetEntity: "RentalPolicy",
+    targetId: "GLOBAL-POLICY",
+    detail: "Điều chỉnh hệ số quá hạn 150% và áp dụng thời hạn giữ chỗ 15 phút.",
+  },
+  {
+    id: "LOG-002",
+    timestamp: "10/12/2024 14:30:12",
+    actor: "Nguyễn Văn An",
+    role: "Khách hàng",
+    action: "Tạo đơn đặt thuê",
+    targetEntity: "Order",
+    targetId: "DT-20241210-042",
+    detail: "Đặt thuê 2 lều P001, áp dụng voucher CAMPGO10 giảm 90.000đ.",
+  },
+  {
+    id: "LOG-003",
+    timestamp: "10/12/2024 16:30:00",
+    actor: "Lê Thị Mai",
+    role: "Nhân viên kho",
+    action: "Lập phiếu nhận trả PNT",
+    targetEntity: "ReturnReceipt",
+    targetId: "PNT-DT-20241208-015-1",
+    detail: "Nhận trả 1 phần đèn D003 trong tình trạng bình thường, tiếp tục cho thuê lều L003.",
+  },
+  {
+    id: "LOG-004",
+    timestamp: "01/10/2024 11:20:05",
+    actor: "Nguyễn Văn Trưởng",
+    role: "Quản trị viên",
+    action: "Khóa tài khoản",
+    targetEntity: "StaffAccount",
+    targetId: "NV-004",
+    detail: "Khóa tài khoản NV Vũ Huy Hùng lý do: Nghỉ việc từ 01/10/2024.",
+  },
+];
+
+export const INITIAL_FINANCIAL_ADJUSTMENTS: FinancialAdjustment[] = [
+  {
+    id: "PDC-TC-001",
+    orderId: "DT-20241208-015",
+    type: "Sai lệch kiểm kê",
+    amount: 150000,
+    reason: "Điều chỉnh bù trừ chi phí vệ sinh lều bám bẩn đợt khách trước bỏ sót",
+    status: "Đã duyệt",
+    createdBy: "Lê Thị Mai",
+    createdAt: "10/12/2024 17:00",
+    approvedBy: "Nguyễn Văn Trưởng",
   },
 ];
 

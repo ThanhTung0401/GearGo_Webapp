@@ -132,7 +132,7 @@ export function RegisterView() {
     });
   };
 
-  // Kiểm tra ràng buộc hợp lệ form đăng ký
+  // Kiểm tra ràng buộc hợp lệ form đăng ký (UC1.1)
   const validate = () => {
     const e: Record<string, string> = {};
     if (!form.name.trim()) e.name = "Vui lòng nhập họ tên.";
@@ -141,6 +141,13 @@ export function RegisterView() {
     if (form.pass.length < 6) e.pass = "Mật khẩu tối thiểu 6 ký tự.";
     if (form.pass !== form.confirm) e.confirm = "Mật khẩu xác nhận không khớp.";
     if (!form.agree) e.agree = "Cần đồng ý điều khoản để đăng ký.";
+
+    // Kiểm tra trùng lặp tài khoản (UC1.1 Sequence Diagram)
+    const duplicateEmail = app.customers.some((c) => c.email.toLowerCase() === form.email.toLowerCase());
+    const duplicatePhone = app.customers.some((c) => c.phone.replace(/\s/g, "") === form.phone.replace(/\s/g, ""));
+    if (duplicateEmail) e.email = "Email này đã được đăng ký tài khoản trong hệ thống.";
+    if (duplicatePhone) e.phone = "Số điện thoại này đã được sử dụng bởi tài khoản khác.";
+
     return e;
   };
 
@@ -151,6 +158,22 @@ export function RegisterView() {
       setErrors(errs);
       return;
     }
+
+    // Tạo khách hàng mới vào hệ thống
+    const nextId = `KH00${app.customers.length + 1}`;
+    app.saveCustomer({
+      id: nextId,
+      name: form.name,
+      email: form.email,
+      phone: form.phone,
+      address: "Chưa cập nhật",
+      status: "active",
+      createdAt: new Date().toLocaleDateString("vi-VN"),
+      totalOrders: 0,
+      totalSpent: 0,
+      currentDeposit: 0,
+    });
+
     setSuccess(true);
   };
 
@@ -265,45 +288,91 @@ export function RegisterView() {
   );
 }
 
-// ─── Quên mật khẩu (ForgotPasswordView) ───────────────────────────────────────
+// ─── Quên mật khẩu & Xác minh OTP (ForgotPasswordView - UC1.4) ─────────────────
 export function ForgotPasswordView() {
   const app = useApp();
-  const [step, setStep] = useState<"input" | "sent" | "reset">("input");
+  const [step, setStep] = useState<"input" | "otp" | "reset" | "success">("input");
   const [contact, setContact] = useState("");
+  const [otp, setOtp] = useState("");
   const [newPass, setNewPass] = useState("");
   const [confirm, setConfirm] = useState("");
   const [err, setErr] = useState("");
 
-  if (step === "sent") {
+  // Bước 2: Nhập OTP xác thực (UC1.4)
+  if (step === "otp") {
     return (
       <div className="auth-page">
         <div className="auth-wrapper text-center">
           <div className="auth-card text-center">
             <div className="auth-icon-badge" style={{ background: "var(--color-moss)" }}>
-              <Icon name="check" size={26} />
+              <Icon name="shield" size={26} />
             </div>
-            <h2 className="auth-title">Đã gửi hướng dẫn!</h2>
-            <p className="auth-subtitle mb-6">
-              Chúng tôi đã gửi liên kết đặt lại mật khẩu đến <strong>{contact}</strong>. Vui lòng kiểm tra hộp thư đến (hoặc thư rác).
+            <h2 className="auth-title">Nhập mã xác minh OTP</h2>
+            <p className="auth-subtitle mb-4">
+              Mã OTP gồm 6 chữ số đã được gửi đến <strong>{contact}</strong>.
             </p>
-            <button
-              onClick={() => setStep("reset")}
-              className="btn btn-primary btn-lg btn-full mb-3"
+            <div className="policy-banner text-xs mb-4">
+              💡 Mã thử nghiệm demo: <strong>123456</strong>
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (otp.trim() !== "123456" && otp.trim().length !== 6) {
+                  setErr("Mã OTP không chính xác hoặc đã hết hạn (Thử mã: 123456).");
+                  return;
+                }
+                setErr("");
+                setStep("reset");
+              }}
+              className="auth-form"
             >
-              Tiếp tục đặt lại mật khẩu →
-            </button>
-            <button
-              onClick={() => app.setPage("login")}
-              className="auth-link text-sm"
-            >
-              Quay lại đăng nhập
-            </button>
+              <div className="form-group mb-4">
+                <label className="form-label">Mã OTP (6 số)</label>
+                <input
+                  autoFocus
+                  type="text"
+                  maxLength={6}
+                  value={otp}
+                  onChange={(e) => {
+                    setOtp(e.target.value.replace(/\D/g, ""));
+                    setErr("");
+                  }}
+                  placeholder="123456"
+                  style={{ textAlign: "center", fontSize: "1.3rem", letterSpacing: "6px", fontFamily: "var(--font-mono)", fontWeight: 700 }}
+                  className={`form-input ${err ? "form-input-error" : ""}`}
+                />
+                {err && <div className="form-error-msg">{err}</div>}
+              </div>
+
+              <button type="submit" className="btn btn-primary btn-lg btn-full mb-3">
+                Xác minh mã OTP →
+              </button>
+
+              <div className="flex justify-between items-center text-xs text-gray-500">
+                <button
+                  type="button"
+                  onClick={() => alert("Đã gửi lại mã OTP mới: 123456")}
+                  className="auth-link text-xs"
+                >
+                  Gửi lại mã OTP
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStep("input")}
+                  className="auth-link text-xs"
+                >
+                  Đổi email / SĐT
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       </div>
     );
   }
 
+  // Bước 3: Đặt mật khẩu mới hai lần (UC1.4)
   if (step === "reset") {
     return (
       <div className="auth-page">
@@ -313,7 +382,7 @@ export function ForgotPasswordView() {
               <Icon name="shield" size={26} />
             </div>
             <h1 className="auth-title">Đặt mật khẩu mới</h1>
-            <p className="auth-subtitle">Nhập mật khẩu an toàn mới cho tài khoản của bạn</p>
+            <p className="auth-subtitle">Xác minh thành công cho {contact}. Nhập mật khẩu mới an toàn.</p>
           </div>
 
           <div className="auth-card">
@@ -328,12 +397,12 @@ export function ForgotPasswordView() {
                   setErr("Mật khẩu xác nhận không khớp.");
                   return;
                 }
-                app.setPage("login");
+                setStep("success");
               }}
               className="auth-form"
             >
               <div className="form-group">
-                <label className="form-label">Mật khẩu mới</label>
+                <label className="form-label">Mật khẩu mới *</label>
                 <input
                   type="password"
                   value={newPass}
@@ -347,7 +416,7 @@ export function ForgotPasswordView() {
               </div>
 
               <div className="form-group">
-                <label className="form-label">Xác nhận mật khẩu mới</label>
+                <label className="form-label">Xác nhận mật khẩu mới *</label>
                 <input
                   type="password"
                   value={confirm}
@@ -372,6 +441,32 @@ export function ForgotPasswordView() {
     );
   }
 
+  // Bước 4: Thành công
+  if (step === "success") {
+    return (
+      <div className="auth-page">
+        <div className="auth-wrapper text-center">
+          <div className="auth-card text-center">
+            <div className="auth-icon-badge" style={{ background: "var(--color-forest)" }}>
+              <Icon name="check" size={26} />
+            </div>
+            <h2 className="auth-title">Đổi mật khẩu thành công!</h2>
+            <p className="auth-subtitle mb-6">
+              Mật khẩu tài khoản <strong>{contact}</strong> đã được cập nhật thành công. Vui lòng đăng nhập lại.
+            </p>
+            <button
+              onClick={() => app.setPage("login")}
+              className="btn btn-primary btn-lg btn-full"
+            >
+              Đăng nhập ngay →
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Bước 1: Nhập email hoặc SĐT
   return (
     <div className="auth-page">
       <div className="auth-wrapper">
@@ -380,7 +475,7 @@ export function ForgotPasswordView() {
             <Icon name="arrow-up" size={26} />
           </div>
           <h1 className="auth-title">Khôi phục mật khẩu</h1>
-          <p className="auth-subtitle">Nhập email hoặc số điện thoại để nhận mã xác minh</p>
+          <p className="auth-subtitle">Nhập email hoặc số điện thoại để nhận mã xác minh OTP</p>
         </div>
 
         <div className="auth-card">
@@ -391,12 +486,13 @@ export function ForgotPasswordView() {
                 setErr("Vui lòng nhập email hoặc số điện thoại.");
                 return;
               }
-              setStep("sent");
+              setErr("");
+              setStep("otp");
             }}
             className="auth-form"
           >
             <div className="form-group">
-              <label className="form-label">Email hoặc số điện thoại</label>
+              <label className="form-label">Email hoặc số điện thoại *</label>
               <input
                 type="text"
                 value={contact}
@@ -404,14 +500,14 @@ export function ForgotPasswordView() {
                   setContact(e.target.value);
                   setErr("");
                 }}
-                placeholder="example@email.com hoặc 0901234567"
+                placeholder="VD: an.nguyen@gmail.com hoặc 0901234567"
                 className={`form-input ${err ? "form-input-error" : ""}`}
               />
               {err && <div className="form-error-msg">{err}</div>}
             </div>
 
             <button type="submit" className="btn btn-primary btn-lg btn-full mt-2">
-              Gửi hướng dẫn khôi phục
+              Gửi mã OTP xác minh →
             </button>
 
             <div className="text-center mt-3">

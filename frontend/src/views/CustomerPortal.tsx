@@ -290,7 +290,7 @@ function CheckoutView() {
           </div>
 
           <div className="policy-banner">
-            <strong>📌 Chính sách hủy đơn tiêu chuẩn (UC07):</strong>
+            <strong>📌 Chính sách hủy đơn tiêu chuẩn:</strong>
             <p className="mt-1">
               - Trước 48h: Hoàn 100% tiền thuê + tiền cọc.
               <br />
@@ -505,61 +505,106 @@ function OrderConfirmedView() {
   );
 }
 
-// ─── Danh sách đơn của tôi (MyOrdersView) ────────────────────────────────────
+// ─── Danh sách đơn của tôi (MyOrdersView - UC3.3) ────────────────────────────
 function MyOrdersView() {
   const app = useApp();
   const [selected, setSelected] = useState<string | null>(null);
   const [cancelling, setCancelling] = useState<string | null>(null);
   const [cancelReason, setCancelReason] = useState("");
+  const [statusTab, setStatusTab] = useState<string>("Tất cả");
+  const [viewingRecord, setViewingRecord] = useState<"bbbg" | "pnt" | null>(null);
 
-  const myOrders = app.orders;
-  const detail = myOrders.find((o) => o.id === selected);
+  const statusOptions = ["Tất cả", "Chờ thanh toán", "Đã xác nhận", "Đang thuê", "Hoàn tất", "Đã hủy"];
+
+  const myOrders = app.orders.filter((o) => {
+    if (statusTab === "Tất cả") return true;
+    if (statusTab === "Đã hủy") return o.status === "Khách hủy" || o.status === "Cửa hàng hủy";
+    return o.status === statusTab;
+  });
+
+  const detail = app.orders.find((o) => o.id === selected);
   const cancellationQuote = cancelling ? app.getCancellationQuote(cancelling) : null;
 
   return (
     <div className="customer-container">
       <div className="customer-page-header">
         <h1 className="customer-page-title">Đơn thuê của tôi</h1>
-        <p className="text-sm text-gray-500">Xem tiến độ nhận trả và trạng thái các đơn thuê</p>
+        <p className="text-sm text-gray-500">Xem tiến độ nhận trả, tra cứu biên bản bàn giao BBBG và phiếu nhận trả PNT</p>
+      </div>
+
+      {/* Tabs lọc trạng thái đơn hàng (UC3.3) */}
+      <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
+        {statusOptions.map((st) => {
+          const count = st === "Tất cả"
+            ? app.orders.length
+            : st === "Đã hủy"
+            ? app.orders.filter((o) => o.status === "Khách hủy" || o.status === "Cửa hàng hủy").length
+            : app.orders.filter((o) => o.status === st).length;
+          return (
+            <button
+              key={st}
+              onClick={() => setStatusTab(st)}
+              style={{
+                background: statusTab === st ? "var(--color-forest)" : "white",
+                color: statusTab === st ? "white" : "var(--color-bark)",
+                border: `1px solid ${statusTab === st ? "var(--color-forest)" : "var(--color-bone)"}`,
+                borderRadius: 8,
+                padding: "8px 14px",
+                fontSize: "0.82rem",
+                fontWeight: statusTab === st ? 700 : 500,
+                cursor: "pointer",
+                whiteSpace: "nowrap"
+              }}
+            >
+              {st} ({count})
+            </button>
+          );
+        })}
       </div>
 
       <div className="responsive-detail-grid grid gap-6" style={{ gridTemplateColumns: detail ? "1fr 420px" : "1fr" }}>
         <div className="flex flex-col gap-3">
-          {myOrders.map((o) => {
-            const sc = statusColors[o.status] || { bg: "#F3F4F6", text: "#374151" };
-            return (
-              <div
-                key={o.id}
-                onClick={() => setSelected(selected === o.id ? null : o.id)}
-                className={`order-card cursor-pointer ${
-                  selected === o.id ? "border-forest shadow-md" : ""
-                }`}
-              >
-                <div className="flex justify-between items-start">
-                  <div>
-                    <div className="font-mono text-xs text-moss font-bold">{o.id}</div>
-                    <div className="font-bold text-bark my-1">
-                      {o.items.map((i) => `${i.productName} ×${i.qty}`).join(", ")}
+          {myOrders.length === 0 ? (
+            <div className="card-panel text-center py-12 text-gray-500 text-sm">
+              Không có đơn thuê nào ở trạng thái "{statusTab}".
+            </div>
+          ) : (
+            myOrders.map((o) => {
+              const sc = statusColors[o.status] || { bg: "#F3F4F6", text: "#374151" };
+              return (
+                <div
+                  key={o.id}
+                  onClick={() => setSelected(selected === o.id ? null : o.id)}
+                  className={`order-card cursor-pointer ${
+                    selected === o.id ? "border-forest shadow-md" : ""
+                  }`}
+                >
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <div className="font-mono text-xs text-moss font-bold">{o.id}</div>
+                      <div className="font-bold text-bark my-1">
+                        {o.items.map((i) => `${i.productName} ×${i.qty}`).join(", ")}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        📅 {o.pickupTime} → {o.returnTime}
+                      </div>
                     </div>
-                    <div className="text-xs text-gray-500">
-                      📅 {o.pickupTime} → {o.returnTime}
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <span
-                      style={{ background: sc.bg, color: sc.text }}
-                      className="badge mb-1"
-                    >
-                      {o.status}
-                    </span>
-                    <div className="font-mono font-bold text-forest text-sm">
-                      {fmt(o.rental - o.discount + o.depositTotal)}
+                    <div className="text-right">
+                      <span
+                        style={{ background: sc.bg, color: sc.text }}
+                        className="badge mb-1"
+                      >
+                        {o.status}
+                      </span>
+                      <div className="font-mono font-bold text-forest text-sm">
+                        {fmt(o.rental - o.discount + o.depositTotal)}
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })
+          )}
         </div>
 
         {detail && (
@@ -595,6 +640,47 @@ function MyOrdersView() {
               ))}
             </div>
 
+            {/* Các chứng từ bàn giao / nhận trả (UC3.3) */}
+            <div className="flex flex-col gap-2 mb-4">
+              {detail.handoverRecord && (
+                <button
+                  onClick={() => setViewingRecord("bbbg")}
+                  style={{
+                    background: "#EFF6FF",
+                    border: "1px solid #BFDBFE",
+                    color: "#1D4ED8",
+                    padding: "8px 12px",
+                    borderRadius: 8,
+                    fontSize: "0.78rem",
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    textAlign: "left"
+                  }}
+                >
+                  📋 Xem Biên bản bàn giao (BBBG)
+                </button>
+              )}
+
+              {detail.returnReceipts && detail.returnReceipts.length > 0 && (
+                <button
+                  onClick={() => setViewingRecord("pnt")}
+                  style={{
+                    background: "#F0FDF4",
+                    border: "1px solid #BBF7D0",
+                    color: "#15803D",
+                    padding: "8px 12px",
+                    borderRadius: 8,
+                    fontSize: "0.78rem",
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    textAlign: "left"
+                  }}
+                >
+                  📦 Xem Phiếu nhận trả ({detail.returnReceipts.length} đợt)
+                </button>
+              )}
+            </div>
+
             <div className="mb-4">
               <div className="text-xs font-bold text-bark mb-2">Lịch sử trạng thái</div>
               {detail.statusHistory.map((h, i) => (
@@ -616,9 +702,105 @@ function MyOrdersView() {
                 Yêu cầu hủy đơn
               </button>
             )}
+
+            {detail.status === "Hoàn tất" && (
+              <button
+                onClick={() => {
+                  app.setPage("profile");
+                }}
+                className="btn btn-primary btn-sm btn-full"
+                style={{ background: "#D97706", borderColor: "#D97706", color: "#FFFFFF" }}
+              >
+                ⭐ Viết đánh giá sản phẩm (UC08 / UC9.1)
+              </button>
+            )}
           </div>
         )}
       </div>
+
+      {/* Modal Xem BBBG (UC3.3) */}
+      {viewingRecord === "bbbg" && detail && detail.handoverRecord && (
+        <div role="dialog" aria-modal="true" className="modal-overlay">
+          <div className="modal-container" style={{ maxWidth: 540 }}>
+            <div className="modal-header">
+              <h3 className="modal-title">Biên bản bàn giao thiết bị ({detail.handoverRecord.id})</h3>
+              <button onClick={() => setViewingRecord(null)} className="btn btn-ghost btn-sm text-lg">×</button>
+            </div>
+            <div className="modal-body text-xs flex flex-col gap-3">
+              <div style={{ background: "var(--color-parchment)", borderRadius: 8, padding: 12 }}>
+                <div>Thời gian bàn giao: <strong>{detail.handoverRecord.handoverAt}</strong></div>
+                <div>Nhân viên giao: <strong>{detail.handoverRecord.staffName}</strong></div>
+                <div>Khách nhận: <strong>{detail.handoverRecord.customerName}</strong></div>
+              </div>
+
+              <div>
+                <strong>Danh sách thiết bị cá thể & phụ kiện:</strong>
+                <div className="flex flex-col gap-1.5 mt-2">
+                  {detail.handoverRecord.items.map((it) => (
+                    <div key={it.equipmentId} style={{ padding: "6px 10px", background: "#F9FAFB", borderRadius: 6, border: "1px solid var(--color-bone)" }}>
+                      Mã serial: <strong>{it.equipmentId}</strong> · Tình trạng: {it.condition} · Phụ kiện: {it.accessoriesOk ? "✓ Đầy đủ" : "Thiếu"}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {detail.handoverRecord.accessoriesChecklist && (
+                <div>
+                  <strong>Checklist phụ kiện đi kèm:</strong>
+                  <div className="flex flex-col gap-1 mt-1">
+                    {detail.handoverRecord.accessoriesChecklist.map((c, i) => (
+                      <div key={i} className="flex items-center gap-2">
+                        <span>{c.checked ? "☑" : "☐"}</span>
+                        <span>{c.name}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {detail.handoverRecord.initialNotes && (
+                <div>Ghi chú ban đầu: <em>"{detail.handoverRecord.initialNotes}"</em></div>
+              )}
+
+              <div style={{ padding: 10, background: "#DCFCE7", borderRadius: 8, color: "#15803D", fontWeight: 700 }}>
+                ✓ Đã ký xác nhận bàn giao đầy đủ tại quầy
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Xem Phiếu Nhận Trả PNT (UC3.3) */}
+      {viewingRecord === "pnt" && detail && detail.returnReceipts && (
+        <div role="dialog" aria-modal="true" className="modal-overlay">
+          <div className="modal-container" style={{ maxWidth: 540 }}>
+            <div className="modal-header">
+              <h3 className="modal-title">Phiếu nhận trả thiết bị (PNT)</h3>
+              <button onClick={() => setViewingRecord(null)} className="btn btn-ghost btn-sm text-lg">×</button>
+            </div>
+            <div className="modal-body text-xs flex flex-col gap-4">
+              {detail.returnReceipts.map((rc, idx) => (
+                <div key={rc.id || idx} style={{ border: "1px solid var(--color-bone)", borderRadius: 10, padding: 12, background: "var(--color-cream)" }}>
+                  <div className="flex justify-between items-center mb-2">
+                    <strong style={{ color: "var(--color-forest)" }}>{rc.id} (Đợt {rc.returnRound})</strong>
+                    <span>Thời gian: {rc.returnedAt}</span>
+                  </div>
+                  <div>Nhân viên tiếp nhận: <strong>{rc.staffName}</strong> · Lần trả cuối: {rc.isFinalReturn ? "Có" : "Không"}</div>
+                  <div className="flex flex-col gap-1.5 mt-2">
+                    {rc.items.map((item, itemIdx) => (
+                      <div key={itemIdx} style={{ padding: "6px 10px", background: "white", borderRadius: 6, border: "1px solid var(--color-bone)" }}>
+                        Thiết bị: <strong>{item.equipmentId}</strong> · Tình trạng nhận lại: <strong style={{ color: item.condition === "Bình thường" ? "#15803D" : "#DC2626" }}>{item.condition}</strong>
+                        {item.surchargeAmount > 0 && <span style={{ color: "#DC2626", marginLeft: 8 }}>(Phụ phí: +{fmt(item.surchargeAmount)})</span>}
+                        {item.note && <div style={{ color: "#6B7280", marginTop: 2 }}>Ghi chú: {item.note}</div>}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {cancelling && cancellationQuote && (
         <div className="modal-overlay">
@@ -855,31 +1037,39 @@ function AIAdvisorView() {
   );
 }
 
-// ─── Hồ sơ cá nhân & Đánh giá (ProfileView) ──────────────────────────────────
+// ─── Hồ sơ cá nhân & Đổi mật khẩu & Đánh giá (ProfileView - UC1.5, UC1.6, UC1.12, UC9.1) ─
 function ProfileView() {
   const app = useApp();
-  const [section, setSection] = useState<"profile" | "reviews">("profile");
-  const [profile, setProfile] = useState(() => {
+  const [section, setSection] = useState<"profile" | "security" | "reviews">("profile");
+
+  const defaultProfile = {
+    name: "Nguyễn Văn An",
+    phone: "0901 234 567",
+    email: "an.nguyen@example.com",
+    address: "142 Hai Bà Trưng, Phường Đa Kao, Quận 1, TP. Hồ Chí Minh",
+    birthDate: "1995-08-15",
+    avatarUrl: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150",
+  };
+
+  const [savedProfile, setSavedProfile] = useState(() => {
     try {
       const saved = localStorage.getItem("geargo-demo-customer-profile");
-      return saved
-        ? (JSON.parse(saved) as { name: string; phone: string; email: string; address: string })
-        : {
-            name: "Nguyễn Văn An",
-            phone: "0901 234 567",
-            email: "an.nguyen@example.com",
-            address: "Quận 3, TP. Hồ Chí Minh",
-          };
+      return saved ? (JSON.parse(saved) as typeof defaultProfile) : defaultProfile;
     } catch {
-      return {
-        name: "Nguyễn Văn An",
-        phone: "0901 234 567",
-        email: "an.nguyen@example.com",
-        address: "Quận 3, TP. Hồ Chí Minh",
-      };
+      return defaultProfile;
     }
   });
+
+  const [profile, setProfile] = useState(savedProfile);
   const [saved, setSaved] = useState(false);
+
+  // Đổi mật khẩu state (UC1.12)
+  const [oldPassword, setOldPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordMsg, setPasswordMsg] = useState("");
+  const [passwordError, setPasswordError] = useState("");
+
   const [reviewingTarget, setReviewingTarget] = useState<{
     orderId: string;
     productId: string;
@@ -887,12 +1077,45 @@ function ProfileView() {
   } | null>(null);
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState("");
+  const [reviewImage, setReviewImage] = useState("");
   const [reviewError, setReviewError] = useState("");
   const completedOrders = app.orders.filter((order) => order.status === "Hoàn tất");
 
   const saveProfile = () => {
     localStorage.setItem("geargo-demo-customer-profile", JSON.stringify(profile));
+    setSavedProfile(profile);
     setSaved(true);
+    app.addAuditLog({ actor: profile.name, role: "Khách hàng", action: "Cập nhật hồ sơ (UC1.6)", targetEntity: "CustomerProfile", targetId: profile.phone, detail: "Cập nhật thông tin liên hệ và hồ sơ cá nhân" });
+  };
+
+  const handleCancelProfileChanges = () => {
+    setProfile(savedProfile);
+    setSaved(false);
+  };
+
+  const handleChangePassword = (e: React.FormEvent) => {
+    e.preventDefault();
+    setPasswordError("");
+    setPasswordMsg("");
+
+    if (!oldPassword) {
+      setPasswordError("Vui lòng nhập mật khẩu hiện tại");
+      return;
+    }
+    if (newPassword.length < 6) {
+      setPasswordError("Mật khẩu mới phải có tối thiểu 6 ký tự");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordError("Mật khẩu mới và xác nhận mật khẩu không khớp");
+      return;
+    }
+
+    setPasswordMsg("✓ Đổi mật khẩu thành công! Vui lòng dùng mật khẩu mới cho các lần đăng nhập sau.");
+    setOldPassword("");
+    setNewPassword("");
+    setConfirmPassword("");
+    app.addAuditLog({ actor: profile.name, role: "Khách hàng", action: "Đổi mật khẩu (UC1.12)", targetEntity: "CustomerAccount", targetId: profile.email, detail: "Người dùng đổi mật khẩu bảo mật cá nhân" });
   };
 
   const handleSendReview = (e: React.FormEvent) => {
@@ -903,11 +1126,13 @@ function ProfileView() {
       productId: reviewingTarget.productId,
       rating,
       comment,
+      images: reviewImage.trim() ? [reviewImage.trim()] : undefined,
     });
     if (res.ok) {
       setReviewingTarget(null);
       setComment("");
       setRating(5);
+      setReviewImage("");
       setReviewError("");
     } else {
       setReviewError(res.message);
@@ -919,20 +1144,26 @@ function ProfileView() {
       <div className="flex justify-between items-center mb-6 flex-wrap gap-4">
         <div>
           <h1 className="customer-page-title">Tài khoản cá nhân</h1>
-          <p className="text-sm text-gray-500">Quản lý hồ sơ và đánh giá sản phẩm sau chuyến đi</p>
+          <p className="text-sm text-gray-500">Quản lý hồ sơ, đổi mật khẩu và đánh giá sản phẩm sau chuyến đi</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <button
             onClick={() => setSection("profile")}
             className={`btn btn-sm ${section === "profile" ? "btn-primary" : "btn-secondary"}`}
           >
-            Hồ sơ cá nhân
+            Hồ sơ cá nhân (UC1.6)
+          </button>
+          <button
+            onClick={() => setSection("security")}
+            className={`btn btn-sm ${section === "security" ? "btn-primary" : "btn-secondary"}`}
+          >
+            Đổi mật khẩu (UC1.12)
           </button>
           <button
             onClick={() => setSection("reviews")}
             className={`btn btn-sm ${section === "reviews" ? "btn-primary" : "btn-secondary"}`}
           >
-            Đánh giá sản phẩm
+            Đánh giá sản phẩm ({completedOrders.length})
           </button>
         </div>
       </div>
@@ -945,19 +1176,35 @@ function ProfileView() {
           }}
           className="card-panel"
         >
+          <div className="flex justify-between items-start mb-4">
+            <div>
+              <h2 className="font-display font-bold text-lg text-bark">Hồ sơ cá nhân & Thông tin liên hệ (UC1.6)</h2>
+              <p className="text-xs text-gray-500 mt-0.5">
+                * Chuẩn thực thể KHACH_HANG & TAI_KHOAN: GearGo nhận và trả thiết bị trực tiếp tại cửa hàng (128 Nguyễn Đình Chiểu, Q.3).
+              </p>
+            </div>
+            {profile.avatarUrl && (
+              <img
+                src={profile.avatarUrl}
+                alt={profile.name}
+                style={{ width: 48, height: 48, borderRadius: "50%", objectFit: "cover", border: "2px solid var(--color-forest)" }}
+              />
+            )}
+          </div>
           <div className="form-grid-2">
             {[
               { key: "name" as const, label: "Họ và tên", type: "text" },
               { key: "phone" as const, label: "Số điện thoại", type: "tel" },
               { key: "email" as const, label: "Email", type: "email" },
-              { key: "address" as const, label: "Địa chỉ nhận / trả", type: "text" },
+              { key: "birthDate" as const, label: "Ngày sinh (KHACH_HANG.ngay_sinh)", type: "date" },
+              { key: "address" as const, label: "Địa chỉ thường trú / liên hệ", type: "text" },
+              { key: "avatarUrl" as const, label: "Ảnh đại diện (URL)", type: "url" },
             ].map((field) => (
               <div key={field.key} className="form-group">
                 <label className="form-label">{field.label}</label>
                 <input
-                  required
                   type={field.type}
-                  value={profile[field.key]}
+                  value={profile[field.key] ?? ""}
                   onChange={(e) => {
                     setProfile({ ...profile, [field.key]: e.target.value });
                     setSaved(false);
@@ -971,10 +1218,72 @@ function ProfileView() {
             <button type="submit" className="btn btn-primary btn-md">
               Lưu thay đổi
             </button>
+            <button
+              type="button"
+              onClick={handleCancelProfileChanges}
+              className="btn btn-secondary btn-md"
+            >
+              Hủy thay đổi
+            </button>
             {saved && (
               <span className="badge badge-success">✓ Đã lưu hồ sơ thành công</span>
             )}
           </div>
+        </form>
+      ) : section === "security" ? (
+        <form onSubmit={handleChangePassword} className="card-panel max-w-lg">
+          <h2 className="font-display font-bold text-lg text-bark mb-2">Đổi mật khẩu tài khoản</h2>
+          <p className="text-xs text-gray-500 mb-4">Mật khẩu mới cần dài tối thiểu 6 ký tự để bảo mật tài khoản thuê thiết bị.</p>
+
+          <div className="form-group mb-3">
+            <label className="form-label">Mật khẩu hiện tại *</label>
+            <input
+              required
+              type="password"
+              placeholder="••••••••"
+              value={oldPassword}
+              onChange={(e) => setOldPassword(e.target.value)}
+              className="form-input"
+            />
+          </div>
+
+          <div className="form-group mb-3">
+            <label className="form-label">Mật khẩu mới *</label>
+            <input
+              required
+              type="password"
+              placeholder="••••••••"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              className="form-input"
+            />
+          </div>
+
+          <div className="form-group mb-4">
+            <label className="form-label">Xác nhận mật khẩu mới *</label>
+            <input
+              required
+              type="password"
+              placeholder="••••••••"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              className="form-input"
+            />
+          </div>
+
+          {passwordError && (
+            <div className="form-error-msg mb-3">{passwordError}</div>
+          )}
+
+          {passwordMsg && (
+            <div className="badge badge-success p-2.5 rounded-lg mb-3 block text-center font-bold">
+              {passwordMsg}
+            </div>
+          )}
+
+          <button type="submit" className="btn btn-primary btn-md">
+            Cập nhật mật khẩu mới
+          </button>
         </form>
       ) : (
         <div className="card-panel">
@@ -982,7 +1291,7 @@ function ProfileView() {
             Đánh giá sản phẩm theo đơn đã hoàn tất
           </h2>
           <p className="text-xs text-gray-500 mb-4">
-            Quy tắc UC08: Mỗi sản phẩm trong một đơn hoàn tất chỉ được đánh giá một lần duy nhất.
+            Lưu ý: Mỗi sản phẩm trong một đơn hoàn tất chỉ được đánh giá một lần duy nhất.
           </p>
 
           {completedOrders.length === 0 ? (

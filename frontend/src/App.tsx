@@ -2,9 +2,11 @@ import { useState, createContext, useContext, useEffect } from "react";
 import {
   Role, Order, Equipment, CartItem,
   INITIAL_PRODUCTS, INITIAL_EQUIPMENT, INITIAL_IMPORT_RECEIPTS, INITIAL_CATEGORIES,
-  INITIAL_SUPPLIERS, INITIAL_PROMOTIONS, INITIAL_REVIEWS, INITIAL_ORDERS, INITIAL_MAINTENANCE_RECEIPTS, INITIAL_STAFF_ACCOUNTS, INITIAL_STOCK_ADJUSTMENTS, DEMO_ORDER,
+  INITIAL_SUPPLIERS, INITIAL_PROMOTIONS, INITIAL_REVIEWS, INITIAL_ORDERS, INITIAL_MAINTENANCE_RECEIPTS, INITIAL_STAFF_ACCOUNTS, INITIAL_STOCK_ADJUSTMENTS, DEMO_ORDER, DEMO_ORDER_COMPLETED,
+  INITIAL_CUSTOMERS, INITIAL_NOTIFICATIONS, INITIAL_POLICIES, INITIAL_AUDIT_LOGS, INITIAL_FINANCIAL_ADJUSTMENTS,
   Product, Category, Supplier, Promotion, PromotionUsage, ActionResult, OrderStatus, AssignedEquipment, Surcharge, MoneyTransaction, ImportReceipt, Review,
   HandoverRecord, ReturnReceipt, ReturnReceiptItem, MaintenanceReceipt, StaffAccount, StockAdjustmentReceipt, StockAdjustmentLine,
+  CustomerAccount, AppNotification, RentalPolicyConfig, AuditLogEntry, FinancialAdjustment,
   fmt, statusColors,
 } from "./store";
 import LandingView from "./views/LandingView";
@@ -42,6 +44,12 @@ export interface AppState {
   maintenanceReceipts: MaintenanceReceipt[];
   staffAccounts: StaffAccount[];
   stockAdjustments: StockAdjustmentReceipt[];
+  customers: CustomerAccount[];
+  notifications: AppNotification[];
+  policies: RentalPolicyConfig;
+  auditLogs: AuditLogEntry[];
+  financialAdjustments: FinancialAdjustment[];
+  currentUser: { name: string; email: string; phone: string; role: Role } | null;
   pickupDate: string;
   returnDate: string;
   pickupHour: string;
@@ -71,7 +79,7 @@ export interface AppState {
   updateCartQty: (productId: string, delta: number) => void;
   createOrder: (promoCode: string) => string;
   payOrder: (orderId: string, succeed?: boolean) => void;
-  settleOrder: (orderId: string, succeed?: boolean) => void;
+  settleOrder: (orderId: string, succeed?: boolean, details?: { method?: string; note?: string; amount?: number }) => void;
   cancelOrder: (orderId: string, reason?: string) => void;
   getCancellationQuote: (orderId: string) => { fee: number; refund: number };
   advanceOrderStatus: (orderId: string, status: OrderStatus, by?: string) => void;
@@ -83,6 +91,16 @@ export interface AppState {
   saveMaintenanceReceipt: (receipt: MaintenanceReceipt) => ActionResult<MaintenanceReceipt>;
   updateMaintenanceStatus: (id: string, status: MaintenanceReceipt["status"], actualCost?: number, note?: string) => ActionResult;
   toggleStaffLock: (staffId: string, reason?: string) => ActionResult;
+  saveStaffAccount: (staff: StaffAccount) => ActionResult<StaffAccount>;
+  saveCustomer: (customer: CustomerAccount) => ActionResult<CustomerAccount>;
+  toggleCustomerLock: (customerId: string, reason?: string) => ActionResult;
+  sendNotification: (notif: { title: string; message: string; type: AppNotification["type"]; targetRole: AppNotification["targetRole"] }) => ActionResult<AppNotification>;
+  markNotificationRead: (id: string) => void;
+  updatePolicy: (policy: Partial<RentalPolicyConfig>) => ActionResult;
+  addAuditLog: (entry: { actor: string; role: string; action: string; targetEntity: string; targetId: string; detail: string }) => void;
+  saveFinancialAdjustment: (adj: Omit<FinancialAdjustment, "id" | "createdAt">) => ActionResult<FinancialAdjustment>;
+  login: (user: { name: string; email: string; phone: string; role: Role }) => void;
+  logout: () => void;
   createStockAdjustment: (receipt: { reason: string; createdBy: string; lines: StockAdjustmentLine[] }) => ActionResult<StockAdjustmentReceipt>;
   addSurcharge: (orderId: string, surcharge: Surcharge) => void;
   approveSurcharge: (orderId: string, surchargeId: string) => void;
@@ -121,6 +139,12 @@ interface PersistedState {
   maintenanceReceipts?: MaintenanceReceipt[];
   staffAccounts?: StaffAccount[];
   stockAdjustments?: StockAdjustmentReceipt[];
+  customers?: CustomerAccount[];
+  notifications?: AppNotification[];
+  policies?: RentalPolicyConfig;
+  auditLogs?: AuditLogEntry[];
+  financialAdjustments?: FinancialAdjustment[];
+  currentUser?: { name: string; email: string; phone: string; role: Role } | null;
   pickupDate: string;
   returnDate: string;
   pickupHour?: string;
@@ -173,7 +197,13 @@ export default function App() {
     includedAccessories: item.includedAccessories ?? [],
     note: item.note ?? "",
   })));
-  const [orders, setOrders] = useState<Order[]>(persistedState?.orders ?? INITIAL_ORDERS);
+  const [orders, setOrders] = useState<Order[]>(() => {
+    const list = persistedState?.orders ?? INITIAL_ORDERS;
+    if (!list.some((o) => o.status === "Hoàn tất")) {
+      return [...list, DEMO_ORDER_COMPLETED];
+    }
+    return list;
+  });
   const [cart, setCart] = useState<CartItem[]>(persistedState?.cart ?? []);
   const [importReceipts, setImportReceipts] = useState<ImportReceipt[]>(() => (persistedState?.importReceipts ?? INITIAL_IMPORT_RECEIPTS).map((receipt) => {
     const supplier = suppliers.find((item) => item.id === receipt.supplierId || item.displayCode === receipt.supplierId);
@@ -189,6 +219,15 @@ export default function App() {
   const [maintenanceReceipts, setMaintenanceReceipts] = useState<MaintenanceReceipt[]>(persistedState?.maintenanceReceipts ?? INITIAL_MAINTENANCE_RECEIPTS);
   const [staffAccounts, setStaffAccounts] = useState<StaffAccount[]>(persistedState?.staffAccounts ?? INITIAL_STAFF_ACCOUNTS);
   const [stockAdjustments, setStockAdjustments] = useState<StockAdjustmentReceipt[]>(persistedState?.stockAdjustments ?? INITIAL_STOCK_ADJUSTMENTS);
+  const [customers, setCustomers] = useState<CustomerAccount[]>(persistedState?.customers ?? INITIAL_CUSTOMERS);
+  const [notifications, setNotifications] = useState<AppNotification[]>(persistedState?.notifications ?? INITIAL_NOTIFICATIONS);
+  const [policies, setPolicies] = useState<RentalPolicyConfig>(persistedState?.policies ?? INITIAL_POLICIES);
+  const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>(persistedState?.auditLogs ?? INITIAL_AUDIT_LOGS);
+  const [financialAdjustments, setFinancialAdjustments] = useState<FinancialAdjustment[]>(persistedState?.financialAdjustments ?? INITIAL_FINANCIAL_ADJUSTMENTS);
+  const [currentUser, setCurrentUser] = useState<{ name: string; email: string; phone: string; role: Role } | null>(
+    persistedState?.currentUser ?? { name: "Nguyễn Văn An", email: "an.nguyen@gmail.com", phone: "0901 234 567", role: "customer" }
+  );
+  const [notifDropdownOpen, setNotifDropdownOpen] = useState(false);
   const [pickupDate, setPickupDate] = useState(persistedState?.pickupDate ?? "");
   const [returnDate, setReturnDate] = useState(persistedState?.returnDate ?? "");
   const [pickupHour, setPickupHour] = useState(persistedState?.pickupHour ?? "09:00");
@@ -560,21 +599,34 @@ export default function App() {
     }));
   };
 
-  const settleOrder = (orderId: string, succeed = true) => {
+  const settleOrder = (orderId: string, succeed = true, details?: { method?: string; note?: string; amount?: number }) => {
     const now = new Date().toLocaleString("vi-VN");
     setOrders((prev) => prev.map((o) => {
       if (o.id !== orderId || o.status !== "Chờ đối soát") return o;
       const approved = o.surcharges.filter((s) => s.status === "Đã duyệt").reduce((sum, s) => sum + s.amount, 0);
       const difference = o.depositTotal - approved;
+      const amount = details?.amount ?? Math.abs(difference);
+      const defaultNote = succeed ? (difference >= 0 ? "Hoàn cọc thành công" : "Thu thêm thành công") : "Giao dịch đối soát thất bại";
+      const fullNote = details?.note || (details?.method ? `${defaultNote} qua ${details.method}` : defaultNote);
       const transaction: MoneyTransaction = {
         id: `GD-${Date.now()}`,
         type: difference >= 0 ? "Hoàn cọc" : "Thu thêm",
-        amount: Math.abs(difference),
+        amount,
         status: succeed ? "Thành công" : "Thất bại",
         createdAt: now,
         completedAt: now,
-        note: succeed ? "Đối soát mô phỏng thành công" : "Giao dịch đối soát thất bại, cần thử lại",
+        note: fullNote,
       };
+      if (succeed) {
+        addAuditLog({
+          actor: "NV Kho Mai",
+          role: "staff",
+          action: difference >= 0 ? "Hoàn cọc đối soát (UC5.6)" : "Thu thêm đối soát (UC5.5)",
+          targetEntity: "Order",
+          targetId: orderId,
+          detail: `${fullNote} - Số tiền: ${fmt(amount)}`,
+        });
+      }
       return succeed
         ? {
             ...o,
@@ -904,7 +956,7 @@ export default function App() {
     return { isOverdue: true, overdueHours: Math.round(diffHours), overdueDays, surcharge };
   };
 
-  // UC16: Quản lý Phiếu Bảo Trì
+  // UC16: Quản lý Phiếu Bảo Trì (UC6.12 & UC6.13)
   const saveMaintenanceReceipt = (receipt: MaintenanceReceipt): ActionResult<MaintenanceReceipt> => {
     setMaintenanceReceipts((prev) => {
       const idx = prev.findIndex((m) => m.id === receipt.id);
@@ -914,6 +966,16 @@ export default function App() {
         return copy;
       }
       return [receipt, ...prev];
+    });
+    // Cập nhật thiết bị tương ứng sang trạng thái Đang bảo trì
+    setEquipment((prev) => prev.map((e) => e.id === receipt.equipmentId ? { ...e, equipmentStatus: "Đang bảo trì" } : e));
+    addAuditLog({
+      actor: "NV Kho Mai",
+      role: "staff",
+      action: "Tạo phiếu bảo trì (UC6.12)",
+      targetEntity: "MaintenanceReceipt",
+      targetId: receipt.id,
+      detail: `Thiết bị: ${receipt.equipmentId} - Lỗi: ${receipt.issueDescription} - Dự tính: ${fmt(receipt.estimatedCost)}`,
     });
     return { ok: true, data: receipt };
   };
@@ -939,6 +1001,15 @@ export default function App() {
     } else if (status === "Không thể sửa") {
       setEquipment((prev) => prev.map((e) => e.id === m.equipmentId ? { ...e, equipmentStatus: "Ngừng sử dụng" } : e));
     }
+
+    addAuditLog({
+      actor: "NV Kho Mai",
+      role: "staff",
+      action: "Nghiệm thu bảo trì (UC6.13)",
+      targetEntity: "MaintenanceReceipt",
+      targetId: id,
+      detail: `Trạng thái: ${status}${actualCost !== undefined ? ` - Chi phí thực tế: ${fmt(actualCost)}` : ""}${note ? ` (${note})` : ""}`,
+    });
 
     return { ok: true, data: undefined };
   };
@@ -1085,6 +1156,111 @@ export default function App() {
     return { ok: true, data: newReceipt };
   };
 
+  const saveCustomer = (customer: CustomerAccount): ActionResult<CustomerAccount> => {
+    if (!customer.name.trim()) return { ok: false, message: "Họ tên không được để trống" };
+    if (!customer.phone.trim()) return { ok: false, message: "Số điện thoại không được để trống" };
+    setCustomers((prev) => {
+      const exists = prev.some((c) => c.id === customer.id);
+      if (exists) return prev.map((c) => (c.id === customer.id ? customer : c));
+      return [...prev, customer];
+    });
+    addAuditLog({ actor: "Admin", role: "Quản trị viên", action: "Cập nhật khách hàng", targetEntity: "CustomerAccount", targetId: customer.id, detail: `Lưu thông tin khách hàng: ${customer.name}` });
+    return { ok: true, data: customer };
+  };
+
+  const toggleCustomerLock = (customerId: string, reason?: string): ActionResult => {
+    const cust = customers.find((c) => c.id === customerId);
+    if (!cust) return { ok: false, message: "Không tìm thấy khách hàng" };
+    const nextStatus: CustomerAccount["status"] = cust.status === "active" ? "locked" : "active";
+    setCustomers((prev) => prev.map((c) => c.id === customerId ? { ...c, status: nextStatus, lockedReason: nextStatus === "locked" ? (reason || "Vi phạm quy định thuê thiết bị") : undefined } : c));
+    addAuditLog({ actor: "Admin", role: "Quản trị viên", action: nextStatus === "locked" ? "Khóa khách hàng" : "Mở khóa khách hàng", targetEntity: "CustomerAccount", targetId: customerId, detail: `Lý do: ${reason || "N/A"}` });
+    return { ok: true, data: undefined };
+  };
+
+  const sendNotification = (notif: { title: string; message: string; type: AppNotification["type"]; targetRole: AppNotification["targetRole"] }): ActionResult<AppNotification> => {
+    if (!notif.title.trim()) return { ok: false, message: "Tiêu đề không được để trống" };
+    if (!notif.message.trim()) return { ok: false, message: "Nội dung không được để trống" };
+    const newNotif: AppNotification = {
+      id: `NOTIF-${Date.now()}`,
+      title: notif.title,
+      message: notif.message,
+      type: notif.type,
+      targetRole: notif.targetRole,
+      createdAt: new Date().toLocaleString("vi-VN"),
+      isRead: false,
+    };
+    setNotifications((prev) => [newNotif, ...prev]);
+    addAuditLog({ actor: "Admin", role: "Quản trị viên", action: "Gửi thông báo hệ thống", targetEntity: "AppNotification", targetId: newNotif.id, detail: `Tiêu đề: ${newNotif.title} - Đối tượng: ${newNotif.targetRole}` });
+    return { ok: true, data: newNotif };
+  };
+
+  const markNotificationRead = (id: string) => {
+    setNotifications((prev) => prev.map((n) => n.id === id ? { ...n, isRead: true } : n));
+  };
+
+  const updatePolicy = (patch: Partial<RentalPolicyConfig>): ActionResult => {
+    const updated: RentalPolicyConfig = {
+      ...policies,
+      ...patch,
+      updatedAt: new Date().toLocaleString("vi-VN"),
+      updatedBy: role === "admin" ? "Nguyễn Văn Trưởng (Admin)" : "Nhân viên hệ thống",
+    };
+    setPolicies(updated);
+    addAuditLog({ actor: "Admin", role: "Quản trị viên", action: "Cập nhật chính sách thuê", targetEntity: "RentalPolicy", targetId: "GLOBAL-POLICY", detail: "Thay đổi cấu hình thời gian giữ chỗ, tỷ lệ phí phạt hủy hoặc hệ số phạt trễ" });
+    return { ok: true, data: undefined };
+  };
+
+  const addAuditLog = (entry: { actor: string; role: string; action: string; targetEntity: string; targetId: string; detail: string }) => {
+    const log: AuditLogEntry = {
+      id: `LOG-${Date.now()}-${Math.random().toString(36).slice(2, 5)}`,
+      timestamp: new Date().toLocaleString("vi-VN"),
+      ...entry,
+    };
+    setAuditLogs((prev) => [log, ...prev]);
+  };
+
+  const saveStaffAccount = (staff: StaffAccount): ActionResult<StaffAccount> => {
+    if (!staff.name.trim()) return { ok: false, message: "Tên nhân viên không được để trống" };
+    if (!staff.username.trim()) return { ok: false, message: "Tên đăng nhập không được để trống" };
+    setStaffAccounts((prev) => {
+      const exists = prev.some((s) => s.id === staff.id);
+      if (exists) return prev.map((s) => s.id === staff.id ? staff : s);
+      return [...prev, staff];
+    });
+    addAuditLog({ actor: "Admin", role: "Quản trị viên", action: "Cập nhật tài khoản NV", targetEntity: "StaffAccount", targetId: staff.id, detail: `Lưu nhân viên ${staff.name} - Quyền: ${staff.role}` });
+    return { ok: true, data: staff };
+  };
+
+  const saveFinancialAdjustment = (adj: Omit<FinancialAdjustment, "id" | "createdAt">): ActionResult<FinancialAdjustment> => {
+    if (!adj.reason.trim()) return { ok: false, message: "Lý do điều chỉnh không được để trống" };
+    if (adj.amount <= 0) return { ok: false, message: "Số tiền điều chỉnh phải lớn hơn 0" };
+    const newAdj: FinancialAdjustment = {
+      id: `PDC-TC-${Date.now().toString().slice(-4)}`,
+      createdAt: new Date().toLocaleString("vi-VN"),
+      ...adj,
+    };
+    setFinancialAdjustments((prev) => [newAdj, ...prev]);
+    addAuditLog({ actor: "Admin", role: "Quản trị viên", action: "Tạo điều chỉnh tài chính", targetEntity: "FinancialAdjustment", targetId: newAdj.id, detail: `${adj.type}: ${fmt(adj.amount)} - ${adj.reason}` });
+    return { ok: true, data: newAdj };
+  };
+
+  const login = (user: { name: string; email: string; phone: string; role: Role }) => {
+    setCurrentUser(user);
+    setRole(user.role);
+    addAuditLog({ actor: user.name, role: user.role === "admin" ? "Quản trị viên" : user.role === "staff" ? "Nhân viên" : "Khách hàng", action: "Đăng nhập", targetEntity: "Session", targetId: user.email, detail: `Đăng nhập thành công với vai trò ${user.role}` });
+    if (user.role === "admin") setPage("admin");
+    else if (user.role === "staff") setPage("staff");
+    else setPage("landing");
+  };
+
+  const logout = () => {
+    const actorName = currentUser?.name || "Người dùng";
+    addAuditLog({ actor: actorName, role: role === "admin" ? "Quản trị viên" : role === "staff" ? "Nhân viên" : "Khách hàng", action: "Đăng xuất", targetEntity: "Session", targetId: currentUser?.email || "SESSION", detail: "Đăng xuất tài khoản khỏi phiên làm việc" });
+    setCurrentUser(null);
+    setRole("customer");
+    setPage("landing");
+  };
+
   const resetDemo = () => {
     localStorage.removeItem(STORAGE_KEY);
     localStorage.removeItem(LEGACY_STORAGE_KEY);
@@ -1109,6 +1285,12 @@ export default function App() {
     setMaintenanceReceipts(INITIAL_MAINTENANCE_RECEIPTS);
     setStaffAccounts(INITIAL_STAFF_ACCOUNTS);
     setStockAdjustments(INITIAL_STOCK_ADJUSTMENTS);
+    setCustomers(INITIAL_CUSTOMERS);
+    setNotifications(INITIAL_NOTIFICATIONS);
+    setPolicies(INITIAL_POLICIES);
+    setAuditLogs(INITIAL_AUDIT_LOGS);
+    setFinancialAdjustments(INITIAL_FINANCIAL_ADJUSTMENTS);
+    setCurrentUser({ name: "Nguyễn Văn An", email: "an.nguyen@gmail.com", phone: "0901 234 567", role: "customer" });
     setCart([]);
     setImportReceipts(INITIAL_IMPORT_RECEIPTS.map((receipt) => ({
       ...receipt,
@@ -1133,6 +1315,7 @@ export default function App() {
 
   const state: AppState = {
     role, page, selectedProductId, categories, products, suppliers, promotions, promotionUsages, equipment, orders, cart, importReceipts, reviews, maintenanceReceipts, staffAccounts, stockAdjustments,
+    customers, notifications, policies, auditLogs, financialAdjustments, currentUser,
     pickupDate, returnDate, pickupHour, returnHour, newOrderId, appliedPromoCode,
     setRole: (r) => {
       setRole(r);
@@ -1173,6 +1356,16 @@ export default function App() {
     saveMaintenanceReceipt,
     updateMaintenanceStatus,
     toggleStaffLock,
+    saveStaffAccount,
+    saveCustomer,
+    toggleCustomerLock,
+    sendNotification,
+    markNotificationRead,
+    updatePolicy,
+    addAuditLog,
+    saveFinancialAdjustment,
+    login,
+    logout,
     createStockAdjustment,
     addSurcharge,
     approveSurcharge,
@@ -1204,7 +1397,7 @@ export default function App() {
 
   return (
     <AppContext.Provider value={state}>
-      <div style={{ minHeight: "100vh", background: "var(--color-cream)", fontFamily: "var(--font-body)" }}>
+      <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", background: "var(--color-cream)", fontFamily: "var(--font-body)" }}>
         {/* Global Header */}
         <header style={{
           background: "rgba(22, 53, 40, 0.92)",
@@ -1216,9 +1409,9 @@ export default function App() {
           zIndex: 100,
           boxShadow: "0 8px 32px rgba(17, 35, 27, 0.2)"
         }}>
-          <div className="app-header-inner max-w-7xl mx-auto px-5 py-3.5 flex items-center gap-4">
+          <div className="app-header-inner max-w-7xl mx-auto px-4 py-3 flex items-center gap-3">
             {/* Logo */}
-            <button onClick={() => state.setRole("customer")} aria-label="Về trang chủ GearGo" style={{ display: "flex", alignItems: "center", gap: "10px", background: "none", border: "none", cursor: "pointer" }}>
+            <button onClick={() => state.setRole("customer")} aria-label="Về trang chủ GearGo" style={{ display: "flex", alignItems: "center", gap: "10px", background: "none", border: "none", cursor: "pointer", flexShrink: 0 }}>
               <span style={{
                 width: 38,
                 height: 38,
@@ -1239,18 +1432,19 @@ export default function App() {
 
             {/* Customer nav */}
             {isCustomerPage && (
-              <nav className="customer-nav flex items-center gap-1.5 ml-6">
+              <nav className="customer-nav flex items-center gap-1 ml-4 flex-shrink-0">
                 {customerNavigation.map((n) => (
                   <button key={n.label} onClick={() => setPage(n.p)}
                     style={{
-                      padding: "7px 15px",
-                      borderRadius: "10px",
+                      padding: "6px 12px",
+                      borderRadius: "9px",
                       border: page === n.p ? "1px solid rgba(255,255,255,0.2)" : "1px solid transparent",
                       background: page === n.p ? "rgba(255,255,255,0.12)" : "transparent",
                       color: page === n.p ? "#FFFFFF" : "#C7D5CC",
                       cursor: "pointer",
-                      fontSize: "0.86rem",
+                      fontSize: "0.84rem",
                       fontWeight: page === n.p ? 700 : 500,
+                      whiteSpace: "nowrap",
                       transition: "all 0.2s ease"
                     }}
                     onMouseEnter={(e) => {
@@ -1264,14 +1458,174 @@ export default function App() {
               </nav>
             )}
 
-            <div style={{ flex: 1 }} />
+            <div style={{ flex: 1, minWidth: 8 }} />
 
-            {/* Login / Register buttons */}
-            {isCustomerPage && !["login", "register", "forgot-password"].includes(page) && (
-              <div className="auth-actions flex items-center gap-2.5">
+            {/* Notification Bell (UC9.3) */}
+            <div style={{ position: "relative" }}>
+              <button
+                onClick={() => setNotifDropdownOpen(!notifDropdownOpen)}
+                aria-label="Thông báo"
+                style={{
+                  width: 38,
+                  height: 38,
+                  borderRadius: "10px",
+                  border: "1px solid rgba(255,255,255,0.18)",
+                  background: notifDropdownOpen ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.06)",
+                  color: "white",
+                  display: "grid",
+                  placeItems: "center",
+                  cursor: "pointer",
+                  position: "relative",
+                  transition: "all 0.2s ease",
+                }}
+              >
+                <Icon name="bell" size={18} />
+                {notifications.filter((n) => !n.isRead && (n.targetRole === "all" || n.targetRole === role)).length > 0 && (
+                  <span style={{
+                    position: "absolute",
+                    top: -4,
+                    right: -4,
+                    background: "#EF4444",
+                    color: "white",
+                    fontSize: "0.65rem",
+                    fontWeight: 700,
+                    width: 18,
+                    height: 18,
+                    borderRadius: "50%",
+                    display: "grid",
+                    placeItems: "center",
+                    boxShadow: "0 2px 6px rgba(239,68,68,0.5)"
+                  }}>
+                    {notifications.filter((n) => !n.isRead && (n.targetRole === "all" || n.targetRole === role)).length}
+                  </span>
+                )}
+              </button>
+
+              {/* Notification Popover Drawer (UC9.3) */}
+              {notifDropdownOpen && (
+                <div style={{
+                  position: "absolute",
+                  right: 0,
+                  top: 46,
+                  width: 360,
+                  maxHeight: 460,
+                  background: "white",
+                  borderRadius: 14,
+                  boxShadow: "0 16px 40px rgba(0,0,0,0.25)",
+                  border: "1px solid var(--color-bone)",
+                  zIndex: 200,
+                  display: "flex",
+                  flexDirection: "column",
+                  overflow: "hidden"
+                }}>
+                  <div style={{
+                    padding: "14px 16px",
+                    background: "var(--color-forest)",
+                    color: "white",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center"
+                  }}>
+                    <div>
+                      <div style={{ fontWeight: 700, fontSize: "0.92rem" }}>Trung tâm thông báo</div>
+                      <div style={{ fontSize: "0.72rem", color: "#C7D5CC" }}>Cập nhật đơn hàng & thông báo hệ thống</div>
+                    </div>
+                    <button
+                      onClick={() => setNotifDropdownOpen(false)}
+                      style={{ background: "transparent", border: 0, color: "white", fontSize: "1.1rem", cursor: "pointer" }}
+                    >✕</button>
+                  </div>
+
+                  <div style={{ padding: "8px 12px", background: "var(--color-parchment)", display: "flex", justifyContent: "space-between", fontSize: "0.75rem", borderBottom: "1px solid var(--color-bone)" }}>
+                    <span style={{ color: "#6B7280" }}>{notifications.filter((n) => n.targetRole === "all" || n.targetRole === role).length} thông báo</span>
+                    <button
+                      onClick={() => setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })))}
+                      style={{ background: "none", border: "none", color: "var(--color-forest)", fontWeight: 700, cursor: "pointer", fontSize: "0.75rem" }}
+                    >
+                      Đánh dấu đã đọc tất cả
+                    </button>
+                  </div>
+
+                  <div style={{ overflowY: "auto", maxHeight: 340, padding: "8px" }}>
+                    {notifications.filter((n) => n.targetRole === "all" || n.targetRole === role).length === 0 ? (
+                      <div style={{ padding: 24, textAlign: "center", color: "#9CA3AF", fontSize: "0.82rem" }}>
+                        Không có thông báo mới nào.
+                      </div>
+                    ) : (
+                      notifications.filter((n) => n.targetRole === "all" || n.targetRole === role).map((n) => (
+                        <div
+                          key={n.id}
+                          style={{
+                            padding: "10px 12px",
+                            borderRadius: 10,
+                            marginBottom: 6,
+                            background: n.isRead ? "#F9FAFB" : "#EFF6FF",
+                            border: n.isRead ? "1px solid #E5E7EB" : "1px solid #BFDBFE",
+                            display: "flex",
+                            flexDirection: "column",
+                            gap: 4
+                          }}
+                        >
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                            <strong style={{ fontSize: "0.82rem", color: "var(--color-bark)" }}>{n.title}</strong>
+                            {!n.isRead && (
+                              <button
+                                onClick={() => markNotificationRead(n.id)}
+                                style={{ background: "none", border: "none", color: "#2563EB", fontSize: "0.7rem", cursor: "pointer", fontWeight: 600 }}
+                              >
+                                Đã đọc
+                              </button>
+                            )}
+                          </div>
+                          <p style={{ fontSize: "0.78rem", color: "#4B5563", lineHeight: 1.4, margin: 0 }}>{n.message}</p>
+                          <span style={{ fontSize: "0.68rem", color: "#9CA3AF", marginTop: 2 }}>{n.createdAt}</span>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Auth Actions & User Info & Logout */}
+            {currentUser ? (
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <div style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(255,255,255,0.08)", padding: "4px 10px", borderRadius: 10, border: "1px solid rgba(255,255,255,0.15)", flexShrink: 0 }}>
+                  <div style={{ width: 28, height: 28, borderRadius: "50%", background: "var(--color-amber)", display: "grid", placeItems: "center", color: "white", fontWeight: 700, fontSize: "0.75rem", flexShrink: 0 }}>
+                    {currentUser.name.charAt(0)}
+                  </div>
+                  <div style={{ textAlign: "left", whiteSpace: "nowrap" }}>
+                    <div style={{ color: "white", fontSize: "0.8rem", fontWeight: 700, lineHeight: 1.2, whiteSpace: "nowrap" }}>{currentUser.name}</div>
+                    <div style={{ color: "#B9C9C0", fontSize: "0.68rem", whiteSpace: "nowrap" }}>{currentUser.phone}</div>
+                  </div>
+                </div>
+                <button
+                  onClick={() => state.logout()}
+                  title="Đăng xuất khỏi hệ thống"
+                  style={{
+                    padding: "6px 11px",
+                    borderRadius: 9,
+                    border: "1px solid rgba(239,68,68,0.4)",
+                    background: "rgba(239,68,68,0.15)",
+                    color: "#FCA5A5",
+                    cursor: "pointer",
+                    fontSize: "0.76rem",
+                    fontWeight: 600,
+                    whiteSpace: "nowrap",
+                    flexShrink: 0,
+                    transition: "all 0.2s ease"
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(239,68,68,0.25)")}
+                  onMouseLeave={(e) => (e.currentTarget.style.background = "rgba(239,68,68,0.15)")}
+                >
+                  Đăng xuất
+                </button>
+              </div>
+            ) : isCustomerPage && !["login", "register", "forgot-password"].includes(page) ? (
+              <div className="auth-actions flex items-center gap-2.5 flex-shrink-0">
                 <button onClick={() => setPage("login")}
                   style={{
-                    padding: "8px 14px",
+                    padding: "7px 13px",
                     borderRadius: "10px",
                     border: "1px solid rgba(255,255,255,0.25)",
                     background: "rgba(255, 255, 255, 0.05)",
@@ -1279,6 +1633,7 @@ export default function App() {
                     cursor: "pointer",
                     fontSize: "0.84rem",
                     fontWeight: 600,
+                    whiteSpace: "nowrap",
                     transition: "all 0.2s ease"
                   }}
                   onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255, 255, 255, 0.12)")}
@@ -1288,7 +1643,7 @@ export default function App() {
                 </button>
                 <button onClick={() => setPage("register")}
                   style={{
-                    padding: "8px 16px",
+                    padding: "7px 15px",
                     borderRadius: "10px",
                     border: "none",
                     background: "linear-gradient(135deg, #E07A43 0%, #D46931 100%)",
@@ -1296,6 +1651,7 @@ export default function App() {
                     cursor: "pointer",
                     fontSize: "0.84rem",
                     fontWeight: 700,
+                    whiteSpace: "nowrap",
                     boxShadow: "0 4px 14px rgba(224, 122, 67, 0.35)",
                     transition: "all 0.2s ease"
                   }}
@@ -1305,7 +1661,7 @@ export default function App() {
                   Đăng ký
                 </button>
               </div>
-            )}
+            ) : null}
 
             {/* Cart button */}
             {isCustomerPage && cart.length > 0 && (
@@ -1313,15 +1669,17 @@ export default function App() {
                 style={{
                   background: "linear-gradient(135deg, #E07A43 0%, #D46931 100%)",
                   color: "white",
-                  padding: "8px 16px",
+                  padding: "7px 14px",
                   borderRadius: "10px",
                   border: "none",
                   cursor: "pointer",
                   fontWeight: 700,
-                  fontSize: "0.88rem",
+                  fontSize: "0.86rem",
                   display: "flex",
                   alignItems: "center",
                   gap: "7px",
+                  whiteSpace: "nowrap",
+                  flexShrink: 0,
                   boxShadow: "0 4px 14px rgba(224, 122, 67, 0.4)"
                 }}
               >
@@ -1333,22 +1691,25 @@ export default function App() {
             <div className="role-switcher" style={{
               display: "flex",
               alignItems: "center",
-              gap: "4px",
+              gap: "3px",
               background: "rgba(0,0,0,0.35)",
               border: "1px solid rgba(255,255,255,0.12)",
               borderRadius: "12px",
-              padding: "4px"
+              padding: "3px",
+              flexShrink: 0,
+              whiteSpace: "nowrap"
             }}>
-              <span className="desktop-only-label" style={{ color: "#B9C9C0", fontSize: "0.7rem", paddingLeft: "8px", fontWeight: 600 }}>Vai trò:</span>
+              <span className="desktop-only-label" style={{ color: "#B9C9C0", fontSize: "0.7rem", paddingLeft: "6px", fontWeight: 600, whiteSpace: "nowrap" }}>Vai trò:</span>
               {(["customer", "staff", "admin"] as Role[]).map((r) => (
                 <button key={r} onClick={() => state.setRole(r)}
                   style={{
-                    padding: "6px 12px",
+                    padding: "5px 10px",
                     borderRadius: "8px",
                     border: "none",
                     cursor: "pointer",
-                    fontSize: "0.8rem",
+                    fontSize: "0.78rem",
                     fontWeight: 700,
+                    whiteSpace: "nowrap",
                     background: role === r ? "var(--color-amber)" : "transparent",
                     color: role === r ? "white" : "#B9C9C0",
                     transition: "all 0.2s ease"
@@ -1361,9 +1722,9 @@ export default function App() {
 
             {/* Reset */}
             <button className="demo-reset" onClick={() => setShowResetConfirm(true)}
-              style={{ background: "rgba(239, 68, 68, 0.2)", border: "1px solid rgba(239, 68, 68, 0.4)", color: "#FCA5A5", padding: "6px 12px", borderRadius: "8px", cursor: "pointer", fontSize: "0.75rem", fontWeight: 600 }}
+              style={{ background: "rgba(239, 68, 68, 0.2)", border: "1px solid rgba(239, 68, 68, 0.4)", color: "#FCA5A5", padding: "5px 10px", borderRadius: "8px", cursor: "pointer", fontSize: "0.74rem", fontWeight: 600, whiteSpace: "nowrap", flexShrink: 0 }}
               title="Đặt lại dữ liệu demo"
-            ><span className="icon-label"><Icon name="refresh" size={14} /> Reset</span></button>
+            ><span className="icon-label" style={{ whiteSpace: "nowrap" }}><Icon name="refresh" size={14} /> Reset</span></button>
             {isCustomerPage && (
               <button className="customer-mobile-toggle" onClick={() => setMobileMenuOpen(true)} aria-label="Mở menu"
                 style={{ width: 44, height: 44, border: "1px solid rgba(255,255,255,0.22)", borderRadius: 9, background: "transparent", color: "white", cursor: "pointer" }}>
@@ -1414,7 +1775,7 @@ export default function App() {
         </div>
 
         {/* Page content */}
-        <main>
+        <main style={{ flex: 1, display: "flex", flexDirection: "column" }}>
           {page === "landing" && <LandingView />}
           {(page === "products" || page === "product-detail") && <ProductsView />}
           {(page === "cart" || page === "checkout" || page === "order-confirmed" || page === "my-orders" || page === "profile" || page === "ai-advisor") && <CustomerPortal />}
