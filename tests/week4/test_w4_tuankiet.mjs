@@ -98,7 +98,7 @@ async function runTests() {
 
   try {
     execSync('docker exec -i geargo-sql /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "GearGo@123" -C -d GearGoDb -Q "DELETE FROM CHI_TIET_NHAN_TRA WHERE ma_phieu_nhan_tra > 1; DELETE FROM PHIEU_NHAN_TRA WHERE ma_phieu_nhan_tra > 1; UPDATE DON_THUE SET trang_thai = \'DangThue\' WHERE ma_don_thue = 1;"', { stdio: 'ignore' });
-  } catch { }
+  } catch {}
 
   await detectAccountTokens();
 
