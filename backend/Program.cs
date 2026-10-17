@@ -7,6 +7,7 @@ using System.Text;
 using GearGo.BackgroundJobs;
 using GearGo.Services.Implements;
 using GearGo.Services.Interfaces;
+using GearGo.Services.Strategies;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -131,6 +132,13 @@ builder.Services.AddScoped<GearGo.Services.Interfaces.IAdminSanPhamService, Gear
 builder.Services.AddScoped<GearGo.Services.Interfaces.IAdminDanhMucService, GearGo.Services.Admin.AdminDanhMucService>();
 builder.Services.AddScoped<IBaoTriService, BaoTriService>();
 builder.Services.AddScoped<INhanTraService, NhanTraService>();
+builder.Services.AddScoped<ITruyVanNhanTraService, TruyVanNhanTraService>();
+builder.Services.AddScoped<IInspectionStrategy, PassInspectionStrategy>();
+builder.Services.AddScoped<IInspectionStrategy, CleaningInspectionStrategy>();
+builder.Services.AddScoped<IInspectionStrategy, DamageInspectionStrategy>();
+builder.Services.AddScoped<IInspectionStrategy, LostInspectionStrategy>();
+builder.Services.AddScoped<IDeviceConflictDetector, DeviceConflictDetector>();
+builder.Services.AddScoped<IBaoCaoVanHanhService, BaoCaoVanHanhService>();
 var app = builder.Build();
 
 // Tự động áp dụng Migration vào database nếu chưa có

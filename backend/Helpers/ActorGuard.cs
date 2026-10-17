@@ -70,4 +70,13 @@ public static class ActorGuard
     public static Task<long?> LayMaNhanVienAsync(ApplicationDbContext ctx, long maTaiKhoan, CancellationToken ct = default)
         => ctx.NhanViens.Where(n => n.MaTaiKhoan == maTaiKhoan)
             .Select(n => (long?)n.MaNhanVien).FirstOrDefaultAsync(ct);
+
+    /// <summary>
+    /// Lấy thông tin nhân viên theo MaTaiKhoan hoặc MaNhanVien (hỗ trợ linh hoạt cả 2 định dạng id)
+    /// </summary>
+    public static async Task<NhanVien?> LayNhanVienAsync(this ApplicationDbContext ctx, long actorId, CancellationToken ct = default)
+    {
+        return await ctx.NhanViens
+            .FirstOrDefaultAsync(n => n.MaTaiKhoan == actorId || n.MaNhanVien == actorId, ct);
+    }
 }

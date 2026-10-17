@@ -1,10 +1,12 @@
 using System.Data;
 using GearGo.Data;
+using GearGo.Helpers;
 using GearGo.Models.Common;
 using GearGo.Models.DTOs.BanGiao;
 using GearGo.Models.Entities;
 using GearGo.Models.Enums;
 using GearGo.Services.Interfaces;
+using GearGo.Services.Specifications;
 using Microsoft.EntityFrameworkCore;
 
 namespace GearGo.Services.Implements;
@@ -12,10 +14,12 @@ namespace GearGo.Services.Implements;
 public class BanGiaoService : IBanGiaoService
 {
     private readonly ApplicationDbContext _context;
+    private readonly ILogger<BanGiaoService>? _logger;
 
-    public BanGiaoService(ApplicationDbContext context)
+    public BanGiaoService(ApplicationDbContext context, ILogger<BanGiaoService>? logger = null)
     {
         _context = context;
+        _logger = logger;
     }
 
     public async Task<Result<PhieuBanGiaoResponse>> LayTheoDonAsync(long maDonThue)
@@ -25,18 +29,14 @@ public class BanGiaoService : IBanGiaoService
             .FirstOrDefaultAsync(p => p.MaDonThue == maDonThue);
 
         if (phieu == null)
-            return Result<PhieuBanGiaoResponse>
-                .Loi("NOT_FOUND", "Đơn thuê này chưa có biên bản bàn giao.");
+            return Result<PhieuBanGiaoResponse>.Loi("NOT_FOUND", "Đơn thuê này chưa có biên bản bàn giao.");
 
-        return Result<PhieuBanGiaoResponse>.Ok(MapToResponse(phieu));
+        return Result<PhieuBanGiaoResponse>.Ok(phieu.ToResponse());
     }
 
-    public async Task<Result<PhieuBanGiaoResponse>> TaoHoacLayPhieuBanGiaoNhapAsync
-            (long maDonThue, long maNhanVienTao)
+    public async Task<Result<PhieuBanGiaoResponse>> TaoHoacLayPhieuBanGiaoNhapAsync(long maDonThue, long maNhanVienTao)
     {
-        using var transaction = await _context.Database.BeginTransactionAsync();
-
-        try
+        return await TransactionExecutionWrapper.ExecuteInTransactionAsync(_context, async () =>
         {
             var donThue = await _context.DonThues
                 .Include(d => d.ChiTietDonThues)
@@ -54,11 +54,10 @@ public class BanGiaoService : IBanGiaoService
                 .FirstOrDefaultAsync(p => p.MaDonThue == maDonThue);
 
             if (phieuDaCo != null)
-                return Result<PhieuBanGiaoResponse>.Ok(MapToResponse(phieuDaCo));
+                return Result<PhieuBanGiaoResponse>.Ok(phieuDaCo.ToResponse());
 
-            // Khởi tạo phiếu nháp
-            var nhanVienTao = await _context.NhanViens
-                .FirstOrDefaultAsync(n => n.MaNhanVien == maNhanVienTao || n.MaTaiKhoan == maNhanVienTao);
+            // Khởi tạo phiếu nháp qua Actor Helper
+            var nhanVienTao = await _context.LayNhanVienAsync(maNhanVienTao);
             var maNv = nhanVienTao?.MaNhanVien ?? maNhanVienTao;
 
             var phieuMoi = new PhieuBanGiao
@@ -78,30 +77,20 @@ public class BanGiaoService : IBanGiaoService
                     .ToListAsync();
                 foreach (var phanCong in phanCongs)
                 {
-                    var ctBanGiao = new ChiTietBanGiao
+                    _context.ChiTietBanGiaos.Add(new ChiTietBanGiao
                     {
                         PhieuBanGiao = phieuMoi,
                         MaPhanCong = phanCong.MaPhanCong,
                         TinhTrangTruocThue = "Hoạt động bình thường"
-                    };
-                    _context.ChiTietBanGiaos.Add(ctBanGiao);
+                    });
                 }
             }
 
-            await _context.SaveChangesAsync();
-            await transaction.CommitAsync();
-
-            return Result<PhieuBanGiaoResponse>.Ok(MapToResponse(phieuMoi));
-        }
-        catch (Exception e)
-        {
-            await transaction.RollbackAsync();
-            return Result<PhieuBanGiaoResponse>.Loi("SYS_ERROR", "Lỗi: " + e.Message);
-        }
+            return Result<PhieuBanGiaoResponse>.Ok(phieuMoi.ToResponse());
+        }, _logger);
     }
 
-    public async Task<Result<PhieuBanGiaoResponse>> CapNhatPhieuBanGiaoNhapAsync
-            (long maPhieuBanGiao, CapNhatPhieuBanGiaoRequest request)
+    public async Task<Result<PhieuBanGiaoResponse>> CapNhatPhieuBanGiaoNhapAsync(long maPhieuBanGiao, CapNhatPhieuBanGiaoRequest request)
     {
         var phieu = await _context.PhieuBanGiaos
             .Include(p => p.ChiTietBanGiaos)
@@ -112,13 +101,11 @@ public class BanGiaoService : IBanGiaoService
         if (phieu.TrangThai == "DaGiao")
             return Result<PhieuBanGiaoResponse>.Loi("LOCKED", "Phiếu đã chốt không thể sửa.");
 
-        // Cập nhật thông tin phiếu
         phieu.TenNguoiNhanThucTe = request.TenNguoiNhanThucTe;
         phieu.ThoiDiemKhachXacNhan = request.ThoiDiemKhachXacNhan;
         phieu.BangChungXacNhan = request.BangChungXacNhan;
         phieu.GhiChu = request.GhiChu;
 
-        // Cập nhật chi tiết
         foreach (var reqChiTiet in request.ChiTiet)
         {
             var dbChiTiet = phieu.ChiTietBanGiaos
@@ -134,23 +121,19 @@ public class BanGiaoService : IBanGiaoService
         }
 
         await _context.SaveChangesAsync();
-        return Result<PhieuBanGiaoResponse>.Ok(MapToResponse(phieu));
+        return Result<PhieuBanGiaoResponse>.Ok(phieu.ToResponse());
     }
 
-    public async Task<Result<bool>> ChotBanGiaoAsync
-            (long maPhieuBanGiao, ChotBanGiaoRequest request, long maNhanVienChot)
+    public async Task<Result<bool>> ChotBanGiaoAsync(long maPhieuBanGiao, ChotBanGiaoRequest request, long maNhanVienChot)
     {
-        using var transaction = await _context.Database
-            .BeginTransactionAsync(IsolationLevel.Serializable);
-
-        try
+        return await TransactionExecutionWrapper.ExecuteInTransactionAsync(_context, async () =>
         {
             var phieu = await _context.PhieuBanGiaos
                 .Include(p => p.DonThue)
-                .ThenInclude(d => d.ChiTietDonThues)
+                    .ThenInclude(d => d.ChiTietDonThues)
                 .Include(p => p.ChiTietBanGiaos)
-                .ThenInclude(c => c.PhanCongThietBi)
-                .ThenInclude(pc => pc.ThietBi)
+                    .ThenInclude(c => c.PhanCongThietBi)
+                        .ThenInclude(pc => pc.ThietBi)
                 .FirstOrDefaultAsync(p => p.MaPhieuBanGiao == maPhieuBanGiao);
 
             if (phieu == null)
@@ -158,28 +141,26 @@ public class BanGiaoService : IBanGiaoService
             if (phieu.TrangThai == "DaGiao")
                 return Result<bool>.Loi("LOCKED", "Phiếu đã chốt.");
 
-            var nhanVienThucHien = await _context.NhanViens
-                .FirstOrDefaultAsync(n => n.MaNhanVien == maNhanVienChot || n.MaTaiKhoan == maNhanVienChot);
+            var nhanVienThucHien = await _context.LayNhanVienAsync(maNhanVienChot);
             var tenNhanVien = nhanVienThucHien?.HoTen ?? "Nhân viên " + maNhanVienChot;
 
-            // Chốt phiếu
+            // Chốt phiếu qua Rich Domain Method
             phieu.ChotPhieu(request.TenNguoiNhanThucTe, tenNhanVien);
             if (nhanVienThucHien != null)
             {
                 phieu.MaNhanVien = nhanVienThucHien.MaNhanVien;
             }
 
-            // Kiểm tra thanh toán
+            // Kiểm tra điều kiện thanh toán qua Specification
             decimal tongTienYeuCau = phieu.DonThue.ChiTietDonThues.Sum(c =>
                 c.DonGiaThueMoiNgay * c.SoNgayTinhTien + c.MucCocMoiThietBi - c.TienGiam);
             decimal tongDaDong = await _context.ThanhToans
                 .Where(t => t.MaDonThue == phieu.MaDonThue && t.TrangThai == "ThanhCong")
                 .SumAsync(t => t.TongSoTien);
-            if (tongDaDong < tongTienYeuCau)
-            {
-                return Result<bool>.Loi("CHUA_THANH_TOAN_DU",
-                    $"Đơn thuê này chưa thanh toán đủ. Yêu cầu: {tongTienYeuCau}, Đã đóng: {tongDaDong}");
-            }
+
+            var validationResult = BanGiaoValidationRules.KiemTraThanhToan(tongTienYeuCau, tongDaDong);
+            if (!validationResult.ThanhCong)
+                return validationResult;
 
             // Ghi lịch sử đơn
             _context.LichSuTrangThaiDons.Add(new LichSuTrangThaiDon
@@ -191,28 +172,7 @@ public class BanGiaoService : IBanGiaoService
                 LyDo = "Khách hàng đã nhận thiết bị thành công"
             });
 
-            await _context.SaveChangesAsync();
-            await transaction.CommitAsync();
             return Result<bool>.Ok(true);
-        }
-        catch (Exception e)
-        {
-            await transaction.RollbackAsync();
-            return Result<bool>.Loi("SYS_ERROR", e.Message);
-        }
-    }
-
-    private PhieuBanGiaoResponse MapToResponse(PhieuBanGiao entity)
-    {
-        return new PhieuBanGiaoResponse(
-            entity.MaPhieuBanGiao, entity.MaDonThue, entity.MaNhanVien,
-            entity.ThoiDiemLap, entity.ThoiDiemGiaoThucTe,
-            entity.TenNhanVienLucGiao, entity.TenNguoiNhanThucTe,
-            entity.TrangThai,
-            entity.ChiTietBanGiaos.Select(c => new ChiTietBanGiaoResponse(
-                c.MaChiTietBanGiao, c.MaPhanCong, c.TinhTrangTruocThue,
-                c.PhuKienThucGiao, c.DanhSachAnh
-            )).ToList()
-        );
+        }, _logger, IsolationLevel.Serializable);
     }
 }

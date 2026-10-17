@@ -22,15 +22,15 @@ namespace GearGo.Services.Implements;
 public class ThanhToanService : IThanhToanService
 {
     private readonly ApplicationDbContext _context;
-    private readonly IHoanTienService _hoanTienService;
-    private readonly IThongBaoService _thongBaoService;
-    private readonly ILogger<ThanhToanService> _logger;
+    private readonly IHoanTienService? _hoanTienService;
+    private readonly IThongBaoService? _thongBaoService;
+    private readonly ILogger<ThanhToanService>? _logger;
 
     public ThanhToanService(
         ApplicationDbContext context,
-        IHoanTienService hoanTienService,
-        IThongBaoService thongBaoService,
-        ILogger<ThanhToanService> logger)
+        IHoanTienService? hoanTienService = null,
+        IThongBaoService? thongBaoService = null,
+        ILogger<ThanhToanService>? logger = null)
     {
         _context = context;
         _hoanTienService = hoanTienService;
