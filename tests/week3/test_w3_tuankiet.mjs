@@ -34,10 +34,10 @@ function generateToken(role, maTaiKhoan = 1, email = 'nhanvien@geargo.vn') {
   return `${header}.${payload}.${sig}`;
 }
 
-let adminToken = generateToken('QuanTriVien', 10002, 'admin@geargo.vn');
-let staffToken = generateToken('NhanVien', 10003, 'staff@geargo.vn');
-let customerToken = generateToken('KhachHang', 10004, 'customer@geargo.vn');
-let otherCustomerToken = generateToken('KhachHang', 10005, 'other@geargo.vn');
+let adminToken = generateToken('QuanTriVien', 1, 'admin@geargo.vn');
+let staffToken = generateToken('NhanVien', 2, 'staff@geargo.vn');
+let customerToken = generateToken('KhachHang', 3, 'customer@geargo.vn');
+let otherCustomerToken = generateToken('KhachHang', 4, 'other@geargo.vn');
 
 async function request(method, path, body = null, token = adminToken) {
   const headers = { 'Content-Type': 'application/json' };
@@ -68,15 +68,14 @@ function assert(condition, message, errorDetails = '') {
 }
 
 async function detectAccountTokens() {
-  for (const adminId of [10002, 1]) {
-    const candidate = generateToken('QuanTriVien', adminId, 'admin@geargo.vn');
-    const res = await request('GET', '/api/v1/don-thue/1/lich-su', null, candidate);
-    // CustomerOnly should return 403 for QuanTriVien
-    if (res.status === 403) {
+  for (const baseId of [1, 10002]) {
+    const candidate = generateToken('QuanTriVien', baseId, 'admin@geargo.vn');
+    const res = await request('GET', '/api/auth/toi', null, candidate);
+    if (res.status === 200) {
       adminToken = candidate;
-      const staffId = adminId === 10002 ? 10003 : 2;
-      const customerId = adminId === 10002 ? 10004 : 3;
-      const otherId = adminId === 10002 ? 10005 : 4;
+      const staffId = baseId === 10002 ? 10003 : 2;
+      const customerId = baseId === 10002 ? 10004 : 3;
+      const otherId = baseId === 10002 ? 10005 : 4;
       staffToken = generateToken('NhanVien', staffId, 'staff@geargo.vn');
       customerToken = generateToken('KhachHang', customerId, 'customer@geargo.vn');
       otherCustomerToken = generateToken('KhachHang', otherId, 'other@geargo.vn');
@@ -102,6 +101,9 @@ async function runTests() {
     chiTiet: [{ maSanPham: 1, soLuong: 1 }]
   }, adminToken);
   assert(adminTaoDon.status === 403, "Admin bị từ chối gọi API tạo đơn thuê của khách (HTTP 403)");
+
+  // Đảm bảo sản phẩm thử nghiệm luôn ở trạng thái DangKinhDoanh để tránh xung đột với các test đổi trạng thái trước đó
+  await request('PATCH', '/api/admin/san-pham/1/trang-thai', { trangThaiMoi: 'DangKinhDoanh' }, adminToken);
 
   // Khách hàng tạo đơn với MaKhachHang giả mạo trong body -> hệ thống phải ghi đè từ JWT
   const taoDonRes = await request('POST', '/api/v1/don-thue', {

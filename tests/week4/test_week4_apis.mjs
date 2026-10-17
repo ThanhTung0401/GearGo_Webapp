@@ -40,7 +40,11 @@ const suites = [
     cmd: 'node tests/week4/test_w4_kimxuyen.mjs'
   },
   {
-    name: 'W4-T6, W4-T7, W4-T9: Hoàn tiền dùng chung, Hủy đơn & Tài chính (Thanh Tùng)',
+    name: 'W4-T6, W4-T7, W4-T9: Hoàn tiền dùng chung, Hủy đơn & Tài chính API (Thanh Tùng)',
+    cmd: 'node tests/week4/test_w4_thanhtung.mjs'
+  },
+  {
+    name: 'W4 Unit Tests: Bộ kiểm thử đơn vị xUnit Backend (Thanh Tùng)',
     cmd: 'dotnet test tests/GearGo.Tests --nologo'
   }
 ];

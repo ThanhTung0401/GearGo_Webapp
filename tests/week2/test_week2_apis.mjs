@@ -303,6 +303,13 @@ async function runAllTests() {
     });
     assertTest('PATCH /api/admin/san-pham/{id}/trang-thai (Admin đổi trạng thái)', resPatchSP.status === 200, `Status: ${resPatchSP.status}`);
 
+    // Khôi phục trạng thái về DangKinhDoanh để không ảnh hưởng đến các kịch bản test thuê sau
+    await callApi(`/api/admin/san-pham/${createdSanPhamId}/trang-thai`, {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${adminToken}` },
+      body: JSON.stringify({ trangThaiMoi: 'DangKinhDoanh' })
+    });
+
     // 21. POST /api/admin/san-pham/{id}/hinh-anh
     const validJpeg = Buffer.from([
       0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10, 0x4A, 0x46, 0x49, 0x46, 0x00, 0x01, 0x01, 0x01, 0x00, 0x48,

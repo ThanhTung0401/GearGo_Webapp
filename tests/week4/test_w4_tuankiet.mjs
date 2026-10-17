@@ -36,9 +36,9 @@ function generateToken(role, maTaiKhoan = 10002, email = 'admin@geargo.vn') {
   return `${header}.${payload}.${sig}`;
 }
 
-let adminToken = generateToken('QuanTriVien', 10002, 'admin@geargo.vn');
-let staffToken = generateToken('NhanVien', 10003, 'staff@geargo.vn');
-let customerToken = generateToken('KhachHang', 10004, 'customer@geargo.vn');
+let adminToken = generateToken('QuanTriVien', 1, 'admin@geargo.vn');
+let staffToken = generateToken('NhanVien', 2, 'staff@geargo.vn');
+let customerToken = generateToken('KhachHang', 3, 'customer@geargo.vn');
 
 async function callApi(endpoint, options = {}) {
   const url = `${BASE_URL}${endpoint}`;
@@ -75,30 +75,35 @@ function assert(condition, message, errorDetail = null) {
 }
 
 async function detectAccountTokens() {
-  for (const adminId of [10002, 1]) {
-    const candidate = generateToken('QuanTriVien', adminId, 'admin@geargo.vn');
-    const res = await callApi(`/api/v1/nhan-tra/1/chi-tiet/1/duyet-mat`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${candidate}` },
-      body: JSON.stringify({ lyDo: 'test', maPhuPhiBoiThuong: 1 })
-    });
-    if (res.status !== 403) {
-      adminToken = candidate;
-      const staffId = adminId === 10002 ? 10003 : 2;
-      const customerId = adminId === 10002 ? 10004 : 3;
-      staffToken = generateToken('NhanVien', staffId, 'staff@geargo.vn');
-      customerToken = generateToken('KhachHang', customerId, 'customer@geargo.vn');
-      break;
-    }
+  for (const baseId of [1, 10002]) {
+    const candidate = generateToken('QuanTriVien', baseId, 'admin@geargo.vn');
+    try {
+      const res = await callApi('/api/auth/toi', {
+        headers: { Authorization: `Bearer ${candidate}` }
+      });
+      if (res.status === 200) {
+        adminToken = candidate;
+        const staffId = baseId === 10002 ? 10003 : 2;
+        const customerId = baseId === 10002 ? 10004 : 3;
+        staffToken = generateToken('NhanVien', staffId, 'staff@geargo.vn');
+        customerToken = generateToken('KhachHang', customerId, 'customer@geargo.vn');
+        break;
+      }
+    } catch {}
   }
 }
 
 async function runTests() {
   console.log(`${colors.bold}${colors.cyan}=== BẮT ĐẦU KIỂM THỬ WEEK 4 - TUẤN KIỆT (W4-T1: NHẬN TRẢ NHIỀU ĐỢT & KẾT LUẬN MẤT) ===${colors.reset}\n`);
 
+  const sqlReset = 'DELETE FROM CHI_TIET_NHAN_TRA WHERE ma_phieu_nhan_tra > 1; DELETE FROM PHIEU_NHAN_TRA WHERE ma_phieu_nhan_tra > 1; UPDATE PHIEU_NHAN_TRA SET trang_thai = \'Nhap\', thoi_diem_chot = NULL WHERE ma_phieu_nhan_tra = 1; UPDATE CHI_TIET_NHAN_TRA SET ket_luan = \'CanVeSinh\', trang_thai_xu_ly = \'ChoXuLy\' WHERE ma_chi_tiet_nhan_tra = 1; UPDATE DON_THUE SET trang_thai = \'DangThue\' WHERE ma_don_thue = 1;';
   try {
-    execSync('docker exec -i geargo-sql /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "GearGo@123" -C -d GearGoDb -Q "DELETE FROM CHI_TIET_NHAN_TRA WHERE ma_phieu_nhan_tra > 1; DELETE FROM PHIEU_NHAN_TRA WHERE ma_phieu_nhan_tra > 1; UPDATE DON_THUE SET trang_thai = \'DangThue\' WHERE ma_don_thue = 1;"', { stdio: 'ignore' });
-  } catch {}
+    execSync(`sqlcmd -S localhost -U sa -P "GearGo@123" -C -d GearGoDb -Q "${sqlReset}"`, { stdio: 'ignore' });
+  } catch {
+    try {
+      execSync(`docker exec -i geargo-sql /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "GearGo@123" -C -d GearGoDb -Q "${sqlReset}"`, { stdio: 'ignore' });
+    } catch {}
+  }
 
   await detectAccountTokens();
 
