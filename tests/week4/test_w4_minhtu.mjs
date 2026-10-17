@@ -119,7 +119,7 @@ async function runTests() {
   assert(t5.status === 200 && Array.isArray(t5.data.items), 'Truy vấn danh sách đơn quá hạn phân trang thành công');
 
   const don1QuaHan = t5.data.items.find(d => d.maDonThue === 1);
-  assert(don1QuaHan !== undefined && don1QuaHan.soThietBiChuaTra === 2, 
+  assert(don1QuaHan !== undefined && don1QuaHan.soThietBiChuaTra === 2,
     `Đơn #1 được gắn nhãn quá hạn chính xác: có ${don1QuaHan?.soThietBiChuaTra} thiết bị chưa trả (đúng quy tắc W4-T2)`);
   assert(don1QuaHan !== undefined && don1QuaHan.tongPhiTreDuKien > 0,
     `Tính tổng phí trễ dự kiến của đơn #1 thành công: ${don1QuaHan?.tongPhiTreDuKien.toLocaleString()} VNĐ`);
@@ -135,7 +135,7 @@ async function runTests() {
     headers: { Authorization: `Bearer ${staffToken}` }
   });
   assert(t7.status === 200 && Array.isArray(t7.data?.danhSachThietBi), 'API chi tiết đơn quá hạn phản hồi đúng đặc tả DTO (200 OK)');
-  
+
   const thietBiLeu = t7.data?.danhSachThietBi?.find(tb => tb.maThietBiHienThi === 'TB-LEU-001');
   assert(thietBiLeu && thietBiLeu.soNgayTre >= 1 && thietBiLeu.heSo === 1.5 && thietBiLeu.phiTreDuKien === thietBiLeu.soNgayTre * thietBiLeu.donGiaSnapshot * 1.5,
     `Công thức phí trễ snapshot thiết bị TB-LEU-001 chuẩn xác: ${thietBiLeu?.soNgayTre} ngày * ${thietBiLeu?.donGiaSnapshot} * 1.5 = ${thietBiLeu?.phiTreDuKien} VNĐ`);
@@ -179,7 +179,7 @@ async function runTests() {
     headers: { Authorization: `Bearer ${customerToken}` },
     body: JSON.stringify({ phuongThucDuocHoTro: 'VNPAY' })
   });
-  assert(t12.status === 409 && t12.data?.maLoi === 'KHONG_CO_NGHIA_VU_THU_THEM', 
+  assert(t12.status === 409 && t12.data?.maLoi === 'KHONG_CO_NGHIA_VU_THU_THEM',
     'Chặn tạo thu bổ sung khi đối soát không thiếu tiền cọc (HTTP 409 KHONG_CO_NGHIA_VU_THU_THEM - Ca W4-T5-A01)');
 
   // Test 13: Tra cứu trạng thái giao dịch không tồn tại -> 404 GIAO_DICH_NOT_FOUND
