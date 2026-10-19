@@ -1,5 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Text.Json;
+using GearGo.Models.DTOs.DonThue;
 using GearGo.Models.Enums;
 
 namespace GearGo.Models.Entities;
@@ -103,6 +105,104 @@ public class DonThue
     public PhieuBanGiao? PhieuBanGiao { get; set; }
 
     // ----- RICH DOMAIN -----
+
+    public static DonThue KhoiTao(
+        TaoDonThueRequest req,
+        long maChinhSach,
+        DateTime now,
+        decimal tienThue,
+        decimal tienGiam,
+        decimal tienCoc,
+        KhuyenMai? km = null)
+    {
+        return new DonThue
+        {
+            MaKhachHang = req.MaKhachHang,
+            MaChinhSach = maChinhSach,
+            MaDonHienThi = $"DH{now:yyyyMMddHHmmss}_{Guid.NewGuid().ToString("N")[..4].ToUpper()}",
+            NgayDat = now,
+            GioNhanDuKien = req.GioNhanDuKien,
+            GioTraDuKien = req.GioTraDuKien,
+            HanThanhToan = now.AddMinutes(15),
+            TenNguoiNhan = req.TenNguoiNhan,
+            SoDienThoaiNguoiNhan = req.SoDienThoaiNguoiNhan,
+            EmailLienHe = req.EmailLienHe,
+            GhiChu = req.GhiChu,
+            TongTienThueTruocGiam = tienThue,
+            TongTienGiam = tienGiam,
+            TongTienCoc = tienCoc,
+            TrangThai = TrangThaiDonThue.ChoThanhToan,
+            KhuyenMaiLucDat = km != null ? JsonSerializer.Serialize(new
+            {
+                km.MaGiamGia,
+                km.TenKhuyenMai,
+                km.LoaiGiam,
+                km.GiaTriGiam,
+                SoTienGiam = tienGiam
+            }) : null
+        };
+    }
+
+    public (List<ChiTietDonThue> ChiTiets, List<GiuCho> GiuChos) TaoDanhSachChiTietVaGiuCho(
+        IReadOnlyList<ChiTietDonThueDto> items,
+        Dictionary<long, SanPham> sanPhams,
+        int soNgayThue,
+        DateTime now)
+    {
+        var chiTiets = new List<ChiTietDonThue>();
+        var giuChos = new List<GiuCho>();
+        var hanThanhToan = HanThanhToan ?? now.AddMinutes(15);
+        decimal tienGiamConLai = TongTienGiam;
+
+        for (int i = 0; i < items.Count; i++)
+        {
+            var item = items[i];
+            var sp = sanPhams[item.MaSanPham];
+            var tienThueDong = sp.GiaThueMoiNgay * item.SoLuong * soNgayThue;
+
+            decimal tienGiamDong = 0;
+            if (TongTienThueTruocGiam > 0 && TongTienGiam > 0)
+            {
+                if (i == items.Count - 1)
+                {
+                    tienGiamDong = tienGiamConLai;
+                }
+                else
+                {
+                    tienGiamDong = Math.Round((tienThueDong / TongTienThueTruocGiam) * TongTienGiam, 0);
+                    tienGiamConLai -= tienGiamDong;
+                }
+            }
+
+            var chiTiet = ChiTietDonThue.KhoiTao(MaDonThue, sp, item.SoLuong, soNgayThue, tienGiamDong);
+            var giuCho = chiTiet.TaoGiuCho(now, hanThanhToan);
+
+            chiTiets.Add(chiTiet);
+            giuChos.Add(giuCho);
+        }
+
+        return (chiTiets, giuChos);
+    }
+
+    public TrangThaiDonThue HuyDon(long maTaiKhoan, bool laNoiBo, string lyDo, DateTime now)
+    {
+        var trangThaiSau = laNoiBo ? TrangThaiDonThue.CuaHangHuy : TrangThaiDonThue.KhachHuy;
+        TrangThai = trangThaiSau;
+        ThoiDiemHuy = now;
+        LyDoHuy = lyDo;
+        MaNguoiHuy = maTaiKhoan;
+
+        foreach (var ct in ChiTietDonThues)
+        {
+            if (ct.GiuCho != null && ct.GiuCho.TrangThai == TrangThaiGiuCho.DangGiu)
+            {
+                ct.GiuCho.TrangThai = TrangThaiGiuCho.DaGiaiPhong;
+                ct.GiuCho.ThoiDiemGiaiPhong = now;
+            }
+        }
+
+        return trangThaiSau;
+    }
 
     // 1. Khach hang huy don
     public void KhachHangHuyDon(string lyDo)
