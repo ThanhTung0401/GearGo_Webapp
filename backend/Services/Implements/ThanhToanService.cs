@@ -1,7 +1,9 @@
+using System.Data;
 using GearGo.Data;
 using GearGo.Helpers;
 using GearGo.Models.Common;
 using GearGo.Models.DTOs.ThanhToan;
+using GearGo.Models.Entities;
 using GearGo.Models.Enums;
 using GearGo.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
@@ -11,28 +13,47 @@ namespace GearGo.Services.Implements;
 public class ThanhToanService : IThanhToanService
 {
     private readonly ApplicationDbContext _context;
+    private readonly ILogger<ThanhToanService> _logger;
 
-    public ThanhToanService(ApplicationDbContext context)
+    public ThanhToanService(ApplicationDbContext context, ILogger<ThanhToanService> logger)
     {
         _context = context;
+        _logger = logger;
     }
 
     public async Task<Result<string>> XacNhanThanhToanAsync(XacNhanThanhToanRequest request)
     {
         return await TransactionExecutionWrapper.ExecuteInTransactionAsync(_context, async () =>
         {
-            // 1. Tìm đơn thuê
+            // 1. Idempotency ưu tiên trước: nếu giao dịch đối tác cho đơn này đã được ghi nhận ThanhCong -> trả kết quả cũ ngay
+            if (!string.IsNullOrWhiteSpace(request.MaGiaoDichDoiTac))
+            {
+                var giaoDichCu = await _context.ThanhToans
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(t => t.MaDonThue == request.MaDonThue
+                                              && t.MaGiaoDichCong == request.MaGiaoDichDoiTac
+                                              && t.TrangThai == KietDomainConstants.PhieuStatus.ThanhCong);
+
+                if (giaoDichCu != null)
+                {
+                    return Result<string>.Ok(giaoDichCu.MaYeuCau);
+                }
+            }
+
+            // 2. Tìm đơn thuê kèm Giữ chỗ và Lượt sử dụng khuyến mãi
             var donThue = await _context.DonThues
                 .Include(d => d.ChiTietDonThues)
                     .ThenInclude(c => c.GiuCho)
+                .Include(d => d.LuotSuDungKhuyenMai)
                 .FirstOrDefaultAsync(d => d.MaDonThue == request.MaDonThue);
 
             if (donThue == null)
                 return Result<string>.Loi(KietDomainConstants.ErrorCodes.DonThueNotFound, "Không tìm thấy đơn thuê.");
 
-            // 2. Tạo bản ghi Thanh toán theo đúng chuẩn thuộc tính ERD
-            var maYeuCau = $"PAY_{DateTime.UtcNow:yyyyMMddHHmmss}_{Guid.NewGuid().ToString("N")[..8]}";
-            var thanhToanMoi = new Models.Entities.ThanhToan
+            var now = DateTime.UtcNow;
+            var maYeuCau = $"PAY_{now:yyyyMMddHHmmss}_{Guid.NewGuid().ToString("N")[..8]}";
+
+            var thanhToanMoi = new ThanhToan
             {
                 MaDonThue = donThue.MaDonThue,
                 MaYeuCau = maYeuCau,
@@ -40,27 +61,64 @@ public class ThanhToanService : IThanhToanService
                 TongSoTien = request.SoTienDaTra,
                 MaGiaoDichCong = request.MaGiaoDichDoiTac,
                 TrangThai = KietDomainConstants.PhieuStatus.ThanhCong,
-                ThoiDiemTao = DateTime.UtcNow,
-                ThoiDiemThanhCong = DateTime.UtcNow
+                ThoiDiemTao = now,
+                ThoiDiemThanhCong = now
             };
-            _context.ThanhToans.Add(thanhToanMoi);
 
-            // 3. Xác nhận thanh toán
+            // 3. Tách 2 dòng ChiTietThanhToan (TienThue và TienCoc) theo đặc tả UC06
+            decimal tienThue = Math.Max(0, donThue.TongTienThueTruocGiam - donThue.TongTienGiam);
+            decimal tienCoc = Math.Max(0, donThue.TongTienCoc);
+
+            thanhToanMoi.ChiTietThanhToans.Add(new ChiTietThanhToan
+            {
+                MucDich = KietDomainConstants.MucDichGiaoDich.TienThue,
+                SoTien = tienThue,
+                ThanhToan = thanhToanMoi
+            });
+
+            thanhToanMoi.ChiTietThanhToans.Add(new ChiTietThanhToan
+            {
+                MucDich = KietDomainConstants.MucDichGiaoDich.TienCoc,
+                SoTien = tienCoc,
+                ThanhToan = thanhToanMoi
+            });
+
+            // 4. Kiểm tra nhánh đối soát nâng cao (UC06 mục 10.11):
+            // Nếu đơn đã chuyển sang HetHan / KhachHuy / CuaHangHuy hoặc đã DaXacNhan bởi giao dịch khác mà tiền vẫn thu ở gateway
+            if (donThue.TrangThai != TrangThaiDonThue.ChoThanhToan)
+            {
+                thanhToanMoi.TrangThaiDoiChieu = KietDomainConstants.PhieuStatus.CanDoiSoat;
+                thanhToanMoi.GhiChu = $"Giao dịch thu tiền khi đơn đang ở trạng thái {donThue.TrangThai} — cần đối soát/hoàn tiền.";
+                _context.ThanhToans.Add(thanhToanMoi);
+
+                _logger.LogWarning(
+                    "Phát sinh giao dịch cần đối soát #{MaYeuCau} cho đơn #{MaDonThue} (Trạng thái đơn: {TrangThai}).",
+                    maYeuCau, donThue.MaDonThue, donThue.TrangThai);
+
+                return Result<string>.Ok(thanhToanMoi.MaYeuCau);
+            }
+
+            // 5. Luồng chuẩn: Đơn đang ChoThanhToan -> Xác nhận đơn + Giữ chỗ + Khuyến mãi + Lịch sử
+            _context.ThanhToans.Add(thanhToanMoi);
             donThue.XacNhanThanhToan();
 
-            // 4. Lưu vào Lịch sử đơn
-            var lichSu = new Models.Entities.LichSuTrangThaiDon
+            if (donThue.LuotSuDungKhuyenMai != null && donThue.LuotSuDungKhuyenMai.TrangThai == KietDomainConstants.PhieuStatus.DangGiu)
+            {
+                donThue.LuotSuDungKhuyenMai.TrangThai = KietDomainConstants.PhieuStatus.DaSuDung;
+                donThue.LuotSuDungKhuyenMai.ThoiDiemSuDung = now;
+            }
+
+            _context.LichSuTrangThaiDons.Add(new LichSuTrangThaiDon
             {
                 MaDonThue = donThue.MaDonThue,
                 TrangThaiTruoc = TrangThaiDonThue.ChoThanhToan.ToString(),
                 TrangThaiSau = TrangThaiDonThue.DaXacNhan.ToString(),
-                ThoiDiem = DateTime.UtcNow,
+                ThoiDiem = now,
                 LyDo = $"Khách hàng đã thanh toán qua {request.PhuongThucThanhToan}"
-            };
-            _context.LichSuTrangThaiDons.Add(lichSu);
+            });
 
             return Result<string>.Ok(thanhToanMoi.MaYeuCau);
-        });
+        }, _logger, IsolationLevel.Serializable);
     }
 
     public async Task<Result<YeuCauThuResponse>> TaoThuBoSungAsync(TaoThuBoSungRequest request, long actorId)
@@ -123,7 +181,7 @@ public class ThanhToanService : IThanhToanService
                 PaymentUrl = "https://mock-gateway.com/pay?id=" + maYeuCau,
                 CanDoiChieu = false
             });
-        });
+        }, _logger);
     }
 
     public async Task<Result<YeuCauThuResponse>> LayTrangThaiGiaoDichAsync(string maYeuCau, long actorId)
@@ -145,6 +203,7 @@ public class ThanhToanService : IThanhToanService
             MucDich = chiTiet?.MucDich ?? "",
             TrangThai = thanhToan.TrangThai,
             CanDoiChieu = thanhToan.TrangThaiDoiChieu == KietDomainConstants.PhieuStatus.CanDoiChieu
+                          || thanhToan.TrangThaiDoiChieu == KietDomainConstants.PhieuStatus.CanDoiSoat
         });
     }
 }

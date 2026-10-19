@@ -35,9 +35,11 @@ public static class KietDomainConstants
         public const string DaKiemTra = "DaKiemTra";
         public const string DaDuyetMat = "DaDuyetMat";
         public const string DangGiu = "DangGiu";
+        public const string DaSuDung = "DaSuDung";
         public const string HetHan = "HetHan";
         public const string DaGiaiPhong = "DaGiaiPhong";
         public const string CanDoiChieu = "CanDoiChieu";
+        public const string CanDoiSoat = "CanDoiSoat";
         public const string TinhTrangMacDinhBanGiao = "Hoạt động bình thường";
     }
 
