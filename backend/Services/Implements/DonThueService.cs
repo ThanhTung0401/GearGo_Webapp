@@ -57,9 +57,9 @@ public class DonThueService : IDonThueService
                 return Result<DonThueResponse>.Loi(stockCheck.MaLoi!, stockCheck.ThongDiep!);
 
             // 2. Tính số ngày thuê, tiền thuê, tiền cọc và khuyến mãi
-            int soNgayThue = KietCalculationHelpers.TinhSoNgayThue(request.GioNhanDuKien, request.GioTraDuKien);
+            int soNgayThue = CalculationHelpers.TinhSoNgayThue(request.GioNhanDuKien, request.GioTraDuKien);
             var now = DateTime.UtcNow;
-            var hanThanhToan = now.AddMinutes(KietDomainConstants.PolicyConfig.ThoiGianGiuChoPhut);
+            var hanThanhToan = now.AddMinutes(DomainConstants.Policies.HoldTimeMinutes);
 
             var chinhSach = await _context.ChinhSachs
                 .Where(c => c.ThoiDiemApDung <= now)
@@ -85,14 +85,14 @@ public class DonThueService : IDonThueService
                 }
                 catch (KhuyenMaiKhongHopLeException ex)
                 {
-                    return Result<DonThueResponse>.Loi("KHUYEN_MAI_KHONG_HOP_LE", ex.Message);
+                    return Result<DonThueResponse>.Loi(DomainConstants.Errors.InvalidPromotion, ex.Message);
                 }
             }
 
             // 3. Khởi tạo Đơn thuê & Phân bổ Chi tiết + Giữ chỗ qua Rich Domain Model
             var donThueMoi = DonThue.KhoiTao(
                 request,
-                chinhSach?.MaChinhSach ?? KietDomainConstants.PolicyConfig.MaChinhSachMacDinh,
+                chinhSach?.MaChinhSach ?? DomainConstants.Policies.DefaultPolicyId,
                 now,
                 tongTienThueTruocGiam,
                 tongTienGiam,
@@ -114,14 +114,14 @@ public class DonThueService : IDonThueService
             }
 
             // 4. Ghi lịch sử & Dọn giỏ hàng
-            _context.LichSuTrangThaiDons.Add(new LichSuTrangThaiDon
-            {
-                MaDonThue = donThueMoi.MaDonThue,
-                TrangThaiTruoc = "KhoiTao",
-                TrangThaiSau = TrangThaiDonThue.ChoThanhToan.ToString(),
-                ThoiDiem = now,
-                LyDo = "Khách hàng tạo đơn thuê thành công"
-            });
+            AuditLogHelper.GhiLichSuDon(
+                _context,
+                donThueMoi.MaDonThue,
+                null,
+                "KhoiTao",
+                TrangThaiDonThue.ChoThanhToan.ToString(),
+                "Khách hàng tạo đơn thuê thành công",
+                now);
 
             var gioThue = await _context.GioThues
                 .Include(g => g.ChiTietGioThues)
@@ -147,7 +147,7 @@ public class DonThueService : IDonThueService
                 .FirstOrDefaultAsync(d => d.MaDonThue == maDonThue);
 
             if (donThue == null)
-                return Result<bool>.Loi("NOT_FOUND", "Không tìm thấy đơn thuê.");
+                return Result<bool>.Loi(DomainConstants.Errors.NotFound, "Không tìm thấy đơn thuê.");
 
             var taiKhoan = await _context.TaiKhoans.FindAsync(maTaiKhoan);
             bool laNoiBo = taiKhoan?.VaiTro is "NhanVien" or "QuanTriVien";
@@ -156,11 +156,11 @@ public class DonThueService : IDonThueService
             {
                 var maKhach = await ActorGuard.LayMaKhachHangAsync(_context, maTaiKhoan);
                 if (donThue.MaKhachHang != maKhach)
-                    return Result<bool>.Loi("KHONG_CO_QUYEN", "Bạn không có quyền thao tác trên đơn thuê của người khác.");
+                    return Result<bool>.Loi(DomainConstants.Errors.Forbidden, "Bạn không có quyền thao tác trên đơn thuê của người khác.");
             }
 
             if (donThue.TrangThai != TrangThaiDonThue.ChoThanhToan)
-                return Result<bool>.Loi("INVALID_STATE", "Chỉ có thể hủy đơn khi đang ở trạng thái Chờ thanh toán.");
+                return Result<bool>.Loi(DomainConstants.Errors.InvalidState, "Chỉ có thể hủy đơn khi đang ở trạng thái Chờ thanh toán.");
 
             var now = DateTime.UtcNow;
             var trangThaiSau = donThue.HuyDon(maTaiKhoan, laNoiBo, lyDo, now);
@@ -168,15 +168,14 @@ public class DonThueService : IDonThueService
             await _context.SaveChangesAsync();
             await _khuyenMaiService.GiaiPhongLuotAsync(donThue.MaDonThue);
 
-            _context.LichSuTrangThaiDons.Add(new LichSuTrangThaiDon
-            {
-                MaDonThue = donThue.MaDonThue,
-                MaNguoiThucHien = maTaiKhoan,
-                TrangThaiTruoc = TrangThaiDonThue.ChoThanhToan.ToString(),
-                TrangThaiSau = trangThaiSau.ToString(),
-                ThoiDiem = now,
-                LyDo = lyDo
-            });
+            AuditLogHelper.GhiLichSuDon(
+                _context,
+                donThue.MaDonThue,
+                maTaiKhoan,
+                TrangThaiDonThue.ChoThanhToan.ToString(),
+                trangThaiSau.ToString(),
+                lyDo,
+                now);
 
             return Result<bool>.Ok(true);
         }, _logger);

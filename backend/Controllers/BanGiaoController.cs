@@ -10,7 +10,7 @@ namespace GearGo.Controllers;
 [Route("api/v1/ban-giao")]
 [Route("api/ban-giao")]
 [Authorize(Policy = "StaffOrAdmin")]
-public class BanGiaoController : KietBaseController
+public class BanGiaoController : BaseApiController
 {
     private readonly IBanGiaoService _banGiaoService;
 

@@ -11,7 +11,7 @@ namespace GearGo.Controllers;
 [Route("api/vong-doi-thiet-bi")]
 [Route("api/v1/vong-doi-thiet-bi")]
 [Authorize(Policy = "StaffOrAdmin")]
-public class VongDoiThietBiController : KietBaseController
+public class VongDoiThietBiController : BaseApiController
 {
     private readonly IVongDoiThietBiService _vongDoiService;
 
