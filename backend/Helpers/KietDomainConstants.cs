@@ -13,12 +13,17 @@ public static class KietDomainConstants
         public const int SoChuSoThapPhanLamTron = 2;
         public const long MaChinhSachMacDinh = 1;
         public const int DungSaiPhutThoiGianThuc = 5;
+        public const int ChuKyQuetJobPhut = 1;
+        public const int DelayRetryJobGiay = 10;
+        public const double SoNgayThueToiThieu = 1.0;
     }
 
     public static class PhieuStatus
     {
+        public const string Nhap = "Nhap";
         public const string ChoGiao = "ChoGiao";
         public const string DaGiao = "DaGiao";
+        public const string DaChot = "DaChot";
         public const string DaPhanCong = "DaPhanCong";
         public const string ThanhCong = "ThanhCong";
         public const string ChoThanhToan = "ChoThanhToan";
@@ -29,6 +34,18 @@ public static class KietDomainConstants
         public const string ChoXuLy = "ChoXuLy";
         public const string DaKiemTra = "DaKiemTra";
         public const string DaDuyetMat = "DaDuyetMat";
+        public const string DangGiu = "DangGiu";
+        public const string HetHan = "HetHan";
+        public const string DaGiaiPhong = "DaGiaiPhong";
+        public const string CanDoiChieu = "CanDoiChieu";
+        public const string TinhTrangMacDinhBanGiao = "Hoạt động bình thường";
+    }
+
+    public static class MucDichGiaoDich
+    {
+        public const string TienThue = "TienThue";
+        public const string TienCoc = "TienCoc";
+        public const string ThuBoSung = "ThuBoSung";
     }
 
     public static class KetLuanKiemTra
@@ -68,12 +85,15 @@ public static class KietDomainConstants
         // 404 Not Found
         public const string NotFound = "NOT_FOUND";
         public const string DonNotFound = "DON_NOT_FOUND";
+        public const string DonThueNotFound = "DON_THUE_NOT_FOUND";
         public const string PhieuNotFound = "PHIEU_NOT_FOUND";
         public const string ThietBiNotFound = "THIET_BI_NOT_FOUND";
         public const string NhanVienNotFound = "NHAN_VIEN_NOT_FOUND";
         public const string ChiTietNotFound = "CHI_TIET_NOT_FOUND";
         public const string PhuPhiNotFound = "PHU_PHI_NOT_FOUND";
         public const string SanPhamNotFound = "SAN_PHAM_NOT_FOUND";
+        public const string DoiSoatNotFound = "DOI_SOAT_NOT_FOUND";
+        public const string GiaoDichNotFound = "GIAO_DICH_NOT_FOUND";
 
         // 403 Forbidden
         public const string KhongCoQuyen = "KHONG_CO_QUYEN";
@@ -92,6 +112,7 @@ public static class KietDomainConstants
         public const string NhanVienDaNghiViec = "NHAN_VIEN_DA_NGHI_VIEC";
         public const string ThietBiChuaThuHoi = "THIET_BI_CHUA_THU_HOI";
         public const string ThayDoiLamThieuCamKet = "THAY_DOI_LAM_THIEU_CAM_KET";
+        public const string ThuThemDangCho = "THU_THEM_DANG_CHO";
 
         // 400 Bad Request
         public const string DanhSachRong = "DANH_SACH_RONG";
@@ -108,5 +129,13 @@ public static class KietDomainConstants
         public const string KetQuaKiemTraChuaDu = "KET_QUA_KIEM_TRA_CHUA_DU";
         public const string SanPhamDichKhongPhuHop = "SAN_PHAM_DICH_KHONG_PHU_HOP";
         public const string ChuaThanhToanDu = "CHUA_THANH_TOAN_DU";
+        public const string GioHangRong = "GIO_HANG_RONG";
+        public const string ThoiGianKhongHopLe = "THOI_GIAN_KHONG_HOP_LE";
+        public const string ThoiGianQuaKhu = "THOI_GIAN_QUA_KHU";
+        public const string SoLuongKhongHopLe = "SO_LUONG_KHONG_HOP_LE";
+        public const string HetHang = "HET_HANG";
+        public const string SanPhamNgungKinhDoanh = "SAN_PHAM_NGUNG_KINH_DOANH";
+        public const string KhuyenMaiKhongHopLe = "KHUYEN_MAI_KHONG_HOP_LE";
+        public const string KhongCoNghiaVuThuThem = "KHONG_CO_NGHIA_VU_THU_THEM";
     }
 }

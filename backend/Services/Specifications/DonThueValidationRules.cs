@@ -1,3 +1,4 @@
+using GearGo.Helpers;
 using GearGo.Models.Common;
 using GearGo.Models.DTOs.DonThue;
 using GearGo.Models.Entities;
@@ -10,13 +11,13 @@ public static class DonThueValidationRules
     public static Result<bool> KiemTraThoiGianVaGioHang(TaoDonThueRequest request)
     {
         if (request.ChiTiet == null || request.ChiTiet.Count == 0)
-            return Result<bool>.Loi("GIO_HANG_RONG", "Đơn thuê phải có ít nhất 1 sản phẩm.");
+            return Result<bool>.Loi(KietDomainConstants.ErrorCodes.GioHangRong, "Đơn thuê phải có ít nhất 1 sản phẩm.");
 
         if (request.GioTraDuKien <= request.GioNhanDuKien)
-            return Result<bool>.Loi("THOI_GIAN_KHONG_HOP_LE", "Thời gian trả phải sau thời gian nhận.");
+            return Result<bool>.Loi(KietDomainConstants.ErrorCodes.ThoiGianKhongHopLe, "Thời gian trả phải sau thời gian nhận.");
 
-        if (request.GioNhanDuKien < DateTime.UtcNow.AddMinutes(-5))
-            return Result<bool>.Loi("THOI_GIAN_QUA_KHU", "Không thể đặt thuê với thời gian bắt đầu trong quá khứ.");
+        if (request.GioNhanDuKien < DateTime.UtcNow.AddMinutes(-KietDomainConstants.PolicyConfig.DungSaiPhutThoiGianThuc))
+            return Result<bool>.Loi(KietDomainConstants.ErrorCodes.ThoiGianQuaKhu, "Không thể đặt thuê với thời gian bắt đầu trong quá khứ.");
 
         return Result<bool>.Ok(true);
     }
@@ -29,20 +30,20 @@ public static class DonThueValidationRules
         foreach (var item in request.ChiTiet)
         {
             if (!sanPhams.TryGetValue(item.MaSanPham, out var sp))
-                return Result<bool>.Loi("SAN_PHAM_NOT_FOUND", $"Không tìm thấy sản phẩm #{item.MaSanPham}");
+                return Result<bool>.Loi(KietDomainConstants.ErrorCodes.SanPhamNotFound, $"Không tìm thấy sản phẩm #{item.MaSanPham}");
 
             if (sp.TrangThaiKinhDoanh != TrangThaiKinhDoanh.DangKinhDoanh)
-                return Result<bool>.Loi("SAN_PHAM_NGUNG_KINH_DOANH",
+                return Result<bool>.Loi(KietDomainConstants.ErrorCodes.SanPhamNgungKinhDoanh,
                     $"Sản phẩm '{sp.TenSanPham}' hiện đang tạm ngừng hoặc ngừng kinh doanh.");
 
             if (item.SoLuong <= 0)
-                return Result<bool>.Loi("SO_LUONG_KHONG_HOP_LE", "Số lượng thuê phải lớn hơn 0.");
+                return Result<bool>.Loi(KietDomainConstants.ErrorCodes.SoLuongKhongHopLe, "Số lượng thuê phải lớn hơn 0.");
 
             if (khaDungData != null)
             {
                 if (!khaDungData.TryGetValue(item.MaSanPham, out var slKhaDung) || slKhaDung < item.SoLuong)
                 {
-                    return Result<bool>.Loi("HET_HANG",
+                    return Result<bool>.Loi(KietDomainConstants.ErrorCodes.HetHang,
                         $"Sản phẩm '{sp.TenSanPham}' không đủ số lượng khả dụng trong khoảng thời gian đã chọn.");
                 }
             }

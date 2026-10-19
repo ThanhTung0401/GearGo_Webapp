@@ -112,16 +112,16 @@ public class VongDoiThietBiService : IVongDoiThietBiService
             .FirstOrDefaultAsync(tb => tb.MaThietBi == thietBiId);
 
         if (thietBi == null)
-            return Result<AnhHuongThayDoiResponse>.Loi("THIET_BI_NOT_FOUND", "Không tìm thấy thiết bị.");
+            return Result<AnhHuongThayDoiResponse>.Loi(KietDomainConstants.ErrorCodes.ThietBiNotFound, "Không tìm thấy thiết bị.");
 
-        if (request.LoaiThayDoi == "GiangCap")
+        if (request.LoaiThayDoi == KietDomainConstants.VongDoiConfig.LoaiGiangCap)
         {
             if (!request.MaSanPhamDich.HasValue)
-                return Result<AnhHuongThayDoiResponse>.Loi("SAN_PHAM_DICH_KHONG_PHU_HOP", "Phải chọn sản phẩm đích khi giáng cấp.");
+                return Result<AnhHuongThayDoiResponse>.Loi(KietDomainConstants.ErrorCodes.SanPhamDichKhongPhuHop, "Phải chọn sản phẩm đích khi giáng cấp.");
 
             var spDich = await _context.SanPhams.FirstOrDefaultAsync(s => s.MaSanPham == request.MaSanPhamDich.Value);
             if (spDich == null || spDich.TrangThaiKinhDoanh != TrangThaiKinhDoanh.DangKinhDoanh || spDich.MaSanPham == thietBi.MaSanPhamHienTai)
-                return Result<AnhHuongThayDoiResponse>.Loi("SAN_PHAM_DICH_KHONG_PHU_HOP", "Sản phẩm đích không tồn tại, không đang kinh doanh hoặc trùng sản phẩm hiện tại.");
+                return Result<AnhHuongThayDoiResponse>.Loi(KietDomainConstants.ErrorCodes.SanPhamDichKhongPhuHop, "Sản phẩm đích không tồn tại, không đang kinh doanh hoặc trùng sản phẩm hiện tại.");
         }
 
         var response = await PhanTichCamKetThietBiAsync(thietBi, request.LoaiThayDoi);
@@ -131,7 +131,7 @@ public class VongDoiThietBiService : IVongDoiThietBiService
     public async Task<Result<DeNghiVongDoiResponse>> DeNghiGiangCapAsync(long thietBiId, DeNghiGiangCapRequest request, long actorId)
     {
         if (string.IsNullOrWhiteSpace(request.LyDo))
-            return Result<DeNghiVongDoiResponse>.Loi("DU_LIEU_KHONG_HOP_LE", "Phải có lý do đề nghị giáng cấp.");
+            return Result<DeNghiVongDoiResponse>.Loi(KietDomainConstants.ErrorCodes.DuLieuKhongHopLe, "Phải có lý do đề nghị giáng cấp.");
 
         return await TransactionExecutionWrapper.ExecuteInTransactionAsync(_context, async () =>
         {
@@ -139,33 +139,33 @@ public class VongDoiThietBiService : IVongDoiThietBiService
                 .FirstOrDefaultAsync(tb => tb.MaThietBi == thietBiId);
 
             if (thietBi == null)
-                return Result<DeNghiVongDoiResponse>.Loi("THIET_BI_NOT_FOUND", "Không tìm thấy thiết bị.");
+                return Result<DeNghiVongDoiResponse>.Loi(KietDomainConstants.ErrorCodes.ThietBiNotFound, "Không tìm thấy thiết bị.");
 
             if (thietBi.TrangThaiSuDung == TrangThaiThietBi.DangThue)
-                return Result<DeNghiVongDoiResponse>.Loi("THIET_BI_CHUA_THU_HOI", "Thiết bị đang phục vụ khách hàng, chưa thể giáng cấp.");
+                return Result<DeNghiVongDoiResponse>.Loi(KietDomainConstants.ErrorCodes.ThietBiChuaThuHoi, "Thiết bị đang phục vụ khách hàng, chưa thể giáng cấp.");
 
             var spDich = await _context.SanPhams.FirstOrDefaultAsync(s => s.MaSanPham == request.MaSanPhamDich);
             if (spDich == null || spDich.TrangThaiKinhDoanh != TrangThaiKinhDoanh.DangKinhDoanh || spDich.MaSanPham == thietBi.MaSanPhamHienTai)
-                return Result<DeNghiVongDoiResponse>.Loi("SAN_PHAM_DICH_KHONG_PHU_HOP", "Sản phẩm đích không hợp lệ hoặc trùng sản phẩm hiện tại.");
+                return Result<DeNghiVongDoiResponse>.Loi(KietDomainConstants.ErrorCodes.SanPhamDichKhongPhuHop, "Sản phẩm đích không hợp lệ hoặc trùng sản phẩm hiện tại.");
 
-            var anhHuong = await PhanTichCamKetThietBiAsync(thietBi, "GiangCap");
+            var anhHuong = await PhanTichCamKetThietBiAsync(thietBi, KietDomainConstants.VongDoiConfig.LoaiGiangCap);
             if (!anhHuong.CoTheDeNghi || anhHuong.CamKetCuThe.Count > 0 || anhHuong.ThieuSoLuongTheoLich.Count > 0)
-                return Result<DeNghiVongDoiResponse>.Loi("THAY_DOI_LAM_THIEU_CAM_KET",
+                return Result<DeNghiVongDoiResponse>.Loi(KietDomainConstants.ErrorCodes.ThayDoiLamThieuCamKet,
                     $"Không thể giáng cấp do vướng cam kết đơn thuê: {string.Join("; ", anhHuong.VuongMac.Concat(anhHuong.ThieuSoLuongTheoLich))}");
 
             var nhanVien = await _context.LayNhanVienAsync(actorId);
             if (nhanVien == null)
-                return Result<DeNghiVongDoiResponse>.Loi("NHAN_VIEN_NOT_FOUND", "Không tìm thấy hồ sơ nhân viên đề nghị.");
+                return Result<DeNghiVongDoiResponse>.Loi(KietDomainConstants.ErrorCodes.NhanVienNotFound, "Không tìm thấy hồ sơ nhân viên đề nghị.");
 
             var phieu = new PhieuDieuChinhKho
             {
                 MaNguoiLap = nhanVien.MaNhanVien,
                 TenNguoiLapLucLap = nhanVien.HoTen,
-                LoaiDieuChinh = "GiangCap",
+                LoaiDieuChinh = KietDomainConstants.VongDoiConfig.LoaiGiangCap,
                 LyDo = request.LyDo,
                 BangChung = request.BangChung,
                 ThoiDiemLap = DateTime.UtcNow,
-                TrangThai = "ChoDuyet"
+                TrangThai = KietDomainConstants.PhieuStatus.ChoDuyet
             };
 
             _context.PhieuDieuChinhKhos.Add(phieu);
@@ -210,7 +210,7 @@ public class VongDoiThietBiService : IVongDoiThietBiService
     public async Task<Result<DeNghiVongDoiResponse>> DeNghiNgungSuDungAsync(long thietBiId, DeNghiNgungSuDungRequest request, long actorId)
     {
         if (string.IsNullOrWhiteSpace(request.LyDo))
-            return Result<DeNghiVongDoiResponse>.Loi("DU_LIEU_KHONG_HOP_LE", "Phải có lý do đề nghị ngừng sử dụng.");
+            return Result<DeNghiVongDoiResponse>.Loi(KietDomainConstants.ErrorCodes.DuLieuKhongHopLe, "Phải có lý do đề nghị ngừng sử dụng.");
 
         return await TransactionExecutionWrapper.ExecuteInTransactionAsync(_context, async () =>
         {
@@ -218,29 +218,29 @@ public class VongDoiThietBiService : IVongDoiThietBiService
                 .FirstOrDefaultAsync(tb => tb.MaThietBi == thietBiId);
 
             if (thietBi == null)
-                return Result<DeNghiVongDoiResponse>.Loi("THIET_BI_NOT_FOUND", "Không tìm thấy thiết bị.");
+                return Result<DeNghiVongDoiResponse>.Loi(KietDomainConstants.ErrorCodes.ThietBiNotFound, "Không tìm thấy thiết bị.");
 
             if (thietBi.TrangThaiSuDung == TrangThaiThietBi.DangThue)
-                return Result<DeNghiVongDoiResponse>.Loi("THIET_BI_CHUA_THU_HOI", "Thiết bị đang phục vụ khách hàng, không được ngừng sử dụng.");
+                return Result<DeNghiVongDoiResponse>.Loi(KietDomainConstants.ErrorCodes.ThietBiChuaThuHoi, "Thiết bị đang phục vụ khách hàng, không được ngừng sử dụng.");
 
-            var anhHuong = await PhanTichCamKetThietBiAsync(thietBi, "NgungSuDung");
+            var anhHuong = await PhanTichCamKetThietBiAsync(thietBi, KietDomainConstants.VongDoiConfig.LoaiNgungSuDung);
             if (!anhHuong.CoTheDeNghi || anhHuong.CamKetCuThe.Count > 0 || anhHuong.ThieuSoLuongTheoLich.Count > 0)
-                return Result<DeNghiVongDoiResponse>.Loi("THAY_DOI_LAM_THIEU_CAM_KET",
+                return Result<DeNghiVongDoiResponse>.Loi(KietDomainConstants.ErrorCodes.ThayDoiLamThieuCamKet,
                     $"Không thể ngừng sử dụng: {string.Join("; ", anhHuong.VuongMac.Concat(anhHuong.ThieuSoLuongTheoLich))}");
 
             var nhanVien = await _context.LayNhanVienAsync(actorId);
             if (nhanVien == null)
-                return Result<DeNghiVongDoiResponse>.Loi("NHAN_VIEN_NOT_FOUND", "Không tìm thấy hồ sơ nhân viên đề nghị.");
+                return Result<DeNghiVongDoiResponse>.Loi(KietDomainConstants.ErrorCodes.NhanVienNotFound, "Không tìm thấy hồ sơ nhân viên đề nghị.");
 
             var phieu = new PhieuDieuChinhKho
             {
                 MaNguoiLap = nhanVien.MaNhanVien,
                 TenNguoiLapLucLap = nhanVien.HoTen,
-                LoaiDieuChinh = "NgungSuDung",
+                LoaiDieuChinh = KietDomainConstants.VongDoiConfig.LoaiNgungSuDung,
                 LyDo = request.LyDo,
                 BangChung = request.BangChung,
                 ThoiDiemLap = DateTime.UtcNow,
-                TrangThai = "ChoDuyet"
+                TrangThai = KietDomainConstants.PhieuStatus.ChoDuyet
             };
 
             _context.PhieuDieuChinhKhos.Add(phieu);
@@ -289,13 +289,13 @@ public class VongDoiThietBiService : IVongDoiThietBiService
                 .FirstOrDefaultAsync(p => p.MaPhieuDieuChinh == maPhieuDieuChinh);
 
             if (phieu == null)
-                return Result<DeNghiVongDoiResponse>.Loi("PHIEU_NOT_FOUND", "Không tìm thấy phiếu đề nghị điều chỉnh.");
+                return Result<DeNghiVongDoiResponse>.Loi(KietDomainConstants.ErrorCodes.PhieuNotFound, "Không tìm thấy phiếu đề nghị điều chỉnh.");
 
             var chiTiet = phieu.ChiTietDieuChinhKhos.FirstOrDefault();
             if (chiTiet == null || !chiTiet.MaThietBi.HasValue)
-                return Result<DeNghiVongDoiResponse>.Loi("DU_LIEU_KHONG_HOP_LE", "Phiếu điều chỉnh không gắn thiết bị hợp lệ.");
+                return Result<DeNghiVongDoiResponse>.Loi(KietDomainConstants.ErrorCodes.DuLieuKhongHopLe, "Phiếu điều chỉnh không gắn thiết bị hợp lệ.");
 
-            if (phieu.TrangThai == "DaApDung")
+            if (phieu.TrangThai == KietDomainConstants.PhieuStatus.DaApDung)
             {
                 return Result<DeNghiVongDoiResponse>.Ok(new DeNghiVongDoiResponse
                 {
@@ -311,25 +311,25 @@ public class VongDoiThietBiService : IVongDoiThietBiService
 
             var thietBi = await _context.ThietBis.FirstOrDefaultAsync(tb => tb.MaThietBi == chiTiet.MaThietBi.Value);
             if (thietBi == null)
-                return Result<DeNghiVongDoiResponse>.Loi("THIET_BI_NOT_FOUND", "Không tìm thấy thiết bị.");
+                return Result<DeNghiVongDoiResponse>.Loi(KietDomainConstants.ErrorCodes.ThietBiNotFound, "Không tìm thấy thiết bị.");
 
             if (thietBi.TrangThaiSuDung == TrangThaiThietBi.DangThue)
-                return Result<DeNghiVongDoiResponse>.Loi("THIET_BI_CHUA_THU_HOI", "Thiết bị đang phục vụ khách, không thể duyệt áp dụng.");
+                return Result<DeNghiVongDoiResponse>.Loi(KietDomainConstants.ErrorCodes.ThietBiChuaThuHoi, "Thiết bị đang phục vụ khách, không thể duyệt áp dụng.");
 
             // Kiểm tra lại cam kết tại thời điểm duyệt (W5-T3-A05)
-            var anhHuong = await PhanTichCamKetThietBiAsync(thietBi, phieu.LoaiDieuChinh ?? "GiangCap");
+            var anhHuong = await PhanTichCamKetThietBiAsync(thietBi, phieu.LoaiDieuChinh ?? KietDomainConstants.VongDoiConfig.LoaiGiangCap);
             if (!anhHuong.CoTheApDungHienTai || anhHuong.CamKetCuThe.Count > 0 || anhHuong.ThieuSoLuongTheoLich.Count > 0)
-                return Result<DeNghiVongDoiResponse>.Loi("THAY_DOI_LAM_THIEU_CAM_KET",
+                return Result<DeNghiVongDoiResponse>.Loi(KietDomainConstants.ErrorCodes.ThayDoiLamThieuCamKet,
                     $"Không thể duyệt áp dụng do phát sinh thiếu cam kết: {string.Join("; ", anhHuong.VuongMac.Concat(anhHuong.ThieuSoLuongTheoLich))}");
 
             var nhanVien = await _context.LayNhanVienAsync(actorId);
             if (nhanVien == null)
-                return Result<DeNghiVongDoiResponse>.Loi("NHAN_VIEN_NOT_FOUND", "Không tìm thấy hồ sơ quản trị viên duyệt.");
+                return Result<DeNghiVongDoiResponse>.Loi(KietDomainConstants.ErrorCodes.NhanVienNotFound, "Không tìm thấy hồ sơ quản trị viên duyệt.");
 
             var trangThaiCu = thietBi.TrangThaiSuDung;
             var tinhTrangCu = thietBi.TinhTrang;
 
-            if (phieu.LoaiDieuChinh == "GiangCap" && !string.IsNullOrWhiteSpace(chiTiet.GiaTriSau))
+            if (phieu.LoaiDieuChinh == KietDomainConstants.VongDoiConfig.LoaiGiangCap && !string.IsNullOrWhiteSpace(chiTiet.GiaTriSau))
             {
                 using var doc = JsonDocument.Parse(chiTiet.GiaTriSau);
                 if (doc.RootElement.TryGetProperty("MaSanPhamHienTai", out var spProp))
@@ -341,7 +341,7 @@ public class VongDoiThietBiService : IVongDoiThietBiService
                     thietBi.TinhTrang = ttProp.GetString();
                 }
             }
-            else if (phieu.LoaiDieuChinh == "NgungSuDung")
+            else if (phieu.LoaiDieuChinh == KietDomainConstants.VongDoiConfig.LoaiNgungSuDung)
             {
                 thietBi.TrangThaiSuDung = TrangThaiThietBi.NgungSuDung;
             }
@@ -350,7 +350,7 @@ public class VongDoiThietBiService : IVongDoiThietBiService
             phieu.TenNguoiDuyetLucDuyet = nhanVien.HoTen;
             phieu.ThoiDiemDuyet = DateTime.UtcNow;
             phieu.ThoiDiemApDung = DateTime.UtcNow;
-            phieu.TrangThai = "DaApDung";
+            phieu.TrangThai = KietDomainConstants.PhieuStatus.DaApDung;
 
             _context.LichSuTinhTrangThietBis.Add(new LichSuTinhTrangThietBi
             {
@@ -394,11 +394,13 @@ public class VongDoiThietBiService : IVongDoiThietBiService
             res.VuongMac.Add("Thiết bị đang được khách thuê (chưa thu hồi).");
         }
 
-        if (loaiThayDoi == "NgungSuDung")
+        if (loaiThayDoi == KietDomainConstants.VongDoiConfig.LoaiNgungSuDung)
         {
             bool coBaoTriMo = await _context.PhieuBaoTris.AnyAsync(p =>
                 p.MaThietBi == thietBi.MaThietBi &&
-                (p.TrangThai == "ChoXuLy" || p.TrangThai == "DangXuLy" || p.TrangThai == "ChoKiemTra"));
+                (p.TrangThai == KietDomainConstants.BaoTriConfig.TrangThaiChoXuLy ||
+                 p.TrangThai == KietDomainConstants.BaoTriConfig.TrangThaiDangXuLy ||
+                 p.TrangThai == KietDomainConstants.BaoTriConfig.TrangThaiChoKiemTra));
 
             if (coBaoTriMo)
             {
@@ -413,7 +415,7 @@ public class VongDoiThietBiService : IVongDoiThietBiService
             .Include(pc => pc.ChiTietDon)
                 .ThenInclude(ct => ct.DonThue)
             .Where(pc => pc.MaThietBi == thietBi.MaThietBi &&
-                         pc.TrangThai == "DaPhanCong" &&
+                         pc.TrangThai == KietDomainConstants.PhieuStatus.DaPhanCong &&
                          (pc.ChiTietDon.DonThue.TrangThai == TrangThaiDonThue.ChoThanhToan ||
                           pc.ChiTietDon.DonThue.TrangThai == TrangThaiDonThue.DaXacNhan ||
                           pc.ChiTietDon.DonThue.TrangThai == TrangThaiDonThue.DangChuanBi ||

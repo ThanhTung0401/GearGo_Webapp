@@ -1,6 +1,8 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Text.Json;
+using GearGo.Exceptions;
+using GearGo.Helpers;
 using GearGo.Models.DTOs.DonThue;
 using GearGo.Models.Enums;
 
@@ -123,7 +125,7 @@ public class DonThue
             NgayDat = now,
             GioNhanDuKien = req.GioNhanDuKien,
             GioTraDuKien = req.GioTraDuKien,
-            HanThanhToan = now.AddMinutes(15),
+            HanThanhToan = now.AddMinutes(KietDomainConstants.PolicyConfig.ThoiGianGiuChoPhut),
             TenNguoiNhan = req.TenNguoiNhan,
             SoDienThoaiNguoiNhan = req.SoDienThoaiNguoiNhan,
             EmailLienHe = req.EmailLienHe,
@@ -151,7 +153,7 @@ public class DonThue
     {
         var chiTiets = new List<ChiTietDonThue>();
         var giuChos = new List<GiuCho>();
-        var hanThanhToan = HanThanhToan ?? now.AddMinutes(15);
+        var hanThanhToan = HanThanhToan ?? now.AddMinutes(KietDomainConstants.PolicyConfig.ThoiGianGiuChoPhut);
         decimal tienGiamConLai = TongTienGiam;
 
         for (int i = 0; i < items.Count; i++)
@@ -204,46 +206,24 @@ public class DonThue
         return trangThaiSau;
     }
 
-    // 1. Khach hang huy don
-    public void KhachHangHuyDon(string lyDo)
-    {
-        if (TrangThai != TrangThaiDonThue.ChoThanhToan)
-            throw new Exception("Chỉ có thể hủy đơn khi đang ở trạng thái Chờ thanh toán.");
-
-        TrangThai = TrangThaiDonThue.KhachHuy;
-        ThoiDiemHuy = DateTime.UtcNow;
-        LyDoHuy = lyDo;
-
-        // Tự động giải phóng các giữ chỗ
-        foreach (var chiTiet in ChiTietDonThues)
-        {
-            if (chiTiet.GiuCho != null)
-            {
-                chiTiet.GiuCho.TrangThai = TrangThaiGiuCho.DaGiaiPhong;
-                chiTiet.GiuCho.ThoiDiemGiaiPhong = DateTime.UtcNow;
-            }
-        }
-    }
-
-    // 2. Chuyen trang thai sang dang thue (khi ban giao)
     public void BatDauThue()
     {
         if (TrangThai != TrangThaiDonThue.SanSangNhan)
-            throw new Exception("Đơn chưa sẵn sàng để giao.");
+            throw new TrangThaiKhongHopLeException("Đơn chưa sẵn sàng để giao.");
 
         TrangThai = TrangThaiDonThue.DangThue;
     }
 
-    // 3. Xac nhan thanh toan
     public void XacNhanThanhToan()
     {
         if (TrangThai != TrangThaiDonThue.ChoThanhToan)
-            throw new Exception("Đơn chưa sẵn sàng để thanh toán.");
+            throw new TrangThaiKhongHopLeException("Đơn chưa sẵn sàng để thanh toán.");
 
         TrangThai = TrangThaiDonThue.DaXacNhan;
         foreach (var chiTiet in ChiTietDonThues)
         {
-            if (chiTiet.GiuCho != null) {
+            if (chiTiet.GiuCho != null)
+            {
                 chiTiet.GiuCho.TrangThai = TrangThaiGiuCho.DaXacNhan;
             }
         }
