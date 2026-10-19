@@ -10,7 +10,7 @@ namespace GearGo.Controllers;
 [Route("api/v1/nhan-tra")]
 [Route("api/nhan-tra")]
 [Authorize(Policy = "StaffOrAdmin")]
-public class NhanTraController : KietBaseController
+public class NhanTraController : BaseApiController
 {
     private readonly INhanTraService _nhanTraService;
     private readonly ITruyVanNhanTraService _truyVanService;

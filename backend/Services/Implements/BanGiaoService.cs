@@ -163,14 +163,13 @@ public class BanGiaoService : IBanGiaoService
                 return validationResult;
 
             // Ghi lịch sử đơn
-            _context.LichSuTrangThaiDons.Add(new LichSuTrangThaiDon
-            {
-                MaDonThue = phieu.MaDonThue,
-                TrangThaiTruoc = TrangThaiDonThue.SanSangNhan.ToString(),
-                TrangThaiSau = TrangThaiDonThue.DangThue.ToString(),
-                ThoiDiem = DateTime.UtcNow,
-                LyDo = "Khách hàng đã nhận thiết bị thành công"
-            });
+            AuditLogHelper.GhiLichSuDon(
+                _context,
+                phieu.MaDonThue,
+                nhanVienThucHien?.MaTaiKhoan ?? maNhanVienChot,
+                TrangThaiDonThue.SanSangNhan.ToString(),
+                TrangThaiDonThue.DangThue.ToString(),
+                "Khách hàng đã nhận thiết bị thành công");
 
             return Result<bool>.Ok(true);
         }, _logger, IsolationLevel.Serializable);

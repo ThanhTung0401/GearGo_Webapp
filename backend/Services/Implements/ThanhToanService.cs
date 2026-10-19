@@ -51,7 +51,7 @@ public class ThanhToanService : IThanhToanService
                 return Result<string>.Loi(KietDomainConstants.ErrorCodes.DonThueNotFound, "Không tìm thấy đơn thuê.");
 
             var now = DateTime.UtcNow;
-            var maYeuCau = $"PAY_{now:yyyyMMddHHmmss}_{Guid.NewGuid().ToString("N")[..8]}";
+            var maYeuCau = DisplayCodeHelper.SinhMaYeuCauThanhToan(now);
 
             var thanhToanMoi = new ThanhToan
             {
@@ -108,14 +108,14 @@ public class ThanhToanService : IThanhToanService
                 donThue.LuotSuDungKhuyenMai.ThoiDiemSuDung = now;
             }
 
-            _context.LichSuTrangThaiDons.Add(new LichSuTrangThaiDon
-            {
-                MaDonThue = donThue.MaDonThue,
-                TrangThaiTruoc = TrangThaiDonThue.ChoThanhToan.ToString(),
-                TrangThaiSau = TrangThaiDonThue.DaXacNhan.ToString(),
-                ThoiDiem = now,
-                LyDo = $"Khách hàng đã thanh toán qua {request.PhuongThucThanhToan}"
-            });
+            AuditLogHelper.GhiLichSuDon(
+                _context,
+                donThue.MaDonThue,
+                null,
+                TrangThaiDonThue.ChoThanhToan.ToString(),
+                TrangThaiDonThue.DaXacNhan.ToString(),
+                $"Khách hàng đã thanh toán qua {request.PhuongThucThanhToan}",
+                now);
 
             return Result<string>.Ok(thanhToanMoi.MaYeuCau);
         }, _logger, IsolationLevel.Serializable);
@@ -146,7 +146,7 @@ public class ThanhToanService : IThanhToanService
             if (existingThanhToan != null)
                 return Result<YeuCauThuResponse>.Loi(KietDomainConstants.ErrorCodes.ThuThemDangCho, "Đã có yêu cầu thu bổ sung đang chờ xử lý.");
 
-            var maYeuCau = $"PAY_{DateTime.UtcNow:yyyyMMddHHmmss}_{Guid.NewGuid().ToString("N")[..8]}";
+            var maYeuCau = DisplayCodeHelper.SinhMaYeuCauThanhToan(DateTime.UtcNow);
 
             var thanhToanMoi = new Models.Entities.ThanhToan
             {

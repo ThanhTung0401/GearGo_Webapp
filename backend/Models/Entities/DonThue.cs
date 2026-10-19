@@ -121,7 +121,7 @@ public class DonThue
         {
             MaKhachHang = req.MaKhachHang,
             MaChinhSach = maChinhSach,
-            MaDonHienThi = $"DH{now:yyyyMMddHHmmss}_{Guid.NewGuid().ToString("N")[..4].ToUpper()}",
+            MaDonHienThi = DisplayCodeHelper.SinhMaDonHienThi(now),
             NgayDat = now,
             GioNhanDuKien = req.GioNhanDuKien,
             GioTraDuKien = req.GioTraDuKien,

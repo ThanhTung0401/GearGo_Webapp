@@ -10,7 +10,7 @@ namespace GearGo.Controllers;
 [Route("api/bao-tri")]
 [Route("api/v1/bao-tri")]
 [Authorize(Policy = "StaffOrAdmin")]
-public class BaoTriController : KietBaseController
+public class BaoTriController : BaseApiController
 {
     private readonly IBaoTriService _baoTriService;
 

@@ -153,9 +153,10 @@ public class VongDoiThietBiService : IVongDoiThietBiService
                 return Result<DeNghiVongDoiResponse>.Loi(KietDomainConstants.ErrorCodes.ThayDoiLamThieuCamKet,
                     $"Không thể giáng cấp do vướng cam kết đơn thuê: {string.Join("; ", anhHuong.VuongMac.Concat(anhHuong.ThieuSoLuongTheoLich))}");
 
-            var nhanVien = await _context.LayNhanVienAsync(actorId);
-            if (nhanVien == null)
-                return Result<DeNghiVongDoiResponse>.Loi(KietDomainConstants.ErrorCodes.NhanVienNotFound, "Không tìm thấy hồ sơ nhân viên đề nghị.");
+            var nvResult = await _context.LayNhanVienHopLeAsync(actorId);
+            if (!nvResult.ThanhCong)
+                return Result<DeNghiVongDoiResponse>.Loi(nvResult.MaLoi!, "Không tìm thấy hồ sơ nhân viên đề nghị.");
+            var nhanVien = nvResult.DuLieu!;
 
             var phieu = new PhieuDieuChinhKho
             {
@@ -228,9 +229,10 @@ public class VongDoiThietBiService : IVongDoiThietBiService
                 return Result<DeNghiVongDoiResponse>.Loi(KietDomainConstants.ErrorCodes.ThayDoiLamThieuCamKet,
                     $"Không thể ngừng sử dụng: {string.Join("; ", anhHuong.VuongMac.Concat(anhHuong.ThieuSoLuongTheoLich))}");
 
-            var nhanVien = await _context.LayNhanVienAsync(actorId);
-            if (nhanVien == null)
-                return Result<DeNghiVongDoiResponse>.Loi(KietDomainConstants.ErrorCodes.NhanVienNotFound, "Không tìm thấy hồ sơ nhân viên đề nghị.");
+            var nvResult = await _context.LayNhanVienHopLeAsync(actorId);
+            if (!nvResult.ThanhCong)
+                return Result<DeNghiVongDoiResponse>.Loi(nvResult.MaLoi!, "Không tìm thấy hồ sơ nhân viên đề nghị.");
+            var nhanVien = nvResult.DuLieu!;
 
             var phieu = new PhieuDieuChinhKho
             {
@@ -322,9 +324,10 @@ public class VongDoiThietBiService : IVongDoiThietBiService
                 return Result<DeNghiVongDoiResponse>.Loi(KietDomainConstants.ErrorCodes.ThayDoiLamThieuCamKet,
                     $"Không thể duyệt áp dụng do phát sinh thiếu cam kết: {string.Join("; ", anhHuong.VuongMac.Concat(anhHuong.ThieuSoLuongTheoLich))}");
 
-            var nhanVien = await _context.LayNhanVienAsync(actorId);
-            if (nhanVien == null)
-                return Result<DeNghiVongDoiResponse>.Loi(KietDomainConstants.ErrorCodes.NhanVienNotFound, "Không tìm thấy hồ sơ quản trị viên duyệt.");
+            var nvResult = await _context.LayNhanVienHopLeAsync(actorId);
+            if (!nvResult.ThanhCong)
+                return Result<DeNghiVongDoiResponse>.Loi(nvResult.MaLoi!, "Không tìm thấy hồ sơ quản trị viên duyệt.");
+            var nhanVien = nvResult.DuLieu!;
 
             var trangThaiCu = thietBi.TrangThaiSuDung;
             var tinhTrangCu = thietBi.TinhTrang;
@@ -352,17 +355,15 @@ public class VongDoiThietBiService : IVongDoiThietBiService
             phieu.ThoiDiemApDung = DateTime.UtcNow;
             phieu.TrangThai = KietDomainConstants.PhieuStatus.DaApDung;
 
-            _context.LichSuTinhTrangThietBis.Add(new LichSuTinhTrangThietBi
-            {
-                MaThietBi = thietBi.MaThietBi,
-                MaNguoiThucHien = actorId,
-                TrangThaiTruoc = trangThaiCu.ToString(),
-                TrangThaiSau = thietBi.TrangThaiSuDung.ToString(),
-                TinhTrangTruoc = tinhTrangCu,
-                TinhTrangSau = thietBi.TinhTrang,
-                ThoiDiem = DateTime.UtcNow,
-                LyDo = $"Duyệt áp dụng vòng đời ({phieu.LoaiDieuChinh}) theo phiếu #{phieu.MaPhieuDieuChinh}: {phieu.LyDo}"
-            });
+            AuditLogHelper.GhiLichSuThietBi(
+                _context,
+                thietBi.MaThietBi,
+                actorId,
+                trangThaiCu.ToString(),
+                thietBi.TrangThaiSuDung.ToString(),
+                tinhTrangCu,
+                thietBi.TinhTrang,
+                $"Duyệt áp dụng vòng đời ({phieu.LoaiDieuChinh}) theo phiếu #{phieu.MaPhieuDieuChinh}: {phieu.LyDo}");
 
             await _context.SaveChangesAsync();
 
