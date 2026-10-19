@@ -1,5 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using GearGo.Exceptions;
+using GearGo.Helpers;
 using GearGo.Models.Enums;
 
 namespace GearGo.Models.Entities;
@@ -42,7 +44,7 @@ public class PhieuBanGiao
 
     [Column("trang_thai")]
     [MaxLength(50)]
-    public string TrangThai { get; set; } = "ChoGiao";
+    public string TrangThai { get; set; } = KietDomainConstants.PhieuStatus.ChoGiao;
 
     [Column("ghi_chu")]
     public string? GhiChu { get; set; }
@@ -59,14 +61,14 @@ public class PhieuBanGiao
     // ----- RICH DOMAIN -----
     public void ChotPhieu(string tenNguoiNhan, string tenNhanVienLucGiao)
     {
-        if (TrangThai == "DaGiao")
-            throw new Exception("Phiếu đã được chốt từ trước.");
+        if (TrangThai == KietDomainConstants.PhieuStatus.DaGiao)
+            throw new TrangThaiKhongHopLeException("Phiếu đã được chốt từ trước.");
         if (ThoiDiemKhachXacNhan == null)
-            throw new Exception("Khách hàng chưa xác nhận bàn giao.");
+            throw new DuLieuKhongHopLeException(KietDomainConstants.ErrorCodes.DuLieuKhongHopLe, "Khách hàng chưa xác nhận bàn giao.");
         if (string.IsNullOrWhiteSpace(BangChungXacNhan))
-            throw new Exception("Thiếu bằng chứng xác nhận của khách.");
+            throw new DuLieuKhongHopLeException(KietDomainConstants.ErrorCodes.DuLieuKhongHopLe, "Thiếu bằng chứng xác nhận của khách.");
 
-        TrangThai = "DaGiao";
+        TrangThai = KietDomainConstants.PhieuStatus.DaGiao;
         ThoiDiemGiaoThucTe = DateTime.UtcNow;
         TenNguoiNhanThucTe = tenNguoiNhan;
         TenNhanVienLucGiao = tenNhanVienLucGiao;

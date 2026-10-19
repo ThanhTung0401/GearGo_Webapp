@@ -1,4 +1,5 @@
 using GearGo.Data;
+using GearGo.Helpers;
 using GearGo.Models.Entities;
 using GearGo.Models.Enums;
 using Microsoft.EntityFrameworkCore;
@@ -27,7 +28,7 @@ public class DonThueExpirationJob : BackgroundService
             try
             {
                 await QuetDonHetHan(stoppingToken);
-                await Task.Delay(TimeSpan.FromMinutes(1), stoppingToken);
+                await Task.Delay(TimeSpan.FromMinutes(KietDomainConstants.PolicyConfig.ChuKyQuetJobPhut), stoppingToken);
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
@@ -44,7 +45,7 @@ public class DonThueExpirationJob : BackgroundService
                 _logger.LogError(e, "Lỗi xảy ra trong quá trình quét đơn hết hạn.");
                 try
                 {
-                    await Task.Delay(TimeSpan.FromSeconds(10), stoppingToken);
+                    await Task.Delay(TimeSpan.FromSeconds(KietDomainConstants.PolicyConfig.DelayRetryJobGiay), stoppingToken);
                 }
                 catch (OperationCanceledException)
                 {
@@ -66,7 +67,8 @@ public class DonThueExpirationJob : BackgroundService
         // Tìm các đơn chưa thanh toán và đã quá hạn
         var donHetHan = await context.DonThues
             .Include(d => d.ChiTietDonThues)
-            .ThenInclude(c => c.GiuCho)
+                .ThenInclude(c => c.GiuCho)
+            .Include(d => d.LuotSuDungKhuyenMai)
             .Where(d => d.TrangThai == TrangThaiDonThue.ChoThanhToan
                         && d.HanThanhToan < thoiDiemHienTai)
             .ToListAsync(stoppingToken);
@@ -80,7 +82,7 @@ public class DonThueExpirationJob : BackgroundService
             // Cập nhật trạng thái Đơn
             don.TrangThai = TrangThaiDonThue.HetHan;
             don.ThoiDiemHuy = thoiDiemHienTai;
-            don.LyDoHuy = "Hệ thống tự động hủy do quá hạn thanh toán 15 phút.";
+            don.LyDoHuy = $"Hệ thống tự động hủy do quá hạn thanh toán {KietDomainConstants.PolicyConfig.ThoiGianGiuChoPhut} phút.";
 
             // Cập nhật trạng thái Giữ chỗ để nhả hàng ra
             foreach (var chiTiet in don.ChiTietDonThues)
@@ -90,6 +92,13 @@ public class DonThueExpirationJob : BackgroundService
                     chiTiet.GiuCho.TrangThai = TrangThaiGiuCho.HetHan;
                     chiTiet.GiuCho.ThoiDiemGiaiPhong = thoiDiemHienTai;
                 }
+            }
+
+            // Giải phóng lượt sử dụng khuyến mãi nếu có đang giữ
+            if (don.LuotSuDungKhuyenMai != null && don.LuotSuDungKhuyenMai.TrangThai == KietDomainConstants.PhieuStatus.DangGiu)
+            {
+                don.LuotSuDungKhuyenMai.TrangThai = KietDomainConstants.PhieuStatus.HetHan;
+                don.LuotSuDungKhuyenMai.ThoiDiemGiaiPhong = thoiDiemHienTai;
             }
 
             // Ghi vào Lịch sử trạng thái đơn

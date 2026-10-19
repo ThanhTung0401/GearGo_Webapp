@@ -1,3 +1,4 @@
+using GearGo.Helpers;
 using GearGo.Models.Common;
 
 namespace GearGo.Services.Specifications;
@@ -11,7 +12,7 @@ public static class BanGiaoValidationRules
     {
         if (tongDaDong < tongTienYeuCau)
         {
-            return Result<bool>.Loi("CHUA_THANH_TOAN_DU",
+            return Result<bool>.Loi(KietDomainConstants.ErrorCodes.ChuaThanhToanDu,
                 $"Đơn thuê này chưa thanh toán đủ. Yêu cầu: {tongTienYeuCau}, Đã đóng: {tongDaDong}");
         }
 

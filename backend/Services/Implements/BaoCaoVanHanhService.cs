@@ -21,45 +21,55 @@ public class BaoCaoVanHanhService : IBaoCaoVanHanhService
         var tuNgay = filter.TuNgay ?? DateTime.UtcNow.AddDays(-KietDomainConstants.PolicyConfig.SoNgayBaoCaoMacDinh);
         var denNgay = filter.DenNgay ?? DateTime.UtcNow;
 
-        // 1. Lọc đơn thuê theo khoảng thời gian
-        var queryDon = _context.DonThues.AsNoTracking()
-            .Where(d => d.NgayDat >= tuNgay && d.NgayDat <= denNgay);
+        // 1. Lọc đơn thuê theo khoảng thời gian (Gộp 4 câu query thành 1 roundtrip duy nhất)
+        var danhSachDon = await _context.DonThues.AsNoTracking()
+            .Where(d => d.NgayDat >= tuNgay && d.NgayDat <= denNgay)
+            .Select(d => new
+            {
+                d.TrangThai,
+                SoNgay = (double)EF.Functions.DateDiffDay(d.GioNhanDuKien, d.GioTraDuKien)
+            })
+            .ToListAsync();
 
-        int tongDon = await queryDon.CountAsync();
-        int tongDonHuy = await queryDon.CountAsync(d => 
-            d.TrangThai == TrangThaiDonThue.KhachHuy || 
-            d.TrangThai == TrangThaiDonThue.CuaHangHuy || 
+        int tongDon = danhSachDon.Count;
+        int tongDonHuy = danhSachDon.Count(d =>
+            d.TrangThai == TrangThaiDonThue.KhachHuy ||
+            d.TrangThai == TrangThaiDonThue.CuaHangHuy ||
             d.TrangThai == TrangThaiDonThue.HetHan);
 
-        int tongDonThanhCong = await queryDon.CountAsync(d => 
-            d.TrangThai == TrangThaiDonThue.HoanTat || 
+        int tongDonThanhCong = danhSachDon.Count(d =>
+            d.TrangThai == TrangThaiDonThue.HoanTat ||
             d.TrangThai == TrangThaiDonThue.DangThue ||
             d.TrangThai == TrangThaiDonThue.DaNhanTra ||
             d.TrangThai == TrangThaiDonThue.ChoDoiSoat);
 
         double tyLeHuy = KietCalculationHelpers.TinhPhanTram(tongDonHuy, tongDon);
 
-        // 2. Thống kê thiết bị toàn hệ thống
-        var queryThietBi = _context.ThietBis.AsNoTracking();
-        int tongThietBi = await queryThietBi.CountAsync();
-        int soDangThue = await queryThietBi.CountAsync(t => t.TrangThaiSuDung == TrangThaiThietBi.DangThue);
-        int soDangBaoTri = await queryThietBi.CountAsync(t => t.TrangThaiSuDung == TrangThaiThietBi.DangBaoTri);
-        int soThatLac = await queryThietBi.CountAsync(t => t.TrangThaiSuDung == TrangThaiThietBi.ThatLac);
+        // 2. Thống kê thiết bị toàn hệ thống (Gộp 4 câu query thành 1 roundtrip duy nhất)
+        var trangThaiThietBis = await _context.ThietBis.AsNoTracking()
+            .Select(t => t.TrangThaiSuDung)
+            .ToListAsync();
+
+        int tongThietBi = trangThaiThietBis.Count;
+        int soDangThue = trangThaiThietBis.Count(t => t == TrangThaiThietBi.DangThue);
+        int soDangBaoTri = trangThaiThietBis.Count(t => t == TrangThaiThietBi.DangBaoTri);
+        int soThatLac = trangThaiThietBis.Count(t => t == TrangThaiThietBi.ThatLac);
 
         double tyLeHaoMon = KietCalculationHelpers.TinhPhanTram(soDangBaoTri + soThatLac, tongThietBi);
 
         // 3. Tính số ngày thuê trung bình của các đơn thành công
-        var danhSachSoNgay = await queryDon
-            .Where(d => d.TrangThai != TrangThaiDonThue.KhachHuy && 
-                        d.TrangThai != TrangThaiDonThue.CuaHangHuy && 
+        var danhSachSoNgay = danhSachDon
+            .Where(d => d.TrangThai != TrangThaiDonThue.KhachHuy &&
+                        d.TrangThai != TrangThaiDonThue.CuaHangHuy &&
                         d.TrangThai != TrangThaiDonThue.HetHan)
-            .Select(d => (double)EF.Functions.DateDiffDay(d.GioNhanDuKien, d.GioTraDuKien))
-            .ToListAsync();
+            .Select(d => d.SoNgay)
+            .ToList();
 
-        double soNgayThueTB = danhSachSoNgay.Count > 0 
-            ? Math.Round(danhSachSoNgay.Average(), 1) 
+        double soNgayThueTB = danhSachSoNgay.Count > 0
+            ? Math.Round(danhSachSoNgay.Average(), 1)
             : 0.0;
-        if (soNgayThueTB < 1.0 && danhSachSoNgay.Count > 0) soNgayThueTB = 1.0;
+        if (soNgayThueTB < KietDomainConstants.PolicyConfig.SoNgayThueToiThieu && danhSachSoNgay.Count > 0)
+            soNgayThueTB = KietDomainConstants.PolicyConfig.SoNgayThueToiThieu;
 
         // 4. Tính tỷ lệ quay vòng = Tổng lượt thuê thiết bị / Tổng thiết bị
         int tongLuotThueThietBi = await _context.PhanCongThietBis

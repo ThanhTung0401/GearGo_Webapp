@@ -1,4 +1,5 @@
 using GearGo.Data;
+using GearGo.Helpers;
 using GearGo.Models.Common;
 using GearGo.Models.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -15,24 +16,24 @@ public static class NhanTraValidationRules
         foreach (var ct in phieu.ChiTietNhanTras)
         {
             if (string.IsNullOrEmpty(ct.KetLuan))
-                return Result<bool>.Loi("KET_LUAN_CHUA_DU", $"Thiết bị #{ct.MaChiTietBanGiao} chưa có kết luận kiểm tra.");
+                return Result<bool>.Loi(KietDomainConstants.ErrorCodes.KetLuanChuaDu, $"Thiết bị #{ct.MaChiTietBanGiao} chưa có kết luận kiểm tra.");
 
-            if (ct.KetLuan == "MatThietBi")
+            if (ct.KetLuan == KietDomainConstants.KetLuanKiemTra.MatThietBi)
             {
                 if (!ct.ThoiDiemDuyetMat.HasValue || !ct.MaNguoiDuyetMat.HasValue)
                 {
-                    return Result<bool>.Loi("KET_LUAN_MAT_CHUA_DU",
+                    return Result<bool>.Loi(KietDomainConstants.ErrorCodes.KetLuanMatChuaDu,
                         $"Thiết bị #{ct.MaChiTietBanGiao} được báo mất nhưng chưa được Quản trị viên phê duyệt kết luận mất.");
                 }
 
                 bool coPhiDuyet = await context.PhuPhis.AnyAsync(p =>
                     p.MaChiTietBanGiao == ct.MaChiTietBanGiao &&
-                    p.LoaiPhi == "MatThietBi" &&
-                    p.TrangThaiDuyet == "DaDuyet");
+                    p.LoaiPhi == KietDomainConstants.KetLuanKiemTra.MatThietBi &&
+                    p.TrangThaiDuyet == KietDomainConstants.PhieuStatus.DaDuyet);
 
                 if (!coPhiDuyet)
                 {
-                    return Result<bool>.Loi("KET_LUAN_MAT_CHUA_DU",
+                    return Result<bool>.Loi(KietDomainConstants.ErrorCodes.KetLuanMatChuaDu,
                         $"Thiết bị #{ct.MaChiTietBanGiao} chưa có phụ phí bồi thường mất thiết bị được phê duyệt.");
                 }
             }
