@@ -57,9 +57,9 @@ public class DonThueService : IDonThueService
                 return Result<DonThueResponse>.Loi(stockCheck.MaLoi!, stockCheck.ThongDiep!);
 
             // 2. Tính số ngày thuê, tiền thuê, tiền cọc và khuyến mãi
-            int soNgayThue = Math.Max(1, (int)Math.Ceiling((request.GioTraDuKien - request.GioNhanDuKien).TotalHours / 24.0));
+            int soNgayThue = KietCalculationHelpers.TinhSoNgayThue(request.GioNhanDuKien, request.GioTraDuKien);
             var now = DateTime.UtcNow;
-            var hanThanhToan = now.AddMinutes(15);
+            var hanThanhToan = now.AddMinutes(KietDomainConstants.PolicyConfig.ThoiGianGiuChoPhut);
 
             var chinhSach = await _context.ChinhSachs
                 .Where(c => c.ThoiDiemApDung <= now)
@@ -92,7 +92,7 @@ public class DonThueService : IDonThueService
             // 3. Khởi tạo Đơn thuê & Phân bổ Chi tiết + Giữ chỗ qua Rich Domain Model
             var donThueMoi = DonThue.KhoiTao(
                 request,
-                chinhSach?.MaChinhSach ?? 1,
+                chinhSach?.MaChinhSach ?? KietDomainConstants.PolicyConfig.MaChinhSachMacDinh,
                 now,
                 tongTienThueTruocGiam,
                 tongTienGiam,

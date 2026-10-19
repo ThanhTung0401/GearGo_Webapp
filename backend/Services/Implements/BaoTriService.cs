@@ -43,7 +43,9 @@ public class BaoTriService : IBaoTriService
 
         var phieuDangMo = await _context.PhieuBaoTris
             .FirstOrDefaultAsync(p => p.MaThietBi == maThietBi
-                                      && (p.TrangThai == "ChoXuLy" || p.TrangThai == "DangXuLy" || p.TrangThai == "ChoKiemTra"));
+                                      && (p.TrangThai == KietDomainConstants.BaoTriConfig.TrangThaiChoXuLy
+                                          || p.TrangThai == KietDomainConstants.BaoTriConfig.TrangThaiDangXuLy
+                                          || p.TrangThai == KietDomainConstants.BaoTriConfig.TrangThaiChoKiemTra));
 
         if (phieuDangMo != null)
             return Result<PhieuBaoTri>.Ok(phieuDangMo);
@@ -57,7 +59,7 @@ public class BaoTriService : IBaoTriService
             MoTaLoi = moTaLoi,
             MucDo = mucDo,
             NgayBatDau = DateTime.UtcNow,
-            TrangThai = "ChoXuLy"
+            TrangThai = KietDomainConstants.BaoTriConfig.TrangThaiChoXuLy
         };
 
         thietBi.TrangThaiSuDung = TrangThaiThietBi.DangBaoTri;
@@ -70,8 +72,7 @@ public class BaoTriService : IBaoTriService
 
     public async Task<Result<DanhSachBaoTriResponse>> TimKiemAsync(TimKiemBaoTriRequest request)
     {
-        int trang = Math.Max(1, request.Trang);
-        int soMoiTrang = Math.Clamp(request.SoMoiTrang, 1, 100);
+        var (trang, soMoiTrang) = KietCalculationHelpers.ChuanHoaPhanTrang(request.Trang, request.SoMoiTrang);
 
         var query = _context.PhieuBaoTris
             .AsNoTracking()
@@ -153,7 +154,9 @@ public class BaoTriService : IBaoTriService
 
             var phieuDangMo = await _context.PhieuBaoTris
                 .FirstOrDefaultAsync(p => p.MaThietBi == request.MaThietBi
-                                          && (p.TrangThai == "ChoXuLy" || p.TrangThai == "DangXuLy" || p.TrangThai == "ChoKiemTra"));
+                                          && (p.TrangThai == KietDomainConstants.BaoTriConfig.TrangThaiChoXuLy
+                                              || p.TrangThai == KietDomainConstants.BaoTriConfig.TrangThaiDangXuLy
+                                              || p.TrangThai == KietDomainConstants.BaoTriConfig.TrangThaiChoKiemTra));
 
             if (phieuDangMo != null)
                 return Result<BaoTriResponse>.Loi("THIET_BI_DA_CO_BAO_TRI_MO",
@@ -171,13 +174,13 @@ public class BaoTriService : IBaoTriService
                 MaThietBi = request.MaThietBi,
                 MaDonThue = request.MaDonThue,
                 MaNguoiLap = nhanVien.MaNhanVien,
-                LoaiXuLy = string.IsNullOrWhiteSpace(request.LoaiXuLy) ? "SuaChua" : request.LoaiXuLy,
+                LoaiXuLy = string.IsNullOrWhiteSpace(request.LoaiXuLy) ? KietDomainConstants.BaoTriConfig.LoaiSuaChua : request.LoaiXuLy,
                 MoTaLoi = request.MoTaLoi,
-                MucDo = string.IsNullOrWhiteSpace(request.MucDo) ? "Nhe" : request.MucDo,
+                MucDo = string.IsNullOrWhiteSpace(request.MucDo) ? KietDomainConstants.BaoTriConfig.MucDoNhe : request.MucDo,
                 NgayBatDau = DateTime.UtcNow,
                 NgayDuKienHoanThanh = request.NgayDuKienHoanThanh,
                 BangChung = request.BangChung,
-                TrangThai = "ChoXuLy"
+                TrangThai = KietDomainConstants.BaoTriConfig.TrangThaiChoXuLy
             };
 
             _context.PhieuBaoTris.Add(phieuMoi);
@@ -215,7 +218,8 @@ public class BaoTriService : IBaoTriService
             if (phieu == null)
                 return Result<BaoTriResponse>.Loi("PHIEU_NOT_FOUND", "Không tìm thấy phiếu bảo trì.");
 
-            if (phieu.TrangThai == "HoanThanh" || phieu.TrangThai == "KhongDat")
+            if (phieu.TrangThai == KietDomainConstants.BaoTriConfig.TrangThaiHoanThanh
+                || phieu.TrangThai == KietDomainConstants.BaoTriConfig.TrangThaiKhongDat)
                 return Result<BaoTriResponse>.Loi("PHIEU_BAO_TRI_DA_KET_THUC", "Phiếu bảo trì đã kết thúc, không thể phân công lại.");
 
             var nguoiXuLy = await _context.NhanViens
@@ -229,8 +233,8 @@ public class BaoTriService : IBaoTriService
                 return Result<BaoTriResponse>.Loi("NHAN_VIEN_DA_NGHI_VIEC", "Nhân viên được phân công không còn làm việc hoặc tài khoản đã khóa.");
 
             phieu.MaNguoiXuLy = nguoiXuLy.MaNhanVien;
-            if (phieu.TrangThai == "ChoXuLy")
-                phieu.TrangThai = "DangXuLy";
+            if (phieu.TrangThai == KietDomainConstants.BaoTriConfig.TrangThaiChoXuLy)
+                phieu.TrangThai = KietDomainConstants.BaoTriConfig.TrangThaiDangXuLy;
 
             await _context.SaveChangesAsync();
             var updated = await LayPhieuBaoTriDayDuAsync(maPhieuBaoTri);
@@ -249,7 +253,8 @@ public class BaoTriService : IBaoTriService
             if (phieu == null)
                 return Result<BaoTriResponse>.Loi("PHIEU_NOT_FOUND", "Không tìm thấy phiếu bảo trì.");
 
-            if (phieu.TrangThai == "HoanThanh" || phieu.TrangThai == "KhongDat")
+            if (phieu.TrangThai == KietDomainConstants.BaoTriConfig.TrangThaiHoanThanh
+                || phieu.TrangThai == KietDomainConstants.BaoTriConfig.TrangThaiKhongDat)
                 return Result<BaoTriResponse>.Loi("PHIEU_BAO_TRI_DA_KET_THUC", "Phiếu bảo trì đã kết thúc, không thể sửa tiến độ.");
 
             var coQuyen = await KiemTraQuyenXuLyAsync(phieu, actorId);
@@ -265,8 +270,8 @@ public class BaoTriService : IBaoTriService
             if (request.NgayDuKienHoanThanh.HasValue)
                 phieu.NgayDuKienHoanThanh = request.NgayDuKienHoanThanh.Value;
 
-            if (phieu.TrangThai == "ChoXuLy")
-                phieu.TrangThai = "DangXuLy";
+            if (phieu.TrangThai == KietDomainConstants.BaoTriConfig.TrangThaiChoXuLy)
+                phieu.TrangThai = KietDomainConstants.BaoTriConfig.TrangThaiDangXuLy;
 
             await _context.SaveChangesAsync();
             var updated = await LayPhieuBaoTriDayDuAsync(maPhieuBaoTri);
@@ -282,7 +287,8 @@ public class BaoTriService : IBaoTriService
             if (phieu == null)
                 return Result<BaoTriResponse>.Loi("PHIEU_NOT_FOUND", "Không tìm thấy phiếu bảo trì.");
 
-            if (phieu.TrangThai == "HoanThanh" || phieu.TrangThai == "KhongDat")
+            if (phieu.TrangThai == KietDomainConstants.BaoTriConfig.TrangThaiHoanThanh
+                || phieu.TrangThai == KietDomainConstants.BaoTriConfig.TrangThaiKhongDat)
                 return Result<BaoTriResponse>.Loi("PHIEU_BAO_TRI_DA_KET_THUC", "Phiếu bảo trì đã kết thúc.");
 
             var coQuyen = await KiemTraQuyenXuLyAsync(phieu, actorId);
@@ -292,7 +298,7 @@ public class BaoTriService : IBaoTriService
             if (string.IsNullOrWhiteSpace(phieu.KetQua))
                 return Result<BaoTriResponse>.Loi("KET_QUA_KIEM_TRA_CHUA_DU", "Cần cập nhật kết quả xử lý trước khi gửi kiểm tra nghiệm thu.");
 
-            phieu.TrangThai = "ChoKiemTra";
+            phieu.TrangThai = KietDomainConstants.BaoTriConfig.TrangThaiChoKiemTra;
 
             await _context.SaveChangesAsync();
             var updated = await LayPhieuBaoTriDayDuAsync(maPhieuBaoTri);
@@ -315,24 +321,24 @@ public class BaoTriService : IBaoTriService
                 return Result<BaoTriResponse>.Loi("PHIEU_NOT_FOUND", "Không tìm thấy phiếu bảo trì.");
 
             // Idempotency: Gọi hoàn thành lần 2 trả kết quả cũ, không ghi trùng lịch sử
-            if (phieu.TrangThai == "HoanThanh")
+            if (phieu.TrangThai == KietDomainConstants.BaoTriConfig.TrangThaiHoanThanh)
                 return Result<BaoTriResponse>.Ok(phieu.ToResponse());
 
-            if (phieu.TrangThai == "KhongDat")
+            if (phieu.TrangThai == KietDomainConstants.BaoTriConfig.TrangThaiKhongDat)
                 return Result<BaoTriResponse>.Loi("PHIEU_BAO_TRI_DA_KET_THUC", "Phiếu bảo trì đã kết thúc với kết luận Không Đạt.");
 
             var ngayHoanThanh = request.NgayHoanThanhThucTe ?? DateTime.UtcNow;
-            if (ngayHoanThanh > DateTime.UtcNow.AddMinutes(5))
+            if (ngayHoanThanh > DateTime.UtcNow.AddMinutes(KietDomainConstants.PolicyConfig.DungSaiPhutThoiGianThuc))
                 return Result<BaoTriResponse>.Loi("KET_QUA_KIEM_TRA_CHUA_DU", "Thời điểm hoàn thành thực tế không được ở tương lai.");
 
-            if (phieu.NgayBatDau.HasValue && ngayHoanThanh < phieu.NgayBatDau.Value.AddMinutes(-5))
+            if (phieu.NgayBatDau.HasValue && ngayHoanThanh < phieu.NgayBatDau.Value.AddMinutes(-KietDomainConstants.PolicyConfig.DungSaiPhutThoiGianThuc))
                 return Result<BaoTriResponse>.Loi("KET_QUA_KIEM_TRA_CHUA_DU", "Thời điểm hoàn thành không được trước thời điểm bắt đầu.");
 
             var nhanVien = await _context.LayNhanVienAsync(actorId);
             if (nhanVien == null)
                 return Result<BaoTriResponse>.Loi("NHAN_VIEN_NOT_FOUND", "Không tìm thấy hồ sơ nhân viên xác nhận.");
 
-            phieu.TrangThai = "HoanThanh";
+            phieu.TrangThai = KietDomainConstants.BaoTriConfig.TrangThaiHoanThanh;
             phieu.MaNguoiXacNhanHoanThanh = nhanVien.MaNhanVien;
             phieu.NgayHoanThanhThucTe = ngayHoanThanh;
             phieu.KetQua = request.KetQuaKiemTra;
@@ -374,14 +380,15 @@ public class BaoTriService : IBaoTriService
             if (phieu == null)
                 return Result<BaoTriResponse>.Loi("PHIEU_NOT_FOUND", "Không tìm thấy phiếu bảo trì.");
 
-            if (phieu.TrangThai == "HoanThanh" || phieu.TrangThai == "KhongDat")
+            if (phieu.TrangThai == KietDomainConstants.BaoTriConfig.TrangThaiHoanThanh
+                || phieu.TrangThai == KietDomainConstants.BaoTriConfig.TrangThaiKhongDat)
                 return Result<BaoTriResponse>.Loi("PHIEU_BAO_TRI_DA_KET_THUC", "Phiếu bảo trì đã kết thúc.");
 
             var nhanVien = await _context.LayNhanVienAsync(actorId);
             if (nhanVien == null)
                 return Result<BaoTriResponse>.Loi("NHAN_VIEN_NOT_FOUND", "Không tìm thấy hồ sơ nhân viên xác nhận.");
 
-            phieu.TrangThai = "KhongDat";
+            phieu.TrangThai = KietDomainConstants.BaoTriConfig.TrangThaiKhongDat;
             phieu.MaNguoiXacNhanHoanThanh = nhanVien.MaNhanVien;
             phieu.NgayHoanThanhThucTe = request.NgayHoanThanhThucTe ?? DateTime.UtcNow;
             phieu.KetQua = request.KetQuaKiemTra;

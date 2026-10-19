@@ -1,3 +1,4 @@
+using GearGo.Helpers;
 using GearGo.Models.Entities;
 using GearGo.Models.Enums;
 using GearGo.Services.Interfaces;
@@ -13,7 +14,8 @@ public class CleaningInspectionStrategy : IInspectionStrategy
         _baoTriService = baoTriService;
     }
 
-    public bool CanHandle(string ketLuan) => ketLuan == "CanVeSinh";
+    public bool CanHandle(string ketLuan)
+        => ketLuan == KietDomainConstants.KetLuanKiemTra.CanVeSinh;
 
     public async Task XuLySauKiemTraAsync(
         ChiTietNhanTra chiTiet,
@@ -22,17 +24,14 @@ public class CleaningInspectionStrategy : IInspectionStrategy
         long maDonThue)
     {
         thietBi.TrangThaiSuDung = TrangThaiThietBi.DangBaoTri;
-        if (!chiTiet.ThoiDiemTraThucTe.HasValue)
-        {
-            chiTiet.ThoiDiemTraThucTe = DateTime.UtcNow;
-        }
+        chiTiet.ThoiDiemTraThucTe ??= DateTime.UtcNow;
 
         await _baoTriService.TaoPhieuBaoTriToiThieuAsync(
             thietBi.MaThietBi,
             maDonThue,
             nhanVien.MaNhanVien,
-            "VeSinh",
+            KietDomainConstants.BaoTriConfig.LoaiVeSinh,
             $"Cần vệ sinh sau thuê: {chiTiet.TinhTrangSauThue}",
-            "Nhe");
+            KietDomainConstants.BaoTriConfig.MucDoNhe);
     }
 }

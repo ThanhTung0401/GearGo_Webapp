@@ -1,3 +1,4 @@
+using GearGo.Helpers;
 using GearGo.Models.Entities;
 using GearGo.Models.Enums;
 
@@ -5,7 +6,8 @@ namespace GearGo.Services.Strategies;
 
 public class LostInspectionStrategy : IInspectionStrategy
 {
-    public bool CanHandle(string ketLuan) => ketLuan == "MatThietBi";
+    public bool CanHandle(string ketLuan)
+        => ketLuan == KietDomainConstants.KetLuanKiemTra.MatThietBi;
 
     public Task XuLySauKiemTraAsync(
         ChiTietNhanTra chiTiet,
@@ -14,7 +16,7 @@ public class LostInspectionStrategy : IInspectionStrategy
         long maDonThue)
     {
         thietBi.TrangThaiSuDung = TrangThaiThietBi.ThatLac;
-        chiTiet.ThoiDiemTraThucTe = null; // Đồ thất lạc không có thời điểm trả thực tế
+        chiTiet.ThoiDiemTraThucTe = null;
         return Task.CompletedTask;
     }
 }

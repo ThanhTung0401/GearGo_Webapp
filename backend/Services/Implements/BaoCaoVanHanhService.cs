@@ -1,4 +1,5 @@
 using GearGo.Data;
+using GearGo.Helpers;
 using GearGo.Models.DTOs.BaoCao;
 using GearGo.Models.Enums;
 using GearGo.Services.Interfaces;
@@ -17,7 +18,7 @@ public class BaoCaoVanHanhService : IBaoCaoVanHanhService
 
     public async Task<BaoCaoVanHanhChiTietResponse> LayBaoCaoVanHanhAsync(BoLocBaoCaoRequest filter)
     {
-        var tuNgay = filter.TuNgay ?? DateTime.UtcNow.AddDays(-30);
+        var tuNgay = filter.TuNgay ?? DateTime.UtcNow.AddDays(-KietDomainConstants.PolicyConfig.SoNgayBaoCaoMacDinh);
         var denNgay = filter.DenNgay ?? DateTime.UtcNow;
 
         // 1. Lọc đơn thuê theo khoảng thời gian
@@ -36,7 +37,7 @@ public class BaoCaoVanHanhService : IBaoCaoVanHanhService
             d.TrangThai == TrangThaiDonThue.DaNhanTra ||
             d.TrangThai == TrangThaiDonThue.ChoDoiSoat);
 
-        double tyLeHuy = tongDon > 0 ? Math.Round((double)tongDonHuy / tongDon * 100, 2) : 0.0;
+        double tyLeHuy = KietCalculationHelpers.TinhPhanTram(tongDonHuy, tongDon);
 
         // 2. Thống kê thiết bị toàn hệ thống
         var queryThietBi = _context.ThietBis.AsNoTracking();
@@ -45,9 +46,7 @@ public class BaoCaoVanHanhService : IBaoCaoVanHanhService
         int soDangBaoTri = await queryThietBi.CountAsync(t => t.TrangThaiSuDung == TrangThaiThietBi.DangBaoTri);
         int soThatLac = await queryThietBi.CountAsync(t => t.TrangThaiSuDung == TrangThaiThietBi.ThatLac);
 
-        double tyLeHaoMon = tongThietBi > 0 
-            ? Math.Round((double)(soDangBaoTri + soThatLac) / tongThietBi * 100, 2) 
-            : 0.0;
+        double tyLeHaoMon = KietCalculationHelpers.TinhPhanTram(soDangBaoTri + soThatLac, tongThietBi);
 
         // 3. Tính số ngày thuê trung bình của các đơn thành công
         var danhSachSoNgay = await queryDon
@@ -65,11 +64,11 @@ public class BaoCaoVanHanhService : IBaoCaoVanHanhService
         // 4. Tính tỷ lệ quay vòng = Tổng lượt thuê thiết bị / Tổng thiết bị
         int tongLuotThueThietBi = await _context.PhanCongThietBis
             .AsNoTracking()
-            .Where(pc => pc.ThoiDiemPhanCong >= tuNgay && pc.ThoiDiemPhanCong <= denNgay && pc.TrangThai != "DaHuy")
+            .Where(pc => pc.ThoiDiemPhanCong >= tuNgay && pc.ThoiDiemPhanCong <= denNgay && pc.TrangThai != KietDomainConstants.PhieuStatus.DaHuy)
             .CountAsync();
 
         double tyLeQuayVong = tongThietBi > 0 
-            ? Math.Round((double)tongLuotThueThietBi / tongThietBi, 2) 
+            ? Math.Round((double)tongLuotThueThietBi / tongThietBi, KietDomainConstants.PolicyConfig.SoChuSoThapPhanLamTron) 
             : 0.0;
 
         // 5. Thống kê theo từng sản phẩm
@@ -111,8 +110,8 @@ public class BaoCaoVanHanhService : IBaoCaoVanHanhService
             .Select(g => new
             {
                 MaSanPham = g.Key,
-                SoHong = g.Count(x => x.KetLuan == "HongNhe" || x.KetLuan == "HongNang"),
-                SoMat = g.Count(x => x.KetLuan == "MatThietBi")
+                SoHong = g.Count(x => x.KetLuan == KietDomainConstants.KetLuanKiemTra.HongNhe || x.KetLuan == KietDomainConstants.KetLuanKiemTra.HongNang),
+                SoMat = g.Count(x => x.KetLuan == KietDomainConstants.KetLuanKiemTra.MatThietBi)
             })
             .ToDictionaryAsync(x => x.MaSanPham);
 
