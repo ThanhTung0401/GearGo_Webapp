@@ -1,15 +1,17 @@
+using GearGo.Helpers;
+
 namespace GearGo.Services.Strategies;
 
 public class InspectionStrategyFactory : IInspectionStrategyFactory
 {
     private static readonly HashSet<string> ValidConclusions = new(StringComparer.OrdinalIgnoreCase)
     {
-        "Dat",
-        "CanVeSinh",
-        "HongNhe",
-        "HongNang",
-        "ThieuPhuKien",
-        "MatThietBi"
+        KietDomainConstants.KetLuanKiemTra.Dat,
+        KietDomainConstants.KetLuanKiemTra.CanVeSinh,
+        KietDomainConstants.KetLuanKiemTra.HongNhe,
+        KietDomainConstants.KetLuanKiemTra.HongNang,
+        KietDomainConstants.KetLuanKiemTra.ThieuPhuKien,
+        KietDomainConstants.KetLuanKiemTra.MatThietBi
     };
 
     private readonly IEnumerable<IInspectionStrategy> _strategies;
