@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using GearGo.Models.Enums;
 
 namespace GearGo.Models.Entities;
 
@@ -56,4 +57,33 @@ public class ChiTietDonThue
 
     // Quan hệ 1-1 với Đánh Giá
     public DanhGia? DanhGia { get; set; }
+
+    // ----- RICH DOMAIN -----
+    public static ChiTietDonThue KhoiTao(long maDonThue, SanPham sp, int soLuong, int soNgayThue, decimal tienGiamDong)
+    {
+        return new ChiTietDonThue
+        {
+            MaDonThue = maDonThue,
+            MaSanPham = sp.MaSanPham,
+            TenSanPhamLucDat = sp.TenSanPham,
+            DonGiaThueMoiNgay = sp.GiaThueMoiNgay,
+            MucCocMoiThietBi = sp.MucCocMoiThietBi,
+            GiaTriBoiThuongMoiThietBi = sp.GiaTriBoiThuong,
+            SoLuong = soLuong,
+            SoNgayTinhTien = soNgayThue,
+            TienGiam = tienGiamDong,
+            PhuKienVaMucBoiThuongLucDat = sp.ThongSo
+        };
+    }
+
+    public GiuCho TaoGiuCho(DateTime now, DateTime hanThanhToan)
+    {
+        return new GiuCho
+        {
+            ChiTietDonThue = this,
+            ThoiDiemTao = now,
+            ThoiDiemHetHan = hanThanhToan,
+            TrangThai = TrangThaiGiuCho.DangGiu
+        };
+    }
 }

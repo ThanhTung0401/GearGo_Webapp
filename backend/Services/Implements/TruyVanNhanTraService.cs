@@ -1,6 +1,7 @@
 using GearGo.Data;
 using GearGo.Exceptions;
 using GearGo.Models.DTOs.NhanTra;
+using GearGo.Models.Entities;
 using GearGo.Models.Enums;
 using GearGo.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
@@ -22,16 +23,7 @@ public class TruyVanNhanTraService : ITruyVanNhanTraService
         if (!tonTaiDon)
             throw new KhongTimThayException($"Không tìm thấy đơn thuê #{donId}");
 
-        int tongGiao = await _context.ChiTietBanGiaos
-            .CountAsync(ctb => ctb.PhieuBanGiao.MaDonThue == donId && ctb.PhieuBanGiao.TrangThai == "DaGiao");
-
-        var settledCtbIds = await _context.ChiTietNhanTras
-            .Where(ct => ct.PhieuNhanTra.MaDonThue == donId && ct.PhieuNhanTra.TrangThai == TrangThaiPhieuNhanTra.DaChot)
-            .Select(ct => ct.MaChiTietBanGiao)
-            .Distinct()
-            .CountAsync();
-
-        int soConNo = Math.Max(0, tongGiao - settledCtbIds);
+        int soConNo = await DemThietBiConNoAsync(donId);
 
         var phieuList = await _context.PhieuNhanTras
             .AsNoTracking()
@@ -78,7 +70,7 @@ public class TruyVanNhanTraService : ITruyVanNhanTraService
         var donThue = await _context.DonThues
             .AsNoTracking()
             .Include(d => d.PhieuBanGiao)
-                .ThenInclude(pb => pb.ChiTietBanGiaos)
+                .ThenInclude(pb => pb!.ChiTietBanGiaos)
                     .ThenInclude(ctb => ctb.PhanCongThietBi)
                         .ThenInclude(pc => pc.ThietBi)
                             .ThenInclude(tb => tb.SanPhamHienTai)
@@ -90,7 +82,6 @@ public class TruyVanNhanTraService : ITruyVanNhanTraService
         if (donThue.PhieuBanGiao == null || donThue.PhieuBanGiao.TrangThai != "DaGiao")
             throw new TrangThaiKhongHopLeException("Đơn thuê chưa hoàn tất bàn giao thiết bị.");
 
-        // Lấy tất cả dòng nhận trả của đơn
         var allChiTietNhanTra = await _context.ChiTietNhanTras
             .AsNoTracking()
             .Where(ct => ct.PhieuNhanTra.MaDonThue == donId)
@@ -116,7 +107,7 @@ public class TruyVanNhanTraService : ITruyVanNhanTraService
         foreach (var ctb in donThue.PhieuBanGiao.ChiTietBanGiaos)
         {
             if (settledIds.Contains(ctb.MaChiTietBanGiao))
-                continue; // Thiết bị đã chốt xong nghĩa vụ
+                continue;
 
             draftMap.TryGetValue(ctb.MaChiTietBanGiao, out var draftCt);
             result.Add(new ThietBiConNoResponse
@@ -133,5 +124,35 @@ public class TruyVanNhanTraService : ITruyVanNhanTraService
         }
 
         return result;
+    }
+
+    public async Task<PhieuNhanTra?> LayPhieuNhanTraTheoIdAsync(long phieuId)
+    {
+        return await _context.PhieuNhanTras
+            .Include(p => p.DonThue)
+            .Include(p => p.ChiTietNhanTras)
+                .ThenInclude(ct => ct.ChiTietBanGiao)
+                    .ThenInclude(ctb => ctb.PhanCongThietBi)
+                        .ThenInclude(pc => pc.ThietBi)
+                            .ThenInclude(tb => tb.SanPhamHienTai)
+            .Include(p => p.ChiTietNhanTras)
+                .ThenInclude(ct => ct.NguoiDuyetMat)
+            .FirstOrDefaultAsync(p => p.MaPhieuNhanTra == phieuId);
+    }
+
+    public async Task<int> DemThietBiConNoAsync(long maDonThue, long? includePhieuId = null)
+    {
+        int tongGiao = await _context.ChiTietBanGiaos
+            .CountAsync(ctb => ctb.PhieuBanGiao.MaDonThue == maDonThue);
+
+        var settledCount = await _context.ChiTietNhanTras
+            .Where(ct => ct.PhieuNhanTra.MaDonThue == maDonThue &&
+                         (ct.PhieuNhanTra.TrangThai == TrangThaiPhieuNhanTra.DaChot ||
+                          (includePhieuId.HasValue && ct.MaPhieuNhanTra == includePhieuId.Value)))
+            .Select(ct => ct.MaChiTietBanGiao)
+            .Distinct()
+            .CountAsync();
+
+        return Math.Max(0, tongGiao - settledCount);
     }
 }
