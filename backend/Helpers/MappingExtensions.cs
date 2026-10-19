@@ -1,4 +1,5 @@
 using GearGo.Models.DTOs.BanGiao;
+using GearGo.Models.DTOs.BaoTri;
 using GearGo.Models.DTOs.NhanTra;
 using GearGo.Models.Entities;
 
@@ -70,5 +71,34 @@ public static class MappingExtensions
                 c.DanhSachAnh
             )).ToList()
         );
+    }
+
+    public static BaoTriResponse ToResponse(this PhieuBaoTri p, List<string>? canhBao = null)
+    {
+        return new BaoTriResponse
+        {
+            MaPhieuBaoTri = p.MaPhieuBaoTri,
+            MaThietBi = p.MaThietBi,
+            MaThietBiHienThi = p.ThietBi?.MaThietBiHienThi ?? "",
+            TenSanPham = p.ThietBi?.SanPhamHienTai?.TenSanPham ?? "",
+            MaDonThue = p.MaDonThue,
+            MaNguoiLap = p.MaNguoiLap,
+            TenNguoiLap = p.NguoiLap?.HoTen,
+            MaNguoiXuLy = p.MaNguoiXuLy,
+            TenNguoiXuLy = p.NguoiXuLy?.HoTen,
+            MaNguoiXacNhanHoanThanh = p.MaNguoiXacNhanHoanThanh,
+            TenNguoiXacNhanHoanThanh = p.NguoiXacNhanHoanThanh?.HoTen,
+            LoaiXuLy = p.LoaiXuLy,
+            MoTaLoi = p.MoTaLoi,
+            MucDo = p.MucDo,
+            NgayBatDau = p.NgayBatDau,
+            NgayDuKienHoanThanh = p.NgayDuKienHoanThanh,
+            NgayHoanThanhThucTe = p.NgayHoanThanhThucTe,
+            ChiPhi = p.ChiPhi,
+            KetQua = p.KetQua,
+            BangChung = p.BangChung,
+            TrangThai = p.TrangThai,
+            CanhBaoDonSau = canhBao ?? new List<string>()
+        };
     }
 }
