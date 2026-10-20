@@ -1,4 +1,3 @@
-using GearGo.Data;
 using GearGo.Helpers;
 using GearGo.Models.DTOs.DonThue;
 using GearGo.Services.Interfaces;
@@ -9,21 +8,19 @@ namespace GearGo.Controllers;
 
 [ApiController]
 [Route("api/v1/don-thue")]
+[Route("api/don-thue")]
 [Authorize]
-public class DonThueController : ControllerBase
+public class DonThueController : BaseApiController
 {
     private readonly IDonThueService _donThueService;
     private readonly ITruyVanDonThueService _truyVanService;
-    private readonly ApplicationDbContext _context;
 
     public DonThueController(
         IDonThueService donThueService,
-        ITruyVanDonThueService truyVanService,
-        ApplicationDbContext context)
+        ITruyVanDonThueService truyVanService)
     {
         _donThueService = donThueService;
         _truyVanService = truyVanService;
-        _context = context;
     }
 
     // ── W3-T1: truy vấn đơn của khách (mã khách lấy từ JWT, không nhận từ request) ──
@@ -54,10 +51,8 @@ public class DonThueController : ControllerBase
     [Authorize(Policy = "CustomerOnly")]
     public async Task<IActionResult> TaoDonThue([FromBody] TaoDonThueRequest request)
     {
-        // 🔒 BẢO MẬT: Bắt buộc lấy MaKhachHang từ JWT, ghi đè toàn bộ dữ liệu giả mạo từ body
-        long maTaiKhoan = User.LayMaTaiKhoan();
-        long maKhachHang = await ActorGuard.LayMaKhachHangAsync(_context, maTaiKhoan);
-        request.MaKhachHang = maKhachHang;
+        // 🔒 BẢO MẬT: Bắt buộc lấy MaTaiKhoan từ JWT, Service sẽ phân giải và ghi đè MaKhachHang
+        request.MaTaiKhoan = User.LayMaTaiKhoan();
 
         var result = await _donThueService.TaoDonThueAsync(request);
         if (!result.ThanhCong)

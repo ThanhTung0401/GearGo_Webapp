@@ -37,7 +37,7 @@ public class BaoTriService : IBaoTriService
         var thietBi = await _context.ThietBis.FindAsync(maThietBi);
         if (thietBi == null)
             return Result<PhieuBaoTri>.Loi(
-                "THIET_BI_NOT_FOUND",
+                DomainConstants.Errors.EquipmentNotFound,
                 "Không tìm thấy thiết bị để lập phiếu bảo trì."
             );
 
@@ -162,10 +162,10 @@ public class BaoTriService : IBaoTriService
                 return Result<BaoTriResponse>.Loi(DomainConstants.Errors.ActiveMaintenanceExists,
                     $"Thiết bị đã có phiếu bảo trì đang mở #{phieuDangMo.MaPhieuBaoTri}. Vui lòng tiếp tục trên phiếu hiện có.");
 
-            var nvResult = await _context.LayNhanVienHopLeAsync(actorId);
-            if (!nvResult.ThanhCong)
-                return Result<BaoTriResponse>.Loi(nvResult.MaLoi!, "Không tìm thấy hồ sơ nhân viên thao tác.");
-            var nhanVien = nvResult.DuLieu!;
+            var nvCheck = await _context.LayNhanVienDangHoatDongAsync(actorId);
+            if (!nvCheck.ThanhCong)
+                return Result<BaoTriResponse>.Loi(nvCheck.MaLoi!, "Không tìm thấy hồ sơ nhân viên thao tác.");
+            var nhanVien = nvCheck.DuLieu!;
 
             var trangThaiCu = thietBi.TrangThaiSuDung;
             thietBi.TrangThaiSuDung = TrangThaiThietBi.DangBaoTri;
@@ -215,21 +215,21 @@ public class BaoTriService : IBaoTriService
         {
             var phieu = await LayPhieuBaoTriDayDuAsync(maPhieuBaoTri);
             if (phieu == null)
-                return Result<BaoTriResponse>.Loi("PHIEU_NOT_FOUND", "Không tìm thấy phiếu bảo trì.");
+                return Result<BaoTriResponse>.Loi(DomainConstants.Errors.ReceiptNotFound, "Không tìm thấy phiếu bảo trì.");
 
             if (phieu.TrangThai == KietDomainConstants.BaoTriConfig.TrangThaiHoanThanh
                 || phieu.TrangThai == KietDomainConstants.BaoTriConfig.TrangThaiKhongDat)
-                return Result<BaoTriResponse>.Loi("PHIEU_BAO_TRI_DA_KET_THUC", "Phiếu bảo trì đã kết thúc, không thể phân công lại.");
+                return Result<BaoTriResponse>.Loi(DomainConstants.Errors.MaintenanceTicketClosed, "Phiếu bảo trì đã kết thúc, không thể phân công lại.");
 
-            var nguoiXuLy = await _context.NhanViens
-                .Include(n => n.TaiKhoan)
-                .FirstOrDefaultAsync(n => n.MaNhanVien == request.MaNguoiXuLy);
-
-            if (nguoiXuLy == null)
-                return Result<BaoTriResponse>.Loi("NHAN_VIEN_NOT_FOUND", "Không tìm thấy nhân viên được phân công.");
-
-            if (nguoiXuLy.TrangThaiLamViec != "DangLamViec" || nguoiXuLy.TaiKhoan?.TrangThai != "HoatDong")
-                return Result<BaoTriResponse>.Loi("NHAN_VIEN_DA_NGHI_VIEC", "Nhân viên được phân công không còn làm việc hoặc tài khoản đã khóa.");
+            var nvCheck = await _context.LayNhanVienDangHoatDongAsync(request.MaNguoiXuLy);
+            if (!nvCheck.ThanhCong)
+            {
+                string msg = nvCheck.MaLoi == DomainConstants.Errors.StaffNotFound
+                    ? "Không tìm thấy nhân viên được phân công."
+                    : "Nhân viên được phân công không còn làm việc hoặc tài khoản đã khóa.";
+                return Result<BaoTriResponse>.Loi(nvCheck.MaLoi!, msg);
+            }
+            var nguoiXuLy = nvCheck.DuLieu!;
 
             phieu.MaNguoiXuLy = nguoiXuLy.MaNhanVien;
             if (phieu.TrangThai == KietDomainConstants.BaoTriConfig.TrangThaiChoXuLy)
@@ -244,21 +244,21 @@ public class BaoTriService : IBaoTriService
     public async Task<Result<BaoTriResponse>> CapNhatTienDoAsync(long maPhieuBaoTri, CapNhatTienDoRequest request, long actorId)
     {
         if (request.ChiPhi.HasValue && request.ChiPhi.Value < 0)
-            return Result<BaoTriResponse>.Loi("CHI_PHI_KHONG_HOP_LE", "Chi phí bảo trì không được âm.");
+            return Result<BaoTriResponse>.Loi(DomainConstants.Errors.InvalidCost, "Chi phí bảo trì không được âm.");
 
         return await TransactionExecutionWrapper.ExecuteInTransactionAsync(_context, async () =>
         {
             var phieu = await LayPhieuBaoTriDayDuAsync(maPhieuBaoTri);
             if (phieu == null)
-                return Result<BaoTriResponse>.Loi("PHIEU_NOT_FOUND", "Không tìm thấy phiếu bảo trì.");
+                return Result<BaoTriResponse>.Loi(DomainConstants.Errors.ReceiptNotFound, "Không tìm thấy phiếu bảo trì.");
 
             if (phieu.TrangThai == KietDomainConstants.BaoTriConfig.TrangThaiHoanThanh
                 || phieu.TrangThai == KietDomainConstants.BaoTriConfig.TrangThaiKhongDat)
-                return Result<BaoTriResponse>.Loi("PHIEU_BAO_TRI_DA_KET_THUC", "Phiếu bảo trì đã kết thúc, không thể sửa tiến độ.");
+                return Result<BaoTriResponse>.Loi(DomainConstants.Errors.MaintenanceTicketClosed, "Phiếu bảo trì đã kết thúc, không thể sửa tiến độ.");
 
             var coQuyen = await KiemTraQuyenXuLyAsync(phieu, actorId);
             if (!coQuyen)
-                return Result<BaoTriResponse>.Loi("KHONG_PHAI_NGUOI_XU_LY", "Bạn không phải người được phân công xử lý phiếu bảo trì này.");
+                return Result<BaoTriResponse>.Loi(DomainConstants.Errors.NotAssignedStaff, "Bạn không phải người được phân công xử lý phiếu bảo trì này.");
 
             if (request.KetQua != null)
                 phieu.KetQua = request.KetQua;
@@ -284,18 +284,18 @@ public class BaoTriService : IBaoTriService
         {
             var phieu = await LayPhieuBaoTriDayDuAsync(maPhieuBaoTri);
             if (phieu == null)
-                return Result<BaoTriResponse>.Loi("PHIEU_NOT_FOUND", "Không tìm thấy phiếu bảo trì.");
+                return Result<BaoTriResponse>.Loi(DomainConstants.Errors.ReceiptNotFound, "Không tìm thấy phiếu bảo trì.");
 
             if (phieu.TrangThai == KietDomainConstants.BaoTriConfig.TrangThaiHoanThanh
                 || phieu.TrangThai == KietDomainConstants.BaoTriConfig.TrangThaiKhongDat)
-                return Result<BaoTriResponse>.Loi("PHIEU_BAO_TRI_DA_KET_THUC", "Phiếu bảo trì đã kết thúc.");
+                return Result<BaoTriResponse>.Loi(DomainConstants.Errors.MaintenanceTicketClosed, "Phiếu bảo trì đã kết thúc.");
 
             var coQuyen = await KiemTraQuyenXuLyAsync(phieu, actorId);
             if (!coQuyen)
-                return Result<BaoTriResponse>.Loi("KHONG_PHAI_NGUOI_XU_LY", "Bạn không phải người được phân công xử lý phiếu bảo trì này.");
+                return Result<BaoTriResponse>.Loi(DomainConstants.Errors.NotAssignedStaff, "Bạn không phải người được phân công xử lý phiếu bảo trì này.");
 
             if (string.IsNullOrWhiteSpace(phieu.KetQua))
-                return Result<BaoTriResponse>.Loi("KET_QUA_KIEM_TRA_CHUA_DU", "Cần cập nhật kết quả xử lý trước khi gửi kiểm tra nghiệm thu.");
+                return Result<BaoTriResponse>.Loi(DomainConstants.Errors.InspectionResultIncomplete, "Cần cập nhật kết quả xử lý trước khi gửi kiểm tra nghiệm thu.");
 
             phieu.TrangThai = KietDomainConstants.BaoTriConfig.TrangThaiChoKiemTra;
 
@@ -308,10 +308,10 @@ public class BaoTriService : IBaoTriService
     public async Task<Result<BaoTriResponse>> XacNhanHoanThanhAsync(long maPhieuBaoTri, XacNhanBaoTriRequest request, long actorId)
     {
         if (string.IsNullOrWhiteSpace(request.KetQuaKiemTra))
-            return Result<BaoTriResponse>.Loi("KET_QUA_KIEM_TRA_CHUA_DU", "Phải có kết luận kiểm tra nghiệm thu.");
+            return Result<BaoTriResponse>.Loi(DomainConstants.Errors.InspectionResultIncomplete, "Phải có kết luận kiểm tra nghiệm thu.");
 
         if (request.ChiPhi.HasValue && request.ChiPhi.Value < 0)
-            return Result<BaoTriResponse>.Loi("CHI_PHI_KHONG_HOP_LE", "Chi phí bảo trì không được âm.");
+            return Result<BaoTriResponse>.Loi(DomainConstants.Errors.InvalidCost, "Chi phí bảo trì không được âm.");
 
         return await TransactionExecutionWrapper.ExecuteInTransactionAsync(_context, async () =>
         {
@@ -333,10 +333,10 @@ public class BaoTriService : IBaoTriService
             if (phieu.NgayBatDau.HasValue && ngayHoanThanh < phieu.NgayBatDau.Value.AddMinutes(-DomainConstants.Policies.ToleranceMinutes))
                 return Result<BaoTriResponse>.Loi(DomainConstants.Errors.InspectionResultIncomplete, "Thời điểm hoàn thành không được trước thời điểm bắt đầu.");
 
-            var nvResult = await _context.LayNhanVienHopLeAsync(actorId);
-            if (!nvResult.ThanhCong)
-                return Result<BaoTriResponse>.Loi(nvResult.MaLoi!, "Không tìm thấy hồ sơ nhân viên xác nhận.");
-            var nhanVien = nvResult.DuLieu!;
+            var nvCheck = await _context.LayNhanVienDangHoatDongAsync(actorId);
+            if (!nvCheck.ThanhCong)
+                return Result<BaoTriResponse>.Loi(nvCheck.MaLoi!, "Không tìm thấy hồ sơ nhân viên xác nhận.");
+            var nhanVien = nvCheck.DuLieu!;
 
             phieu.TrangThai = KietDomainConstants.BaoTriConfig.TrangThaiHoanThanh;
             phieu.MaNguoiXacNhanHoanThanh = nhanVien.MaNhanVien;
@@ -382,10 +382,10 @@ public class BaoTriService : IBaoTriService
                 || phieu.TrangThai == KietDomainConstants.BaoTriConfig.TrangThaiKhongDat)
                 return Result<BaoTriResponse>.Loi(DomainConstants.Errors.MaintenanceTicketClosed, "Phiếu bảo trì đã kết thúc.");
 
-            var nvResult = await _context.LayNhanVienHopLeAsync(actorId);
-            if (!nvResult.ThanhCong)
-                return Result<BaoTriResponse>.Loi(nvResult.MaLoi!, "Không tìm thấy hồ sơ nhân viên xác nhận.");
-            var nhanVien = nvResult.DuLieu!;
+            var nvCheck = await _context.LayNhanVienDangHoatDongAsync(actorId);
+            if (!nvCheck.ThanhCong)
+                return Result<BaoTriResponse>.Loi(nvCheck.MaLoi!, "Không tìm thấy hồ sơ nhân viên xác nhận.");
+            var nhanVien = nvCheck.DuLieu!;
 
             phieu.TrangThai = KietDomainConstants.BaoTriConfig.TrangThaiKhongDat;
             phieu.MaNguoiXacNhanHoanThanh = nhanVien.MaNhanVien;

@@ -37,7 +37,7 @@ public class VongDoiThietBiService : IVongDoiThietBiService
             .FirstOrDefaultAsync(tb => tb.MaThietBi == thietBiId);
 
         if (thietBi == null)
-            return Result<HoSoVongDoiResponse>.Loi("THIET_BI_NOT_FOUND", "Không tìm thấy thiết bị.");
+            return Result<HoSoVongDoiResponse>.Loi(DomainConstants.Errors.EquipmentNotFound, "Không tìm thấy thiết bị.");
 
         var baoTris = await _context.PhieuBaoTris
             .AsNoTracking()
@@ -112,173 +112,160 @@ public class VongDoiThietBiService : IVongDoiThietBiService
             .FirstOrDefaultAsync(tb => tb.MaThietBi == thietBiId);
 
         if (thietBi == null)
-            return Result<AnhHuongThayDoiResponse>.Loi(KietDomainConstants.ErrorCodes.ThietBiNotFound, "Không tìm thấy thiết bị.");
+            return Result<AnhHuongThayDoiResponse>.Loi(DomainConstants.Errors.EquipmentNotFound, "Không tìm thấy thiết bị.");
 
         if (request.LoaiThayDoi == KietDomainConstants.VongDoiConfig.LoaiGiangCap)
         {
             if (!request.MaSanPhamDich.HasValue)
-                return Result<AnhHuongThayDoiResponse>.Loi(KietDomainConstants.ErrorCodes.SanPhamDichKhongPhuHop, "Phải chọn sản phẩm đích khi giáng cấp.");
+                return Result<AnhHuongThayDoiResponse>.Loi(DomainConstants.Errors.TargetProductMismatch, "Phải chọn sản phẩm đích khi giáng cấp.");
 
             var spDich = await _context.SanPhams.FirstOrDefaultAsync(s => s.MaSanPham == request.MaSanPhamDich.Value);
             if (spDich == null || spDich.TrangThaiKinhDoanh != TrangThaiKinhDoanh.DangKinhDoanh || spDich.MaSanPham == thietBi.MaSanPhamHienTai)
-                return Result<AnhHuongThayDoiResponse>.Loi(KietDomainConstants.ErrorCodes.SanPhamDichKhongPhuHop, "Sản phẩm đích không tồn tại, không đang kinh doanh hoặc trùng sản phẩm hiện tại.");
+                return Result<AnhHuongThayDoiResponse>.Loi(DomainConstants.Errors.TargetProductMismatch, "Sản phẩm đích không tồn tại, không đang kinh doanh hoặc trùng sản phẩm hiện tại.");
         }
 
         var response = await PhanTichCamKetThietBiAsync(thietBi, request.LoaiThayDoi);
         return Result<AnhHuongThayDoiResponse>.Ok(response);
     }
 
+    private async Task<Result<DeNghiVongDoiResponse>> TaoDeNghiDieuChinhVongDoiInternalAsync(
+        long thietBiId,
+        long actorId,
+        string loaiThayDoi,
+        string lyDo,
+        string? bangChung,
+        object giaTriSauPayload,
+        string ghiChuChiTiet)
+    {
+        var thietBi = await _context.ThietBis
+            .FirstOrDefaultAsync(tb => tb.MaThietBi == thietBiId);
+
+        if (thietBi == null)
+            return Result<DeNghiVongDoiResponse>.Loi(DomainConstants.Errors.EquipmentNotFound, "Không tìm thấy thiết bị.");
+
+        if (thietBi.TrangThaiSuDung == TrangThaiThietBi.DangThue)
+        {
+            string thongDiepDangThue = loaiThayDoi == DomainConstants.Lifecycle.Downgrade
+                ? "Thiết bị đang phục vụ khách hàng, chưa thể giáng cấp."
+                : "Thiết bị đang phục vụ khách hàng, không được ngừng sử dụng.";
+            return Result<DeNghiVongDoiResponse>.Loi(DomainConstants.Errors.EquipmentNotRecovered, thongDiepDangThue);
+        }
+
+        var anhHuong = await PhanTichCamKetThietBiAsync(thietBi, loaiThayDoi);
+        if (!anhHuong.CoTheDeNghi || anhHuong.CamKetCuThe.Count > 0 || anhHuong.ThieuSoLuongTheoLich.Count > 0)
+        {
+            string thongDiepCamKet = loaiThayDoi == DomainConstants.Lifecycle.Downgrade
+                ? $"Không thể giáng cấp do vướng cam kết đơn thuê: {string.Join("; ", anhHuong.VuongMac.Concat(anhHuong.ThieuSoLuongTheoLich))}"
+                : $"Không thể ngừng sử dụng: {string.Join("; ", anhHuong.VuongMac.Concat(anhHuong.ThieuSoLuongTheoLich))}";
+            return Result<DeNghiVongDoiResponse>.Loi(DomainConstants.Errors.ChangeViolatesCommitment, thongDiepCamKet);
+        }
+
+        var nvCheck = await _context.LayNhanVienDangHoatDongAsync(actorId);
+        if (!nvCheck.ThanhCong)
+            return Result<DeNghiVongDoiResponse>.Loi(nvCheck.MaLoi!, "Không tìm thấy hồ sơ nhân viên đề nghị.");
+        var nhanVien = nvCheck.DuLieu!;
+
+        var phieu = new PhieuDieuChinhKho
+        {
+            MaNguoiLap = nhanVien.MaNhanVien,
+            TenNguoiLapLucLap = nhanVien.HoTen,
+            LoaiDieuChinh = loaiThayDoi,
+            LyDo = lyDo,
+            BangChung = bangChung,
+            ThoiDiemLap = DateTime.UtcNow,
+            TrangThai = DomainConstants.Status.PendingApproval
+        };
+
+        _context.PhieuDieuChinhKhos.Add(phieu);
+
+        var chiTiet = new ChiTietDieuChinhKho
+        {
+            PhieuDieuChinhKho = phieu,
+            MaThietBi = thietBi.MaThietBi,
+            MaChiTietPhieuNhap = thietBi.MaChiTietPhieuNhap,
+            GiaTriTruoc = JsonSerializer.Serialize(new
+            {
+                thietBi.MaSanPhamHienTai,
+                thietBi.TinhTrang,
+                TrangThaiSuDung = thietBi.TrangThaiSuDung.ToString(),
+                thietBi.MaChiTietPhieuNhap
+            }),
+            GiaTriSau = JsonSerializer.Serialize(giaTriSauPayload),
+            GhiChu = ghiChuChiTiet
+        };
+
+        _context.ChiTietDieuChinhKhos.Add(chiTiet);
+        await _context.SaveChangesAsync();
+
+        return Result<DeNghiVongDoiResponse>.Ok(new DeNghiVongDoiResponse
+        {
+            MaPhieuDieuChinh = phieu.MaPhieuDieuChinh,
+            MaThietBi = thietBi.MaThietBi,
+            LoaiDieuChinh = phieu.LoaiDieuChinh,
+            TrangThai = phieu.TrangThai,
+            LyDo = phieu.LyDo,
+            ThoiDiemLap = phieu.ThoiDiemLap
+        });
+    }
+
     public async Task<Result<DeNghiVongDoiResponse>> DeNghiGiangCapAsync(long thietBiId, DeNghiGiangCapRequest request, long actorId)
     {
         if (string.IsNullOrWhiteSpace(request.LyDo))
-            return Result<DeNghiVongDoiResponse>.Loi(KietDomainConstants.ErrorCodes.DuLieuKhongHopLe, "Phải có lý do đề nghị giáng cấp.");
+            return Result<DeNghiVongDoiResponse>.Loi(DomainConstants.Errors.InvalidData, "Phải có lý do đề nghị giáng cấp.");
 
         return await TransactionExecutionWrapper.ExecuteInTransactionAsync(_context, async () =>
         {
-            var thietBi = await _context.ThietBis
-                .FirstOrDefaultAsync(tb => tb.MaThietBi == thietBiId);
-
+            var thietBi = await _context.ThietBis.AsNoTracking().FirstOrDefaultAsync(tb => tb.MaThietBi == thietBiId);
             if (thietBi == null)
-                return Result<DeNghiVongDoiResponse>.Loi(KietDomainConstants.ErrorCodes.ThietBiNotFound, "Không tìm thấy thiết bị.");
-
-            if (thietBi.TrangThaiSuDung == TrangThaiThietBi.DangThue)
-                return Result<DeNghiVongDoiResponse>.Loi(KietDomainConstants.ErrorCodes.ThietBiChuaThuHoi, "Thiết bị đang phục vụ khách hàng, chưa thể giáng cấp.");
+                return Result<DeNghiVongDoiResponse>.Loi(DomainConstants.Errors.EquipmentNotFound, "Không tìm thấy thiết bị.");
 
             var spDich = await _context.SanPhams.FirstOrDefaultAsync(s => s.MaSanPham == request.MaSanPhamDich);
             if (spDich == null || spDich.TrangThaiKinhDoanh != TrangThaiKinhDoanh.DangKinhDoanh || spDich.MaSanPham == thietBi.MaSanPhamHienTai)
-                return Result<DeNghiVongDoiResponse>.Loi(KietDomainConstants.ErrorCodes.SanPhamDichKhongPhuHop, "Sản phẩm đích không hợp lệ hoặc trùng sản phẩm hiện tại.");
+                return Result<DeNghiVongDoiResponse>.Loi(DomainConstants.Errors.TargetProductMismatch, "Sản phẩm đích không hợp lệ hoặc trùng sản phẩm hiện tại.");
 
-            var anhHuong = await PhanTichCamKetThietBiAsync(thietBi, KietDomainConstants.VongDoiConfig.LoaiGiangCap);
-            if (!anhHuong.CoTheDeNghi || anhHuong.CamKetCuThe.Count > 0 || anhHuong.ThieuSoLuongTheoLich.Count > 0)
-                return Result<DeNghiVongDoiResponse>.Loi(KietDomainConstants.ErrorCodes.ThayDoiLamThieuCamKet,
-                    $"Không thể giáng cấp do vướng cam kết đơn thuê: {string.Join("; ", anhHuong.VuongMac.Concat(anhHuong.ThieuSoLuongTheoLich))}");
-
-            var nvResult = await _context.LayNhanVienHopLeAsync(actorId);
-            if (!nvResult.ThanhCong)
-                return Result<DeNghiVongDoiResponse>.Loi(nvResult.MaLoi!, "Không tìm thấy hồ sơ nhân viên đề nghị.");
-            var nhanVien = nvResult.DuLieu!;
-
-            var phieu = new PhieuDieuChinhKho
-            {
-                MaNguoiLap = nhanVien.MaNhanVien,
-                TenNguoiLapLucLap = nhanVien.HoTen,
-                LoaiDieuChinh = KietDomainConstants.VongDoiConfig.LoaiGiangCap,
-                LyDo = request.LyDo,
-                BangChung = request.BangChung,
-                ThoiDiemLap = DateTime.UtcNow,
-                TrangThai = KietDomainConstants.PhieuStatus.ChoDuyet
-            };
-
-            _context.PhieuDieuChinhKhos.Add(phieu);
-
-            var chiTiet = new ChiTietDieuChinhKho
-            {
-                PhieuDieuChinhKho = phieu,
-                MaThietBi = thietBi.MaThietBi,
-                MaChiTietPhieuNhap = thietBi.MaChiTietPhieuNhap,
-                GiaTriTruoc = JsonSerializer.Serialize(new
-                {
-                    thietBi.MaSanPhamHienTai,
-                    thietBi.TinhTrang,
-                    TrangThaiSuDung = thietBi.TrangThaiSuDung.ToString(),
-                    thietBi.MaChiTietPhieuNhap
-                }),
-                GiaTriSau = JsonSerializer.Serialize(new
+            return await TaoDeNghiDieuChinhVongDoiInternalAsync(
+                thietBiId,
+                actorId,
+                DomainConstants.Lifecycle.Downgrade,
+                request.LyDo,
+                request.BangChung,
+                new
                 {
                     MaSanPhamHienTai = request.MaSanPhamDich,
                     TinhTrang = request.TinhTrang,
                     TrangThaiSuDung = thietBi.TrangThaiSuDung.ToString(),
                     thietBi.MaChiTietPhieuNhap
-                }),
-                GhiChu = $"Đề nghị giáng cấp từ SP #{thietBi.MaSanPhamHienTai} sang SP #{request.MaSanPhamDich}"
-            };
-
-            _context.ChiTietDieuChinhKhos.Add(chiTiet);
-            await _context.SaveChangesAsync();
-
-            return Result<DeNghiVongDoiResponse>.Ok(new DeNghiVongDoiResponse
-            {
-                MaPhieuDieuChinh = phieu.MaPhieuDieuChinh,
-                MaThietBi = thietBi.MaThietBi,
-                LoaiDieuChinh = phieu.LoaiDieuChinh,
-                TrangThai = phieu.TrangThai,
-                LyDo = phieu.LyDo,
-                ThoiDiemLap = phieu.ThoiDiemLap
-            });
+                },
+                $"Đề nghị giáng cấp từ SP #{thietBi.MaSanPhamHienTai} sang SP #{request.MaSanPhamDich}"
+            );
         }, _logger, IsolationLevel.Serializable);
     }
 
     public async Task<Result<DeNghiVongDoiResponse>> DeNghiNgungSuDungAsync(long thietBiId, DeNghiNgungSuDungRequest request, long actorId)
     {
         if (string.IsNullOrWhiteSpace(request.LyDo))
-            return Result<DeNghiVongDoiResponse>.Loi(KietDomainConstants.ErrorCodes.DuLieuKhongHopLe, "Phải có lý do đề nghị ngừng sử dụng.");
+            return Result<DeNghiVongDoiResponse>.Loi(DomainConstants.Errors.InvalidData, "Phải có lý do đề nghị ngừng sử dụng.");
 
         return await TransactionExecutionWrapper.ExecuteInTransactionAsync(_context, async () =>
         {
-            var thietBi = await _context.ThietBis
-                .FirstOrDefaultAsync(tb => tb.MaThietBi == thietBiId);
-
+            var thietBi = await _context.ThietBis.AsNoTracking().FirstOrDefaultAsync(tb => tb.MaThietBi == thietBiId);
             if (thietBi == null)
-                return Result<DeNghiVongDoiResponse>.Loi(KietDomainConstants.ErrorCodes.ThietBiNotFound, "Không tìm thấy thiết bị.");
+                return Result<DeNghiVongDoiResponse>.Loi(DomainConstants.Errors.EquipmentNotFound, "Không tìm thấy thiết bị.");
 
-            if (thietBi.TrangThaiSuDung == TrangThaiThietBi.DangThue)
-                return Result<DeNghiVongDoiResponse>.Loi(KietDomainConstants.ErrorCodes.ThietBiChuaThuHoi, "Thiết bị đang phục vụ khách hàng, không được ngừng sử dụng.");
-
-            var anhHuong = await PhanTichCamKetThietBiAsync(thietBi, KietDomainConstants.VongDoiConfig.LoaiNgungSuDung);
-            if (!anhHuong.CoTheDeNghi || anhHuong.CamKetCuThe.Count > 0 || anhHuong.ThieuSoLuongTheoLich.Count > 0)
-                return Result<DeNghiVongDoiResponse>.Loi(KietDomainConstants.ErrorCodes.ThayDoiLamThieuCamKet,
-                    $"Không thể ngừng sử dụng: {string.Join("; ", anhHuong.VuongMac.Concat(anhHuong.ThieuSoLuongTheoLich))}");
-
-            var nvResult = await _context.LayNhanVienHopLeAsync(actorId);
-            if (!nvResult.ThanhCong)
-                return Result<DeNghiVongDoiResponse>.Loi(nvResult.MaLoi!, "Không tìm thấy hồ sơ nhân viên đề nghị.");
-            var nhanVien = nvResult.DuLieu!;
-
-            var phieu = new PhieuDieuChinhKho
-            {
-                MaNguoiLap = nhanVien.MaNhanVien,
-                TenNguoiLapLucLap = nhanVien.HoTen,
-                LoaiDieuChinh = KietDomainConstants.VongDoiConfig.LoaiNgungSuDung,
-                LyDo = request.LyDo,
-                BangChung = request.BangChung,
-                ThoiDiemLap = DateTime.UtcNow,
-                TrangThai = KietDomainConstants.PhieuStatus.ChoDuyet
-            };
-
-            _context.PhieuDieuChinhKhos.Add(phieu);
-
-            var chiTiet = new ChiTietDieuChinhKho
-            {
-                PhieuDieuChinhKho = phieu,
-                MaThietBi = thietBi.MaThietBi,
-                MaChiTietPhieuNhap = thietBi.MaChiTietPhieuNhap,
-                GiaTriTruoc = JsonSerializer.Serialize(new
-                {
-                    thietBi.MaSanPhamHienTai,
-                    thietBi.TinhTrang,
-                    TrangThaiSuDung = thietBi.TrangThaiSuDung.ToString()
-                }),
-                GiaTriSau = JsonSerializer.Serialize(new
+            return await TaoDeNghiDieuChinhVongDoiInternalAsync(
+                thietBiId,
+                actorId,
+                DomainConstants.Lifecycle.Decommission,
+                request.LyDo,
+                request.BangChung,
+                new
                 {
                     thietBi.MaSanPhamHienTai,
                     TinhTrang = request.KetLuanKiemTra ?? thietBi.TinhTrang,
                     TrangThaiSuDung = TrangThaiThietBi.NgungSuDung.ToString()
-                }),
-                GhiChu = $"Đề nghị ngừng sử dụng thiết bị #{thietBi.MaThietBiHienThi}: {request.LyDo}"
-            };
-
-            _context.ChiTietDieuChinhKhos.Add(chiTiet);
-            await _context.SaveChangesAsync();
-
-            return Result<DeNghiVongDoiResponse>.Ok(new DeNghiVongDoiResponse
-            {
-                MaPhieuDieuChinh = phieu.MaPhieuDieuChinh,
-                MaThietBi = thietBi.MaThietBi,
-                LoaiDieuChinh = phieu.LoaiDieuChinh,
-                TrangThai = phieu.TrangThai,
-                LyDo = phieu.LyDo,
-                ThoiDiemLap = phieu.ThoiDiemLap
-            });
+                },
+                $"Đề nghị ngừng sử dụng thiết bị #{thietBi.MaThietBiHienThi}: {request.LyDo}"
+            );
         }, _logger, IsolationLevel.Serializable);
     }
 
@@ -291,11 +278,11 @@ public class VongDoiThietBiService : IVongDoiThietBiService
                 .FirstOrDefaultAsync(p => p.MaPhieuDieuChinh == maPhieuDieuChinh);
 
             if (phieu == null)
-                return Result<DeNghiVongDoiResponse>.Loi(KietDomainConstants.ErrorCodes.PhieuNotFound, "Không tìm thấy phiếu đề nghị điều chỉnh.");
+                return Result<DeNghiVongDoiResponse>.Loi(DomainConstants.Errors.ReceiptNotFound, "Không tìm thấy phiếu đề nghị điều chỉnh.");
 
             var chiTiet = phieu.ChiTietDieuChinhKhos.FirstOrDefault();
             if (chiTiet == null || !chiTiet.MaThietBi.HasValue)
-                return Result<DeNghiVongDoiResponse>.Loi(KietDomainConstants.ErrorCodes.DuLieuKhongHopLe, "Phiếu điều chỉnh không gắn thiết bị hợp lệ.");
+                return Result<DeNghiVongDoiResponse>.Loi(DomainConstants.Errors.InvalidData, "Phiếu điều chỉnh không gắn thiết bị hợp lệ.");
 
             if (phieu.TrangThai == KietDomainConstants.PhieuStatus.DaApDung)
             {
@@ -313,18 +300,18 @@ public class VongDoiThietBiService : IVongDoiThietBiService
 
             var thietBi = await _context.ThietBis.FirstOrDefaultAsync(tb => tb.MaThietBi == chiTiet.MaThietBi.Value);
             if (thietBi == null)
-                return Result<DeNghiVongDoiResponse>.Loi(KietDomainConstants.ErrorCodes.ThietBiNotFound, "Không tìm thấy thiết bị.");
+                return Result<DeNghiVongDoiResponse>.Loi(DomainConstants.Errors.EquipmentNotFound, "Không tìm thấy thiết bị.");
 
             if (thietBi.TrangThaiSuDung == TrangThaiThietBi.DangThue)
-                return Result<DeNghiVongDoiResponse>.Loi(KietDomainConstants.ErrorCodes.ThietBiChuaThuHoi, "Thiết bị đang phục vụ khách, không thể duyệt áp dụng.");
+                return Result<DeNghiVongDoiResponse>.Loi(DomainConstants.Errors.EquipmentNotRecovered, "Thiết bị đang phục vụ khách, không thể duyệt áp dụng.");
 
             // Kiểm tra lại cam kết tại thời điểm duyệt (W5-T3-A05)
             var anhHuong = await PhanTichCamKetThietBiAsync(thietBi, phieu.LoaiDieuChinh ?? KietDomainConstants.VongDoiConfig.LoaiGiangCap);
             if (!anhHuong.CoTheApDungHienTai || anhHuong.CamKetCuThe.Count > 0 || anhHuong.ThieuSoLuongTheoLich.Count > 0)
-                return Result<DeNghiVongDoiResponse>.Loi(KietDomainConstants.ErrorCodes.ThayDoiLamThieuCamKet,
+                return Result<DeNghiVongDoiResponse>.Loi(DomainConstants.Errors.ChangeViolatesCommitment,
                     $"Không thể duyệt áp dụng do phát sinh thiếu cam kết: {string.Join("; ", anhHuong.VuongMac.Concat(anhHuong.ThieuSoLuongTheoLich))}");
 
-            var nvResult = await _context.LayNhanVienHopLeAsync(actorId);
+            var nvResult = await _context.LayNhanVienDangHoatDongAsync(actorId);
             if (!nvResult.ThanhCong)
                 return Result<DeNghiVongDoiResponse>.Loi(nvResult.MaLoi!, "Không tìm thấy hồ sơ quản trị viên duyệt.");
             var nhanVien = nvResult.DuLieu!;

@@ -85,8 +85,22 @@ public static class KietDomainConstants
         public const string LoaiNgungSuDung = DomainConstants.Lifecycle.Decommission;
     }
 
+    public static class StaffStatus
+    {
+        public const string Working = DomainConstants.StaffStatus.Working;
+        public const string Resigned = DomainConstants.StaffStatus.Resigned;
+    }
+
+    public static class AccountStatus
+    {
+        public const string Active = DomainConstants.AccountStatus.Active;
+        public const string Locked = DomainConstants.AccountStatus.Locked;
+    }
+
     public static class ErrorCodes
     {
+        // 500
+        public const string SystemError = DomainConstants.Errors.SystemError;
         // 404
         public const string NotFound = DomainConstants.Errors.NotFound;
         public const string DonNotFound = DomainConstants.Errors.OrderNotFound;
