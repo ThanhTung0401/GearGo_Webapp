@@ -1,4 +1,5 @@
 using GearGo.Data;
+using GearGo.Helpers;
 using GearGo.Models.DTOs.BaoCao;
 using GearGo.Models.Enums;
 using GearGo.Services.Interfaces;
@@ -17,59 +18,67 @@ public class BaoCaoVanHanhService : IBaoCaoVanHanhService
 
     public async Task<BaoCaoVanHanhChiTietResponse> LayBaoCaoVanHanhAsync(BoLocBaoCaoRequest filter)
     {
-        var tuNgay = filter.TuNgay ?? DateTime.UtcNow.AddDays(-30);
+        var tuNgay = filter.TuNgay ?? DateTime.UtcNow.AddDays(-DomainConstants.Policies.DefaultReportDays);
         var denNgay = filter.DenNgay ?? DateTime.UtcNow;
 
-        // 1. Lọc đơn thuê theo khoảng thời gian
-        var queryDon = _context.DonThues.AsNoTracking()
-            .Where(d => d.NgayDat >= tuNgay && d.NgayDat <= denNgay);
+        // 1. Lọc đơn thuê theo khoảng thời gian (Gộp 4 câu query thành 1 roundtrip duy nhất)
+        var danhSachDon = await _context.DonThues.AsNoTracking()
+            .Where(d => d.NgayDat >= tuNgay && d.NgayDat <= denNgay)
+            .Select(d => new
+            {
+                d.TrangThai,
+                SoNgay = (double)EF.Functions.DateDiffDay(d.GioNhanDuKien, d.GioTraDuKien)
+            })
+            .ToListAsync();
 
-        int tongDon = await queryDon.CountAsync();
-        int tongDonHuy = await queryDon.CountAsync(d => 
-            d.TrangThai == TrangThaiDonThue.KhachHuy || 
-            d.TrangThai == TrangThaiDonThue.CuaHangHuy || 
+        int tongDon = danhSachDon.Count;
+        int tongDonHuy = danhSachDon.Count(d =>
+            d.TrangThai == TrangThaiDonThue.KhachHuy ||
+            d.TrangThai == TrangThaiDonThue.CuaHangHuy ||
             d.TrangThai == TrangThaiDonThue.HetHan);
 
-        int tongDonThanhCong = await queryDon.CountAsync(d => 
-            d.TrangThai == TrangThaiDonThue.HoanTat || 
+        int tongDonThanhCong = danhSachDon.Count(d =>
+            d.TrangThai == TrangThaiDonThue.HoanTat ||
             d.TrangThai == TrangThaiDonThue.DangThue ||
             d.TrangThai == TrangThaiDonThue.DaNhanTra ||
             d.TrangThai == TrangThaiDonThue.ChoDoiSoat);
 
-        double tyLeHuy = tongDon > 0 ? Math.Round((double)tongDonHuy / tongDon * 100, 2) : 0.0;
+        double tyLeHuy = CalculationHelpers.TinhPhanTram(tongDonHuy, tongDon);
 
-        // 2. Thống kê thiết bị toàn hệ thống
-        var queryThietBi = _context.ThietBis.AsNoTracking();
-        int tongThietBi = await queryThietBi.CountAsync();
-        int soDangThue = await queryThietBi.CountAsync(t => t.TrangThaiSuDung == TrangThaiThietBi.DangThue);
-        int soDangBaoTri = await queryThietBi.CountAsync(t => t.TrangThaiSuDung == TrangThaiThietBi.DangBaoTri);
-        int soThatLac = await queryThietBi.CountAsync(t => t.TrangThaiSuDung == TrangThaiThietBi.ThatLac);
-
-        double tyLeHaoMon = tongThietBi > 0 
-            ? Math.Round((double)(soDangBaoTri + soThatLac) / tongThietBi * 100, 2) 
-            : 0.0;
-
-        // 3. Tính số ngày thuê trung bình của các đơn thành công
-        var danhSachSoNgay = await queryDon
-            .Where(d => d.TrangThai != TrangThaiDonThue.KhachHuy && 
-                        d.TrangThai != TrangThaiDonThue.CuaHangHuy && 
-                        d.TrangThai != TrangThaiDonThue.HetHan)
-            .Select(d => (double)EF.Functions.DateDiffDay(d.GioNhanDuKien, d.GioTraDuKien))
+        // 2. Thống kê thiết bị toàn hệ thống (Gộp 4 câu query thành 1 roundtrip duy nhất)
+        var trangThaiThietBis = await _context.ThietBis.AsNoTracking()
+            .Select(t => t.TrangThaiSuDung)
             .ToListAsync();
 
-        double soNgayThueTB = danhSachSoNgay.Count > 0 
-            ? Math.Round(danhSachSoNgay.Average(), 1) 
+        int tongThietBi = trangThaiThietBis.Count;
+        int soDangThue = trangThaiThietBis.Count(t => t == TrangThaiThietBi.DangThue);
+        int soDangBaoTri = trangThaiThietBis.Count(t => t == TrangThaiThietBi.DangBaoTri);
+        int soThatLac = trangThaiThietBis.Count(t => t == TrangThaiThietBi.ThatLac);
+
+        double tyLeHaoMon = CalculationHelpers.TinhPhanTram(soDangBaoTri + soThatLac, tongThietBi);
+
+        // 3. Tính số ngày thuê trung bình của các đơn thành công
+        var danhSachSoNgay = danhSachDon
+            .Where(d => d.TrangThai != TrangThaiDonThue.KhachHuy &&
+                        d.TrangThai != TrangThaiDonThue.CuaHangHuy &&
+                        d.TrangThai != TrangThaiDonThue.HetHan)
+            .Select(d => d.SoNgay)
+            .ToList();
+
+        double soNgayThueTB = danhSachSoNgay.Count > 0
+            ? Math.Round(danhSachSoNgay.Average(), 1)
             : 0.0;
-        if (soNgayThueTB < 1.0 && danhSachSoNgay.Count > 0) soNgayThueTB = 1.0;
+        if (soNgayThueTB < DomainConstants.Policies.MinRentalDays && danhSachSoNgay.Count > 0)
+            soNgayThueTB = DomainConstants.Policies.MinRentalDays;
 
         // 4. Tính tỷ lệ quay vòng = Tổng lượt thuê thiết bị / Tổng thiết bị
         int tongLuotThueThietBi = await _context.PhanCongThietBis
             .AsNoTracking()
-            .Where(pc => pc.ThoiDiemPhanCong >= tuNgay && pc.ThoiDiemPhanCong <= denNgay && pc.TrangThai != "DaHuy")
+            .Where(pc => pc.ThoiDiemPhanCong >= tuNgay && pc.ThoiDiemPhanCong <= denNgay && pc.TrangThai != DomainConstants.Status.Cancelled)
             .CountAsync();
 
         double tyLeQuayVong = tongThietBi > 0 
-            ? Math.Round((double)tongLuotThueThietBi / tongThietBi, 2) 
+            ? Math.Round((double)tongLuotThueThietBi / tongThietBi, DomainConstants.Policies.DecimalRoundingDigits) 
             : 0.0;
 
         // 5. Thống kê theo từng sản phẩm
@@ -111,8 +120,8 @@ public class BaoCaoVanHanhService : IBaoCaoVanHanhService
             .Select(g => new
             {
                 MaSanPham = g.Key,
-                SoHong = g.Count(x => x.KetLuan == "HongNhe" || x.KetLuan == "HongNang"),
-                SoMat = g.Count(x => x.KetLuan == "MatThietBi")
+                SoHong = g.Count(x => x.KetLuan == DomainConstants.InspectionConclusions.MinorDamage || x.KetLuan == DomainConstants.InspectionConclusions.MajorDamage),
+                SoMat = g.Count(x => x.KetLuan == DomainConstants.InspectionConclusions.Lost)
             })
             .ToDictionaryAsync(x => x.MaSanPham);
 

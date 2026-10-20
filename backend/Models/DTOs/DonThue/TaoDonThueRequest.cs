@@ -3,6 +3,7 @@ namespace GearGo.Models.DTOs.DonThue;
 public record TaoDonThueRequest
 {
     public long MaKhachHang { get; set; }
+    public long? MaTaiKhoan { get; set; }
     public DateTime GioNhanDuKien { get; init; }
     public DateTime GioTraDuKien { get; init; }
     public string TenNguoiNhan { get; init; } = string.Empty;

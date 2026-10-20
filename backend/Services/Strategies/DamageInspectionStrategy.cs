@@ -1,3 +1,4 @@
+using GearGo.Helpers;
 using GearGo.Models.Entities;
 using GearGo.Models.Enums;
 using GearGo.Services.Interfaces;
@@ -13,7 +14,8 @@ public class DamageInspectionStrategy : IInspectionStrategy
         _baoTriService = baoTriService;
     }
 
-    public bool CanHandle(string ketLuan) => ketLuan is "HongNhe" or "HongNang";
+    public bool CanHandle(string ketLuan)
+        => ketLuan is KietDomainConstants.KetLuanKiemTra.HongNhe or KietDomainConstants.KetLuanKiemTra.HongNang;
 
     public async Task XuLySauKiemTraAsync(
         ChiTietNhanTra chiTiet,
@@ -22,17 +24,17 @@ public class DamageInspectionStrategy : IInspectionStrategy
         long maDonThue)
     {
         thietBi.TrangThaiSuDung = TrangThaiThietBi.DangBaoTri;
-        if (!chiTiet.ThoiDiemTraThucTe.HasValue)
-        {
-            chiTiet.ThoiDiemTraThucTe = DateTime.UtcNow;
-        }
+        chiTiet.ThoiDiemTraThucTe ??= DateTime.UtcNow;
 
-        string mucDo = chiTiet.KetLuan == "HongNang" ? "Nang" : "Nhe";
+        string mucDo = chiTiet.KetLuan == KietDomainConstants.KetLuanKiemTra.HongNang
+            ? KietDomainConstants.BaoTriConfig.MucDoNang
+            : KietDomainConstants.BaoTriConfig.MucDoNhe;
+
         await _baoTriService.TaoPhieuBaoTriToiThieuAsync(
             thietBi.MaThietBi,
             maDonThue,
             nhanVien.MaNhanVien,
-            "SuaChua",
+            KietDomainConstants.BaoTriConfig.LoaiSuaChua,
             $"Hư hỏng sau thuê: {chiTiet.TinhTrangSauThue}",
             mucDo);
     }

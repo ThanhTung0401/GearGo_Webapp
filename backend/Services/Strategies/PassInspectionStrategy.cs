@@ -1,3 +1,4 @@
+using GearGo.Helpers;
 using GearGo.Models.Entities;
 using GearGo.Models.Enums;
 
@@ -5,7 +6,8 @@ namespace GearGo.Services.Strategies;
 
 public class PassInspectionStrategy : IInspectionStrategy
 {
-    public bool CanHandle(string ketLuan) => ketLuan == "Dat";
+    public bool CanHandle(string ketLuan)
+        => ketLuan == KietDomainConstants.KetLuanKiemTra.Dat;
 
     public Task XuLySauKiemTraAsync(
         ChiTietNhanTra chiTiet,
@@ -14,10 +16,7 @@ public class PassInspectionStrategy : IInspectionStrategy
         long maDonThue)
     {
         thietBi.TrangThaiSuDung = TrangThaiThietBi.SanSang;
-        if (!chiTiet.ThoiDiemTraThucTe.HasValue)
-        {
-            chiTiet.ThoiDiemTraThucTe = DateTime.UtcNow;
-        }
+        chiTiet.ThoiDiemTraThucTe ??= DateTime.UtcNow;
         return Task.CompletedTask;
     }
 }

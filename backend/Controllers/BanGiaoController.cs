@@ -10,7 +10,7 @@ namespace GearGo.Controllers;
 [Route("api/v1/ban-giao")]
 [Route("api/ban-giao")]
 [Authorize(Policy = "StaffOrAdmin")]
-public class BanGiaoController : ControllerBase
+public class BanGiaoController : BaseApiController
 {
     private readonly IBanGiaoService _banGiaoService;
 
@@ -22,43 +22,25 @@ public class BanGiaoController : ControllerBase
     [HttpGet("don-thue/{maDonThue:long}")]
     [HttpGet("theo-don/{maDonThue:long}")]
     public async Task<IActionResult> LayTheoDon(long maDonThue)
-    {
-        var result = await _banGiaoService.LayTheoDonAsync(maDonThue);
-        if (!result.ThanhCong)
-            return BadRequest(new { result.MaLoi, result.ThongDiep });
-        return Ok(result.DuLieu);
-    }
+        => HandleResult(await _banGiaoService.LayTheoDonAsync(maDonThue));
 
     [HttpPost("nhap/{maDonThue:long}")]
     [HttpPost("theo-don/{maDonThue:long}")]
     public async Task<IActionResult> TaoHoacLayPhieuBanGiaoNhap(long maDonThue)
-    {
-        long maTaiKhoan = User.LayMaTaiKhoan();
-        var result = await _banGiaoService.TaoHoacLayPhieuBanGiaoNhapAsync(maDonThue, maTaiKhoan);
-        if (!result.ThanhCong)
-            return BadRequest(new { result.MaLoi, result.ThongDiep });
-        return Ok(result.DuLieu);
-    }
+        => HandleResult(await _banGiaoService.TaoHoacLayPhieuBanGiaoNhapAsync(maDonThue, User.LayMaTaiKhoan()));
 
     [HttpPut("nhap/{maPhieuBanGiao:long}")]
     [HttpPut("{maPhieuBanGiao:long}")]
-    public async Task<IActionResult> CapNhatPhieuBanGiaoNhap(
-            long maPhieuBanGiao, [FromBody] CapNhatPhieuBanGiaoRequest request)
-    {
-        var result = await _banGiaoService.CapNhatPhieuBanGiaoNhapAsync(maPhieuBanGiao, request);
-        if (!result.ThanhCong)
-            return BadRequest(new { result.MaLoi, result.ThongDiep });
-        return Ok(result.DuLieu);
-    }
+    public async Task<IActionResult> CapNhatPhieuBanGiaoNhap(long maPhieuBanGiao, [FromBody] CapNhatPhieuBanGiaoRequest request)
+        => HandleResult(await _banGiaoService.CapNhatPhieuBanGiaoNhapAsync(maPhieuBanGiao, request));
 
     [HttpPost("{maPhieuBanGiao:long}/chot")]
-    public async Task<IActionResult> ChotBanGiao(
-            long maPhieuBanGiao, [FromBody] ChotBanGiaoRequest request)
+    public async Task<IActionResult> ChotBanGiao(long maPhieuBanGiao, [FromBody] ChotBanGiaoRequest request)
     {
-        long maTaiKhoan = User.LayMaTaiKhoan();
-        var result = await _banGiaoService.ChotBanGiaoAsync(maPhieuBanGiao, request, maTaiKhoan);
+        var result = await _banGiaoService.ChotBanGiaoAsync(maPhieuBanGiao, request, User.LayMaTaiKhoan());
         if (!result.ThanhCong)
-            return BadRequest(new { result.MaLoi, result.ThongDiep });
+            return HandleResult(result);
+
         return Ok(new { Message = "Chốt bàn giao thành công! Đơn đã chuyển sang trạng thái Đang Thuê." });
     }
 }

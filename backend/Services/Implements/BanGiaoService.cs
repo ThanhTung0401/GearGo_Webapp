@@ -29,7 +29,7 @@ public class BanGiaoService : IBanGiaoService
             .FirstOrDefaultAsync(p => p.MaDonThue == maDonThue);
 
         if (phieu == null)
-            return Result<PhieuBanGiaoResponse>.Loi("NOT_FOUND", "Đơn thuê này chưa có biên bản bàn giao.");
+            return Result<PhieuBanGiaoResponse>.Loi(KietDomainConstants.ErrorCodes.NotFound, "Đơn thuê này chưa có biên bản bàn giao.");
 
         return Result<PhieuBanGiaoResponse>.Ok(phieu.ToResponse());
     }
@@ -43,10 +43,10 @@ public class BanGiaoService : IBanGiaoService
                 .FirstOrDefaultAsync(d => d.MaDonThue == maDonThue);
 
             if (donThue == null)
-                return Result<PhieuBanGiaoResponse>.Loi("DON_NOT_FOUND", "Không tìm thấy đơn thuê.");
+                return Result<PhieuBanGiaoResponse>.Loi(KietDomainConstants.ErrorCodes.DonNotFound, "Không tìm thấy đơn thuê.");
 
             if (donThue.TrangThai != TrangThaiDonThue.SanSangNhan)
-                return Result<PhieuBanGiaoResponse>.Loi("INVALID_STATE", "Đơn thuê chưa sẵn sàng bàn giao.");
+                return Result<PhieuBanGiaoResponse>.Loi(KietDomainConstants.ErrorCodes.InvalidState, "Đơn thuê chưa sẵn sàng bàn giao.");
 
             // Nếu đã có phiếu nháp thì lấy lên
             var phieuDaCo = await _context.PhieuBanGiaos
@@ -64,26 +64,26 @@ public class BanGiaoService : IBanGiaoService
             {
                 MaDonThue = maDonThue,
                 MaNhanVien = maNv,
-                TrangThai = "ChoGiao",
+                TrangThai = KietDomainConstants.PhieuStatus.ChoGiao,
                 ThoiDiemLap = DateTime.UtcNow
             };
 
             _context.PhieuBanGiaos.Add(phieuMoi);
 
-            foreach (var chiTietDon in donThue.ChiTietDonThues)
+            var chiTietDonIds = donThue.ChiTietDonThues.Select(c => c.MaChiTietDon).ToList();
+            var phanCongs = await _context.PhanCongThietBis
+                .Where(pc => chiTietDonIds.Contains(pc.MaChiTietDon)
+                             && pc.TrangThai == KietDomainConstants.PhieuStatus.DaPhanCong)
+                .ToListAsync();
+
+            foreach (var phanCong in phanCongs)
             {
-                var phanCongs = await _context.PhanCongThietBis
-                    .Where(pc => pc.MaChiTietDon == chiTietDon.MaChiTietDon && pc.TrangThai == "DaPhanCong")
-                    .ToListAsync();
-                foreach (var phanCong in phanCongs)
+                _context.ChiTietBanGiaos.Add(new ChiTietBanGiao
                 {
-                    _context.ChiTietBanGiaos.Add(new ChiTietBanGiao
-                    {
-                        PhieuBanGiao = phieuMoi,
-                        MaPhanCong = phanCong.MaPhanCong,
-                        TinhTrangTruocThue = "Hoạt động bình thường"
-                    });
-                }
+                    PhieuBanGiao = phieuMoi,
+                    MaPhanCong = phanCong.MaPhanCong,
+                    TinhTrangTruocThue = KietDomainConstants.PhieuStatus.TinhTrangMacDinhBanGiao
+                });
             }
 
             return Result<PhieuBanGiaoResponse>.Ok(phieuMoi.ToResponse());
@@ -97,9 +97,9 @@ public class BanGiaoService : IBanGiaoService
             .FirstOrDefaultAsync(p => p.MaPhieuBanGiao == maPhieuBanGiao);
 
         if (phieu == null)
-            return Result<PhieuBanGiaoResponse>.Loi("NOT_FOUND", "Không tìm thấy phiếu.");
-        if (phieu.TrangThai == "DaGiao")
-            return Result<PhieuBanGiaoResponse>.Loi("LOCKED", "Phiếu đã chốt không thể sửa.");
+            return Result<PhieuBanGiaoResponse>.Loi(KietDomainConstants.ErrorCodes.NotFound, "Không tìm thấy phiếu.");
+        if (phieu.TrangThai == KietDomainConstants.PhieuStatus.DaGiao)
+            return Result<PhieuBanGiaoResponse>.Loi(KietDomainConstants.ErrorCodes.Locked, "Phiếu đã chốt không thể sửa.");
 
         phieu.TenNguoiNhanThucTe = request.TenNguoiNhanThucTe;
         phieu.ThoiDiemKhachXacNhan = request.ThoiDiemKhachXacNhan;
@@ -137,12 +137,12 @@ public class BanGiaoService : IBanGiaoService
                 .FirstOrDefaultAsync(p => p.MaPhieuBanGiao == maPhieuBanGiao);
 
             if (phieu == null)
-                return Result<bool>.Loi("NOT_FOUND", "Không tìm thấy phiếu.");
-            if (phieu.TrangThai == "DaGiao")
-                return Result<bool>.Loi("LOCKED", "Phiếu đã chốt.");
+                return Result<bool>.Loi(KietDomainConstants.ErrorCodes.NotFound, "Không tìm thấy phiếu.");
+            if (phieu.TrangThai == KietDomainConstants.PhieuStatus.DaGiao)
+                return Result<bool>.Loi(KietDomainConstants.ErrorCodes.Locked, "Phiếu đã chốt.");
 
             var nhanVienThucHien = await _context.LayNhanVienAsync(maNhanVienChot);
-            var tenNhanVien = nhanVienThucHien?.HoTen ?? "Nhân viên " + maNhanVienChot;
+            var tenNhanVien = nhanVienThucHien?.HoTen ?? $"Nhân viên {maNhanVienChot}";
 
             // Chốt phiếu qua Rich Domain Method
             phieu.ChotPhieu(request.TenNguoiNhanThucTe, tenNhanVien);
@@ -155,7 +155,7 @@ public class BanGiaoService : IBanGiaoService
             decimal tongTienYeuCau = phieu.DonThue.ChiTietDonThues.Sum(c =>
                 c.DonGiaThueMoiNgay * c.SoNgayTinhTien + c.MucCocMoiThietBi - c.TienGiam);
             decimal tongDaDong = await _context.ThanhToans
-                .Where(t => t.MaDonThue == phieu.MaDonThue && t.TrangThai == "ThanhCong")
+                .Where(t => t.MaDonThue == phieu.MaDonThue && t.TrangThai == KietDomainConstants.PhieuStatus.ThanhCong)
                 .SumAsync(t => t.TongSoTien);
 
             var validationResult = BanGiaoValidationRules.KiemTraThanhToan(tongTienYeuCau, tongDaDong);
@@ -163,14 +163,13 @@ public class BanGiaoService : IBanGiaoService
                 return validationResult;
 
             // Ghi lịch sử đơn
-            _context.LichSuTrangThaiDons.Add(new LichSuTrangThaiDon
-            {
-                MaDonThue = phieu.MaDonThue,
-                TrangThaiTruoc = TrangThaiDonThue.SanSangNhan.ToString(),
-                TrangThaiSau = TrangThaiDonThue.DangThue.ToString(),
-                ThoiDiem = DateTime.UtcNow,
-                LyDo = "Khách hàng đã nhận thiết bị thành công"
-            });
+            AuditLogHelper.GhiLichSuDon(
+                _context,
+                phieu.MaDonThue,
+                nhanVienThucHien?.MaTaiKhoan ?? maNhanVienChot,
+                TrangThaiDonThue.SanSangNhan.ToString(),
+                TrangThaiDonThue.DangThue.ToString(),
+                "Khách hàng đã nhận thiết bị thành công");
 
             return Result<bool>.Ok(true);
         }, _logger, IsolationLevel.Serializable);

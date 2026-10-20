@@ -1,5 +1,9 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Text.Json;
+using GearGo.Exceptions;
+using GearGo.Helpers;
+using GearGo.Models.DTOs.DonThue;
 using GearGo.Models.Enums;
 
 namespace GearGo.Models.Entities;
@@ -104,46 +108,122 @@ public class DonThue
 
     // ----- RICH DOMAIN -----
 
-    // 1. Khach hang huy don
-    public void KhachHangHuyDon(string lyDo)
+    public static DonThue KhoiTao(
+        TaoDonThueRequest req,
+        long maChinhSach,
+        DateTime now,
+        decimal tienThue,
+        decimal tienGiam,
+        decimal tienCoc,
+        KhuyenMai? km = null)
     {
-        if (TrangThai != TrangThaiDonThue.ChoThanhToan)
-            throw new Exception("Chỉ có thể hủy đơn khi đang ở trạng thái Chờ thanh toán.");
-
-        TrangThai = TrangThaiDonThue.KhachHuy;
-        ThoiDiemHuy = DateTime.UtcNow;
-        LyDoHuy = lyDo;
-
-        // Tự động giải phóng các giữ chỗ
-        foreach (var chiTiet in ChiTietDonThues)
+        return new DonThue
         {
-            if (chiTiet.GiuCho != null)
+            MaKhachHang = req.MaKhachHang,
+            MaChinhSach = maChinhSach,
+            MaDonHienThi = DisplayCodeHelper.SinhMaDonHienThi(now),
+            NgayDat = now,
+            GioNhanDuKien = req.GioNhanDuKien,
+            GioTraDuKien = req.GioTraDuKien,
+            HanThanhToan = now.AddMinutes(KietDomainConstants.PolicyConfig.ThoiGianGiuChoPhut),
+            TenNguoiNhan = req.TenNguoiNhan,
+            SoDienThoaiNguoiNhan = req.SoDienThoaiNguoiNhan,
+            EmailLienHe = req.EmailLienHe,
+            GhiChu = req.GhiChu,
+            TongTienThueTruocGiam = tienThue,
+            TongTienGiam = tienGiam,
+            TongTienCoc = tienCoc,
+            TrangThai = TrangThaiDonThue.ChoThanhToan,
+            KhuyenMaiLucDat = km != null ? JsonSerializer.Serialize(new
             {
-                chiTiet.GiuCho.TrangThai = TrangThaiGiuCho.DaGiaiPhong;
-                chiTiet.GiuCho.ThoiDiemGiaiPhong = DateTime.UtcNow;
-            }
-        }
+                km.MaGiamGia,
+                km.TenKhuyenMai,
+                km.LoaiGiam,
+                km.GiaTriGiam,
+                SoTienGiam = tienGiam
+            }) : null
+        };
     }
 
-    // 2. Chuyen trang thai sang dang thue (khi ban giao)
+    public (List<ChiTietDonThue> ChiTiets, List<GiuCho> GiuChos) TaoDanhSachChiTietVaGiuCho(
+        IReadOnlyList<ChiTietDonThueDto> items,
+        Dictionary<long, SanPham> sanPhams,
+        int soNgayThue,
+        DateTime now)
+    {
+        var chiTiets = new List<ChiTietDonThue>();
+        var giuChos = new List<GiuCho>();
+        var hanThanhToan = HanThanhToan ?? now.AddMinutes(KietDomainConstants.PolicyConfig.ThoiGianGiuChoPhut);
+        decimal tienGiamConLai = TongTienGiam;
+
+        for (int i = 0; i < items.Count; i++)
+        {
+            var item = items[i];
+            var sp = sanPhams[item.MaSanPham];
+            var tienThueDong = sp.GiaThueMoiNgay * item.SoLuong * soNgayThue;
+
+            decimal tienGiamDong = 0;
+            if (TongTienThueTruocGiam > 0 && TongTienGiam > 0)
+            {
+                if (i == items.Count - 1)
+                {
+                    tienGiamDong = tienGiamConLai;
+                }
+                else
+                {
+                    tienGiamDong = Math.Round((tienThueDong / TongTienThueTruocGiam) * TongTienGiam, 0);
+                    tienGiamConLai -= tienGiamDong;
+                }
+            }
+
+            var chiTiet = ChiTietDonThue.KhoiTao(MaDonThue, sp, item.SoLuong, soNgayThue, tienGiamDong);
+            var giuCho = chiTiet.TaoGiuCho(now, hanThanhToan);
+
+            chiTiets.Add(chiTiet);
+            giuChos.Add(giuCho);
+        }
+
+        return (chiTiets, giuChos);
+    }
+
+    public TrangThaiDonThue HuyDon(long maTaiKhoan, bool laNoiBo, string lyDo, DateTime now)
+    {
+        var trangThaiSau = laNoiBo ? TrangThaiDonThue.CuaHangHuy : TrangThaiDonThue.KhachHuy;
+        TrangThai = trangThaiSau;
+        ThoiDiemHuy = now;
+        LyDoHuy = lyDo;
+        MaNguoiHuy = maTaiKhoan;
+
+        foreach (var ct in ChiTietDonThues)
+        {
+            if (ct.GiuCho != null && ct.GiuCho.TrangThai == TrangThaiGiuCho.DangGiu)
+            {
+                ct.GiuCho.TrangThai = TrangThaiGiuCho.DaGiaiPhong;
+                ct.GiuCho.ThoiDiemGiaiPhong = now;
+            }
+        }
+
+        return trangThaiSau;
+    }
+
     public void BatDauThue()
     {
         if (TrangThai != TrangThaiDonThue.SanSangNhan)
-            throw new Exception("Đơn chưa sẵn sàng để giao.");
+            throw new TrangThaiKhongHopLeException("Đơn chưa sẵn sàng để giao.");
 
         TrangThai = TrangThaiDonThue.DangThue;
     }
 
-    // 3. Xac nhan thanh toan
     public void XacNhanThanhToan()
     {
         if (TrangThai != TrangThaiDonThue.ChoThanhToan)
-            throw new Exception("Đơn chưa sẵn sàng để thanh toán.");
+            throw new TrangThaiKhongHopLeException("Đơn chưa sẵn sàng để thanh toán.");
 
         TrangThai = TrangThaiDonThue.DaXacNhan;
         foreach (var chiTiet in ChiTietDonThues)
         {
-            if (chiTiet.GiuCho != null) {
+            if (chiTiet.GiuCho != null)
+            {
                 chiTiet.GiuCho.TrangThai = TrangThaiGiuCho.DaXacNhan;
             }
         }

@@ -15,65 +15,61 @@ namespace GearGo.Services.Implements;
 
 /// <summary>
 /// Cài đặt dịch vụ nhận trả thiết bị nhiều đợt và kết luận mất (UC12 - Tuấn Kiệt)
-/// Áp dụng Clean Architecture: Strategy, Specification, Facade, TransactionWrapper và Rich Domain
+/// Áp dụng Clean Architecture: StrategyFactory, Specification, CQRS Query Delegation, Facade, TransactionWrapper và Rich Domain
 /// </summary>
 public class NhanTraService : INhanTraService
 {
     private readonly ApplicationDbContext _context;
-    private readonly IEnumerable<IInspectionStrategy> _strategies;
+    private readonly ITruyVanNhanTraService _truyVanService;
+    private readonly IInspectionStrategyFactory _strategyFactory;
     private readonly IDeviceConflictDetector _conflictDetector;
     private readonly ILogger<NhanTraService> _logger;
 
     public NhanTraService(
         ApplicationDbContext context,
-        IEnumerable<IInspectionStrategy> strategies,
+        ITruyVanNhanTraService truyVanService,
+        IInspectionStrategyFactory strategyFactory,
         IDeviceConflictDetector conflictDetector,
         ILogger<NhanTraService> logger)
     {
         _context = context;
-        _strategies = strategies;
+        _truyVanService = truyVanService;
+        _strategyFactory = strategyFactory;
         _conflictDetector = conflictDetector;
         _logger = logger;
     }
 
-    /// <summary>
-    /// Tạo phiếu nhận trả nháp mới dưới khóa giao dịch
-    /// </summary>
     public async Task<Result<NhanTraResponse>> TaoPhieuNhanTraNhapAsync(
         long donId, TaoNhanTraRequest request, long actorId)
     {
-        if (request.DanhSachChiTietBanGiao == null || request.DanhSachChiTietBanGiao.Count == 0)
-            return Result<NhanTraResponse>.Loi("DANH_SACH_RONG", "Phải chọn ít nhất 1 thiết bị để nhận trả.");
-
-        if (request.DanhSachChiTietBanGiao.Distinct().Count() != request.DanhSachChiTietBanGiao.Count)
-            return Result<NhanTraResponse>.Loi("DUPLICATE_ITEMS", "Danh sách thiết bị chọn bị trùng lặp.");
+        var inputCheck = NhanTraValidationRules.KiemTraDanhSachNhanTra(request.DanhSachChiTietBanGiao);
+        if (!inputCheck.ThanhCong)
+            return Result<NhanTraResponse>.Loi(inputCheck.MaLoi!, inputCheck.ThongDiep!);
 
         return await TransactionExecutionWrapper.ExecuteInTransactionAsync(_context, async () =>
         {
             var donThue = await _context.DonThues
                 .Include(d => d.PhieuBanGiao)
-                    .ThenInclude(pb => pb.ChiTietBanGiaos)
+                    .ThenInclude(pb => pb!.ChiTietBanGiaos)
                 .FirstOrDefaultAsync(d => d.MaDonThue == donId);
 
             if (donThue == null)
-                return Result<NhanTraResponse>.Loi("DON_NOT_FOUND", "Không tìm thấy đơn thuê.");
+                return Result<NhanTraResponse>.Loi(DomainConstants.Errors.OrderNotFound, "Không tìm thấy đơn thuê.");
 
-            if (donThue.PhieuBanGiao == null || donThue.PhieuBanGiao.TrangThai != "DaGiao")
-                return Result<NhanTraResponse>.Loi("DON_CHUA_BAN_GIAO", "Đơn chưa hoàn tất bàn giao thiết bị.");
+            if (donThue.PhieuBanGiao == null || donThue.PhieuBanGiao.TrangThai != DomainConstants.Status.Delivered)
+                return Result<NhanTraResponse>.Loi(DomainConstants.Errors.OrderNotDelivered, "Đơn chưa hoàn tất bàn giao thiết bị.");
 
             var validCtbIds = donThue.PhieuBanGiao.ChiTietBanGiaos.Select(c => c.MaChiTietBanGiao).ToHashSet();
             if (request.DanhSachChiTietBanGiao.Any(id => !validCtbIds.Contains(id)))
-                return Result<NhanTraResponse>.Loi("THIET_BI_KHONG_THUOC_BAN_GIAO", "Một số thiết bị không thuộc biên bản bàn giao của đơn thuê.");
+                return Result<NhanTraResponse>.Loi(DomainConstants.Errors.EquipmentNotInHandover, "Một số thiết bị không thuộc biên bản bàn giao của đơn thuê.");
 
-            // Kiểm tra xem thiết bị đã chốt trả ở đợt trước chưa
             bool daChot = await _context.ChiTietNhanTras.AnyAsync(ct =>
                 request.DanhSachChiTietBanGiao.Contains(ct.MaChiTietBanGiao) &&
                 ct.PhieuNhanTra.TrangThai == TrangThaiPhieuNhanTra.DaChot);
 
             if (daChot)
-                return Result<NhanTraResponse>.Loi("THIET_BI_DA_TRA", "Một số thiết bị đã được chốt nhận trả ở đợt trước.");
+                return Result<NhanTraResponse>.Loi(DomainConstants.Errors.EquipmentAlreadyReturned, "Một số thiết bị đã được chốt nhận trả ở đợt trước.");
 
-            // Kiểm tra xem thiết bị đã nằm trong phiếu nháp nào chưa
             var existingDraftDetails = await _context.ChiTietNhanTras
                 .Include(ct => ct.PhieuNhanTra)
                 .Where(ct => request.DanhSachChiTietBanGiao.Contains(ct.MaChiTietBanGiao) &&
@@ -83,29 +79,29 @@ public class NhanTraService : INhanTraService
             if (existingDraftDetails.Count > 0)
             {
                 var phieuId = existingDraftDetails.First().MaPhieuNhanTra;
-                var phieuHienCo = await LayPhieuNhanTraTheoIdAsync(phieuId);
+                var phieuHienCo = await _truyVanService.LayPhieuNhanTraTheoIdAsync(phieuId);
                 if (phieuHienCo != null && phieuHienCo.ChiTietNhanTras.Count == request.DanhSachChiTietBanGiao.Count)
                 {
                     return Result<NhanTraResponse>.Ok(phieuHienCo.ToResponse());
                 }
 
-                return Result<NhanTraResponse>.Loi("DONG_DA_CO_PHIEU_NHAN",
+                return Result<NhanTraResponse>.Loi(DomainConstants.Errors.LineAlreadyHasDraftReceipt,
                     $"Thiết bị đã nằm trong phiếu nhận trả nháp #{phieuId}.", new { MaPhieu = phieuId });
             }
 
-            var nhanVien = await _context.LayNhanVienAsync(actorId);
-            if (nhanVien == null)
-                return Result<NhanTraResponse>.Loi("NHAN_VIEN_NOT_FOUND", "Không tìm thấy thông tin nhân viên tiếp nhận.");
+            var nvResult = await _context.LayNhanVienHopLeAsync(actorId);
+            if (!nvResult.ThanhCong)
+                return Result<NhanTraResponse>.Loi(nvResult.MaLoi!, "Không tìm thấy thông tin nhân viên tiếp nhận.");
+            var nhanVien = nvResult.DuLieu!;
 
             int countPhieu = await _context.PhieuNhanTras.CountAsync(p => p.MaDonThue == donId);
             int lanTra = countPhieu + 1;
-            string maPhieuHienThi = $"PNT-DT{donThue.MaDonThue:D4}-{lanTra:D2}";
 
             var phieuMoi = new PhieuNhanTra
             {
                 MaDonThue = donId,
                 MaNhanVien = nhanVien.MaNhanVien,
-                MaPhieuHienThi = maPhieuHienThi,
+                MaPhieuHienThi = DisplayCodeHelper.SinhMaPhieuNhanTra(donThue.MaDonThue, lanTra),
                 LanTra = lanTra,
                 ThoiDiemLap = DateTime.UtcNow,
                 TrangThai = TrangThaiPhieuNhanTra.Nhap,
@@ -116,39 +112,35 @@ public class NhanTraService : INhanTraService
 
             foreach (var ctbId in request.DanhSachChiTietBanGiao)
             {
-                var ctnt = new ChiTietNhanTra
+                _context.ChiTietNhanTras.Add(new ChiTietNhanTra
                 {
                     PhieuNhanTra = phieuMoi,
                     MaChiTietBanGiao = ctbId,
-                    TrangThaiXuLy = "ChoXuLy"
-                };
-                _context.ChiTietNhanTras.Add(ctnt);
+                    TrangThaiXuLy = DomainConstants.Status.PendingProcessing
+                });
             }
 
             await _context.SaveChangesAsync();
-            var resultPhieu = await LayPhieuNhanTraTheoIdAsync(phieuMoi.MaPhieuNhanTra);
+            var resultPhieu = await _truyVanService.LayPhieuNhanTraTheoIdAsync(phieuMoi.MaPhieuNhanTra);
             return Result<NhanTraResponse>.Ok(resultPhieu!.ToResponse());
         }, _logger, IsolationLevel.Serializable);
     }
 
-    /// <summary>
-    /// Cập nhật thông tin kiểm tra thiết bị trên phiếu nhận trả nháp
-    /// </summary>
     public async Task<Result<NhanTraResponse>> CapNhatPhieuNhanTraNhapAsync(
         long phieuId, CapNhatPhieuNhanTraRequest request, long actorId)
     {
         return await TransactionExecutionWrapper.ExecuteInTransactionAsync(_context, async () =>
         {
-            var phieu = await LayPhieuNhanTraTheoIdAsync(phieuId);
+            var phieu = await _truyVanService.LayPhieuNhanTraTheoIdAsync(phieuId);
             if (phieu == null)
-                return Result<NhanTraResponse>.Loi("PHIEU_NOT_FOUND", "Không tìm thấy phiếu nhận trả.");
+                return Result<NhanTraResponse>.Loi(DomainConstants.Errors.ReceiptNotFound, "Không tìm thấy phiếu nhận trả.");
 
             if (phieu.TrangThai == TrangThaiPhieuNhanTra.DaChot)
-                return Result<NhanTraResponse>.Loi("PHIEU_NHAN_DA_CHOT", "Phiếu đã chốt, không được sửa.");
+                return Result<NhanTraResponse>.Loi(DomainConstants.Errors.ReceiptFinalized, "Phiếu đã chốt, không được sửa.");
 
-            var nhanVien = await _context.LayNhanVienAsync(actorId);
-            if (nhanVien == null)
-                return Result<NhanTraResponse>.Loi("NHAN_VIEN_NOT_FOUND", "Không tìm thấy thông tin nhân viên thao tác.");
+            var nvResult = await _context.LayNhanVienHopLeAsync(actorId);
+            if (!nvResult.ThanhCong)
+                return Result<NhanTraResponse>.Loi(nvResult.MaLoi!, nvResult.ThongDiep!);
 
             if (request.DanhSachDong != null && request.DanhSachDong.Count > 0)
             {
@@ -157,17 +149,13 @@ public class NhanTraService : INhanTraService
                 foreach (var dong in request.DanhSachDong)
                 {
                     if (!ctDict.TryGetValue(dong.MaChiTietBanGiao, out var ctnt))
-                        return Result<NhanTraResponse>.Loi("CHI_TIET_NOT_FOUND", $"Không tìm thấy chi tiết bàn giao #{dong.MaChiTietBanGiao} trong phiếu này.");
+                        return Result<NhanTraResponse>.Loi(DomainConstants.Errors.DetailNotFound, $"Không tìm thấy chi tiết bàn giao #{dong.MaChiTietBanGiao} trong phiếu này.");
 
-                    if (dong.ThoiDiemTraThucTe.HasValue && dong.ThoiDiemTraThucTe.Value > DateTime.UtcNow.AddMinutes(5))
-                        return Result<NhanTraResponse>.Loi("THOI_DIEM_TRA_KHONG_HOP_LE", "Thời điểm trả thực tế không được ở tương lai.");
+                    if (dong.ThoiDiemTraThucTe.HasValue && dong.ThoiDiemTraThucTe.Value > DateTime.UtcNow.AddMinutes(DomainConstants.Policies.ToleranceMinutes))
+                        return Result<NhanTraResponse>.Loi(DomainConstants.Errors.InvalidReturnTime, "Thời điểm trả thực tế không được ở tương lai.");
 
-                    if (!string.IsNullOrEmpty(dong.KetLuan))
-                    {
-                        string[] validKetLuan = { "Dat", "CanVeSinh", "HongNhe", "HongNang", "ThieuPhuKien", "MatThietBi" };
-                        if (!validKetLuan.Contains(dong.KetLuan))
-                            return Result<NhanTraResponse>.Loi("KET_LUAN_KHONG_HOP_LE", $"Kết luận '{dong.KetLuan}' không hợp lệ.");
-                    }
+                    if (!string.IsNullOrEmpty(dong.KetLuan) && !_strategyFactory.IsValidConclusion(dong.KetLuan))
+                        return Result<NhanTraResponse>.Loi(DomainConstants.Errors.InvalidConclusion, $"Kết luận '{dong.KetLuan}' không hợp lệ.");
 
                     ctnt.ThoiDiemTraThucTe = dong.ThoiDiemTraThucTe;
                     ctnt.KetLuan = dong.KetLuan;
@@ -182,7 +170,7 @@ public class NhanTraService : INhanTraService
                     if (dong.DanhSachAnh != null)
                         ctnt.DanhSachAnh = JsonSerializer.Serialize(dong.DanhSachAnh);
 
-                    ctnt.TrangThaiXuLy = "DaKiemTra";
+                    ctnt.TrangThaiXuLy = DomainConstants.Status.Inspected;
                 }
             }
 
@@ -190,35 +178,31 @@ public class NhanTraService : INhanTraService
                 phieu.GhiChu = request.GhiChu;
 
             await _context.SaveChangesAsync();
-            var resultPhieu = await LayPhieuNhanTraTheoIdAsync(phieuId);
+            var resultPhieu = await _truyVanService.LayPhieuNhanTraTheoIdAsync(phieuId);
             return Result<NhanTraResponse>.Ok(resultPhieu!.ToResponse());
         }, _logger, IsolationLevel.Serializable);
     }
 
-    /// <summary>
-    /// Tách các dòng chưa đủ điều kiện sang một phiếu nháp riêng
-    /// </summary>
     public async Task<Result<TachDongResponse>> TachDongChoXuLyAsync(
         long phieuId, TachDongChoXuLyRequest request, long actorId)
     {
-        if (request.DanhSachChiTietNhanTra == null || request.DanhSachChiTietNhanTra.Count == 0)
-            return Result<TachDongResponse>.Loi("DANH_SACH_RONG", "Phải chọn ít nhất 1 dòng để tách.");
-
         return await TransactionExecutionWrapper.ExecuteInTransactionAsync(_context, async () =>
         {
-            var phieuGoc = await LayPhieuNhanTraTheoIdAsync(phieuId);
+            var phieuGoc = await _truyVanService.LayPhieuNhanTraTheoIdAsync(phieuId);
             if (phieuGoc == null)
-                return Result<TachDongResponse>.Loi("PHIEU_NOT_FOUND", "Không tìm thấy phiếu nhận trả gốc.");
+                return Result<TachDongResponse>.Loi(DomainConstants.Errors.ReceiptNotFound, "Không tìm thấy phiếu nhận trả gốc.");
 
             if (phieuGoc.TrangThai == TrangThaiPhieuNhanTra.DaChot)
-                return Result<TachDongResponse>.Loi("PHIEU_NHAN_DA_CHOT", "Không thể tách dòng từ phiếu đã chốt.");
+                return Result<TachDongResponse>.Loi(DomainConstants.Errors.ReceiptFinalized, "Không thể tách dòng từ phiếu đã chốt.");
 
-            if (request.DanhSachChiTietNhanTra.Count >= phieuGoc.ChiTietNhanTras.Count)
-                return Result<TachDongResponse>.Loi("KHONG_THE_TACH_HET", "Không thể tách toàn bộ dòng. Phiếu gốc phải giữ lại ít nhất 1 dòng.");
+            var validTach = NhanTraValidationRules.KiemTraTachDong(request.DanhSachChiTietNhanTra, phieuGoc.ChiTietNhanTras.Count);
+            if (!validTach.ThanhCong)
+                return Result<TachDongResponse>.Loi(validTach.MaLoi!, validTach.ThongDiep!);
 
-            var nhanVien = await _context.LayNhanVienAsync(actorId);
-            if (nhanVien == null)
-                return Result<TachDongResponse>.Loi("NHAN_VIEN_NOT_FOUND", "Không tìm thấy thông tin nhân viên thao tác.");
+            var nvResult = await _context.LayNhanVienHopLeAsync(actorId);
+            if (!nvResult.ThanhCong)
+                return Result<TachDongResponse>.Loi(nvResult.MaLoi!, nvResult.ThongDiep!);
+            var nhanVien = nvResult.DuLieu!;
 
             int countPhieu = await _context.PhieuNhanTras.CountAsync(p => p.MaDonThue == phieuGoc.MaDonThue);
             int lanTraMoi = countPhieu + 1;
@@ -227,7 +211,7 @@ public class NhanTraService : INhanTraService
             {
                 MaDonThue = phieuGoc.MaDonThue,
                 MaNhanVien = nhanVien.MaNhanVien,
-                MaPhieuHienThi = $"PNT-DT{phieuGoc.MaDonThue:D4}-{lanTraMoi:D2}",
+                MaPhieuHienThi = DisplayCodeHelper.SinhMaPhieuNhanTra(phieuGoc.MaDonThue, lanTraMoi),
                 LanTra = lanTraMoi,
                 ThoiDiemLap = DateTime.UtcNow,
                 TrangThai = TrangThaiPhieuNhanTra.Nhap,
@@ -251,117 +235,115 @@ public class NhanTraService : INhanTraService
 
             await _context.SaveChangesAsync();
 
-            var resultGoc = await LayPhieuNhanTraTheoIdAsync(phieuGoc.MaPhieuNhanTra);
-            var resultMoi = await LayPhieuNhanTraTheoIdAsync(phieuMoi.MaPhieuNhanTra);
+            var loadedGoc = await _truyVanService.LayPhieuNhanTraTheoIdAsync(phieuGoc.MaPhieuNhanTra);
+            var loadedMoi = await _truyVanService.LayPhieuNhanTraTheoIdAsync(phieuMoi.MaPhieuNhanTra);
 
             return Result<TachDongResponse>.Ok(new TachDongResponse
             {
-                PhieuGoc = resultGoc!.ToResponse(),
-                PhieuMoi = resultMoi!.ToResponse()
+                PhieuGoc = loadedGoc!.ToResponse(),
+                PhieuMoi = loadedMoi!.ToResponse()
             });
         }, _logger, IsolationLevel.Serializable);
     }
 
-    /// <summary>
-    /// Quản trị viên phê duyệt kết luận mất thiết bị
-    /// </summary>
     public async Task<Result<ChiTietNhanTraResponse>> DuyetKetLuanMatAsync(
         long phieuId, long chiTietId, DuyetMatRequest request, long actorId)
     {
         return await TransactionExecutionWrapper.ExecuteInTransactionAsync(_context, async () =>
         {
-            var phieu = await _context.PhieuNhanTras
-                .Include(p => p.ChiTietNhanTras)
-                    .ThenInclude(ct => ct.ChiTietBanGiao)
-                        .ThenInclude(ctb => ctb.PhanCongThietBi)
-                            .ThenInclude(pc => pc.ThietBi)
-                .FirstOrDefaultAsync(p => p.MaPhieuNhanTra == phieuId);
-
+            var phieu = await _truyVanService.LayPhieuNhanTraTheoIdAsync(phieuId);
             if (phieu == null)
-                return Result<ChiTietNhanTraResponse>.Loi("PHIEU_NOT_FOUND", "Không tìm thấy phiếu nhận trả.");
+                return Result<ChiTietNhanTraResponse>.Loi(DomainConstants.Errors.ReceiptNotFound, "Không tìm thấy phiếu nhận trả.");
 
-            var ctnt = phieu.ChiTietNhanTras.FirstOrDefault(c => c.MaChiTietNhanTra == chiTietId);
-            if (ctnt == null)
-                return Result<ChiTietNhanTraResponse>.Loi("CHI_TIET_NOT_FOUND", "Không tìm thấy dòng kiểm tra thiết bị.");
+            if (phieu.TrangThai == TrangThaiPhieuNhanTra.DaChot)
+                return Result<ChiTietNhanTraResponse>.Loi(DomainConstants.Errors.ReceiptFinalized, "Phiếu nhận trả đã chốt.");
 
-            if (ctnt.KetLuan != "MatThietBi")
-                return Result<ChiTietNhanTraResponse>.Loi("KHONG_PHAI_MAT_THIET_BI",
-                    "Dòng này không có kết luận mất thiết bị, không thể thực hiện duyệt mất.");
+            var ct = phieu.ChiTietNhanTras.FirstOrDefault(c => c.MaChiTietNhanTra == chiTietId);
+            if (ct == null)
+                return Result<ChiTietNhanTraResponse>.Loi(DomainConstants.Errors.DetailNotFound, "Không tìm thấy chi tiết nhận trả.");
 
-            var phuPhi = await _context.PhuPhis.FindAsync(request.MaPhuPhiBoiThuong);
+            if (ct.KetLuan != DomainConstants.InspectionConclusions.Lost)
+                return Result<ChiTietNhanTraResponse>.Loi(DomainConstants.Errors.NotLostEquipment, "Dòng kiểm tra này không có kết luận mất thiết bị.");
+
+            var phuPhi = await _context.PhuPhis.FirstOrDefaultAsync(p =>
+                p.MaPhuPhi == request.MaPhuPhiBoiThuong &&
+                p.MaDonThue == phieu.MaDonThue &&
+                p.MaChiTietBanGiao == ct.MaChiTietBanGiao &&
+                p.LoaiPhi == DomainConstants.InspectionConclusions.Lost);
+
             if (phuPhi == null)
-                return Result<ChiTietNhanTraResponse>.Loi("PHU_PHI_NOT_FOUND", "Không tìm thấy phụ phí bồi thường được chỉ định.");
+                return Result<ChiTietNhanTraResponse>.Loi(DomainConstants.Errors.SurchargeNotFound,
+                    "Không tìm thấy khoản phụ phí bồi thường mất thiết bị hợp lệ cho dòng này.");
 
-            if (phuPhi.TrangThaiDuyet != "DaDuyet")
-                return Result<ChiTietNhanTraResponse>.Loi("KET_LUAN_MAT_CHUA_DU",
-                    "Phụ phí bồi thường mất thiết bị chưa được phê duyệt.");
+            if (phuPhi.TrangThaiDuyet != DomainConstants.Status.Approved)
+                return Result<ChiTietNhanTraResponse>.Loi(DomainConstants.Errors.LostConclusionIncomplete,
+                    "Khoản phụ phí bồi thường mất thiết bị chưa được phê duyệt.");
 
-            if (phuPhi.MaChiTietBanGiao != ctnt.MaChiTietBanGiao)
-                return Result<ChiTietNhanTraResponse>.Loi("PHU_PHI_KHONG_KHOP",
-                    "Phụ phí bồi thường không khớp với chi tiết bàn giao của thiết bị này.");
+            var nvResult = await _context.LayNhanVienHopLeAsync(actorId);
+            if (!nvResult.ThanhCong)
+                return Result<ChiTietNhanTraResponse>.Loi(nvResult.MaLoi!, "Không tìm thấy hồ sơ nhân viên của quản trị viên.");
+            var adminNv = nvResult.DuLieu!;
 
-            var admin = await _context.LayNhanVienAsync(actorId);
-            ctnt.MaNguoiDuyetMat = admin?.MaNhanVien ?? actorId;
-            ctnt.ThoiDiemDuyetMat = DateTime.UtcNow;
-            ctnt.GhiChu = (ctnt.GhiChu != null ? ctnt.GhiChu + "; " : "") +
-                          $"Duyệt mất: {request.LyDo} (Phụ phí #{request.MaPhuPhiBoiThuong})";
+            ct.MaNguoiDuyetMat = adminNv.MaNhanVien;
+            ct.ThoiDiemDuyetMat = DateTime.UtcNow;
+            ct.TrangThaiXuLy = DomainConstants.Status.ApprovedLost;
+            if (!string.IsNullOrEmpty(request.LyDo))
+                ct.GhiChu = (ct.GhiChu != null ? ct.GhiChu + "; " : "") + $"[Admin duyệt mất]: {request.LyDo}";
+            ct.ChiTietBanGiao.PhanCongThietBi.ThietBi.TrangThaiSuDung = TrangThaiThietBi.ThatLac;
 
-            ctnt.ChiTietBanGiao.PhanCongThietBi.ThietBi.TrangThaiSuDung = TrangThaiThietBi.ThatLac;
+            await _context.SaveChangesAsync();
 
-            return Result<ChiTietNhanTraResponse>.Ok(ctnt.ToResponse());
+            var reloaded = await _truyVanService.LayPhieuNhanTraTheoIdAsync(phieuId);
+            var updatedCt = reloaded!.ChiTietNhanTras.First(c => c.MaChiTietNhanTra == chiTietId);
+            return Result<ChiTietNhanTraResponse>.Ok(updatedCt.ToResponse());
         }, _logger, IsolationLevel.Serializable);
     }
 
-    /// <summary>
-    /// Chốt phiếu nhận trả: cập nhật trạng thái thiết bị, tạo bảo trì, cập nhật trạng thái đơn
-    /// </summary>
     public async Task<Result<NhanTraResponse>> ChotNhanTraAsync(long phieuId, long actorId)
     {
         return await TransactionExecutionWrapper.ExecuteInTransactionAsync(_context, async () =>
         {
-            var phieu = await LayPhieuNhanTraTheoIdAsync(phieuId);
+            var phieu = await _truyVanService.LayPhieuNhanTraTheoIdAsync(phieuId);
             if (phieu == null)
-                return Result<NhanTraResponse>.Loi("PHIEU_NOT_FOUND", "Không tìm thấy phiếu nhận trả.");
+                return Result<NhanTraResponse>.Loi(DomainConstants.Errors.ReceiptNotFound, "Không tìm thấy phiếu nhận trả.");
 
             if (phieu.TrangThai == TrangThaiPhieuNhanTra.DaChot)
             {
-                return Result<NhanTraResponse>.Ok(phieu.ToResponse());
+                int soConNoHienTai = await _truyVanService.DemThietBiConNoAsync(phieu.MaDonThue);
+                return Result<NhanTraResponse>.Ok(phieu.ToResponse(soConNoHienTai));
             }
 
-            var nhanVien = await _context.LayNhanVienAsync(actorId);
-            if (nhanVien == null)
-                return Result<NhanTraResponse>.Loi("NHAN_VIEN_NOT_FOUND", "Không tìm thấy thông tin nhân viên thao tác.");
+            var nvResult = await _context.LayNhanVienHopLeAsync(actorId);
+            if (!nvResult.ThanhCong)
+                return Result<NhanTraResponse>.Loi(nvResult.MaLoi!, "Không tìm thấy thông tin nhân viên chốt phiếu.");
+            var nhanVien = nvResult.DuLieu!;
 
-            // 1. Kiểm tra quy tắc nghiệp vụ qua Rule Engine / Specification
             var validation = await NhanTraValidationRules.KiemTraDieuKienChotAsync(phieu, _context);
             if (!validation.ThanhCong)
                 return Result<NhanTraResponse>.Loi(validation.MaLoi ?? "VALIDATION_FAILED", validation.ThongDiep ?? "Điều kiện kiểm tra không hợp lệ.");
 
             var canhBaoDonSau = new List<string>();
 
-            // 2. Cập nhật trạng thái từng thiết bị qua Strategy & quét cảnh báo xung đột qua Facade
             foreach (var ct in phieu.ChiTietNhanTras)
             {
                 var thietBi = ct.ChiTietBanGiao.PhanCongThietBi.ThietBi;
                 var trangThaiCu = thietBi.TrangThaiSuDung;
 
-                var strategy = _strategies.FirstOrDefault(s => s.CanHandle(ct.KetLuan ?? ""));
+                var strategy = _strategyFactory.GetStrategy(ct.KetLuan);
                 if (strategy != null)
                 {
                     await strategy.XuLySauKiemTraAsync(ct, thietBi, nhanVien, phieu.MaDonThue);
                 }
 
-                _context.LichSuTinhTrangThietBis.Add(new LichSuTinhTrangThietBi
-                {
-                    MaThietBi = thietBi.MaThietBi,
-                    MaNguoiThucHien = actorId,
-                    TrangThaiTruoc = trangThaiCu.ToString(),
-                    TrangThaiSau = thietBi.TrangThaiSuDung.ToString(),
-                    TinhTrangTruoc = ct.ChiTietBanGiao.TinhTrangTruocThue,
-                    TinhTrangSau = ct.TinhTrangSauThue,
-                    ThoiDiem = DateTime.UtcNow,
-                    LyDo = $"Nhận trả đợt {phieu.LanTra}: Kết luận {ct.KetLuan}"
-                });
+                AuditLogHelper.GhiLichSuThietBi(
+                    _context,
+                    thietBi.MaThietBi,
+                    actorId,
+                    trangThaiCu.ToString(),
+                    thietBi.TrangThaiSuDung.ToString(),
+                    ct.ChiTietBanGiao.TinhTrangTruocThue,
+                    ct.TinhTrangSauThue,
+                    $"Nhận trả đợt {phieu.LanTra}: Kết luận {ct.KetLuan}");
 
                 if (thietBi.TrangThaiSuDung != TrangThaiThietBi.SanSang)
                 {
@@ -374,20 +356,8 @@ public class NhanTraService : INhanTraService
                 }
             }
 
-            // 3. Đếm lại tổng số đồ còn nợ trên toàn đơn
-            int tongGiao = await _context.ChiTietBanGiaos
-                .CountAsync(ctb => ctb.PhieuBanGiao.MaDonThue == phieu.MaDonThue);
+            int soConNo = await _truyVanService.DemThietBiConNoAsync(phieu.MaDonThue, phieu.MaPhieuNhanTra);
 
-            var allSettledCtbIds = await _context.ChiTietNhanTras
-                .Where(ct => ct.PhieuNhanTra.MaDonThue == phieu.MaDonThue &&
-                             (ct.PhieuNhanTra.TrangThai == TrangThaiPhieuNhanTra.DaChot || ct.MaPhieuNhanTra == phieu.MaPhieuNhanTra))
-                .Select(ct => ct.MaChiTietBanGiao)
-                .Distinct()
-                .CountAsync();
-
-            int soConNo = Math.Max(0, tongGiao - allSettledCtbIds);
-
-            // 4. Chốt phiếu qua Rich Domain Method
             phieu.ChotPhieu(nhanVien.HoTen ?? "Nhân viên", soConNo == 0);
 
             if (soConNo > 0)
@@ -398,33 +368,16 @@ public class NhanTraService : INhanTraService
             {
                 phieu.DonThue.TrangThai = TrangThaiDonThue.ChoDoiSoat;
 
-                _context.LichSuTrangThaiDons.Add(new LichSuTrangThaiDon
-                {
-                    MaDonThue = phieu.MaDonThue,
-                    TrangThaiTruoc = TrangThaiDonThue.DangThue.ToString(),
-                    TrangThaiSau = TrangThaiDonThue.ChoDoiSoat.ToString(),
-                    ThoiDiem = DateTime.UtcNow,
-                    LyDo = $"Hoàn tất nhận trả toàn bộ thiết bị (Đợt cuối - Phiếu {phieu.MaPhieuHienThi})"
-                });
+                AuditLogHelper.GhiLichSuDon(
+                    _context,
+                    phieu.MaDonThue,
+                    actorId,
+                    TrangThaiDonThue.DangThue.ToString(),
+                    TrangThaiDonThue.ChoDoiSoat.ToString(),
+                    $"Hoàn tất nhận trả toàn bộ thiết bị (Đợt cuối - Phiếu {phieu.MaPhieuHienThi})");
             }
 
             return Result<NhanTraResponse>.Ok(phieu.ToResponse(soConNo, canhBaoDonSau));
         }, _logger, IsolationLevel.Serializable);
-    }
-
-    // ─── PRIVATE HELPERS ───
-
-    private async Task<PhieuNhanTra?> LayPhieuNhanTraTheoIdAsync(long phieuId)
-    {
-        return await _context.PhieuNhanTras
-            .Include(p => p.DonThue)
-            .Include(p => p.ChiTietNhanTras)
-                .ThenInclude(ct => ct.ChiTietBanGiao)
-                    .ThenInclude(ctb => ctb.PhanCongThietBi)
-                        .ThenInclude(pc => pc.ThietBi)
-                            .ThenInclude(tb => tb.SanPhamHienTai)
-            .Include(p => p.ChiTietNhanTras)
-                .ThenInclude(ct => ct.NguoiDuyetMat)
-            .FirstOrDefaultAsync(p => p.MaPhieuNhanTra == phieuId);
     }
 }

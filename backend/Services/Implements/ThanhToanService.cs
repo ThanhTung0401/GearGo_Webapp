@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using GearGo.Data;
+using GearGo.Helpers;
 using GearGo.Models.Common;
 using GearGo.Models.DTOs.HoanTien;
 using GearGo.Models.DTOs.ThanhToan;
@@ -25,20 +27,20 @@ public class ThanhToanService : IThanhToanService
     private readonly IHoanTienService? _hoanTienService;
     private readonly IThongBaoService? _thongBaoService;
     private readonly IKhuyenMaiService? _khuyenMaiService;
-    private readonly ILogger<ThanhToanService>? _logger;
+    private readonly ILogger<ThanhToanService> _logger;
 
     public ThanhToanService(
         ApplicationDbContext context,
+        ILogger<ThanhToanService> logger,
         IHoanTienService? hoanTienService = null,
         IThongBaoService? thongBaoService = null,
-        IKhuyenMaiService? khuyenMaiService = null,
-        ILogger<ThanhToanService>? logger = null)
+        IKhuyenMaiService? khuyenMaiService = null)
     {
         _context = context;
+        _logger = logger;
         _hoanTienService = hoanTienService;
         _thongBaoService = thongBaoService;
         _khuyenMaiService = khuyenMaiService;
-        _logger = logger;
     }
 
     /// <summary>
@@ -46,101 +48,108 @@ public class ThanhToanService : IThanhToanService
     /// </summary>
     public async Task<Result<string>> XacNhanThanhToanAsync(XacNhanThanhToanRequest request)
     {
-        using var transaction = await _context.Database.BeginTransactionAsync();
-
-        try
+        return await TransactionExecutionWrapper.ExecuteInTransactionAsync(_context, async () =>
         {
-            // 1. Tìm đơn thuê
+            // 1. Idempotency ưu tiên trước: nếu giao dịch đối tác cho đơn này đã được ghi nhận ThanhCong -> trả kết quả cũ ngay
+            if (!string.IsNullOrWhiteSpace(request.MaGiaoDichDoiTac))
+            {
+                var giaoDichCu = await _context.ThanhToans
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(t => t.MaDonThue == request.MaDonThue
+                                              && t.MaGiaoDichCong == request.MaGiaoDichDoiTac
+                                              && t.TrangThai == KietDomainConstants.PhieuStatus.ThanhCong);
+
+                if (giaoDichCu != null)
+                {
+                    return Result<string>.Ok(giaoDichCu.MaYeuCau);
+                }
+            }
+
+            // 2. Tìm đơn thuê kèm Giữ chỗ và Lượt sử dụng khuyến mãi
             var donThue = await _context.DonThues
                 .Include(d => d.ChiTietDonThues)
                     .ThenInclude(c => c.GiuCho)
+                .Include(d => d.LuotSuDungKhuyenMai)
                 .FirstOrDefaultAsync(d => d.MaDonThue == request.MaDonThue);
 
             if (donThue == null)
-                return Result<string>.Loi("DON_THUE_NOT_FOUND", "Không tìm thấy đơn thuê.");
+                return Result<string>.Loi(KietDomainConstants.ErrorCodes.DonThueNotFound, "Không tìm thấy đơn thuê.");
 
-            // 2. Tạo bản ghi Thanh toán theo đúng chuẩn thuộc tính ERD
-            var maYeuCau = $"PAY_{DateTime.UtcNow:yyyyMMddHHmmss}_{Guid.NewGuid().ToString("N")[..8]}";
-            var thanhToanMoi = new Models.Entities.ThanhToan
+            var now = DateTime.UtcNow;
+            var maYeuCau = DisplayCodeHelper.SinhMaYeuCauThanhToan(now);
+
+            var thanhToanMoi = new ThanhToan
             {
                 MaDonThue = donThue.MaDonThue,
                 MaYeuCau = maYeuCau,
                 PhuongThuc = request.PhuongThucThanhToan,
                 TongSoTien = request.SoTienDaTra,
                 MaGiaoDichCong = request.MaGiaoDichDoiTac,
-                TrangThai = "ThanhCong",
-                ThoiDiemTao = DateTime.UtcNow,
-                ThoiDiemThanhCong = DateTime.UtcNow
+                TrangThai = KietDomainConstants.PhieuStatus.ThanhCong,
+                ThoiDiemTao = now,
+                ThoiDiemThanhCong = now
             };
 
-            // Phân loại nguồn thu thành CHI_TIET_THANH_TOAN (TienThue / TienCoc) phục vụ hoàn tiền và hủy đơn
-            var tienThue = Math.Max(0, donThue.TongTienThueTruocGiam - donThue.TongTienGiam);
-            var tienCoc = Math.Max(0, donThue.TongTienCoc);
+            // 3. Tách 2 dòng ChiTietThanhToan (TienThue và TienCoc) theo đặc tả UC06
+            decimal tienThue = Math.Max(0, donThue.TongTienThueTruocGiam - donThue.TongTienGiam);
+            decimal tienCoc = Math.Max(0, donThue.TongTienCoc);
 
-            if (tienThue > 0)
+            thanhToanMoi.ChiTietThanhToans.Add(new ChiTietThanhToan
             {
-                thanhToanMoi.ChiTietThanhToans.Add(new ChiTietThanhToan
-                {
-                    MucDich = MucDichThanhToan.TienThue,
-                    SoTien = tienThue,
-                    ThanhToan = thanhToanMoi
-                });
+                MucDich = KietDomainConstants.MucDichGiaoDich.TienThue,
+                SoTien = tienThue,
+                ThanhToan = thanhToanMoi
+            });
+
+            thanhToanMoi.ChiTietThanhToans.Add(new ChiTietThanhToan
+            {
+                MucDich = KietDomainConstants.MucDichGiaoDich.TienCoc,
+                SoTien = tienCoc,
+                ThanhToan = thanhToanMoi
+            });
+
+            // 4. Kiểm tra nhánh đối soát nâng cao (UC06 mục 10.11):
+            // Nếu đơn đã chuyển sang HetHan / KhachHuy / CuaHangHuy hoặc đã DaXacNhan bởi giao dịch khác mà tiền vẫn thu ở gateway
+            if (donThue.TrangThai != TrangThaiDonThue.ChoThanhToan)
+            {
+                thanhToanMoi.TrangThaiDoiChieu = KietDomainConstants.PhieuStatus.CanDoiSoat;
+                thanhToanMoi.GhiChu = $"Giao dịch thu tiền khi đơn đang ở trạng thái {donThue.TrangThai} — cần đối soát/hoàn tiền.";
+                _context.ThanhToans.Add(thanhToanMoi);
+
+                _logger.LogWarning(
+                    "Phát sinh giao dịch cần đối soát #{MaYeuCau} cho đơn #{MaDonThue} (Trạng thái đơn: {TrangThai}).",
+                    maYeuCau, donThue.MaDonThue, donThue.TrangThai);
+
+                return Result<string>.Ok(thanhToanMoi.MaYeuCau);
             }
 
-            if (tienCoc > 0)
-            {
-                thanhToanMoi.ChiTietThanhToans.Add(new ChiTietThanhToan
-                {
-                    MucDich = MucDichThanhToan.TienCoc,
-                    SoTien = tienCoc,
-                    ThanhToan = thanhToanMoi
-                });
-            }
-
-            // Trường hợp dự phòng nếu đơn không có cả 2 mà số tiền đã trả > 0
-            if (!thanhToanMoi.ChiTietThanhToans.Any() && request.SoTienDaTra > 0)
-            {
-                thanhToanMoi.ChiTietThanhToans.Add(new ChiTietThanhToan
-                {
-                    MucDich = MucDichThanhToan.TienThue,
-                    SoTien = request.SoTienDaTra,
-                    ThanhToan = thanhToanMoi
-                });
-            }
-
+            // 5. Luồng chuẩn: Đơn đang ChoThanhToan -> Xác nhận đơn + Giữ chỗ + Khuyến mãi + Lịch sử
             _context.ThanhToans.Add(thanhToanMoi);
-
-            // 3. Xác nhận thanh toán
             donThue.XacNhanThanhToan();
 
-            // 4. Lưu vào Lịch sử đơn
-            var lichSu = new Models.Entities.LichSuTrangThaiDon
+            if (donThue.LuotSuDungKhuyenMai != null && donThue.LuotSuDungKhuyenMai.TrangThai == KietDomainConstants.PhieuStatus.DangGiu)
             {
-                MaDonThue = donThue.MaDonThue,
-                TrangThaiTruoc = TrangThaiDonThue.ChoThanhToan.ToString(),
-                TrangThaiSau = TrangThaiDonThue.DaXacNhan.ToString(),
-                ThoiDiem = DateTime.UtcNow,
-                LyDo = $"Khách hàng đã thanh toán qua {request.PhuongThucThanhToan}"
-            };
-            _context.LichSuTrangThaiDons.Add(lichSu);
+                donThue.LuotSuDungKhuyenMai.TrangThai = KietDomainConstants.PhieuStatus.DaSuDung;
+                donThue.LuotSuDungKhuyenMai.ThoiDiemSuDung = now;
+            }
 
-            // 4.1. Xác nhận sử dụng lượt khuyến mãi nếu đơn có mã (W6-T3)
+            // 5.1. Xác nhận sử dụng lượt khuyến mãi nếu đơn có mã (W6-T3)
             if (_khuyenMaiService != null)
             {
                 await _khuyenMaiService.XacNhanDaSuDungAsync(donThue.MaDonThue);
             }
 
-            // 5. Lưu toàn bộ vào DB và Commit
-            await _context.SaveChangesAsync();
-            await transaction.CommitAsync();
+            AuditLogHelper.GhiLichSuDon(
+                _context,
+                donThue.MaDonThue,
+                null,
+                TrangThaiDonThue.ChoThanhToan.ToString(),
+                TrangThaiDonThue.DaXacNhan.ToString(),
+                $"Khách hàng đã thanh toán qua {request.PhuongThucThanhToan}",
+                now);
 
             return Result<string>.Ok(thanhToanMoi.MaYeuCau);
-        }
-        catch (Exception e)
-        {
-            await transaction.RollbackAsync();
-            return Result<string>.Loi("SYS_ERROR", $"Lỗi hệ thống: {e.Message}");
-        }
+        }, _logger, IsolationLevel.Serializable);
     }
 
     /// <summary>
@@ -148,11 +157,7 @@ public class ThanhToanService : IThanhToanService
     /// </summary>
     public async Task<Result<YeuCauThuResponse>> TaoThuBoSungAsync(TaoThuBoSungRequest request, long actorId)
     {
-        // Kiểm tra xem đã có transaction bên ngoài đang mở chưa (ví dụ từ DoiSoatService) để tránh lỗi nested transaction
-        var hasExistingTransaction = _context.Database.CurrentTransaction != null;
-        var transaction = hasExistingTransaction ? null : await _context.Database.BeginTransactionAsync();
-
-        try
+        return await TransactionExecutionWrapper.ExecuteInTransactionAsync(_context, async () =>
         {
             // Kiểm tra bảng đối soát
             var doiSoat = await _context.DoiSoatTienCocs
@@ -160,17 +165,18 @@ public class ThanhToanService : IThanhToanService
                 .FirstOrDefaultAsync(ds => ds.MaDoiSoat == request.MaDoiSoat);
 
             if (doiSoat == null)
-                return Result<YeuCauThuResponse>.Loi("DOI_SOAT_NOT_FOUND", "Không tìm thấy bảng đối soát.");
+                return Result<YeuCauThuResponse>.Loi(KietDomainConstants.ErrorCodes.DoiSoatNotFound, "Không tìm thấy bảng đối soát.");
 
             if (doiSoat.SoTienCanThuThem <= 0)
-                return Result<YeuCauThuResponse>.Loi("KHONG_CO_NGHIA_VU_THU_THEM", "Bảng tính không thiếu hoặc chưa được xác nhận.");
+                return Result<YeuCauThuResponse>.Loi(KietDomainConstants.ErrorCodes.KhongCoNghiaVuThuThem, "Bảng tính không thiếu hoặc chưa được xác nhận.");
 
             // Kiểm tra xem đã có giao dịch nào đang chờ hoặc đã thành công cho đối soát này chưa
             var existingThanhToan = await _context.ThanhToans
                 .Include(t => t.ChiTietThanhToans)
-                .FirstOrDefaultAsync(t => t.MaDonThue == doiSoat.MaDonThue &&
-                                          (t.TrangThai == "ChoThanhToan" || t.TrangThai == "ThanhCong") &&
-                                          t.GhiChu != null && t.GhiChu.Contains($"DoiSoat_{request.MaDoiSoat}"));
+                .FirstOrDefaultAsync(t => t.MaDonThue == doiSoat.MaDonThue
+                                          && (t.TrangThai == KietDomainConstants.PhieuStatus.ChoThanhToan || t.TrangThai == KietDomainConstants.PhieuStatus.ThanhCong)
+                                          && t.GhiChu != null
+                                          && t.GhiChu.Contains($"DoiSoat_{request.MaDoiSoat}"));
 
             if (existingThanhToan != null)
             {
@@ -180,14 +186,15 @@ public class ThanhToanService : IThanhToanService
                     MaThanhToan = existingThanhToan.MaThanhToan,
                     MaYeuCau = existingThanhToan.MaYeuCau,
                     SoTien = existingThanhToan.TongSoTien,
-                    MucDich = chiTietExist?.MucDich ?? "ThuBoSung",
+                    MucDich = chiTietExist?.MucDich ?? KietDomainConstants.MucDichGiaoDich.ThuBoSung,
                     TrangThai = existingThanhToan.TrangThai,
                     PaymentUrl = $"https://mock-gateway.geargo.vn/pay?id={existingThanhToan.MaYeuCau}",
-                    CanDoiChieu = existingThanhToan.TrangThaiDoiChieu == "CanDoiChieu"
+                    CanDoiChieu = existingThanhToan.TrangThaiDoiChieu == KietDomainConstants.PhieuStatus.CanDoiChieu
                 });
             }
 
-            var maYeuCau = $"TOPUP_{DateTime.UtcNow:yyyyMMddHHmmss}_{Guid.NewGuid().ToString("N")[..8]}";
+            var now = DateTime.UtcNow;
+            var maYeuCau = DisplayCodeHelper.SinhMaYeuCauThanhToan(now);
 
             var thanhToanMoi = new Models.Entities.ThanhToan
             {
@@ -195,15 +202,15 @@ public class ThanhToanService : IThanhToanService
                 MaYeuCau = maYeuCau,
                 PhuongThuc = string.IsNullOrEmpty(request.PhuongThucDuocHoTro) ? "VNPAY" : request.PhuongThucDuocHoTro,
                 TongSoTien = doiSoat.SoTienCanThuThem,
-                TrangThai = "ChoThanhToan",
+                TrangThai = KietDomainConstants.PhieuStatus.ChoThanhToan,
                 TrangThaiDoiChieu = "ChuaDoiChieu",
-                ThoiDiemTao = DateTime.UtcNow,
-                GhiChu = $"ThuBoSung_DoiSoat_{request.MaDoiSoat}" // Metadata liên kết đối soát
+                ThoiDiemTao = now,
+                GhiChu = $"ThuBoSung_DoiSoat_{request.MaDoiSoat}"
             };
 
             var chiTietThanhToan = new Models.Entities.ChiTietThanhToan
             {
-                MucDich = MucDichThanhToan.ThuBoSung,
+                MucDich = KietDomainConstants.MucDichGiaoDich.ThuBoSung,
                 SoTien = doiSoat.SoTienCanThuThem,
                 ThanhToan = thanhToanMoi
             };
@@ -212,30 +219,18 @@ public class ThanhToanService : IThanhToanService
             _context.ThanhToans.Add(thanhToanMoi);
 
             await _context.SaveChangesAsync();
-            if (transaction != null)
-            {
-                await transaction.CommitAsync();
-            }
 
             return Result<YeuCauThuResponse>.Ok(new YeuCauThuResponse
             {
                 MaThanhToan = thanhToanMoi.MaThanhToan,
                 MaYeuCau = maYeuCau,
                 SoTien = doiSoat.SoTienCanThuThem,
-                MucDich = MucDichThanhToan.ThuBoSung,
-                TrangThai = "ChoThanhToan",
+                MucDich = KietDomainConstants.MucDichGiaoDich.ThuBoSung,
+                TrangThai = KietDomainConstants.PhieuStatus.ChoThanhToan,
                 PaymentUrl = $"https://mock-gateway.geargo.vn/pay?id={maYeuCau}",
                 CanDoiChieu = false
             });
-        }
-        catch (Exception e)
-        {
-            if (transaction != null)
-            {
-                await transaction.RollbackAsync();
-            }
-            return Result<YeuCauThuResponse>.Loi("SYS_ERROR", $"Lỗi hệ thống khi tạo thu bổ sung: {e.Message}");
-        }
+        }, _logger);
     }
 
     /// <summary>
@@ -248,7 +243,7 @@ public class ThanhToanService : IThanhToanService
             .FirstOrDefaultAsync(t => t.MaYeuCau == maYeuCau);
 
         if (thanhToan == null)
-            return Result<YeuCauThuResponse>.Loi("GIAO_DICH_NOT_FOUND", "Không tìm thấy giao dịch.");
+            return Result<YeuCauThuResponse>.Loi(KietDomainConstants.ErrorCodes.GiaoDichNotFound, "Không tìm thấy giao dịch.");
 
         var chiTiet = thanhToan.ChiTietThanhToans.FirstOrDefault();
 
@@ -259,8 +254,9 @@ public class ThanhToanService : IThanhToanService
             SoTien = thanhToan.TongSoTien,
             MucDich = chiTiet?.MucDich ?? "",
             TrangThai = thanhToan.TrangThai,
-            PaymentUrl = thanhToan.TrangThai == "ChoThanhToan" ? $"https://mock-gateway.geargo.vn/pay?id={thanhToan.MaYeuCau}" : null,
-            CanDoiChieu = thanhToan.TrangThaiDoiChieu == "CanDoiChieu"
+            PaymentUrl = thanhToan.TrangThai == KietDomainConstants.PhieuStatus.ChoThanhToan ? $"https://mock-gateway.geargo.vn/pay?id={thanhToan.MaYeuCau}" : null,
+            CanDoiChieu = thanhToan.TrangThaiDoiChieu == KietDomainConstants.PhieuStatus.CanDoiChieu
+                          || thanhToan.TrangThaiDoiChieu == KietDomainConstants.PhieuStatus.CanDoiSoat
         });
     }
 
@@ -366,13 +362,16 @@ public class ThanhToanService : IThanhToanService
             }
 
             // 7. Gửi thông báo sự kiện
-            await _thongBaoService.TaoThongBaoSuKienAsync(new SuKienThongBaoCommand(
-                thanhToan.MaDonThue,
-                LoaiSuKienThongBao.ThanhToanBoSung,
-                MaSuKienThongBao.ThanhToanBoSung(thanhToan.MaThanhToan),
-                "Thanh toán thu bổ sung thành công",
-                $"Bạn đã thanh toán thành công số tiền thu bổ sung {thanhToan.TongSoTien:N0} đ cho đơn hàng #{thanhToan.MaDonThue}."
-            ));
+            if (_thongBaoService != null)
+            {
+                await _thongBaoService.TaoThongBaoSuKienAsync(new SuKienThongBaoCommand(
+                    thanhToan.MaDonThue,
+                    LoaiSuKienThongBao.ThanhToanBoSung,
+                    MaSuKienThongBao.ThanhToanBoSung(thanhToan.MaThanhToan),
+                    "Thanh toán thu bổ sung thành công",
+                    $"Bạn đã thanh toán thành công số tiền thu bổ sung {thanhToan.TongSoTien:N0} đ cho đơn hàng #{thanhToan.MaDonThue}."
+                ));
+            }
 
             // Quan trọng: KHÔNG đổi trạng thái đơn thuê về DaXacNhan/DangThue
             await _context.SaveChangesAsync();

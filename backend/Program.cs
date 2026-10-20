@@ -137,7 +137,9 @@ builder.Services.AddScoped<IInspectionStrategy, PassInspectionStrategy>();
 builder.Services.AddScoped<IInspectionStrategy, CleaningInspectionStrategy>();
 builder.Services.AddScoped<IInspectionStrategy, DamageInspectionStrategy>();
 builder.Services.AddScoped<IInspectionStrategy, LostInspectionStrategy>();
+builder.Services.AddScoped<IInspectionStrategyFactory, InspectionStrategyFactory>();
 builder.Services.AddScoped<IDeviceConflictDetector, DeviceConflictDetector>();
+builder.Services.AddScoped<IVongDoiThietBiService, VongDoiThietBiService>();
 builder.Services.AddScoped<IBaoCaoVanHanhService, BaoCaoVanHanhService>();
 
 // ── W5-T6 & W5-T8 (Kiện Minh): Đánh giá sản phẩm, Kiểm duyệt và Hàng chờ thông báo ──
