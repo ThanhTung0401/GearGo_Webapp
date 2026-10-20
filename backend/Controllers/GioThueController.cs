@@ -80,5 +80,12 @@ namespace GearGo.Controllers
             var result = await _gioThueService.ApMaKhuyenMaiAsync(GetMaKhachHang(), req);
             return Ok(result);
         }
+
+        [HttpDelete("ma-giam-gia")]
+        public async Task<IActionResult> BoKhuyenMai()
+        {
+            var result = await _gioThueService.BoMaKhuyenMaiAsync(GetMaKhachHang());
+            return Ok(result);
+        }
     }
 }

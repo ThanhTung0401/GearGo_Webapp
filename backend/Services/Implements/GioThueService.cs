@@ -12,14 +12,16 @@ namespace GearGo.Services.Implements
         private readonly ApplicationDbContext _context;
         private readonly IBaoGiaService _baoGiaService;
         
-        // TODO: Mở comment 2 dòng này khi team gộp code (Người 2, Người 3)
-        // private readonly IKhaDungService _khaDungService;
-        // private readonly IKhuyenMaiService _khuyenMaiService;
+        private readonly IKhuyenMaiService _khuyenMaiService;
 
-        public GioThueService(ApplicationDbContext context, IBaoGiaService baoGiaService)
+        public GioThueService(
+            ApplicationDbContext context, 
+            IBaoGiaService baoGiaService,
+            IKhuyenMaiService khuyenMaiService)
         {
             _context = context;
             _baoGiaService = baoGiaService;
+            _khuyenMaiService = khuyenMaiService;
         }
 
         // Chuyển đổi linh hoạt giữa MaTaiKhoan hoặc MaKhachHang để đảm bảo ràng buộc ngoại khóa KHACH_HANG
@@ -96,9 +98,36 @@ namespace GearGo.Services.Implements
                 MucCocMoiThietBi = c.SanPham.MucCocMoiThietBi
             }).ToList();
 
-            // 2. Tính toán tiền giảm khuyến mãi (Giả lập chờ KhuyenMaiService)
+            // 2. Tính toán tiền giảm khuyến mãi chính xác qua IKhuyenMaiService (W6-T3)
             decimal tienGiamTuKhuyenMai = 0; 
-            // TODO: tienGiamTuKhuyenMai = await _khuyenMaiService.KiemTraApDungAsync(...);
+            if (gio.KhuyenMai != null)
+            {
+                int soNgayThue = (int)Math.Ceiling((gio.GioTraDuKien.Value - gio.GioNhanDuKien.Value).TotalDays);
+                soNgayThue = Math.Max(1, soNgayThue);
+
+                var kmItems = gio.ChiTietGioThues.Select(c => new GearGo.Models.DTOs.KhuyenMai.DongBaoGiaItem
+                {
+                    MaSanPham = c.MaSanPham,
+                    MaDanhMuc = c.SanPham?.MaDanhMuc,
+                    SoLuong = c.SoLuong,
+                    DonGiaThueMoiNgay = c.SanPham?.GiaThueMoiNgay ?? 0,
+                    SoNgay = soNgayThue,
+                    TienCocDong = (c.SanPham?.MucCocMoiThietBi ?? 0) * c.SoLuong
+                }).ToList();
+
+                var kqKm = await _khuyenMaiService.KiemTraApDungChiTietAsync(gio.KhuyenMai.MaGiamGia, gio.MaKhachHang, kmItems);
+                if (kqKm.HopLe)
+                {
+                    tienGiamTuKhuyenMai = kqKm.TongGiamGia;
+                }
+                else
+                {
+                    // Mã không còn thỏa mãn điều kiện giỏ hàng thì tự động bỏ gắn mã
+                    gio.MaKhuyenMai = null;
+                    await _context.SaveChangesAsync();
+                    response.MaKhuyenMaiApDung = null;
+                }
+            }
 
             // 3. Gọi IBaoGiaService tính toán xương sống
             var baoGia = _baoGiaService.TinhBaoGia(gio.GioNhanDuKien.Value, gio.GioTraDuKien.Value, danhSachDong, tienGiamTuKhuyenMai);
@@ -201,12 +230,47 @@ namespace GearGo.Services.Implements
         {
             var gio = await GetOrCreateGioAsync(maKhachHang);
             
-            var km = await _context.Set<KhuyenMai>().FirstOrDefaultAsync(k => k.MaGiamGia == req.MaGiamGia);
-            if (km == null) throw new DuLieuKhongHopLeException("MA_GIAM_GIA_KHONG_HOP_LE", "Mã giảm giá không hợp lệ");
+            if (string.IsNullOrWhiteSpace(req.MaGiamGia))
+            {
+                return await BoMaKhuyenMaiAsync(maKhachHang);
+            }
 
-            gio.MaKhuyenMai = km.MaKhuyenMai;
+            if (gio.GioNhanDuKien == null || gio.GioTraDuKien == null || !gio.ChiTietGioThues.Any())
+            {
+                throw new DuLieuKhongHopLeException("GIO_HANG_CHUA_DAY_DU", "Vui lòng chọn thời gian thuê và có ít nhất 1 sản phẩm trước khi áp mã.");
+            }
+
+            int soNgayThue = (int)Math.Ceiling((gio.GioTraDuKien.Value - gio.GioNhanDuKien.Value).TotalDays);
+            soNgayThue = Math.Max(1, soNgayThue);
+
+            var kmItems = gio.ChiTietGioThues.Select(c => new GearGo.Models.DTOs.KhuyenMai.DongBaoGiaItem
+            {
+                MaSanPham = c.MaSanPham,
+                MaDanhMuc = c.SanPham?.MaDanhMuc,
+                SoLuong = c.SoLuong,
+                DonGiaThueMoiNgay = c.SanPham?.GiaThueMoiNgay ?? 0,
+                SoNgay = soNgayThue,
+                TienCocDong = (c.SanPham?.MucCocMoiThietBi ?? 0) * c.SoLuong
+            }).ToList();
+
+            var checkKm = await _khuyenMaiService.KiemTraApDungChiTietAsync(req.MaGiamGia, gio.MaKhachHang, kmItems);
+            if (!checkKm.HopLe)
+            {
+                throw new DuLieuKhongHopLeException("MA_GIAM_GIA_KHONG_HOP_LE", checkKm.LyDoKhongHopLe ?? "Mã giảm giá không hợp lệ");
+            }
+
+            gio.MaKhuyenMai = checkKm.MaKhuyenMai;
             gio.NgayCapNhat = DateTime.UtcNow;
             
+            await _context.SaveChangesAsync();
+            return await BuildResponseAsync(gio);
+        }
+
+        public async Task<GioThueResponse> BoMaKhuyenMaiAsync(long maKhachHang)
+        {
+            var gio = await GetOrCreateGioAsync(maKhachHang);
+            gio.MaKhuyenMai = null;
+            gio.NgayCapNhat = DateTime.UtcNow;
             await _context.SaveChangesAsync();
             return await BuildResponseAsync(gio);
         }

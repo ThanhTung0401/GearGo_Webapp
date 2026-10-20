@@ -102,19 +102,39 @@ public class DonThueService : IDonThueService
             // 6. Xử lý khuyến mãi nếu có
             decimal tongTienGiam = 0;
             KhuyenMai? khuyenMaiApDung = null;
+            GearGo.Models.DTOs.KhuyenMai.KiemTraMaResult? kqKmChiTiet = null;
 
             if (!string.IsNullOrWhiteSpace(request.MaKhuyenMai))
             {
                 try
                 {
-                    var kqKm = await _khuyenMaiService.KiemTraApDungAsync(
+                    var kmItems = request.ChiTiet.Select(item =>
+                    {
+                        var sp = sanPhams[item.MaSanPham];
+                        return new GearGo.Models.DTOs.KhuyenMai.DongBaoGiaItem
+                        {
+                            MaSanPham = item.MaSanPham,
+                            MaDanhMuc = sp.MaDanhMuc,
+                            SoLuong = item.SoLuong,
+                            DonGiaThueMoiNgay = sp.GiaThueMoiNgay,
+                            SoNgay = soNgayThue,
+                            TienCocDong = sp.MucCocMoiThietBi * item.SoLuong
+                        };
+                    }).ToList();
+
+                    kqKmChiTiet = await _khuyenMaiService.KiemTraApDungChiTietAsync(
                         request.MaKhuyenMai, 
                         request.MaKhachHang, 
-                        danhSachSpIds, 
-                        tongTienThueTruocGiam);
+                        kmItems);
 
-                    tongTienGiam = kqKm.SoTienDuocGiam;
-                    khuyenMaiApDung = await _context.KhuyenMais.FirstOrDefaultAsync(k => k.MaKhuyenMai == kqKm.MaKhuyenMai);
+                    if (!kqKmChiTiet.HopLe)
+                    {
+                        await transaction.RollbackAsync();
+                        return Result<DonThueResponse>.Loi("KHUYEN_MAI_KHONG_HOP_LE", kqKmChiTiet.LyDoKhongHopLe ?? "Mã giảm giá không hợp lệ");
+                    }
+
+                    tongTienGiam = kqKmChiTiet.TongGiamGia;
+                    khuyenMaiApDung = await _context.KhuyenMais.FirstOrDefaultAsync(k => k.MaKhuyenMai == kqKmChiTiet.MaKhuyenMai);
                 }
                 catch (KhuyenMaiKhongHopLeException ex)
                 {
@@ -155,27 +175,15 @@ public class DonThueService : IDonThueService
             await _context.SaveChangesAsync();
 
             // 8. Tạo ChiTietDonThue & GiuCho tương ứng
-            // Phân bổ tiền giảm cho từng dòng
-            decimal tienGiamConLai = tongTienGiam;
+            // Sử dụng kết quả phân bổ từ PhanBoCacDong của IKhuyenMaiService (W6-T3)
+            var mapGiamDong = kqKmChiTiet?.PhanBoCacDong.ToDictionary(p => p.MaSanPham, p => p.TienGiam)
+                              ?? new Dictionary<long, decimal>();
+
             for (int i = 0; i < request.ChiTiet.Count; i++)
             {
                 var item = request.ChiTiet[i];
                 var sp = sanPhams[item.MaSanPham];
-                var tienThueDong = sp.GiaThueMoiNgay * item.SoLuong * soNgayThue;
-
-                decimal tienGiamDong = 0;
-                if (tongTienThueTruocGiam > 0 && tongTienGiam > 0)
-                {
-                    if (i == request.ChiTiet.Count - 1)
-                    {
-                        tienGiamDong = tienGiamConLai; // Dòng cuối nhận phần làm tròn còn lại
-                    }
-                    else
-                    {
-                        tienGiamDong = Math.Round((tienThueDong / tongTienThueTruocGiam) * tongTienGiam, 0);
-                        tienGiamConLai -= tienGiamDong;
-                    }
-                }
+                decimal tienGiamDong = mapGiamDong.TryGetValue(item.MaSanPham, out var g) ? g : 0;
 
                 var chiTiet = new ChiTietDonThue
                 {
@@ -204,13 +212,17 @@ public class DonThueService : IDonThueService
                 _context.GiuChos.Add(giuCho);
             }
 
-            // 9. Giữ lượt khuyến mãi nếu có mã
+            // 9. Giữ lượt khuyến mãi nếu có mã (kèm snapshot số tiền giảm)
             if (khuyenMaiApDung != null)
             {
-                await _khuyenMaiService.GiuLuotAsync(
-                    khuyenMaiApDung.MaKhuyenMai,
-                    donThueMoi.MaDonThue,
-                    hanThanhToan);
+                await _khuyenMaiService.GiuLuotV2Async(new GearGo.Models.DTOs.KhuyenMai.GiuLuotCommand
+                {
+                    MaKhuyenMai = khuyenMaiApDung.MaKhuyenMai,
+                    MaDonThue = donThueMoi.MaDonThue,
+                    MaKhachHang = request.MaKhachHang,
+                    ThoiDiemHetHan = hanThanhToan,
+                    SoTienGiamSnapshot = tongTienGiam
+                });
             }
 
             // 10. Ghi nhận Lịch sử chuyển trạng thái đơn khởi tạo

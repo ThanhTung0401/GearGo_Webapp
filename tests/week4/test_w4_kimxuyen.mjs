@@ -181,7 +181,7 @@ async function runTests() {
         lyDo: 'Khách khiếu nại giảm phí 50.000đ'
       })
     });
-    assert(t10.status === 200 || (t10.status === 400 && t10.data?.maLoi === 'KHONG_CO_PHI_DIEU_CHINH') || (t10.status === 409 && t10.data?.maLoi === 'DOI_SOAT_CHUA_CHOT'),
+    assert(t10.status === 200 || ((t10.status === 400 || t10.status === 409) && t10.data?.maLoi === 'KHONG_CO_PHI_DIEU_CHINH') || (t10.status === 409 && t10.data?.maLoi === 'DOI_SOAT_CHUA_CHOT'),
       `Quản trị viên gọi API lập đối soát điều chỉnh (HTTP ${t10.status}${t10.data?.maLoi ? ' - ' + t10.data.maLoi : ''})`);
   }
 

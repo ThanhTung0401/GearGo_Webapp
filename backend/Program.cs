@@ -146,6 +146,9 @@ builder.Services.AddSingleton<GearGo.Integrations.Notifications.IEmailNotificati
 builder.Services.AddScoped<IGuiThongBaoService, GuiThongBaoService>();
 builder.Services.AddHostedService<ThongBaoJob>();
 
+// ── W6-T2 & W6-T3 (Kiện Minh): Quản trị khuyến mãi & Kiểm soát áp mã ──
+builder.Services.AddScoped<IQuanTriKhuyenMaiService, QuanTriKhuyenMaiService>();
+
 var app = builder.Build();
 
 

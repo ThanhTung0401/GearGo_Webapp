@@ -24,17 +24,20 @@ public class ThanhToanService : IThanhToanService
     private readonly ApplicationDbContext _context;
     private readonly IHoanTienService? _hoanTienService;
     private readonly IThongBaoService? _thongBaoService;
+    private readonly IKhuyenMaiService? _khuyenMaiService;
     private readonly ILogger<ThanhToanService>? _logger;
 
     public ThanhToanService(
         ApplicationDbContext context,
         IHoanTienService? hoanTienService = null,
         IThongBaoService? thongBaoService = null,
+        IKhuyenMaiService? khuyenMaiService = null,
         ILogger<ThanhToanService>? logger = null)
     {
         _context = context;
         _hoanTienService = hoanTienService;
         _thongBaoService = thongBaoService;
+        _khuyenMaiService = khuyenMaiService;
         _logger = logger;
     }
 
@@ -120,6 +123,12 @@ public class ThanhToanService : IThanhToanService
                 LyDo = $"Khách hàng đã thanh toán qua {request.PhuongThucThanhToan}"
             };
             _context.LichSuTrangThaiDons.Add(lichSu);
+
+            // 4.1. Xác nhận sử dụng lượt khuyến mãi nếu đơn có mã (W6-T3)
+            if (_khuyenMaiService != null)
+            {
+                await _khuyenMaiService.XacNhanDaSuDungAsync(donThue.MaDonThue);
+            }
 
             // 5. Lưu toàn bộ vào DB và Commit
             await _context.SaveChangesAsync();

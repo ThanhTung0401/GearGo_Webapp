@@ -10,5 +10,6 @@ namespace GearGo.Services.Interfaces
         Task XoaChiTietAsync(long maKhachHang, long maChiTiet);
         Task<GioThueResponse> DatThoiGianAsync(long maKhachHang, DatThoiGianRequest req);
         Task<GioThueResponse> ApMaKhuyenMaiAsync(long maKhachHang, ApKhuyenMaiRequest req);
+        Task<GioThueResponse> BoMaKhuyenMaiAsync(long maKhachHang);
     }
 }

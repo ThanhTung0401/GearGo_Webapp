@@ -25,9 +25,9 @@ const colors = {
 const weeks = [
   { id: 'Week 2', desc: 'Nền tảng, Danh mục, Sản phẩm, Giỏ & Đơn thuê', script: 'tests/week2/test_week2_apis.mjs' },
   { id: 'Week 3', desc: 'Nhập kho, Thiết bị, Chuẩn bị, Bàn giao, Hồ sơ & Thông báo', script: 'tests/week3/test_week3_all.mjs' },
-  { id: 'Week 4', desc: 'Nhận trả, Phụ phí & Hoàn tiền cọc (Stub)', script: 'tests/week4/test_week4_apis.mjs' },
-  { id: 'Week 5', desc: 'Bảo trì, Kiểm kê & Điều chỉnh kho (Stub)', script: 'tests/week5/test_week5_apis.mjs' },
-  { id: 'Week 6', desc: 'Đánh giá & Báo cáo thống kê doanh thu (Stub)', script: 'tests/week6/test_week6_apis.mjs' }
+  { id: 'Week 4', desc: 'Nhận trả, Phụ phí bồi thường, Hoàn tiền cọc & Tài chính', script: 'tests/week4/test_week4_apis.mjs' },
+  { id: 'Week 5', desc: 'Bảo trì thiết bị, Đánh giá, Thông báo & Điều chỉnh kho', script: 'tests/week5/test_week5_apis.mjs' },
+  { id: 'Week 6', desc: 'Khuyến mãi, Quản trị mã & Báo cáo vận hành', script: 'tests/week6/test_week6_apis.mjs' }
 ];
 
 console.log(`${colors.magenta}${colors.bold}================================================================================${colors.reset}`);
