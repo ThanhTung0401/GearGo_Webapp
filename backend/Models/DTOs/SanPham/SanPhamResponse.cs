@@ -20,4 +20,11 @@ public class SanPhamResponse
     public List<string> HinhAnhs { get; set; } = new();
     
     public int? SoLuongKhaDung { get; set; }
+
+    /// <summary>Điểm đánh giá trung bình (chỉ tính các đánh giá hiển thị, null nếu chưa có đánh giá)</summary>
+    public double? DiemTrungBinh { get; set; }
+
+    /// <summary>Tổng số lượt đánh giá hiển thị của sản phẩm</summary>
+    public int SoLuongDanhGia { get; set; } = 0;
 }
+

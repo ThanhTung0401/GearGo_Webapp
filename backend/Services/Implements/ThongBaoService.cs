@@ -106,4 +106,66 @@ public class ThongBaoService : IThongBaoService
                    .FirstOrDefaultAsync()
                ?? throw new ThongBaoKhongTimThayException();
     }
+
+    public async Task<int> DemChuaDocAsync(long maTaiKhoan)
+    {
+        return await _context.ThongBaos
+            .AsNoTracking()
+            .Where(t => t.MaTaiKhoan == maTaiKhoan && t.KenhGui == KenhTrongUngDung && t.ThoiDiemDoc == null)
+            .CountAsync();
+    }
+
+    public async Task<int> DanhDauTatCaDaDocAsync(long maTaiKhoan)
+    {
+        return await _context.ThongBaos
+            .Where(t => t.MaTaiKhoan == maTaiKhoan && t.KenhGui == KenhTrongUngDung && t.ThoiDiemDoc == null)
+            .ExecuteUpdateAsync(s => s.SetProperty(t => t.ThoiDiemDoc, DateTime.UtcNow));
+    }
+
+    public async Task<ThongBao> TaoThongBaoEmailAsync(SuKienThongBaoCommand c)
+    {
+        if (string.IsNullOrWhiteSpace(c.MaSuKien) || c.MaSuKien.Length > 100)
+            throw new SuKienKhongHopLeException("Mã sự kiện thiếu hoặc quá dài (tối đa 100 ký tự).");
+        if (string.IsNullOrWhiteSpace(c.LoaiSuKien) || c.LoaiSuKien.Length > 50)
+            throw new SuKienKhongHopLeException("Loại sự kiện thiếu hoặc quá dài (tối đa 50 ký tự).");
+        if (string.IsNullOrWhiteSpace(c.TieuDe) || c.TieuDe.Length > 255)
+            throw new SuKienKhongHopLeException("Tiêu đề thông báo thiếu hoặc quá dài (tối đa 255 ký tự).");
+
+        var don = await _context.DonThues
+            .Where(d => d.MaDonThue == c.MaDonThue)
+            .Select(d => new { d.MaDonThue, MaTaiKhoan = d.KhachHang.MaTaiKhoan })
+            .FirstOrDefaultAsync()
+            ?? throw new SuKienKhongHopLeException("Đơn thuê không tồn tại.");
+
+        var maNhan = c.MaTaiKhoanNhan ?? don.MaTaiKhoan;
+
+        var daCo = _context.ThongBaos.Local.FirstOrDefault(t =>
+                       t.MaTaiKhoan == maNhan && t.MaSuKien == c.MaSuKien && t.KenhGui == "Email")
+                   ?? await _context.ThongBaos.FirstOrDefaultAsync(t =>
+                       t.MaTaiKhoan == maNhan && t.MaSuKien == c.MaSuKien && t.KenhGui == "Email");
+
+        if (daCo != null)
+        {
+            if (daCo.MaDonThue != c.MaDonThue)
+                throw new XungDotSuKienException("Mã sự kiện đã dùng cho đơn khác; không ghi đè thông báo cũ.");
+            return daCo;
+        }
+
+        var tb = new ThongBao
+        {
+            MaTaiKhoan = maNhan,
+            MaDonThue = c.MaDonThue,
+            MaSuKien = c.MaSuKien,
+            LoaiSuKien = c.LoaiSuKien,
+            TieuDe = c.TieuDe,
+            NoiDung = c.NoiDung,
+            KenhGui = "Email",
+            TrangThaiGui = "ChuaGui",
+            SoLanThuGui = 0,
+            ThoiDiemTao = DateTime.UtcNow
+        };
+        _context.ThongBaos.Add(tb);
+        return tb;
+    }
 }
+

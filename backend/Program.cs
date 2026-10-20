@@ -139,7 +139,15 @@ builder.Services.AddScoped<IInspectionStrategy, DamageInspectionStrategy>();
 builder.Services.AddScoped<IInspectionStrategy, LostInspectionStrategy>();
 builder.Services.AddScoped<IDeviceConflictDetector, DeviceConflictDetector>();
 builder.Services.AddScoped<IBaoCaoVanHanhService, BaoCaoVanHanhService>();
+
+// ── W5-T6 & W5-T8 (Kiện Minh): Đánh giá sản phẩm, Kiểm duyệt và Hàng chờ thông báo ──
+builder.Services.AddScoped<IDanhGiaService, DanhGiaService>();
+builder.Services.AddSingleton<GearGo.Integrations.Notifications.IEmailNotificationAdapter, GearGo.Integrations.Notifications.MockEmailNotificationAdapter>();
+builder.Services.AddScoped<IGuiThongBaoService, GuiThongBaoService>();
+builder.Services.AddHostedService<ThongBaoJob>();
+
 var app = builder.Build();
+
 
 // Tự động áp dụng Migration vào database nếu chưa có
 using (var scope = app.Services.CreateScope())

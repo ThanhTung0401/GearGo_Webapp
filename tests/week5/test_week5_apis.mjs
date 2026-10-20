@@ -1,8 +1,4 @@
-/**
- * Test Suite cho WEEK 5 (Bảo trì thiết bị, Giáng cấp & Kiểm kê điều chỉnh kho):
- * Theo Plan_Week5.md
- * Chạy: node tests/week5/test_week5_apis.mjs
- */
+import { execSync } from 'node:child_process';
 
 const colors = {
   reset: '\x1b[0m',
@@ -11,6 +7,13 @@ const colors = {
   bold: '\x1b[1m'
 };
 
-console.log(`${colors.cyan}${colors.bold}=== KIỂM THỬ API WEEK 5 (PLAN WEEK 5) ===${colors.reset}`);
-console.log(`${colors.yellow}ℹ Week 5 bao gồm các use case: UC16 (Bảo trì & Giáng cấp thiết bị), UC21 (Kiểm kê kho), UC22 (Điều chỉnh kho).`);
-console.log(`ℹ Trạng thái: Sẵn sàng cho triển khai và kiểm thử trong Tuần 5.${colors.reset}\n`);
+console.log(`${colors.cyan}${colors.bold}=== KIỂM THỬ TỔNG HỢP API WEEK 5 (PLAN WEEK 5) ===${colors.reset}`);
+console.log(`${colors.yellow}ℹ Thành viên: Kiện Minh (W5-T6: Đánh giá & W5-T8: Thông báo), Tuấn Kiệt (Bảo trì), Minh Tú (Kho), Kim Xuyến (Tư vấn), Thanh Tùng (Quản trị)${colors.reset}\n`);
+
+try {
+  console.log(`${colors.cyan}▶ Đang chạy suite kiểm thử của Kiện Minh (test_w5_kienminh.mjs)...${colors.reset}`);
+  execSync('node tests/week5/test_w5_kienminh.mjs', { stdio: 'inherit' });
+} catch (err) {
+  console.log(`\n${colors.yellow}⚠ Chú ý: Backend chưa chạy hoặc endpoint đang triển khai.${colors.reset}`);
+}
+

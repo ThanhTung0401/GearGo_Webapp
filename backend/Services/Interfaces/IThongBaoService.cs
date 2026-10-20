@@ -23,4 +23,14 @@ public interface IThongBaoService
 
     Task<PagedResult<ThongBaoResponse>> LayThongBaoCuaToiAsync(TimThongBaoRequest filter, long maTaiKhoan);
     Task<ThongBaoResponse> DanhDauDaDocAsync(long maThongBao, long maTaiKhoan);
+
+    /// <summary>Đếm số lượng thông báo chưa đọc của tài khoản</summary>
+    Task<int> DemChuaDocAsync(long maTaiKhoan);
+
+    /// <summary>Đánh dấu toàn bộ thông báo của tài khoản là đã đọc</summary>
+    Task<int> DanhDauTatCaDaDocAsync(long maTaiKhoan);
+
+    /// <summary>Tạo thông báo kênh Email (đưa vào hàng chờ gửi nền)</summary>
+    Task<ThongBao> TaoThongBaoEmailAsync(SuKienThongBaoCommand command);
 }
+

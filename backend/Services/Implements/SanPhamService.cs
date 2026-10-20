@@ -109,6 +109,30 @@ public class SanPhamService : ISanPhamService
             HinhAnhs = x.HinhAnhs.OrderBy(h => h.ThuTu).Select(h => h.DuongDan).ToList()
         }).ToList();
 
+        // Projection điểm số và số lượt đánh giá (chỉ lấy các đánh giá đang HienThi)
+        var spIds = resItems.Select(r => r.MaSanPham).ToList();
+        var ratings = await _context.DanhGias
+            .AsNoTracking()
+            .Where(d => d.TrangThaiHienThi == "HienThi" && spIds.Contains(d.ChiTietDonThue.MaSanPham))
+            .GroupBy(d => d.ChiTietDonThue.MaSanPham)
+            .Select(g => new
+            {
+                MaSanPham = g.Key,
+                Count = g.Count(),
+                Avg = g.Average(d => d.SoSao)
+            })
+            .ToListAsync();
+
+        var ratingDict = ratings.ToDictionary(r => r.MaSanPham);
+        foreach (var item in resItems)
+        {
+            if (ratingDict.TryGetValue(item.MaSanPham, out var r))
+            {
+                item.SoLuongDanhGia = r.Count;
+                item.DiemTrungBinh = Math.Round(r.Avg, 1);
+            }
+        }
+
         if (request.GioNhan.HasValue && request.GioTra.HasValue)
         {
             var dictKhaDung = await _khaDungService.LayKhaDungNhieuAsync(
@@ -165,6 +189,19 @@ public class SanPhamService : ISanPhamService
             HinhAnhs = x.HinhAnhs.OrderBy(h => h.ThuTu).Select(h => h.DuongDan).ToList()
         };
 
+        // Projection điểm số và lượt đánh giá cho chi tiết sản phẩm
+        var ratingSaoList = await _context.DanhGias
+            .AsNoTracking()
+            .Where(d => d.TrangThaiHienThi == "HienThi" && d.ChiTietDonThue.MaSanPham == id)
+            .Select(d => d.SoSao)
+            .ToListAsync();
+
+        if (ratingSaoList.Count > 0)
+        {
+            res.SoLuongDanhGia = ratingSaoList.Count;
+            res.DiemTrungBinh = Math.Round(ratingSaoList.Average(), 1);
+        }
+
         if (request.GioNhan.HasValue && request.GioTra.HasValue)
         {
             res.SoLuongKhaDung = await _khaDungService.LayKhaDungAsync(id, request.GioNhan.Value, request.GioTra.Value);
@@ -172,4 +209,5 @@ public class SanPhamService : ISanPhamService
 
         return Result<SanPhamResponse>.Ok(res);
     }
+
 }

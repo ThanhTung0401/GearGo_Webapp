@@ -86,4 +86,33 @@ public static class MaSuKienThongBao
     public static string HoanTat(long maDonThue, long maDoiSoat) => $"HOAN_TAT:{maDonThue}:{maDoiSoat}";
     public static string HuyDon(long maDonThue, long maLichSuDon) => $"HUY_DON:{maDonThue}:{maLichSuDon}";
     public static string KhongDenNhan(long maDonThue, long maNhatKy) => $"KHONG_DEN_NHAN:{maDonThue}:{maNhatKy}";
+    public static string MoiDanhGia(long maDonThue) => $"MOI_DANH_GIA:{maDonThue}";
+    public static string SapHetHan(long maDonThue, DateTime mocNhacUtc) => $"SAP_HET_HAN:{maDonThue}:{mocNhacUtc:yyyyMMddHHmm}";
 }
+
+/// <summary>
+/// Yêu cầu thử lại gửi thông báo từ Quản trị viên
+/// </summary>
+public record ThuLaiThongBaoRequest(
+    string? LyDo
+);
+
+/// <summary>
+/// DTO thông báo chi tiết cho Quản trị viên tra cứu danh sách gửi lỗi
+/// </summary>
+public record ThongBaoAdminResponse(
+    long MaThongBao,
+    long MaTaiKhoan,
+    long? MaDonThue,
+    string? MaSuKien,
+    string? LoaiSuKien,
+    string? TieuDe,
+    string? NoiDung,
+    string? KenhGui,
+    string TrangThaiGui,
+    int SoLanThuGui,
+    DateTime ThoiDiemTao,
+    DateTime? ThoiDiemGui,
+    string? LoiGuiGanNhat
+);
+
