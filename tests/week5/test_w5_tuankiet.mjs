@@ -11,7 +11,7 @@ const colors = {
 let passedCount = 0;
 let failedCount = 0;
 
-function generateToken(role, maTaiKhoan = 10002, email = 'admin@geargo.vn') {
+function generateToken(role, maTaiKhoan = 1, email = 'admin@geargo.vn') {
   const header = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url');
   const now = Math.floor(Date.now() / 1000);
   const payload = Buffer.from(JSON.stringify({
@@ -25,9 +25,9 @@ function generateToken(role, maTaiKhoan = 10002, email = 'admin@geargo.vn') {
   return `${header}.${payload}.${sig}`;
 }
 
-let adminToken = generateToken('QuanTriVien', 10002, 'admin@geargo.vn');
-let staffToken = generateToken('NhanVien', 10003, 'staff@geargo.vn');
-let customerToken = generateToken('KhachHang', 10004, 'customer@geargo.vn');
+let adminToken = generateToken('QuanTriVien', 1, 'admin@geargo.vn');
+let staffToken = generateToken('NhanVien', 2, 'staff@geargo.vn');
+let customerToken = generateToken('KhachHang', 3, 'customer@geargo.vn');
 
 function assert(condition, message, errorDetail = null) {
   if (condition) {
@@ -56,16 +56,16 @@ async function callApi(path, options = {}) {
 }
 
 async function detectAccountTokens() {
-  for (const adminId of [10002, 1]) {
+  for (const adminId of [1, 10002]) {
     const candidate = generateToken('QuanTriVien', adminId, 'admin@geargo.vn');
     try {
-      const res = await fetch(`${BASE_URL}/api/v1/admin/bao-cao-van-hanh`, {
+      const res = await fetch(`${BASE_URL}/api/vong-doi-thiet-bi/1`, {
         headers: { 'Authorization': `Bearer ${candidate}` }
       });
       if (res.status === 200) {
         adminToken = candidate;
-        const staffId = adminId === 10002 ? 10003 : 2;
-        const customerId = adminId === 10002 ? 10004 : 3;
+        const staffId = adminId === 1 ? 2 : 10003;
+        const customerId = adminId === 1 ? 3 : 10004;
         staffToken = generateToken('NhanVien', staffId, 'staff@geargo.vn');
         customerToken = generateToken('KhachHang', customerId, 'customer@geargo.vn');
         break;

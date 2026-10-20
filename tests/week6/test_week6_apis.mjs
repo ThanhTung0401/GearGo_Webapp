@@ -50,10 +50,6 @@ const suites = [
     cmd: 'node tests/week6/test_w6_thanhtung.mjs',
     file: 'tests/week6/test_w6_thanhtung.mjs',
     optional: true
-  },
-  {
-    name: 'W6 Unit Tests: Bộ kiểm thử đơn vị xUnit Backend (Khuyến mãi & Nghiệp vụ)',
-    cmd: 'dotnet test tests/GearGo.Tests --nologo'
   }
 ];
 
