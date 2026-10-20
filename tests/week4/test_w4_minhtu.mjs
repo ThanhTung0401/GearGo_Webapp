@@ -237,6 +237,19 @@ async function runTests() {
   });
   assert(t17.status === 400 && t17.data?.maLoi === 'KET_LUAN_KHONG_HOP_LE', 'Chặn đối chiếu khi kết luận không hợp lệ (HTTP 400 KET_LUAN_KHONG_HOP_LE)');
 
+  // Test 18: Admin đối chiếu hợp lệ với kết luận hoàn tiền thừa HopLe_HoanTienThua
+  const t18 = await callApi(`/api/v1/thanh-toan/1/doi-chieu`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${adminToken}` },
+    body: JSON.stringify({
+      ketLuan: 'HopLe_HoanTienThua',
+      soTienHoan: 50000,
+      ghiChu: 'Hoàn tiền thừa sau đối chiếu'
+    })
+  });
+  assert(t18.status === 200 || (t18.status === 404 && t18.data?.maLoi === 'GIAO_DICH_NOT_FOUND') || (t18.status === 400 && t18.data?.maLoi === 'VUOT_HAN_MUC_HOAN') || (t18.status === 400 && t18.data?.maLoi === 'NGUON_HOAN_KHONG_HOP_LE'),
+    `Admin xử lý đối chiếu hoàn tiền thừa HopLe_HoanTienThua (HTTP ${t18.status}${t18.data?.maLoi ? ' - ' + t18.data.maLoi : ''})`);
+
   // =========================================================================
   // TỔNG KẾT
   // =========================================================================

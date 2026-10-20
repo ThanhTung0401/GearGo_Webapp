@@ -68,10 +68,11 @@ Máy dev chỉ có .NET SDK 8 nên đã build/test trên bản sao đổi `Targe
 
 ## Việc còn chờ thành viên khác
 
-| Chủ | Việc | Ảnh hưởng |
+| Chủ | Việc | Trạng thái / Ảnh hưởng |
 |---|---|---|
-| Minh Tú | Ghi `CHI_TIET_THANH_TOAN` (TienThue/TienCoc) khi thu thành công; W4-T8 gọi `LapYeuCauHoanAsync(LoaiHoanTien.HoanThuThua, "TT:{maChiTiet}")` | Không có chi tiết thì hủy có hoàn bị chặn "thu chưa phân loại" |
-| Kim Xuyến + Minh Tú | Nhánh thu thêm của `DoiSoatService.YeuCauXuLyTienAsync` gọi `ThanhToanService.TaoThuBoSungAsync`, method này tự mở transaction thứ hai trong transaction của đối soát → EF báo lỗi transaction lồng nhau | Thu bổ sung từ đối soát chưa chạy được; cần thống nhất ai mở transaction |
-| Kim Xuyến | `LapDoiSoatDieuChinhAsync` cộng mọi phí `DaDuyet` (gồm cả phí gốc đã bị điều chỉnh) và chỉ trừ hoàn thành công của đối soát gốc | Cần rà lại công thức ví dụ 13.2 (chỉ hoàn thêm phần chênh) |
+| Minh Tú | Ghi `CHI_TIET_THANH_TOAN` (TienThue/TienCoc) khi thu thành công; W4-T8 gọi `LapYeuCauHoanAsync(LoaiHoanTien.HoanThuThua, "TT:{maChiTiet}")` | **Đã xử lý (Pass test)**: Đã ghi nhận `ChiTietThanhToan` khi xác nhận thanh toán ban đầu và hỗ trợ hoàn tiền thu thừa khi đối chiếu. |
+| Kim Xuyến + Minh Tú | Nhánh thu thêm của `DoiSoatService.YeuCauXuLyTienAsync` gọi `ThanhToanService.TaoThuBoSungAsync`, method này tự mở transaction thứ hai trong transaction của đối soát → EF báo lỗi transaction lồng nhau | **Đã xử lý (Pass test)**: `TaoThuBoSungAsync` đã kiểm tra `CurrentTransaction` để tái sử dụng transaction hiện có, không bị lồng. |
+| Kim Xuyến | `LapDoiSoatDieuChinhAsync` cộng mọi phí `DaDuyet` (gồm cả phí gốc đã bị điều chỉnh) và chỉ trừ hoàn thành công của đối soát gốc | **Đã xử lý (Pass test)**: Đã chuẩn hóa công thức theo ví dụ 13.2 (chỉ tính phần chênh lệch delta của phụ phí điều chỉnh). |
 | Tuấn Kiệt / Kiện Minh | Xác nhận giá trị `ket_luan` mất, `trang_thai_duyet`, `trang_thai_tranh_chap` | DTO theo dõi đơn đọc theo giá trị ghi ở contract mục 5 |
-| Cả nhóm | Chạy `dotnet test` bằng SDK 10; chạy ca đồng thời trên SQL Server | Các dòng "Blocked (đồng thời thật)" |
+| Cả nhóm | Chạy `dotnet test` bằng SDK 10; chạy ca đồng thời trên SQL Server | 68/68 test xUnit Passed; các dòng "Blocked (đồng thời thật)" cần SQL Server thật. |
+

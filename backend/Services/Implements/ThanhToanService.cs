@@ -69,6 +69,42 @@ public class ThanhToanService : IThanhToanService
                 ThoiDiemTao = DateTime.UtcNow,
                 ThoiDiemThanhCong = DateTime.UtcNow
             };
+
+            // Phân loại nguồn thu thành CHI_TIET_THANH_TOAN (TienThue / TienCoc) phục vụ hoàn tiền và hủy đơn
+            var tienThue = Math.Max(0, donThue.TongTienThueTruocGiam - donThue.TongTienGiam);
+            var tienCoc = Math.Max(0, donThue.TongTienCoc);
+
+            if (tienThue > 0)
+            {
+                thanhToanMoi.ChiTietThanhToans.Add(new ChiTietThanhToan
+                {
+                    MucDich = MucDichThanhToan.TienThue,
+                    SoTien = tienThue,
+                    ThanhToan = thanhToanMoi
+                });
+            }
+
+            if (tienCoc > 0)
+            {
+                thanhToanMoi.ChiTietThanhToans.Add(new ChiTietThanhToan
+                {
+                    MucDich = MucDichThanhToan.TienCoc,
+                    SoTien = tienCoc,
+                    ThanhToan = thanhToanMoi
+                });
+            }
+
+            // Trường hợp dự phòng nếu đơn không có cả 2 mà số tiền đã trả > 0
+            if (!thanhToanMoi.ChiTietThanhToans.Any() && request.SoTienDaTra > 0)
+            {
+                thanhToanMoi.ChiTietThanhToans.Add(new ChiTietThanhToan
+                {
+                    MucDich = MucDichThanhToan.TienThue,
+                    SoTien = request.SoTienDaTra,
+                    ThanhToan = thanhToanMoi
+                });
+            }
+
             _context.ThanhToans.Add(thanhToanMoi);
 
             // 3. Xác nhận thanh toán
@@ -103,7 +139,9 @@ public class ThanhToanService : IThanhToanService
     /// </summary>
     public async Task<Result<YeuCauThuResponse>> TaoThuBoSungAsync(TaoThuBoSungRequest request, long actorId)
     {
-        using var transaction = await _context.Database.BeginTransactionAsync();
+        // Kiểm tra xem đã có transaction bên ngoài đang mở chưa (ví dụ từ DoiSoatService) để tránh lỗi nested transaction
+        var hasExistingTransaction = _context.Database.CurrentTransaction != null;
+        var transaction = hasExistingTransaction ? null : await _context.Database.BeginTransactionAsync();
 
         try
         {
@@ -165,7 +203,10 @@ public class ThanhToanService : IThanhToanService
             _context.ThanhToans.Add(thanhToanMoi);
 
             await _context.SaveChangesAsync();
-            await transaction.CommitAsync();
+            if (transaction != null)
+            {
+                await transaction.CommitAsync();
+            }
 
             return Result<YeuCauThuResponse>.Ok(new YeuCauThuResponse
             {
@@ -180,7 +221,10 @@ public class ThanhToanService : IThanhToanService
         }
         catch (Exception e)
         {
-            await transaction.RollbackAsync();
+            if (transaction != null)
+            {
+                await transaction.RollbackAsync();
+            }
             return Result<YeuCauThuResponse>.Loi("SYS_ERROR", $"Lỗi hệ thống khi tạo thu bổ sung: {e.Message}");
         }
     }
@@ -405,6 +449,13 @@ public class ThanhToanService : IThanhToanService
                 if (soTienHoan <= 0)
                     return Result<string>.Loi("SO_TIEN_HOAN_KHONG_HOP_LE", "Số tiền hoàn phải lớn hơn 0.");
 
+                if (_hoanTienService == null)
+                    return Result<string>.Loi("SYS_ERROR", "Dịch vụ hoàn tiền chưa được cấu hình.");
+
+                // Cập nhật trạng thái giao dịch thu thành ThanhCong để đủ điều kiện hợp lệ làm nguồn hoàn tiền
+                thanhToan.TrangThai = TrangThaiThanhToan.ThanhCong;
+                await _context.SaveChangesAsync();
+
                 // Lập yêu cầu hoàn qua HoanTienService của Thanh Tùng (W4-T6)
                 var yeuCau = await _hoanTienService.LapYeuCauHoanAsync(new LapHoanCommand(
                     thanhToan.MaDonThue,
@@ -442,7 +493,7 @@ public class ThanhToanService : IThanhToanService
             await transaction.CommitAsync();
 
             // Gửi lệnh hoàn ra gateway nếu có
-            if (yeuCauHoanCanGui.Any())
+            if (yeuCauHoanCanGui.Any() && _hoanTienService != null)
             {
                 await _hoanTienService.GuiYeuCauDaLapAsync(yeuCauHoanCanGui.Select(h => h.MaHoanTien), actorId);
             }

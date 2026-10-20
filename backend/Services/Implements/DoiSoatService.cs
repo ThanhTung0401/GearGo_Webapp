@@ -403,9 +403,19 @@ public class DoiSoatService : IDoiSoatService
                 // mỗi dòng một chi tiết thu cọc gốc. Khóa nghĩa vụ "DS:{maDoiSoat}" ổn định nên bấm lại trả bộ cũ.
                 var nguonCoc = doiSoat.GiaoDichDoiSoats
                     .Select(g => g.ChiTietThanhToan)
-                    .Where(ct => ct.MucDich == MucDichThanhToan.TienCoc)
+                    .Where(ct => ct != null && ct.MucDich == MucDichThanhToan.TienCoc)
                     .Select(ct => ct.MaChiTietThanhToan)
                     .ToList();
+
+                // Nếu đối soát điều chỉnh chưa load đủ navigation hoặc chưa có GiaoDichDoiSoat, lấy từ đối soát gốc
+                if (!nguonCoc.Any() && doiSoat.MaDoiSoatGoc != null)
+                {
+                    nguonCoc = await _context.GiaoDichDoiSoats
+                        .Where(g => g.MaDoiSoat == doiSoat.MaDoiSoatGoc.Value && g.ChiTietThanhToan.MucDich == MucDichThanhToan.TienCoc)
+                        .Select(g => g.MaChiTietThanhToan)
+                        .ToListAsync();
+                }
+
                 var yeuCau = await _hoanTienService.LapYeuCauHoanAsync(new LapHoanCommand(
                     doiSoat.MaDonThue, LoaiHoanTien.HoanCocDoiSoat, $"DS:{doiSoat.MaDoiSoat}", doiSoat.SoTienCanHoan,
                     nguonCoc, doiSoat.MaDoiSoat, $"Hoàn tiền cọc sau đối soát đơn #{doiSoat.MaDonThue}"), actorId);
@@ -603,29 +613,16 @@ public class DoiSoatService : IDoiSoatService
             if (!phuPhiDieuChinhs.Any())
                 return Result<DoiSoatResponse>.Loi("KHONG_CO_PHI_DIEU_CHINH", "Không tìm thấy khoản phụ phí điều chỉnh hợp lệ đã được phê duyệt.");
 
-            // Tính toán số dư theo công thức Plan 7.0:
-            // SoDu = CocGoc + TongThuBoSungDaThanhCong - TongHoanLienQuanDaThanhCong - TongPhiHieuLucSauDieuChinh
-            decimal cocGoc = doiSoatGoc.TienCocDuocDoiSoat;
-            
-            decimal tongThuBoSung = await _context.ChiTietThanhToans
-                .Include(ct => ct.ThanhToan)
-                .Where(ct => ct.ThanhToan.MaDonThue == doiSoatGoc.MaDonThue 
-                          && ct.MucDich == "ThuBoSung" 
-                          && ct.ThanhToan.TrangThai == "ThanhCong")
-                .SumAsync(ct => ct.SoTien);
+            // ─────────────────────────────────────────────────────────────────────────────
+            // TÍNH TOÁN THEO VÍ DỤ 13.2 & CONTRACT WEEK 4:
+            // Phụ phí điều chỉnh mang giá trị chênh lệch (delta):
+            // - Nếu chenhLechPhi < 0 (giảm phí): khách được hoàn thêm đúng phần chênh lệch (-chenhLechPhi).
+            // - Nếu chenhLechPhi > 0 (tăng phí): khách cần thanh toán thu bổ sung đúng phần tăng thêm (chenhLechPhi).
+            // ─────────────────────────────────────────────────────────────────────────────
+            decimal chenhLechPhi = phuPhiDieuChinhs.Sum(p => p.SoTien);
 
-            decimal tongHoanDaThanhCong = await _context.HoanTiens
-                .Where(h => h.MaDoiSoat == doiSoatGoc.MaDoiSoat && h.TrangThai == "ThanhCong")
-                .SumAsync(h => h.SoTien);
-
-            decimal tongPhiSauDieuChinh = await _context.PhuPhis
-                .Where(p => p.MaDonThue == doiSoatGoc.MaDonThue && p.TrangThaiDuyet == "DaDuyet")
-                .SumAsync(p => p.SoTien);
-
-            decimal soDu = cocGoc + tongThuBoSung - tongHoanDaThanhCong - tongPhiSauDieuChinh;
-
-            decimal canHoanMoi = Math.Max(0, soDu);
-            decimal canThuThemMoi = Math.Max(0, -soDu);
+            decimal canHoanMoi = chenhLechPhi < 0 ? -chenhLechPhi : 0;
+            decimal canThuThemMoi = chenhLechPhi > 0 ? chenhLechPhi : 0;
 
             var doiSoatDieuChinh = new DoiSoatTienCoc
             {
@@ -634,7 +631,7 @@ public class DoiSoatService : IDoiSoatService
                 LoaiDoiSoat = "DieuChinh",
                 MaNguoiLap = maNhanVien,
                 TienCocDuocDoiSoat = 0, // Không phân bổ lại cọc đã gắn
-                TongPhuPhiDuocDuyet = phuPhiDieuChinhs.Sum(p => p.SoTien),
+                TongPhuPhiDuocDuyet = chenhLechPhi,
                 SoTienCanHoan = canHoanMoi,
                 SoTienCanThuThem = canThuThemMoi,
                 TrangThai = "ChoChot",
