@@ -80,8 +80,22 @@ public static class DomainConstants
         public const string Decommission = "NgungSuDung";
     }
 
+    public static class StaffStatus
+    {
+        public const string Working = "DangLamViec";
+        public const string Resigned = "DaNghiViec";
+    }
+
+    public static class AccountStatus
+    {
+        public const string Active = "HoatDong";
+        public const string Locked = "BiKhoa";
+    }
+
     public static class Errors
     {
+        // 500 Internal Server Error
+        public const string SystemError = "SYS_ERROR";
         // 404 Not Found
         public const string NotFound = "NOT_FOUND";
         public const string OrderNotFound = "DON_NOT_FOUND";

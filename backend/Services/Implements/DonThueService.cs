@@ -33,6 +33,11 @@ public class DonThueService : IDonThueService
 
     public async Task<Result<DonThueResponse>> TaoDonThueAsync(TaoDonThueRequest request)
     {
+        if (request.MaTaiKhoan.HasValue)
+        {
+            request.MaKhachHang = await ActorGuard.LayMaKhachHangAsync(_context, request.MaTaiKhoan.Value);
+        }
+
         var inputCheck = DonThueValidationRules.KiemTraThoiGianVaGioHang(request);
         if (!inputCheck.ThanhCong)
             return Result<DonThueResponse>.Loi(inputCheck.MaLoi!, inputCheck.ThongDiep!);
