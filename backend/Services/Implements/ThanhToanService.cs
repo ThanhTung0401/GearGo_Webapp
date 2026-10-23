@@ -31,13 +31,13 @@ public class ThanhToanService : IThanhToanService
 
     public ThanhToanService(
         ApplicationDbContext context,
-        ILogger<ThanhToanService> logger,
+        ILogger<ThanhToanService>? logger = null,
         IHoanTienService? hoanTienService = null,
         IThongBaoService? thongBaoService = null,
         IKhuyenMaiService? khuyenMaiService = null)
     {
         _context = context;
-        _logger = logger;
+        _logger = logger ?? Microsoft.Extensions.Logging.Abstractions.NullLogger<ThanhToanService>.Instance;
         _hoanTienService = hoanTienService;
         _thongBaoService = thongBaoService;
         _khuyenMaiService = khuyenMaiService;
@@ -120,7 +120,7 @@ public class ThanhToanService : IThanhToanService
                     "Phát sinh giao dịch cần đối soát #{MaYeuCau} cho đơn #{MaDonThue} (Trạng thái đơn: {TrangThai}).",
                     maYeuCau, donThue.MaDonThue, donThue.TrangThai);
 
-                return Result<string>.Ok(thanhToanMoi.MaYeuCau);
+                return Result<string>.Loi("TRANG_THAI_KHONG_HOP_LE", $"Đơn hàng không ở trạng thái chờ thanh toán ({donThue.TrangThai}).");
             }
 
             // 5. Luồng chuẩn: Đơn đang ChoThanhToan -> Xác nhận đơn + Giữ chỗ + Khuyến mãi + Lịch sử

@@ -13,6 +13,24 @@ public static class TransactionExecutionWrapper
         ILogger? logger = null,
         IsolationLevel isolationLevel = IsolationLevel.ReadCommitted)
     {
+        if (context.Database.CurrentTransaction != null)
+        {
+            try
+            {
+                var result = await operation();
+                if (result.ThanhCong)
+                {
+                    await context.SaveChangesAsync();
+                }
+                return result;
+            }
+            catch (Exception ex)
+            {
+                logger?.LogError(ex, "Lỗi thực thi giao dịch ACID (nested): {Message}", ex.Message);
+                return Result<T>.Loi("SYS_ERROR", ex.Message);
+            }
+        }
+
         using var transaction = await context.Database.BeginTransactionAsync(isolationLevel);
         try
         {

@@ -42,6 +42,7 @@ public abstract class BaseApiController : ControllerBase
         DomainConstants.Errors.ProductNotFound => 404,
 
         DomainConstants.Errors.Forbidden or
+        DomainConstants.Errors.ForbiddenCostInspection or
         DomainConstants.Errors.NotAssignedStaff => 403,
 
         DomainConstants.Errors.InvalidState or
@@ -56,7 +57,12 @@ public abstract class BaseApiController : ControllerBase
         DomainConstants.Errors.StaffResigned or
         DomainConstants.Errors.EquipmentNotRecovered or
         DomainConstants.Errors.SupplementaryCollectionPending or
-        DomainConstants.Errors.ChangeViolatesCommitment => 409,
+        DomainConstants.Errors.ChangeViolatesCommitment or
+        DomainConstants.Errors.StaleAdjustmentSnapshot or
+        DomainConstants.Errors.MissingReceiptEvidence or
+        DomainConstants.Errors.DuplicateEquipmentCode or
+        DomainConstants.Errors.AdjustmentViolatesCommitment or
+        DomainConstants.Errors.ReceiptAlreadyApplied => 409,
 
         _ => 400
     };

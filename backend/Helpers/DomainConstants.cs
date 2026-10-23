@@ -112,6 +112,7 @@ public static class DomainConstants
         // 403 Forbidden
         public const string Forbidden = "KHONG_CO_QUYEN";
         public const string NotAssignedStaff = "KHONG_PHAI_NGUOI_XU_LY";
+        public const string ForbiddenCostInspection = "KHONG_CO_QUYEN_XEM_GIA_NHAP";
 
         // 409 Conflict
         public const string InvalidState = "INVALID_STATE";
@@ -127,6 +128,11 @@ public static class DomainConstants
         public const string EquipmentNotRecovered = "THIET_BI_CHUA_THU_HOI";
         public const string ChangeViolatesCommitment = "THAY_DOI_LAM_THIEU_CAM_KET";
         public const string SupplementaryCollectionPending = "THU_THEM_DANG_CHO";
+        public const string StaleAdjustmentSnapshot = "SNAPSHOT_DIEU_CHINH_DA_CU";
+        public const string MissingReceiptEvidence = "CHUNG_CU_NHAP_CU_CHUA_DU";
+        public const string DuplicateEquipmentCode = "MA_THIET_BI_TRUNG";
+        public const string AdjustmentViolatesCommitment = "DIEU_CHINH_VUONG_CAM_KET";
+        public const string ReceiptAlreadyApplied = "PHIEU_DA_AP_DUNG";
 
         // 400 Bad Request
         public const string EmptyList = "DANH_SACH_RONG";
@@ -151,5 +157,11 @@ public static class DomainConstants
         public const string ProductDiscontinued = "SAN_PHAM_NGUNG_KINH_DOANH";
         public const string InvalidPromotion = "KHUYEN_MAI_KHONG_HOP_LE";
         public const string NoSupplementaryDuty = "KHONG_CO_NGHIA_VU_THU_THEM";
+        public const string ScopeInventoryUndefined = "PHAM_VI_KIEM_KE_KHONG_RO";
+        public const string InvalidRentalPeriod = "KHOANG_THUE_KHONG_HOP_LE";
+        public const string MissingSimulationData = "PHUONG_AN_THIEU_DU_LIEU";
+        public const string ForbiddenAttributeModification = "THUOC_TINH_DIEU_CHINH_BI_CAM";
+        public const string MismatchSourceReceipt = "CHI_TIET_KHAC_NGUON_NHAP";
+        public const string ImmutableSourceReceipt = "NGUON_NHAP_BAT_BIEN";
     }
 }

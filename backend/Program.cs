@@ -148,6 +148,10 @@ builder.Services.AddSingleton<GearGo.Integrations.Notifications.IEmailNotificati
 builder.Services.AddScoped<IGuiThongBaoService, GuiThongBaoService>();
 builder.Services.AddHostedService<ThongBaoJob>();
 
+// ── W5-T4 & W5-T5 (Minh Tú): Quản trị kho, Kiểm kê, Khả dụng và Điều chỉnh kho ──
+builder.Services.AddScoped<IKhoService, KhoService>();
+builder.Services.AddScoped<IDieuChinhKhoService, DieuChinhKhoService>();
+
 // ── W6-T2 & W6-T3 (Kiện Minh): Quản trị khuyến mãi & Kiểm soát áp mã ──
 builder.Services.AddScoped<IQuanTriKhuyenMaiService, QuanTriKhuyenMaiService>();
 

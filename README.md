@@ -13,8 +13,34 @@
   - **W4-T2 (Tối ưu Khả dụng)**: Mở rộng `KhaDungService` tự động giải phóng cam kết chiếm lịch cho các thiết bị đã được kết luận nhận trả đạt/mất trong phiếu chốt đối với các đơn trả nhiều đợt (trả một phần), và loại trừ các thiết bị này khỏi danh sách quá hạn.
   - **W4-T5 (Thu bổ sung phụ phí đối soát)**: Mở rộng `ThanhToanService` và `ThanhToanController` với `TaoThuBoSungAsync` (khởi tạo thanh toán bổ sung khi bảng đối soát có `SoTienCanThuThem > 0`), tự động tạo liên kết `GiaoDichDoiSoat` khi webhook callback thành công, duy trì trạng thái đơn đúng luồng đối soát mà không reset về đơn mới.
   - **W4-T8 (Xử lý ngoại lệ thanh toán & Đối chiếu)**: Tích hợp xử lý webhook idempotent (chống callback lặp, callback thất bại đến sau thành công), tự động phát hiện số tiền sai lệch hoặc tiền đến khi đơn đã hủy/hết hạn đưa vào diện `CanDoiChieu`. Cung cấp API `GET /api/thanh-toan/can-doi-chieu` và `POST /api/thanh-toan/{id}/doi-chieu` cho Quản trị viên xử lý, tích hợp gọi `HoanTienService` để hoàn tiền thừa (`HoanThuThua`) theo đúng nguồn thu gốc.
+- **[Tuần 5 - Task 4, Task 5 (Minh Tú)]**:
+  - **W5-T4 (Theo dõi kho, kiểm kê và khả dụng)**: Xây dựng `KhoService` và `KhoController` (`/api/kho/*`) phục vụ quản lý thiết bị toàn diện:
+    - Thống kê tổng quan số lượng hồ sơ thiết bị theo trạng thái (`SanSangTaiKho`, `DangChoThue`, `DangBaoTri`, `NgungSuDung`, `ThatLac`) và tổng giá trị tiền nhập kho (bảo vệ quyền Quản trị viên).
+    - Tra cứu, tìm kiếm thiết bị phân trang kèm thông tin sản phẩm đại diện kinh doanh hiện tại và nguồn gốc nhập.
+    - Đối chiếu kiểm kê thực tế tại kho từ danh sách quét mã vạch: phân loại chính xác mã khớp, mã quét lạ chưa khai báo, mã thiếu tại kho, đồng thời phân biệt thông minh các thiết bị đang cho thuê (`DangThue`) hoặc đang gửi xưởng (`DangBaoTri`) để tránh kết luận sai lệch mất máy.
+    - Phân tích và giả lập ảnh hưởng khả dụng cam kết đơn thuê tương lai (`PhanTichAnhHuongAsync`) khi đề xuất loại trừ hoặc giáng cấp thiết bị.
+  - **W5-T5 (Điều chỉnh kho và sai lệch phiếu nhập)**: Xây dựng `DieuChinhKhoService`, `DieuChinhKhoController` (`/api/dieu-chinh-kho/*`) và `GiaTriNhapHieuLucQuery`:
+    - Hỗ trợ toàn diện 6 loại điều chỉnh kho: `SaiGiaNhap`, `KhaiBaoThieuThietBi`, `KhaiBaoTrungSaiThietBi`, `KiemKeSaiLech`, `GiangCapThietBi`, `NgungSuDung`.
+    - Tự động sao lưu snapshot trạng thái trước (`GiaTriTruoc`) và giá trị đề xuất sau (`GiaTriSau`) dưới dạng JSON có kiểm soát schema.
+    - Quy trình phê duyệt chặt chẽ: Nhân viên lập nháp (`Draft`), gửi duyệt (`Pending`), Quản trị viên từ chối (`Rejected`) hoặc phê duyệt và áp dụng (`Applied`).
+    - Phê duyệt nguyên tử (Atomic Serializable Transaction): Khóa bản ghi theo thứ tự ID chống deadlock, kiểm tra lại cam kết đơn thuê tại thời điểm duyệt (chặn duyệt nếu gây thiếu hàng cho khách đã đặt), tự động cập nhật trạng thái thiết bị và ghi nhật ký lịch sử (`LichSuTinhTrangThietBi`).
+    - Chuỗi điều chỉnh bất biến: Tuyệt đối không sửa trực tiếp `ChiTietPhieuNhap` gốc, mà tính toán giá trị nhập và số lượng hiệu lực lũy kế thông qua `GiaTriNhapHieuLucQuery`.
 
 ## API / Function
+- **Kho & Kiểm kê API (`api/kho`)**:
+  - `GET /api/kho/tong-quan` - Thống kê tổng quan số lượng thiết bị theo trạng thái và tổng giá trị tồn kho.
+  - `GET /api/kho/thiet-bi` - Danh sách hồ sơ thiết bị phân trang, lọc theo sản phẩm và trạng thái sử dụng.
+  - `POST /api/kho/kiem-ke/doi-chieu` - Đối chiếu danh sách mã quét thực tế với dữ liệu hệ thống, phân loại máy ngoài kho hợp lệ.
+  - `POST /api/kho/phan-tich-anh-huong` - Phân tích, giả lập ảnh hưởng cam kết đơn thuê tương lai khi biến động thiết bị.
+- **Điều chỉnh kho API (`api/dieu-chinh-kho`)**:
+  - `POST /api/dieu-chinh-kho` - Lập phiếu điều chỉnh kho mới (tự động snapshot dữ liệu hiện tại).
+  - `PUT /api/dieu-chinh-kho/{id}` - Cập nhật nội dung phiếu điều chỉnh khi còn ở trạng thái nháp.
+  - `PATCH /api/dieu-chinh-kho/{id}/gui-duyet` - Gửi duyệt phiếu điều chỉnh (chuyển sang trạng thái ChoDuyet).
+  - `POST /api/dieu-chinh-kho/{id}/tu-choi` - Quản trị viên từ chối phiếu điều chỉnh kèm lý do.
+  - `POST /api/dieu-chinh-kho/{id}/duyet` - Quản trị viên duyệt và áp dụng biến động kho (Serializable transaction, re-check cam kết).
+  - `GET /api/dieu-chinh-kho/{id}` - Xem chi tiết phiếu điều chỉnh và snapshot các dòng.
+  - `GET /api/dieu-chinh-kho` - Danh sách phiếu điều chỉnh kho phân trang và lọc theo trạng thái/loại.
+  - `GET /api/dieu-chinh-kho/phieu-nhap/{maPhieuNhap}/gia-tri-hieu-luc` - Tính toán giá trị nhập và số lượng hiệu lực của phiếu nhập sau chuỗi điều chỉnh.
 - **Quá hạn & Khả dụng API (`api/v1/qua-han`)**:
   - `GET /api/v1/qua-han` - Danh sách đơn thuê quá hạn (phân trang, lọc theo đơn/sản phẩm/mốc thời gian).
   - `GET /api/v1/qua-han/{donId}` - Chi tiết từng thiết bị, số ngày trễ và phí trễ dự kiến.
@@ -54,10 +80,12 @@ GearGo_Webapp/
 │   │   │   └── SanPhamController.cs
 │   │   ├── AuthController.cs
 │   │   ├── DanhMucController.cs
+│   │   ├── DieuChinhKhoController.cs
 │   │   ├── DoiSoatController.cs
 │   │   ├── DonThueController.cs
 │   │   ├── GioThueController.cs
 │   │   ├── HoanTienController.cs
+│   │   ├── KhoController.cs
 │   │   ├── NhanTraController.cs
 │   │   ├── PhuPhiController.cs
 │   │   ├── QuaHanController.cs
@@ -68,12 +96,27 @@ GearGo_Webapp/
 │   ├── Models/
 │   │   ├── Entities/ (26 class Entity khớp 100% ERD)
 │   │   ├── DTOs/
+│   │   │   ├── DieuChinhKho/
+│   │   │   │   └── DieuChinhKhoDtos.cs
+│   │   │   └── Kho/
+│   │   │       └── KhoDtos.cs
 │   │   └── Enums/
 │   ├── Services/
 │   │   ├── Interfaces/
-│   │   └── Implements/
+│   │   │   ├── IKhoService.cs
+│   │   │   └── IDieuChinhKhoService.cs
+│   │   ├── Implements/
+│   │   │   ├── KhoService.cs
+│   │   │   └── DieuChinhKhoService.cs
+│   │   └── Queries/
+│   │       └── GiaTriNhapHieuLucQuery.cs
 │   ├── Program.cs
 │   └── GearGo.csproj
+├── tests/
+│   ├── GearGo.Tests/
+│   │   └── KhoDieuChinhKhoTests.cs
+│   └── week5/
+│       └── test_w5_minhtu.mjs
 ├── frontend/
 └── Document/
 ```
