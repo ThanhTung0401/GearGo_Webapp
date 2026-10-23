@@ -152,6 +152,14 @@ builder.Services.AddHostedService<ThongBaoJob>();
 builder.Services.AddScoped<IKhoService, KhoService>();
 builder.Services.AddScoped<IDieuChinhKhoService, DieuChinhKhoService>();
 
+// ── W5-T7 (Kim Xuyến): Tư vấn bộ đồ bằng AI và gợi ý dự phòng ──
+builder.Services.AddHttpClient();
+builder.Services.AddHttpContextAccessor();
+builder.Services.Configure<GearGo.Configuration.TuVanOptions>(builder.Configuration.GetSection(GearGo.Configuration.TuVanOptions.Section));
+builder.Services.AddScoped<GearGo.Integrations.AI.IAIProvider, GearGo.Integrations.AI.AIProviderAdapter>();
+builder.Services.AddScoped<GearGo.Services.Interfaces.IGoiYBoDoService, GearGo.Services.Implements.GoiYBoDoService>();
+builder.Services.AddScoped<GearGo.Services.Interfaces.ITuVanAIService, GearGo.Services.Implements.TuVanAIService>();
+
 // ── W6-T2 & W6-T3 (Kiện Minh): Quản trị khuyến mãi & Kiểm soát áp mã ──
 builder.Services.AddScoped<IQuanTriKhuyenMaiService, QuanTriKhuyenMaiService>();
 
