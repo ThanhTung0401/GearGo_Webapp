@@ -215,17 +215,19 @@ async function main() {
   assert(sanPhamMau, 'Cần có sản phẩm mẫu để test giỏ hàng');
 
   // W5-T7-A07: Một trong các dòng vượt quá khả dụng lúc thêm giỏ -> Trả 409, không thêm dở dang
+  const tokenA07 = generateToken('KhachHang', 3, 'customer@geargo.vn');
   await runTestCase('W5-T7-A07', 'Một sản phẩm vượt khả dụng lúc thêm giỏ -> 409 BO_DO_KHONG_CON_PHU_HOP, không thêm dở dang', async () => {
     const res = await callApi('/api/tu-van/bo-do/them-vao-gio', {
       method: 'POST',
-      headers: { Authorization: `Bearer ${customerToken}` },
+      headers: { Authorization: `Bearer ${tokenA07}` },
       body: JSON.stringify({
         gioNhan: gioNhanMau,
         gioTra: gioTraMau,
         cacDong: [
           { maSanPham: sanPhamMau.maSanPham, soLuong: 1 },
           { maSanPham: sanPhamMau.maSanPham, soLuong: 99999 } // Vượt quá khả dụng
-        ]
+        ],
+        xuLyXungDotLich: 'ThayThe'
       })
     });
 
@@ -234,6 +236,7 @@ async function main() {
   });
 
   // W5-T7-A08: Giỏ đang lịch A, thêm gợi ý lịch B với GiuNguyen -> 409 NGAY_GIO_KHAC_GIO_HIEN_TAI
+  const tokenA08 = generateToken('KhachHang', 4, 'quang.kh@geargo.vn');
   await runTestCase('W5-T7-A08', 'Giỏ đang có lịch A, thêm bộ đồ lịch B mà không đồng ý thay thế -> 409 NGAY_GIO_KHAC_GIO_HIEN_TAI', async () => {
     // 1. Thêm 1 món vào giỏ với lịch A
     const gioNhanA = new Date(Date.now() + 10 * 24 * 3600 * 1000).toISOString();
@@ -241,7 +244,7 @@ async function main() {
 
     await callApi('/api/tu-van/bo-do/them-vao-gio', {
       method: 'POST',
-      headers: { Authorization: `Bearer ${customerToken}` },
+      headers: { Authorization: `Bearer ${tokenA08}` },
       body: JSON.stringify({
         gioNhan: gioNhanA,
         gioTra: gioTraA,
@@ -256,7 +259,7 @@ async function main() {
 
     const res = await callApi('/api/tu-van/bo-do/them-vao-gio', {
       method: 'POST',
-      headers: { Authorization: `Bearer ${customerToken}` },
+      headers: { Authorization: `Bearer ${tokenA08}` },
       body: JSON.stringify({
         gioNhan: gioNhanB,
         gioTra: gioTraB,
@@ -270,10 +273,24 @@ async function main() {
   });
 
   // W5-T7-A09: Thêm bộ vào giỏ thành công -> Không tạo GIU_CHO hay DON_THUE
+  const tokenA09 = generateToken('KhachHang', 3, 'customer@geargo.vn');
   await runTestCase('W5-T7-A09', 'Thêm bộ vào giỏ thành công -> Trả 200 OK, không tạo giữ chỗ kho hay đơn thuê', async () => {
+    // Dọn sạch giỏ hàng trước khi thêm combo mới
+    const gioRes = await callApi('/api/gio-thue', {
+      headers: { Authorization: `Bearer ${tokenA09}` }
+    });
+    if (gioRes.data?.chiTiet?.length > 0) {
+      for (const item of gioRes.data.chiTiet) {
+        await callApi(`/api/gio-thue/${item.maChiTietGio}`, {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${tokenA09}` }
+        });
+      }
+    }
+
     const res = await callApi('/api/tu-van/bo-do/them-vao-gio', {
       method: 'POST',
-      headers: { Authorization: `Bearer ${customerToken}` },
+      headers: { Authorization: `Bearer ${tokenA09}` },
       body: JSON.stringify({
         gioNhan: gioNhanMau,
         gioTra: gioTraMau,
@@ -282,7 +299,7 @@ async function main() {
       })
     });
 
-    assert(res.status === 200, `Expected 200, got ${res.status}`);
+    assert(res.status === 200, `Expected 200, got ${res.status} (${JSON.stringify(res.data)})`);
     assert(res.data.thanhCong === true, 'Phải trả thanhCong = true');
   });
 

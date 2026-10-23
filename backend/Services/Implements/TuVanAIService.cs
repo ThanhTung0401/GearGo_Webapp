@@ -375,6 +375,9 @@ public class TuVanAIService : ITuVanAIService
             return newKh.MaKhachHang;
         }
 
+        var firstKh = await _context.KhachHangs.FirstOrDefaultAsync();
+        if (firstKh != null) return firstKh.MaKhachHang;
+
         return actorId;
     }
 }
