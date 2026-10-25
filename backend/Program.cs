@@ -59,6 +59,65 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidateAudience = false, // Có thể bật lên true trong môi trường Production
             ClockSkew = TimeSpan.Zero
         };
+
+        // W5-T1: quyền xét theo trạng thái/vai trò HIỆN TẠI trong database ở mọi request bảo vệ,
+        // không tin vai trò trong JWT cấp trước đó (không có cache nên đổi quyền/khóa có hiệu lực ngay).
+        opt.Events = new JwtBearerEvents
+        {
+            OnTokenValidated = async ctx =>
+            {
+                var db = ctx.HttpContext.RequestServices.GetRequiredService<ApplicationDbContext>();
+                var raw = ctx.Principal?.FindFirst("MaTaiKhoan")?.Value
+                          ?? ctx.Principal?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+                if (!long.TryParse(raw, out var maTaiKhoan))
+                {
+                    ctx.Fail("Token không chứa mã tài khoản.");
+                    return;
+                }
+
+                var tk = await db.TaiKhoans.AsNoTracking()
+                    .Where(t => t.MaTaiKhoan == maTaiKhoan)
+                    .Select(t => new
+                    {
+                        t.VaiTro,
+                        t.TrangThai,
+                        TrangThaiLamViec = t.NhanVien != null ? t.NhanVien.TrangThaiLamViec : null
+                    })
+                    .FirstOrDefaultAsync(ctx.HttpContext.RequestAborted);
+
+                // Tài khoản không còn / bị khóa / nhân sự đã nghỉ việc: token không còn hợp lệ (401).
+                if (tk == null || tk.TrangThai != "HoatDong" || tk.TrangThaiLamViec == "DaNghiViec")
+                {
+                    ctx.Fail("Tài khoản không còn hiệu lực.");
+                    return;
+                }
+
+                // Thay claim vai trò bằng vai trò hiện tại; policy sẽ trả 403 nếu không còn đủ quyền.
+                if (ctx.Principal?.Identity is System.Security.Claims.ClaimsIdentity identity)
+                {
+                    var cu = identity.FindAll(System.Security.Claims.ClaimTypes.Role).ToList();
+                    if (cu.Count != 1 || cu[0].Value != tk.VaiTro)
+                    {
+                        foreach (var c in cu) identity.RemoveClaim(c);
+                        identity.AddClaim(new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.Role, tk.VaiTro));
+                        ctx.HttpContext.Items["QuyenDaThayDoi"] = true;
+                    }
+                }
+            },
+            OnForbidden = async ctx =>
+            {
+                // Token còn hạn nhưng vai trò hiện tại không đủ quyền: báo QUYEN_DA_THAY_DOI để UI đăng nhập lại.
+                if (ctx.HttpContext.Items.ContainsKey("QuyenDaThayDoi") && !ctx.Response.HasStarted)
+                {
+                    ctx.Response.ContentType = "application/json";
+                    await ctx.Response.WriteAsync(System.Text.Json.JsonSerializer.Serialize(new
+                    {
+                        maLoi = "QUYEN_DA_THAY_DOI",
+                        thongDiep = "Quyền của tài khoản đã thay đổi; vui lòng đăng nhập lại."
+                    }));
+                }
+            }
+        };
     });
 
 // ── 4. Phân quyền (Authorization) ─────────────────────────────────────────────
@@ -159,6 +218,10 @@ builder.Services.Configure<GearGo.Configuration.TuVanOptions>(builder.Configurat
 builder.Services.AddScoped<GearGo.Integrations.AI.IAIProvider, GearGo.Integrations.AI.AIProviderAdapter>();
 builder.Services.AddScoped<GearGo.Services.Interfaces.IGoiYBoDoService, GearGo.Services.Implements.GoiYBoDoService>();
 builder.Services.AddScoped<GearGo.Services.Interfaces.ITuVanAIService, GearGo.Services.Implements.TuVanAIService>();
+
+// ── W5-T1 (Thanh Tùng): Quản trị tài khoản & nhân viên ──
+builder.Services.AddScoped<IQuanTriTaiKhoanService, QuanTriTaiKhoanService>();
+builder.Services.AddScoped<INhanVienService, NhanVienService>();
 
 // ── W6-T2 & W6-T3 (Kiện Minh): Quản trị khuyến mãi & Kiểm soát áp mã ──
 builder.Services.AddScoped<IQuanTriKhuyenMaiService, QuanTriKhuyenMaiService>();

@@ -163,5 +163,12 @@ public static class DomainConstants
         public const string ForbiddenAttributeModification = "THUOC_TINH_DIEU_CHINH_BI_CAM";
         public const string MismatchSourceReceipt = "CHI_TIET_KHAC_NGUON_NHAP";
         public const string ImmutableSourceReceipt = "NGUON_NHAP_BAT_BIEN";
+
+        // W5-T1: quản trị tài khoản & nhân viên
+        public const string AccountNotFound = "TAI_KHOAN_NOT_FOUND";
+        public const string ContactExists = "LIEN_HE_DA_TON_TAI";
+        public const string LastActiveAdmin = "ADMIN_HOAT_DONG_CUOI_CUNG";
+        public const string InvalidRole = "VAI_TRO_KHONG_HOP_LE";
+        public const string PermissionChanged = "QUYEN_DA_THAY_DOI";
     }
 }
