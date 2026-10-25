@@ -2,10 +2,18 @@ import { useState } from "react";
 import { useApp } from "../App";
 import {
   fmt, statusColors, type Category, type Product, type Supplier, type Promotion, type ImportReceipt,
-  type StaffAccount, type StockAdjustmentReceipt, type StockAdjustmentLine, type EquipmentStatus
+  type StaffAccount, type StockAdjustmentReceipt, type StockAdjustmentLine, type EquipmentStatus, type Order,
+  type Equipment
 } from "../store";
 import Icon, { type IconName } from "../components/Icon";
 import { CustomersTab, ReviewsTab, PoliciesTab, NotificationsTab, AdjustmentsTab, AuditLogTab } from "./AdminExtendedTabs";
+import ReconciliationSheet from "./ReconciliationSheet";
+import EquipmentLifecycleModal from "../components/EquipmentLifecycleModal";
+import InventoryAuditModal from "../components/InventoryAuditModal";
+import SupplierProfileModal from "../components/SupplierProfileModal";
+import GoodsReceivingModal from "../components/GoodsReceivingModal";
+import ImportAdjustmentModal from "../components/ImportAdjustmentModal";
+import PromotionDetailModal from "../components/PromotionDetailModal";
 
 type AdminTab =
   | "dashboard"
@@ -147,24 +155,71 @@ function SupplierForm({ app, supplier, onClose }: { app: ReturnType<typeof useAp
 function PromotionForm({ app, promotion, onClose }: { app: ReturnType<typeof useApp>; promotion?: Promotion; onClose: () => void }) {
   const [form, setForm] = useState<Promotion>(promotion ?? { id: "", code: "", name: "", discountType: "percentage", discountValue: 10, maxDiscount: null, minimumRental: 0, scope: "all", productIds: [], categoryIds: [], startsAt: new Date().toISOString().slice(0, 16), endsAt: new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 16), totalUsageLimit: null, perCustomerLimit: 1, usedCount: 0, status: "active" });
   const [error, setError] = useState("");
+  const isCodeLocked = !!promotion && promotion.usedCount > 0;
+
   const set = <K extends keyof Promotion>(key: K, value: Promotion[K]) => setForm((current) => ({ ...current, [key]: value }));
   const toggle = (key: "productIds" | "categoryIds", id: string) => set(key, form[key].includes(id) ? form[key].filter((item) => item !== id) : [...form[key], id]);
+
+  // Tính thử mức giảm cho đơn hàng 1.000.000 đ
+  const testSubtotal = 1000000;
+  const simulatedDiscount = form.discountType === "percentage"
+    ? Math.min((testSubtotal * (Number(form.discountValue) || 0)) / 100, form.maxDiscount ? Number(form.maxDiscount) : Infinity)
+    : Math.min(testSubtotal, Number(form.discountValue) || 0);
+
   return <FormModal title={promotion ? "Sửa khuyến mãi" : "Tạo mã giảm"} description="Khuyến mãi chỉ giảm tiền thuê đủ điều kiện, không giảm tiền cọc." onClose={onClose}>
-    <form onSubmit={(event) => { event.preventDefault(); const result = app.savePromotion(form); if (!result.ok) return setError(result.message); onClose(); }} className="grid gap-4 mt-5">
+    <form onSubmit={(event) => {
+      event.preventDefault();
+      if (!form.code.trim()) return setError("Mã khuyến mãi không được để trống");
+      if (new Date(form.endsAt) <= new Date(form.startsAt)) {
+        return setError("Thời gian kết thúc phải diễn ra sau thời gian bắt đầu");
+      }
+      const result = app.savePromotion(form);
+      if (!result.ok) return setError(result.message);
+      onClose();
+    }} className="grid gap-4 mt-5">
       <div className="responsive-two-column grid gap-4" style={{ gridTemplateColumns: "1fr 1fr" }}>
-        <label style={labelStyle}>Mã giảm giá<input value={form.code} onChange={(e) => set("code", e.target.value)} style={fieldStyle} /></label>
-        <label style={labelStyle}>Tên chương trình<input value={form.name} onChange={(e) => set("name", e.target.value)} style={fieldStyle} /></label>
-        <label style={labelStyle}>Loại giảm<select value={form.discountType} onChange={(e) => set("discountType", e.target.value as Promotion["discountType"])} style={fieldStyle}><option value="percentage">Phần trăm</option><option value="fixed">Số tiền cố định</option></select></label>
-        <label style={labelStyle}>Giá trị giảm<input type="number" min="0" value={form.discountValue} onChange={(e) => set("discountValue", Number(e.target.value))} style={fieldStyle} /></label>
-        <label style={labelStyle}>Mức giảm tối đa<input type="number" min="0" value={form.maxDiscount ?? ""} onChange={(e) => set("maxDiscount", e.target.value ? Number(e.target.value) : null)} style={fieldStyle} /></label>
-        <label style={labelStyle}>Tiền thuê tối thiểu<input type="number" min="0" value={form.minimumRental} onChange={(e) => set("minimumRental", Number(e.target.value))} style={fieldStyle} /></label>
-        <label style={labelStyle}>Bắt đầu<input type="datetime-local" value={form.startsAt} onChange={(e) => set("startsAt", e.target.value)} style={fieldStyle} /></label>
-        <label style={labelStyle}>Kết thúc<input type="datetime-local" value={form.endsAt} onChange={(e) => set("endsAt", e.target.value)} style={fieldStyle} /></label>
-        <label style={labelStyle}>Giới hạn tổng lượt<input type="number" min="1" value={form.totalUsageLimit ?? ""} onChange={(e) => set("totalUsageLimit", e.target.value ? Number(e.target.value) : null)} style={fieldStyle} /></label>
-        <label style={labelStyle}>Giới hạn mỗi khách<input type="number" min="1" value={form.perCustomerLimit ?? ""} onChange={(e) => set("perCustomerLimit", e.target.value ? Number(e.target.value) : null)} style={fieldStyle} /></label>
-        <label style={labelStyle}>Phạm vi<select value={form.scope} onChange={(e) => set("scope", e.target.value as Promotion["scope"])} style={fieldStyle}><option value="all">Tất cả sản phẩm</option><option value="categories">Theo danh mục</option><option value="products">Theo sản phẩm</option></select></label>
-        <label style={labelStyle}>Trạng thái<select value={form.status} onChange={(e) => set("status", e.target.value as Promotion["status"])} style={fieldStyle}><option value="active">Hoạt động</option><option value="inactive">Tạm dừng</option></select></label>
+        <label style={labelStyle}>
+          <div className="flex items-center justify-between">
+            <span>Mã giảm giá (In hoa)</span>
+            {isCodeLocked && <span style={{ fontSize: "0.7rem", color: "#B45309", fontWeight: 700 }}>🔒 Đã khóa (UC8.3)</span>}
+          </div>
+          <input
+            value={form.code}
+            disabled={isCodeLocked}
+            onChange={(e) => set("code", e.target.value.toUpperCase().replace(/\s/g, ""))}
+            placeholder="VD: HELLO2026"
+            style={{ ...fieldStyle, fontFamily: "var(--font-mono)", fontWeight: 700, textTransform: "uppercase", background: isCodeLocked ? "var(--color-parchment)" : "white" }}
+          />
+          {isCodeLocked && (
+            <div style={{ fontSize: "0.72rem", color: "#92400E" }}>
+              Mã đã có {promotion.usedCount} lượt dùng thực tế, không thể sửa mã để bảo toàn chứng từ lịch sử.
+            </div>
+          )}
+        </label>
+        <label style={labelStyle}>Tên chương trình<input value={form.name} onChange={(e) => set("name", e.target.value)} placeholder="VD: Khuyến mãi Hè Rực Rỡ" style={fieldStyle} /></label>
+        <label style={labelStyle}>Loại giảm<select value={form.discountType} onChange={(e) => set("discountType", e.target.value as Promotion["discountType"])} style={fieldStyle}><option value="percentage">Phần trăm (%)</option><option value="fixed">Số tiền cố định (VNĐ)</option></select></label>
+        <label style={labelStyle}>Giá trị giảm {form.discountType === "percentage" ? "(%)" : "(VNĐ)"}<input type="number" min="0" max={form.discountType === "percentage" ? 100 : undefined} value={form.discountValue} onChange={(e) => set("discountValue", Number(e.target.value))} style={fieldStyle} /></label>
+        <label style={labelStyle}>Mức giảm tối đa (VNĐ, để trống nếu không giới hạn)<input type="number" min="0" value={form.maxDiscount ?? ""} onChange={(e) => set("maxDiscount", e.target.value ? Number(e.target.value) : null)} placeholder="Không giới hạn" style={fieldStyle} /></label>
+        <label style={labelStyle}>Tiền thuê tối thiểu (VNĐ)<input type="number" min="0" value={form.minimumRental} onChange={(e) => set("minimumRental", Number(e.target.value))} style={fieldStyle} /></label>
+        <label style={labelStyle}>Thời gian bắt đầu<input type="datetime-local" value={form.startsAt} onChange={(e) => set("startsAt", e.target.value)} style={fieldStyle} /></label>
+        <label style={labelStyle}>Thời gian kết thúc<input type="datetime-local" value={form.endsAt} onChange={(e) => set("endsAt", e.target.value)} style={fieldStyle} /></label>
+        <label style={labelStyle}>Giới hạn tổng lượt dùng (Để trống = Vô hạn)<input type="number" min="1" value={form.totalUsageLimit ?? ""} onChange={(e) => set("totalUsageLimit", e.target.value ? Number(e.target.value) : null)} placeholder="Không giới hạn" style={fieldStyle} /></label>
+        <label style={labelStyle}>Giới hạn mỗi khách hàng (lượt)<input type="number" min="1" value={form.perCustomerLimit ?? ""} onChange={(e) => set("perCustomerLimit", e.target.value ? Number(e.target.value) : null)} style={fieldStyle} /></label>
+        <label style={labelStyle}>Phạm vi áp dụng<select value={form.scope} onChange={(e) => set("scope", e.target.value as Promotion["scope"])} style={fieldStyle}><option value="all">Toàn bộ sản phẩm</option><option value="categories">Theo danh mục sản phẩm</option><option value="products">Theo sản phẩm chỉ định</option></select></label>
+        <label style={labelStyle}>Trạng thái hoạt động<select value={form.status} onChange={(e) => set("status", e.target.value as Promotion["status"])} style={fieldStyle}><option value="active">Hoạt động (Active)</option><option value="inactive">Tạm dừng (Inactive)</option></select></label>
       </div>
+
+      {/* Demo tính giảm giá trực quan */}
+      <div style={{ background: "var(--color-cream)", border: "1px dashed var(--color-moss)", borderRadius: 10, padding: "10px 14px", fontSize: "0.8rem", color: "var(--color-forest)" }}>
+        <strong>💡 Mô phỏng tính giảm giá (UC8.2):</strong> Với đơn hàng có tiền thuê hợp lệ <strong>{fmt(testSubtotal)}</strong>:
+        <span style={{ display: "inline-block", marginLeft: 8, padding: "2px 8px", background: "white", borderRadius: 6, fontWeight: 700, color: "#047857" }}>
+          Được giảm: -{fmt(simulatedDiscount)}
+        </span>
+        <span style={{ display: "inline-block", marginLeft: 8, color: "#6B7280" }}>
+          (Còn lại tiền thuê: {fmt(testSubtotal - simulatedDiscount)} · Tiền cọc giữ nguyên không giảm)
+        </span>
+      </div>
+
       {form.scope === "categories" && <div><div style={{ ...labelStyle, marginBottom: 8 }}>Danh mục áp dụng</div><div className="flex flex-wrap gap-2">{app.categories.map((item) => <label key={item.id} className="icon-label" style={{ border: "1px solid var(--color-bone)", borderRadius: 8, padding: "7px 10px", fontSize: "0.78rem" }}><input type="checkbox" checked={form.categoryIds.includes(item.id)} onChange={() => toggle("categoryIds", item.id)} />{item.name}</label>)}</div></div>}
       {form.scope === "products" && <div><div style={{ ...labelStyle, marginBottom: 8 }}>Sản phẩm áp dụng</div><div className="flex flex-wrap gap-2">{app.products.map((item) => <label key={item.id} className="icon-label" style={{ border: "1px solid var(--color-bone)", borderRadius: 8, padding: "7px 10px", fontSize: "0.78rem" }}><input type="checkbox" checked={form.productIds.includes(item.id)} onChange={() => toggle("productIds", item.id)} />{item.name}</label>)}</div></div>}
       {error && <div role="alert" style={{ color: "#B91C1C", background: "#FEE2E2", padding: 10, borderRadius: 8 }}>{error}</div>}
@@ -316,9 +371,17 @@ export default function AdminView() {
 
 // ─── Dashboard ────────────────────────────────────────────────────────────────
 function DashboardTab({ app }: { app: ReturnType<typeof useApp> }) {
+  const [adminSelectedOrder, setAdminSelectedOrder] = useState<Order | null>(null);
+  const [statusFilter, setStatusFilter] = useState<string | null>("Chờ đối soát");
+  // UC5.3: Xử lý tranh chấp phụ phí
+  const [resolvingSurcharge, setResolvingSurcharge] = useState<{ order: Order; surcharge: Surcharge } | null>(null);
+  const [resolutionType, setResolutionType] = useState<"approved" | "rejected" | "adjusted">("approved");
+  const [adjustedAmount, setAdjustedAmount] = useState<number>(0);
+  const [resolutionReason, setResolutionReason] = useState("");
+
   const pendingSurcharges = app.orders.flatMap((order) =>
     order.surcharges
-      .filter((surcharge) => surcharge.status === "Chờ duyệt")
+      .filter((surcharge) => surcharge.status === "Chờ duyệt" || surcharge.status === "Tranh chấp")
       .map((surcharge) => ({ order, surcharge }))
   );
   return (
@@ -340,29 +403,70 @@ function DashboardTab({ app }: { app: ReturnType<typeof useApp> }) {
         ))}
       </div>
 
+      {/* UC5.3: Trung tâm xử lý tranh chấp & Duyệt phụ phí */}
       <div className="card-panel p-0 overflow-hidden mb-5">
         <div className="flex justify-between items-center bg-parchment p-3 px-4 border-b border-bone">
           <div>
-            <div className="font-bold text-sm text-bark">Phụ phí chờ phê duyệt</div>
-            <div className="text-xs text-gray-500">Nhân viên chỉ lập đề xuất; quản trị viên quyết định duyệt hoặc từ chối.</div>
+            <div className="flex items-center gap-2">
+              <span style={{ fontSize: "0.72rem", background: "var(--color-forest)", color: "white", padding: "2px 8px", borderRadius: 4, fontWeight: 700 }}>
+                UC5.3
+              </span>
+              <strong className="text-sm text-bark">Trung tâm xử lý tranh chấp & Duyệt phụ phí</strong>
+            </div>
+            <div className="text-xs text-gray-500 mt-0.5">
+              Đối chiếu chứng cứ bàn giao (BBBG) vs nhận trả (PNT), xem phản hồi khiếu nại của khách để kết luận mức phí hợp lệ.
+            </div>
           </div>
           <span className={`badge ${pendingSurcharges.length ? "badge-warning" : "badge-success"}`}>
-            {pendingSurcharges.length}
+            {pendingSurcharges.length} khoản cần xử lý
           </span>
         </div>
         {pendingSurcharges.length === 0 ? (
-          <div className="p-4 text-center text-gray-500 text-sm">Không có phụ phí đang chờ duyệt.</div>
-        ) : pendingSurcharges.map(({ order, surcharge }) => (
-          <div key={surcharge.id} className="flex items-center gap-3 flex-wrap p-3 px-4 border-t border-bone">
-            <div className="flex-1 min-w-[220px]">
-              <div className="font-bold text-sm">{surcharge.type} · {surcharge.equipmentId}</div>
-              <div className="text-xs text-gray-500">{order.id} · {order.customerName} · {surcharge.reason}</div>
+          <div className="p-4 text-center text-gray-500 text-sm">✓ Tất cả phụ phí đã được duyệt hoặc xử lý tranh chấp xong.</div>
+        ) : pendingSurcharges.map(({ order, surcharge }) => {
+          const isDisputed = surcharge.status === "Tranh chấp";
+          return (
+            <div key={surcharge.id} className="flex items-center gap-3 flex-wrap p-3 px-4 border-t border-bone" style={{ background: isDisputed ? "#FFFBEB" : "white" }}>
+              <div className="flex-1 min-w-[220px]">
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-sm">{surcharge.type} · {surcharge.equipmentId}</span>
+                  <span style={{
+                    fontSize: "0.7rem",
+                    padding: "1px 6px",
+                    borderRadius: 4,
+                    fontWeight: 700,
+                    background: isDisputed ? "#FEE2E2" : "#FEF3C7",
+                    color: isDisputed ? "#DC2626" : "#B45309",
+                  }}>
+                    {isDisputed ? "⚠️ Khách đang khiếu nại" : "Chờ duyệt"}
+                  </span>
+                </div>
+                <div className="text-xs text-gray-500">
+                  Đơn {order.id} · Khách: {order.customerName} ({order.customerPhone}) · Lý do: {surcharge.reason}
+                </div>
+                {surcharge.customerResponse && (
+                  <div style={{ fontSize: "0.74rem", color: "#B45309", marginTop: 2 }}>
+                    <strong>Ý kiến khách:</strong> "{surcharge.customerResponse}"
+                  </div>
+                )}
+              </div>
+              <strong className="text-red-600 font-mono">+{fmt(surcharge.amount)}</strong>
+              <button
+                type="button"
+                onClick={() => {
+                  setResolvingSurcharge({ order, surcharge });
+                  setResolutionType("approved");
+                  setAdjustedAmount(surcharge.amount);
+                  setResolutionReason("");
+                }}
+                className="btn btn-primary btn-sm"
+                style={{ fontWeight: 700 }}
+              >
+                ⚖️ Xem chứng cứ & Kết luận (UC5.3)
+              </button>
             </div>
-            <strong className="text-red-600 font-mono">+{fmt(surcharge.amount)}</strong>
-            <button onClick={() => app.rejectSurcharge(order.id, surcharge.id)} className="btn btn-secondary btn-sm text-red-600">Từ chối</button>
-            <button onClick={() => app.approveSurcharge(order.id, surcharge.id)} className="btn btn-primary btn-sm">Duyệt phụ phí</button>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       <div className="grid gap-5" style={{ gridTemplateColumns: "1fr 1fr" }}>
@@ -405,25 +509,327 @@ function DashboardTab({ app }: { app: ReturnType<typeof useApp> }) {
         </div>
       </div>
 
-      {/* Status flow */}
+      {/* Status flow & Đối soát cọc (UC5.4 cho Quản trị viên) */}
       <div style={{ background: "white", borderRadius: "12px", border: "1px solid var(--color-bone)", padding: "18px", marginTop: "18px" }}>
-        <h3 style={{ fontWeight: 700, fontSize: "0.9rem", color: "var(--color-bark)", marginBottom: "12px" }}>Luồng trạng thái đơn thuê</h3>
+        <div className="flex justify-between items-center mb-3">
+          <div>
+            <h3 style={{ fontWeight: 700, fontSize: "0.95rem", color: "var(--color-bark)", margin: 0 }}>
+              Luồng trạng thái đơn thuê & Giám sát đối soát (UC5.4)
+            </h3>
+            <div style={{ fontSize: "0.75rem", color: "#6B7280" }}>Click vào một trạng thái để xem danh sách đơn hoặc thực hiện đối soát cọc</div>
+          </div>
+          {statusFilter && (
+            <button onClick={() => setStatusFilter(null)} style={{ background: "none", border: "none", fontSize: "0.75rem", color: "#6B7280", cursor: "pointer", textDecoration: "underline" }}>
+              Bỏ chọn lọc
+            </button>
+          )}
+        </div>
+
         <div className="flex items-center gap-2 flex-wrap">
           {["Chờ thanh toán", "Đã xác nhận", "Đang chuẩn bị", "Sẵn sàng nhận", "Đang thuê", "Đã nhận trả", "Chờ đối soát", "Hoàn tất"].map((s, i, arr) => {
             const sc = statusColors[s] || { bg: "#F3F4F6", text: "#374151" };
             const cnt = app.orders.filter((o) => o.status === s).length;
+            const isSelected = statusFilter === s;
             return (
               <div key={s} className="flex items-center gap-2">
-                <div style={{ background: sc.bg, borderRadius: "8px", padding: "7px 12px", textAlign: "center", minWidth: 80 }}>
-                  <div style={{ fontFamily: "var(--font-mono)", fontSize: "1.1rem", fontWeight: 700, color: sc.text }}>{cnt}</div>
-                  <div style={{ fontSize: "0.66rem", color: sc.text, fontWeight: 600, whiteSpace: "nowrap" }}>{s}</div>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setStatusFilter(isSelected ? null : s)}
+                  style={{
+                    background: isSelected ? "var(--color-forest)" : sc.bg,
+                    borderRadius: "8px",
+                    padding: "7px 12px",
+                    textAlign: "center",
+                    minWidth: 80,
+                    border: isSelected ? "2px solid var(--color-forest)" : "1px solid transparent",
+                    cursor: "pointer",
+                    boxShadow: isSelected ? "0 2px 8px rgba(24,61,45,0.2)" : "none",
+                  }}
+                >
+                  <div style={{ fontFamily: "var(--font-mono)", fontSize: "1.1rem", fontWeight: 700, color: isSelected ? "white" : sc.text }}>{cnt}</div>
+                  <div style={{ fontSize: "0.66rem", color: isSelected ? "white" : sc.text, fontWeight: 600, whiteSpace: "nowrap" }}>{s}</div>
+                </button>
                 {i < arr.length - 1 && <span style={{ color: "var(--color-bone)", fontSize: "1.1rem" }}>→</span>}
               </div>
             );
           })}
         </div>
+
+        {/* Danh sách đơn theo trạng thái đang chọn */}
+        {statusFilter && (
+          <div style={{ marginTop: 16, paddingTop: 14, borderTop: "1px dashed var(--color-bone)" }}>
+            <div className="flex justify-between items-center mb-2">
+              <strong style={{ fontSize: "0.85rem", color: "var(--color-bark)" }}>
+                Danh sách đơn: {statusFilter} ({app.orders.filter((o) => o.status === statusFilter).length} đơn)
+              </strong>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              {app.orders.filter((o) => o.status === statusFilter).length === 0 ? (
+                <div style={{ padding: "16px", textAlign: "center", color: "#9CA3AF", fontSize: "0.8rem", background: "#F9FAFB", borderRadius: 8 }}>
+                  Không có đơn hàng nào ở trạng thái {statusFilter}.
+                </div>
+              ) : (
+                app.orders.filter((o) => o.status === statusFilter).map((o) => (
+                  <div key={o.id} style={{ background: "#F9FAFB", border: "1px solid var(--color-bone)", borderRadius: 8, padding: "10px 14px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <strong style={{ fontFamily: "var(--font-mono)", color: "var(--color-forest)", fontSize: "0.88rem" }}>{o.id}</strong>
+                        <span style={{ fontWeight: 600, fontSize: "0.85rem" }}>{o.customerName}</span>
+                        <span style={{ fontSize: "0.75rem", color: "#6B7280" }}>({o.customerPhone})</span>
+                      </div>
+                      <div style={{ fontSize: "0.75rem", color: "#6B7280", marginTop: 2 }}>
+                        Tiền thuê: {fmt(o.rental - o.discount)} · Tiền cọc: {fmt(o.depositTotal)} · Hẹn trả: {o.returnTime}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      {(o.status === "Chờ đối soát" || o.status === "Hoàn tất") && (
+                        <button
+                          type="button"
+                          onClick={() => setAdminSelectedOrder(o)}
+                          style={{
+                            background: o.status === "Chờ đối soát" ? "var(--color-forest)" : "white",
+                            color: o.status === "Chờ đối soát" ? "white" : "var(--color-bark)",
+                            border: `1px solid ${o.status === "Chờ đối soát" ? "var(--color-forest)" : "var(--color-bone)"}`,
+                            borderRadius: 6,
+                            padding: "6px 14px",
+                            fontSize: "0.78rem",
+                            fontWeight: 700,
+                            cursor: "pointer",
+                          }}
+                        >
+                          {o.status === "Chờ đối soát" ? "📝 Mở bảng đối soát (UC5.4)" : "🔍 Xem đối soát đã khóa"}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        )}
       </div>
+
+      {/* Modal Quản trị viên xử lý kết luận tranh chấp & duyệt phụ phí (UC5.3) */}
+      {resolvingSurcharge && (
+        <div role="dialog" aria-modal="true" className="modal-overlay" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 9999, display: "grid", placeItems: "center", padding: 16 }}>
+          <div className="modal-container" style={{ background: "white", borderRadius: 16, maxWidth: 680, width: "100%", maxHeight: "90vh", overflowY: "auto", padding: 24, boxShadow: "0 10px 40px rgba(0,0,0,0.2)" }}>
+            <div className="modal-header flex justify-between items-center mb-4 pb-3 border-b border-bone">
+              <div>
+                <span style={{ fontSize: "0.72rem", background: "#FEF3C7", color: "#B45309", padding: "2px 8px", borderRadius: 6, fontWeight: 700 }}>
+                  UC5.3: DUYỆT & XỬ LÝ TRANH CHẤP PHỤ PHÍ
+                </span>
+                <h3 className="modal-title font-bold text-lg text-bark mt-1">
+                  Hồ sơ xử lý phụ phí: {resolvingSurcharge.surcharge.type}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setResolvingSurcharge(null)}
+                className="btn btn-ghost btn-sm text-xl"
+                style={{ border: "none", background: "none", cursor: "pointer" }}
+              >
+                ×
+              </button>
+            </div>
+
+            {/* Thông tin căn cứ đề xuất & Đơn hàng */}
+            <div style={{ background: "var(--color-parchment)", borderRadius: 10, padding: 14, marginBottom: 16, fontSize: "0.82rem" }}>
+              <div className="grid grid-cols-2 gap-2 mb-2">
+                <div>Đơn hàng: <strong>{resolvingSurcharge.order.id}</strong></div>
+                <div>Khách hàng: <strong>{resolvingSurcharge.order.customerName}</strong> ({resolvingSurcharge.order.customerPhone})</div>
+                <div>Thiết bị liên quan: <strong className="font-mono text-forest">{resolvingSurcharge.surcharge.equipmentId}</strong></div>
+                <div>Người lập đề xuất: <strong>{resolvingSurcharge.surcharge.createdBy}</strong></div>
+              </div>
+              <div style={{ paddingTop: 8, borderTop: "1px dashed var(--color-bone)" }}>
+                Lý do lập phí ban đầu: <em className="text-gray-700">"{resolvingSurcharge.surcharge.reason}"</em>
+              </div>
+            </div>
+
+            {/* Đối chiếu chứng cứ 2 chiều (Dòng chính 2 UC5.3) */}
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ fontSize: "0.82rem", fontWeight: 700, color: "var(--color-bark)", marginBottom: 8 }}>
+                🔍 Đối chiếu chứng cứ trước và sau thuê (Dòng 2 UC5.3):
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                {/* Cột 1: Trước thuê (BBBG - UC4.2) */}
+                <div style={{ background: "#EFF6FF", border: "1px solid #BFDBFE", borderRadius: 8, padding: 12, fontSize: "0.78rem" }}>
+                  <div style={{ fontWeight: 700, color: "#1D4ED8", marginBottom: 4 }}>
+                    📋 Lúc bàn giao (BBBG - UC4.2)
+                  </div>
+                  <div>Thời gian: {resolvingSurcharge.order.handoverRecord?.handoverAt || resolvingSurcharge.order.pickupTime}</div>
+                  <div>Nhân viên giao: {resolvingSurcharge.order.handoverRecord?.staffName || "Cửa hàng"}</div>
+                  <div>
+                    Tình trạng: {
+                      resolvingSurcharge.order.handoverRecord?.items.find((i) => i.equipmentId === resolvingSurcharge.surcharge.equipmentId)?.condition || "Tốt, hoạt động bình thường"
+                    }
+                  </div>
+                  <div style={{ marginTop: 4, color: "#4B5563" }}>
+                    Ghi chú giao: {resolvingSurcharge.order.handoverRecord?.initialNotes || "Không có ghi nhận lỗi"}
+                  </div>
+                </div>
+
+                {/* Cột 2: Sau thuê (PNT - UC4.3) */}
+                <div style={{ background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: 8, padding: 12, fontSize: "0.78rem" }}>
+                  <div style={{ fontWeight: 700, color: "#DC2626", marginBottom: 4 }}>
+                    📦 Lúc nhận trả (PNT - UC4.3)
+                  </div>
+                  <div>Thời gian: {resolvingSurcharge.order.returnedAt || "Đã nhận trả"}</div>
+                  <div>
+                    Tình trạng: {
+                      resolvingSurcharge.order.returnReceipts?.flatMap((r) => r.items).find((i) => i.equipmentId === resolvingSurcharge.surcharge.equipmentId)?.condition || resolvingSurcharge.surcharge.type
+                    }
+                  </div>
+                  <div style={{ marginTop: 4, color: "#991B1B" }}>
+                    Tổn thất ghi nhận: {resolvingSurcharge.surcharge.reason}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Xem phản hồi khiếu nại của khách (Dòng chính 3 UC5.3) */}
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ fontSize: "0.82rem", fontWeight: 700, color: "var(--color-bark)", marginBottom: 6 }}>
+                🗣️ Phản hồi khiếu nại của khách hàng (Dòng 3 UC5.3):
+              </div>
+              {resolvingSurcharge.surcharge.customerResponse ? (
+                <div style={{ background: "#FFFBEB", border: "1px solid #FCD34D", borderRadius: 8, padding: 12, fontSize: "0.82rem", color: "#92400E" }}>
+                  <strong>Khách hàng phản hồi:</strong> "{resolvingSurcharge.surcharge.customerResponse}"
+                </div>
+              ) : (
+                <div style={{ background: "#F9FAFB", border: "1px solid var(--color-bone)", borderRadius: 8, padding: 10, fontSize: "0.78rem", color: "#6B7280" }}>
+                  ℹ️ Khách hàng chưa có khiếu nại (Khoản phí đang ở trạng thái chờ duyệt thông thường).
+                </div>
+              )}
+            </div>
+
+            {/* Form kết luận & quyết định của Quản trị viên (Dòng chính 4 & 5 UC5.3) */}
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                const finalAmt = resolutionType === "rejected" ? 0 : resolutionType === "adjusted" ? adjustedAmount : resolvingSurcharge.surcharge.amount;
+                app.resolveDisputedSurcharge(
+                  resolvingSurcharge.order.id,
+                  resolvingSurcharge.surcharge.id,
+                  resolutionType,
+                  finalAmt,
+                  resolutionReason || (resolutionType === "approved" ? "Quản trị viên chấp thuận mức phí đề xuất" : resolutionType === "adjusted" ? `Đã thương lượng giảm phí còn ${fmt(adjustedAmount)}` : "Bác bỏ do không đủ căn cứ thu")
+                );
+                setResolvingSurcharge(null);
+              }}
+              style={{ background: "#F9FAFB", border: "1px solid var(--color-bone)", borderRadius: 10, padding: 16 }}
+            >
+              <div style={{ fontSize: "0.85rem", fontWeight: 700, color: "var(--color-bark)", marginBottom: 10 }}>
+                ⚖️ Quyết định xử lý & Mức phí phê duyệt vào đối soát:
+              </div>
+
+              <div className="flex flex-col gap-2 mb-3">
+                <label className="flex items-center gap-2 cursor-pointer" style={{ fontSize: "0.82rem" }}>
+                  <input
+                    type="radio"
+                    name="resolution"
+                    checked={resolutionType === "approved"}
+                    onChange={() => setResolutionType("approved")}
+                  />
+                  <span>
+                    <strong>1. Chấp thuận mức đề xuất:</strong> Giữ nguyên {fmt(resolvingSurcharge.surcharge.amount)}
+                  </span>
+                </label>
+
+                <label className="flex items-center gap-2 cursor-pointer" style={{ fontSize: "0.82rem" }}>
+                  <input
+                    type="radio"
+                    name="resolution"
+                    checked={resolutionType === "adjusted"}
+                    onChange={() => {
+                      setResolutionType("adjusted");
+                      if (adjustedAmount === 0) setAdjustedAmount(Math.round(resolvingSurcharge.surcharge.amount / 2));
+                    }}
+                  />
+                  <span>
+                    <strong>2. Thỏa thuận giảm phí (Điều chỉnh có căn cứ):</strong>
+                  </span>
+                </label>
+
+                {resolutionType === "adjusted" && (
+                  <div style={{ marginLeft: 24, marginTop: 4 }}>
+                    <label style={{ fontSize: "0.78rem", color: "#4B5563", display: "block", marginBottom: 3 }}>
+                      Số tiền sau điều chỉnh thỏa thuận (đ):
+                    </label>
+                    <input
+                      type="number"
+                      min={0}
+                      max={resolvingSurcharge.surcharge.amount}
+                      value={adjustedAmount}
+                      onChange={(e) => setAdjustedAmount(Number(e.target.value))}
+                      className="form-input"
+                      style={{ padding: "6px 10px", width: 180, borderRadius: 6, border: "1px solid var(--color-bone)", fontFamily: "var(--font-mono)", fontWeight: 700 }}
+                    />
+                  </div>
+                )}
+
+                <label className="flex items-center gap-2 cursor-pointer" style={{ fontSize: "0.82rem" }}>
+                  <input
+                    type="radio"
+                    name="resolution"
+                    checked={resolutionType === "rejected"}
+                    onChange={() => setResolutionType("rejected")}
+                  />
+                  <span>
+                    <strong>3. Bác bỏ phụ phí (Quy về 0đ - Dòng phụ 4.1):</strong> Không có căn cứ thu hoặc thuộc hao mòn cho phép
+                  </span>
+                </label>
+              </div>
+
+              <div className="form-group mb-3">
+                <label className="form-label" style={{ fontSize: "0.8rem", fontWeight: 600 }}>
+                  Ghi chú kết luận & Căn cứ xử lý (Lưu vết kiểm toán):
+                </label>
+                <textarea
+                  rows={2}
+                  value={resolutionReason}
+                  onChange={(e) => setResolutionReason(e.target.value)}
+                  placeholder="Ghi nhận thỏa thuận qua điện thoại với khách, trích xuất hình ảnh kiểm tra..."
+                  className="form-textarea"
+                  style={{ width: "100%", padding: 8, borderRadius: 6, border: "1px solid var(--color-bone)", fontSize: "0.8rem" }}
+                />
+              </div>
+
+              <div className="flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setResolvingSurcharge(null)}
+                  className="btn btn-secondary btn-sm"
+                >
+                  Đóng
+                </button>
+                <button
+                  type="submit"
+                  className="btn btn-primary btn-sm"
+                  style={{ fontWeight: 700 }}
+                >
+                  ✓ Xác nhận kết luận & Cập nhật đưa vào đối soát
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Đối soát dành cho Quản trị viên (UC5.4) */}
+      {adminSelectedOrder && (
+        <div role="dialog" aria-modal="true" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 9999, display: "grid", placeItems: "center", padding: 20, overflowY: "auto" }}>
+          <div style={{ maxWidth: 860, width: "100%", maxHeight: "92vh", overflowY: "auto" }}>
+            <ReconciliationSheet
+              order={adminSelectedOrder}
+              app={app}
+              userRole="admin"
+              onClose={() => setAdminSelectedOrder(null)}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -605,6 +1011,7 @@ function EquipmentTab({ app }: { app: ReturnType<typeof useApp> }) {
   const [filterProduct, setFilterProduct] = useState("Tất cả");
   const [filterStatus, setFilterStatus] = useState("Tất cả");
   const [editing, setEditing] = useState<ReturnType<typeof useApp>["equipment"][number] | null>(null);
+  const [viewingLifecycle, setViewingLifecycle] = useState<Equipment | null>(null);
 
   const statusStyle: Record<string, { bg: string; text: string }> = {
     "Sẵn sàng": { bg: "#DCFCE7", text: "#15803D" },
@@ -670,7 +1077,7 @@ function EquipmentTab({ app }: { app: ReturnType<typeof useApp> }) {
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead>
             <tr style={{ background: "var(--color-parchment)", fontSize: "0.78rem", fontWeight: 600, color: "var(--color-bark)" }}>
-              {["Mã", "Sản phẩm hiện tại", "Nguồn nhập gốc", "Ngày nhập", "Điều kiện", "Trạng thái", "Lần thuê", ""].map((h) => (
+              {["Mã", "Sản phẩm hiện tại", "Nguồn nhập gốc", "Ngày nhập", "Điều kiện", "Trạng thái", "Lần thuê", "Thao tác"].map((h) => (
                 <th key={h} style={{ padding: "9px 12px", textAlign: "left" }}>{h}</th>
               ))}
             </tr>
@@ -695,7 +1102,12 @@ function EquipmentTab({ app }: { app: ReturnType<typeof useApp> }) {
                     <span style={{ background: st.bg, color: st.text, padding: "2px 8px", borderRadius: "10px", fontSize: "0.72rem", fontWeight: 600 }}>{e.equipmentStatus}</span>
                   </td>
                   <td style={{ padding: "9px 12px", fontFamily: "var(--font-mono)", textAlign: "center" }}>{e.rentCount}</td>
-                  <td style={{ padding: "9px 12px" }}><button onClick={() => setEditing(e)} style={{ border: "1px solid var(--color-bone)", borderRadius: 6, padding: "4px 8px", background: "white", cursor: "pointer", fontSize: "0.72rem" }}>Sửa</button></td>
+                  <td style={{ padding: "9px 12px" }}>
+                    <div className="flex gap-1">
+                      <button onClick={() => setViewingLifecycle(e)} style={{ border: "1px solid var(--color-forest)", color: "var(--color-forest)", borderRadius: 6, padding: "4px 8px", background: "white", cursor: "pointer", fontSize: "0.72rem", fontWeight: 600 }}>🔍 Sổ đời</button>
+                      <button onClick={() => setEditing(e)} style={{ border: "1px solid var(--color-bone)", borderRadius: 6, padding: "4px 8px", background: "white", cursor: "pointer", fontSize: "0.72rem" }}>Sửa</button>
+                    </div>
+                  </td>
                 </tr>
               );
             })}
@@ -703,6 +1115,7 @@ function EquipmentTab({ app }: { app: ReturnType<typeof useApp> }) {
         </table>
       </div>
       {editing && <EquipmentForm app={app} equipment={editing} onClose={() => setEditing(null)} />}
+      {viewingLifecycle && <EquipmentLifecycleModal equipment={viewingLifecycle} app={app} onClose={() => setViewingLifecycle(null)} />}
     </div>
   );
 }
@@ -841,6 +1254,8 @@ function InventoryTab({ app }: { app: ReturnType<typeof useApp> }) {
   const [selectedId, setSelectedId] = useState<string | null>(app.importReceipts[0]?.id ?? null);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [editing, setEditing] = useState<ImportReceipt | "new" | null>(null);
+  const [inspectingReceipt, setInspectingReceipt] = useState<ImportReceipt | null>(null);
+  const [adjustingReceipt, setAdjustingReceipt] = useState<ImportReceipt | null>(null);
 
   // State UC7.8: Lọc Nhà cung cấp, Trạng thái, Khoảng ngày
   const [supplierFilter, setSupplierFilter] = useState("Tất cả");
@@ -870,19 +1285,20 @@ function InventoryTab({ app }: { app: ReturnType<typeof useApp> }) {
   const selected = app.importReceipts.find((receipt) => receipt.id === selectedId);
 
   const receiptTotal = (receipt: typeof app.importReceipts[number]) =>
-    receipt.lines.reduce((sum, line) => sum + line.quantity * line.unitPrice, 0);
-
-  const confirmReceipt = (receiptId: string) => {
-    const error = app.confirmImportReceipt(receiptId);
-    setMessage(error ? { type: "error", text: error } : { type: "success", text: "Đã xác nhận nhập kho. Thiết bị mới đã chuyển sang trạng thái Sẵn sàng." });
-  };
+    receipt.lines.reduce((sum, line) => {
+      // Nếu đã kiểm nhận, chỉ tính tiền cho hàng được chấp nhận (đạt + lỗi nhận sửa)
+      const billedQty = line.acceptedQty !== undefined || line.damagedQty !== undefined
+        ? ((line.acceptedQty ?? 0) + (line.damagedQty ?? 0))
+        : line.quantity;
+      return sum + billedQty * line.unitPrice;
+    }, 0);
 
   return (
     <div>
       <div className="flex justify-between items-center mb-4 flex-wrap gap-2">
         <div>
           <h2 style={{ fontFamily: "var(--font-display)", fontSize: "1.4rem", color: "var(--color-bark)" }}>Phiếu nhập hàng</h2>
-          <p style={{ color: "#6B7280", fontSize: "0.8rem" }}>Phiếu nháp không làm thay đổi tồn kho cho đến khi được xác nhận.</p>
+          <p style={{ color: "#6B7280", fontSize: "0.8rem" }}>Phiếu nháp không làm thay đổi tồn kho cho đến khi được kiểm nhận và xác nhận (UC7.7).</p>
         </div>
         <button onClick={() => setEditing("new")} style={{ background: "var(--color-forest)", color: "white", padding: "9px 16px", borderRadius: "8px", border: "none", cursor: "pointer", fontWeight: 600, fontSize: "0.85rem" }}>+ Tạo phiếu nháp</button>
       </div>
@@ -956,9 +1372,20 @@ function InventoryTab({ app }: { app: ReturnType<typeof useApp> }) {
             const quantity = receipt.lines.reduce((sum, line) => sum + line.quantity, 0);
             return (
               <button key={receipt.id} onClick={() => { setSelectedId(receipt.id); setMessage(null); }} style={{ background: "white", borderRadius: "10px", padding: "14px 16px", border: `1px solid ${selectedId === receipt.id ? "var(--color-forest)" : "var(--color-bone)"}`, display: "block", cursor: "pointer", textAlign: "left" }}>
-                <div className="flex items-center gap-2 mb-1">
+                <div className="flex items-center gap-2 mb-1 flex-wrap">
                   <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.8rem", fontWeight: 700, color: "var(--color-forest)" }}>{receipt.displayCode ?? receipt.id}</span>
-                  <span style={{ background: receipt.status === "Đã nhập kho" ? "#DCFCE7" : "#FEF3C7", color: receipt.status === "Đã nhập kho" ? "#15803D" : "#B45309", padding: "2px 8px", borderRadius: "999px", fontSize: "0.7rem", fontWeight: 600 }}>{receipt.status}</span>
+                  <span style={{
+                    background: receipt.status === "Đã nhập kho" ? "#DCFCE7" : receipt.status === "Đã hủy" ? "#F3F4F6" : "#FEF3C7",
+                    color: receipt.status === "Đã nhập kho" ? "#15803D" : receipt.status === "Đã hủy" ? "#6B7280" : "#B45309",
+                    padding: "2px 8px", borderRadius: "999px", fontSize: "0.7rem", fontWeight: 600
+                  }}>
+                    {receipt.status}
+                  </span>
+                  {receipt.adjustments && receipt.adjustments.length > 0 && (
+                    <span style={{ background: "#FEF3C7", color: "#D97706", fontSize: "0.68rem", padding: "1px 6px", borderRadius: 4, fontWeight: 700 }}>
+                      ⚡ {receipt.adjustments.filter((a) => a.status === "Chờ duyệt").length > 0 ? "Chờ duyệt điều chỉnh" : "Đã có điều chỉnh"}
+                    </span>
+                  )}
                 </div>
                 <div style={{ fontWeight: 600, fontSize: "0.86rem" }}>{receipt.supplierName}</div>
                 <div style={{ fontSize: "0.72rem", color: "#6B7280", marginTop: "3px" }}>{receipt.lines.length} loại · {quantity} thiết bị · {receipt.createdBy}</div>
@@ -980,119 +1407,695 @@ function InventoryTab({ app }: { app: ReturnType<typeof useApp> }) {
                 <div style={{ fontFamily: "var(--font-mono)", color: "var(--color-forest)", fontWeight: 700 }}>{selected.displayCode ?? selected.id}</div>
                 <div style={{ fontWeight: 700 }}>{selected.supplierName}</div>
                 <div style={{ color: "#6B7280", fontSize: "0.72rem" }}>Lập lúc {selected.createdAt} · {selected.createdBy}</div>
+                {selected.supplierDocumentNumber && (
+                  <div style={{ color: "#4B5563", fontSize: "0.72rem" }}>Số chứng từ NCC: <strong>{selected.supplierDocumentNumber}</strong></div>
+                )}
               </div>
-              <span style={{ background: selected.status === "Đã nhập kho" ? "#DCFCE7" : "#FEF3C7", color: selected.status === "Đã nhập kho" ? "#15803D" : "#B45309", borderRadius: "999px", padding: "4px 10px", fontSize: "0.72rem", fontWeight: 700 }}>{selected.status}</span>
+              <span style={{
+                background: selected.status === "Đã nhập kho" ? "#DCFCE7" : selected.status === "Đã hủy" ? "#F3F4F6" : "#FEF3C7",
+                color: selected.status === "Đã nhập kho" ? "#15803D" : selected.status === "Đã hủy" ? "#6B7280" : "#B45309",
+                borderRadius: "999px", padding: "4px 10px", fontSize: "0.72rem", fontWeight: 700
+              }}>
+                {selected.status}
+              </span>
             </div>
             <div className="responsive-table">
               <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 580 }}>
                 <thead><tr style={{ color: "#6B7280", fontSize: "0.72rem" }}>
-                  {["Sản phẩm", "SL", "Đơn giá", "Mã thiết bị", "Thành tiền"].map((heading) => <th key={heading} style={{ textAlign: heading === "Sản phẩm" || heading === "Mã thiết bị" ? "left" : "right", padding: "10px 14px" }}>{heading}</th>)}
+                  {["Sản phẩm", "Số lượng", "Đơn giá", "Kiểm nhận / Phân loại", "Thành tiền"].map((heading) => <th key={heading} style={{ textAlign: heading === "Sản phẩm" || heading === "Kiểm nhận / Phân loại" ? "left" : "right", padding: "10px 14px" }}>{heading}</th>)}
                 </tr></thead>
                 <tbody>{selected.lines.map((line) => {
                   const product = app.products.find((item) => item.id === line.productId);
+                  const isZeroPrice = line.unitPrice === 0;
+                  const hasInspection = line.acceptedQty !== undefined || line.damagedQty !== undefined || line.rejectedQty !== undefined;
+                  const acceptedCount = line.acceptedQty ?? line.quantity;
+                  const damagedCount = line.damagedQty ?? 0;
+                  const rejectedCount = line.rejectedQty ?? 0;
+                  const billedCount = (line.acceptedQty !== undefined || line.damagedQty !== undefined) ? (acceptedCount + damagedCount) : line.quantity;
+
                   return (
                     <tr key={line.productId} style={{ borderTop: "1px solid var(--color-bone)", fontSize: "0.8rem" }}>
-                      <td style={{ padding: "12px 14px", fontWeight: 600 }}>{product?.name}</td>
+                      <td style={{ padding: "12px 14px" }}>
+                        <div style={{ fontWeight: 600 }}>{product?.name}</div>
+                        {isZeroPrice && (
+                          <div style={{ fontSize: "0.7rem", color: "#D97706", marginTop: 2, background: "#FEF3C7", padding: "1px 6px", borderRadius: 4, display: "inline-block" }}>
+                            🎁 Hàng tặng/KM: {line.priceZeroReason || "Quà tặng kèm đơn"}
+                          </div>
+                        )}
+                      </td>
                       <td style={{ padding: "12px 14px", textAlign: "right" }}>{line.quantity}</td>
-                      <td style={{ padding: "12px 14px", textAlign: "right" }}>{fmt(line.unitPrice)}</td>
-                      <td style={{ padding: "12px 14px", fontSize: "0.72rem", color: "#6B7280" }}>{line.equipmentCodes.join(", ")}</td>
-                      <td style={{ padding: "12px 14px", textAlign: "right", fontWeight: 700 }}>{fmt(line.quantity * line.unitPrice)}</td>
+                      <td style={{ padding: "12px 14px", textAlign: "right" }}>{isZeroPrice ? "0 đ (Tặng)" : fmt(line.unitPrice)}</td>
+                      <td style={{ padding: "12px 14px", fontSize: "0.72rem" }}>
+                        {hasInspection ? (
+                          <div className="flex flex-col gap-1">
+                            <span style={{ color: "#15803D", fontWeight: 600 }}>✓ Đạt: {acceptedCount} thiết bị {line.acceptedCodes && line.acceptedCodes.length > 0 ? `(${line.acceptedCodes.join(", ")})` : ""}</span>
+                            {damagedCount > 0 && (
+                              <span style={{ color: "#B45309", fontWeight: 600 }}>⚠️ Lỗi nhận sửa: {damagedCount} ({line.damageNotes || "Chờ bảo trì"})</span>
+                            )}
+                            {rejectedCount > 0 && (
+                              <span style={{ color: "#DC2626", fontWeight: 600 }}>✕ Từ chối trả NCC: {rejectedCount} ({line.rejectionReason || "Không đạt"})</span>
+                            )}
+                          </div>
+                        ) : (
+                          <span style={{ color: "#6B7280" }}>Mã dự kiến: {line.equipmentCodes.join(", ") || "Chưa tạo mã"}</span>
+                        )}
+                      </td>
+                      <td style={{ padding: "12px 14px", textAlign: "right", fontWeight: 700 }}>
+                        {fmt(billedCount * line.unitPrice)}
+                        {rejectedCount > 0 && (
+                          <div style={{ fontSize: "0.68rem", color: "#DC2626", fontWeight: 400 }}>- Đã trừ {rejectedCount} cái từ chối</div>
+                        )}
+                      </td>
                     </tr>
                   );
                 })}</tbody>
               </table>
             </div>
             <div style={{ padding: "16px 18px", borderTop: "1px solid var(--color-bone)" }}>
-              <div className="flex justify-between" style={{ fontWeight: 800, fontSize: "1rem", marginBottom: "12px" }}><span>Tổng phiếu nhập</span><span style={{ color: "var(--color-forest)" }}>{fmt(receiptTotal(selected))}</span></div>
+              <div className="flex justify-between" style={{ fontWeight: 800, fontSize: "1rem", marginBottom: "12px" }}>
+                <span>Tổng tiền thanh toán</span>
+                <span style={{ color: "var(--color-forest)" }}>{fmt(receiptTotal(selected))}</span>
+              </div>
+
               {selected.status === "Nháp" ? (
-                <div className="flex gap-2">
-                  <button onClick={() => setEditing(selected)} style={{ flex: 1, background: "white", color: "var(--color-forest)", border: "1px solid var(--color-forest)", borderRadius: "9px", padding: "11px", cursor: "pointer", fontWeight: 700 }}>Sửa nháp</button>
-                  <button onClick={() => { const reason = window.prompt("Lý do hủy phiếu nhập:"); if (!reason) return; const result = app.cancelImportReceipt(selected.id, reason); setMessage(result.ok ? { type: "success", text: "Đã hủy phiếu nháp. Kho không thay đổi." } : { type: "error", text: result.message }); }} style={{ background: "white", color: "#B91C1C", border: "1px solid #FECACA", borderRadius: "9px", padding: "11px", cursor: "pointer", fontWeight: 700 }}>Hủy</button>
-                  <button onClick={() => confirmReceipt(selected.id)} style={{ flex: 1.4, background: "var(--color-forest)", color: "white", border: "none", borderRadius: "9px", padding: "11px", cursor: "pointer", fontWeight: 700 }}>Xác nhận nhập kho</button>
+                <div className="flex gap-2 flex-wrap">
+                  <button onClick={() => setEditing(selected)} style={{ flex: 1, minWidth: 100, background: "white", color: "var(--color-forest)", border: "1px solid var(--color-forest)", borderRadius: "9px", padding: "11px", cursor: "pointer", fontWeight: 700 }}>
+                    ✏️ Sửa nháp (UC7.6)
+                  </button>
+                  <button onClick={() => {
+                    const reason = window.prompt("Lý do hủy phiếu nhập (bắt buộc theo UC7.9):");
+                    if (!reason || !reason.trim()) return;
+                    const result = app.cancelImportReceipt(selected.id, reason.trim());
+                    setMessage(result.ok ? { type: "success", text: "Đã hủy phiếu nháp thành công. Kho không thay đổi." } : { type: "error", text: result.message });
+                  }} style={{ background: "white", color: "#B91C1C", border: "1px solid #FECACA", borderRadius: "9px", padding: "11px 16px", cursor: "pointer", fontWeight: 700 }}>
+                    ✕ Hủy nháp (UC7.9)
+                  </button>
+                  <button onClick={() => setInspectingReceipt(selected)} style={{ flex: 1.6, minWidth: 200, background: "var(--color-forest)", color: "white", border: "none", borderRadius: "9px", padding: "11px 18px", cursor: "pointer", fontWeight: 700, fontSize: "0.88rem", boxShadow: "0 2px 8px rgba(34, 197, 94, 0.25)" }}>
+                    📦 Kiểm nhận & Chốt kho (UC7.7)
+                  </button>
+                </div>
+              ) : selected.status === "Đã hủy" ? (
+                <div style={{ background: "#F3F4F6", color: "#6B7280", borderRadius: "8px", padding: "10px", fontSize: "0.8rem", textAlign: "center", fontWeight: 600 }}>
+                  Phiếu đã hủy lúc {selected.cancelledAt ?? "trước đó"}. Lý do: {selected.cancelReason ?? "Không có"}. Tồn kho không thay đổi.
                 </div>
               ) : (
-                <div style={{ background: selected.status === "Đã hủy" ? "#F3F4F6" : "#DCFCE7", color: selected.status === "Đã hủy" ? "#6B7280" : "#15803D", borderRadius: "8px", padding: "10px", fontSize: "0.8rem", textAlign: "center", fontWeight: 600 }}>{selected.status === "Đã hủy" ? "Phiếu đã hủy, kho không thay đổi." : `Đã nhập kho lúc ${selected.confirmedAt}. Phiếu được khóa chỉnh sửa.`}</div>
+                <div>
+                  <div style={{ background: "#DCFCE7", color: "#15803D", borderRadius: "8px", padding: "10px 14px", fontSize: "0.8rem", fontWeight: 600, marginBottom: "12px" }}>
+                    ✓ Đã nhập kho lúc {selected.confirmedAt}. Người kiểm: {selected.inspectedBy ?? selected.createdBy}. Phiếu gốc đã được khóa chỉnh sửa.
+                  </div>
+
+                  {/* UC7.10: Xử lý sai lệch sau chốt */}
+                  <div className="flex justify-between items-center mb-2 flex-wrap gap-2" style={{ borderTop: "1px dashed var(--color-bone)", paddingTop: 12 }}>
+                    <div>
+                      <span style={{ fontSize: "0.82rem", fontWeight: 700, color: "var(--color-bark)" }}>Xử lý sai lệch phiếu nhập sau chốt (UC7.10)</span>
+                      <p style={{ fontSize: "0.72rem", color: "#6B7280", margin: 0 }}>Ghi nhận sai sót số lượng, mã thiết bị hoặc giá vốn. Quản trị viên duyệt an toàn lịch thuê.</p>
+                    </div>
+                    <button
+                      onClick={() => setAdjustingReceipt(selected)}
+                      style={{ background: "#F59E0B", color: "white", border: "none", borderRadius: "8px", padding: "7px 14px", cursor: "pointer", fontWeight: 700, fontSize: "0.78rem" }}
+                    >
+                      ⚡ Đề nghị điều chỉnh
+                    </button>
+                  </div>
+
+                  {selected.adjustments && selected.adjustments.length > 0 && (
+                    <div style={{ background: "var(--color-parchment)", borderRadius: "8px", padding: "10px", marginTop: "8px", border: "1px solid var(--color-bone)" }}>
+                      <div style={{ fontSize: "0.75rem", fontWeight: 700, marginBottom: "6px", color: "#374151" }}>Lịch sử đề nghị điều chỉnh ({selected.adjustments.length}):</div>
+                      <div className="flex flex-col gap-2">
+                        {selected.adjustments.map((adj) => (
+                          <div key={adj.id} style={{ background: "white", padding: "9px 12px", borderRadius: "6px", fontSize: "0.76rem", border: "1px solid var(--color-bone)" }}>
+                            <div className="flex justify-between items-center mb-1">
+                              <span style={{ fontWeight: 700, color: "var(--color-forest)" }}>{adj.type}</span>
+                              <span style={{
+                                background: adj.status === "Đã duyệt" ? "#DCFCE7" : adj.status === "Từ chối" ? "#FEE2E2" : "#FEF3C7",
+                                color: adj.status === "Đã duyệt" ? "#15803D" : adj.status === "Từ chối" ? "#DC2626" : "#B45309",
+                                padding: "2px 7px", borderRadius: "4px", fontWeight: 700, fontSize: "0.68rem"
+                              }}>
+                                {adj.status}
+                              </span>
+                            </div>
+                            <div style={{ color: "#374151" }}>
+                              Giá trị: <span style={{ textDecoration: "line-through", color: "#9CA3AF" }}>{adj.previousValue}</span> → <strong>{adj.newValue}</strong>
+                            </div>
+                            <div style={{ color: "#6B7280", marginTop: "2px" }}>
+                              Lý do: <em>{adj.reason}</em> (Người lập: {adj.createdBy} lúc {adj.createdAt})
+                            </div>
+                            {adj.evidence && (
+                              <div style={{ color: "#6B7280", fontSize: "0.7rem", marginTop: "1px" }}>Chứng từ kèm: {adj.evidence}</div>
+                            )}
+
+                            {adj.status === "Chờ duyệt" && (
+                              <div className="flex gap-2 mt-2 pt-2" style={{ borderTop: "1px dashed var(--color-bone)" }}>
+                                <button
+                                  onClick={() => {
+                                    const res = app.approveImportAdjustment(selected.id, adj.id, "Quản trị viên");
+                                    setMessage(res.ok ? { type: "success", text: "Đã duyệt và áp dụng điều chỉnh phiếu nhập thành công (UC7.10)!" } : { type: "error", text: res.message });
+                                  }}
+                                  style={{ background: "var(--color-forest)", color: "white", border: "none", borderRadius: "5px", padding: "5px 12px", fontSize: "0.72rem", fontWeight: 700, cursor: "pointer" }}
+                                >
+                                  ✓ Duyệt (UC7.10)
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    const res = app.rejectImportAdjustment(selected.id, adj.id, "Không đủ căn cứ chứng từ", "Quản trị viên");
+                                    setMessage(res.ok ? { type: "success", text: "Đã từ chối đề nghị điều chỉnh." } : { type: "error", text: res.message });
+                                  }}
+                                  style={{ background: "white", color: "#DC2626", border: "1px solid #FECACA", borderRadius: "5px", padding: "5px 12px", fontSize: "0.72rem", fontWeight: 700, cursor: "pointer" }}
+                                >
+                                  ✕ Từ chối
+                                </button>
+                              </div>
+                            )}
+                            {adj.status === "Đã duyệt" && (
+                              <div style={{ fontSize: "0.7rem", color: "#15803D", marginTop: "4px", fontWeight: 600 }}>
+                                ✓ Đã duyệt bởi {adj.reviewedBy} lúc {adj.reviewedAt}
+                              </div>
+                            )}
+                            {adj.status === "Từ chối" && (
+                              <div style={{ fontSize: "0.7rem", color: "#DC2626", marginTop: "4px", fontWeight: 600 }}>
+                                ✕ Từ chối bởi {adj.reviewedBy}: {adj.reviewNotes}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
               )}
             </div>
           </div>
         )}
       </div>
+
       {editing && <ImportReceiptForm app={app} receipt={editing === "new" ? undefined : editing} onClose={() => setEditing(null)} />}
+
+      {/* UC7.7: Modal kiểm nhận hàng thực tế tại kho */}
+      {inspectingReceipt && (
+        <GoodsReceivingModal
+          receipt={inspectingReceipt}
+          app={app}
+          onClose={() => setInspectingReceipt(null)}
+          onSuccess={() => {
+            setInspectingReceipt(null);
+            setMessage({ type: "success", text: "Đã hoàn tất kiểm nhận hàng và nhập kho thành công (UC7.7)!" });
+          }}
+        />
+      )}
+
+      {/* UC7.10: Modal lập đề nghị điều chỉnh sau chốt */}
+      {adjustingReceipt && (
+        <ImportAdjustmentModal
+          receipt={adjustingReceipt}
+          app={app}
+          onClose={() => setAdjustingReceipt(null)}
+          onSuccess={() => {
+            setAdjustingReceipt(null);
+            setMessage({ type: "success", text: "Đã gửi đề nghị điều chỉnh phiếu nhập sau chốt thành công. Đang ở trạng thái Chờ duyệt (UC7.10)." });
+          }}
+        />
+      )}
     </div>
   );
 }
 
-// ─── Suppliers ────────────────────────────────────────────────────────────────
+// ─── Suppliers (UC7.1 - UC7.4) ────────────────────────────────────────────────
 function SuppliersTab({ app }: { app: ReturnType<typeof useApp> }) {
   const [action, setAction] = useState<Supplier | "new" | null>(null);
+  const [supplierSearch, setSupplierSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
+  const [selectedSupplierProfile, setSelectedSupplierProfile] = useState<Supplier | null>(null);
+
+  const filteredSuppliers = app.suppliers.filter((s) => {
+    const matchStatus = statusFilter === "all" || s.cooperationStatus === statusFilter;
+    const query = supplierSearch.toLowerCase().trim();
+    const matchSearch =
+      !query ||
+      s.name.toLowerCase().includes(query) ||
+      s.displayCode.toLowerCase().includes(query) ||
+      s.contactPerson.toLowerCase().includes(query) ||
+      s.phone.includes(query) ||
+      (s.taxCode && s.taxCode.includes(query)) ||
+      (s.address && s.address.toLowerCase().includes(query));
+    return matchStatus && matchSearch;
+  });
+
   return (
     <div>
-      <div className="flex justify-between items-center mb-4">
-        <h2 style={{ fontFamily: "var(--font-display)", fontSize: "1.4rem", color: "var(--color-bark)" }}>Nhà cung cấp</h2>
-        <button onClick={() => setAction("new")} style={{ background: "var(--color-forest)", color: "white", padding: "8px 16px", borderRadius: "8px", border: "none", cursor: "pointer", fontWeight: 600, fontSize: "0.85rem" }}>+ Thêm</button>
+      <div className="flex justify-between items-center mb-4 flex-wrap gap-2">
+        <div>
+          <h2 style={{ fontFamily: "var(--font-display)", fontSize: "1.4rem", color: "var(--color-bark)" }}>Nhà cung cấp</h2>
+          <p style={{ color: "#6B7280", fontSize: "0.8rem" }}>Quản lý đối tác cung ứng thiết bị và theo dõi hồ sơ lịch sử nhập hàng (UC7.1 - UC7.4).</p>
+        </div>
+        <button onClick={() => setAction("new")} style={{ background: "var(--color-forest)", color: "white", padding: "8px 16px", borderRadius: "8px", border: "none", cursor: "pointer", fontWeight: 600, fontSize: "0.85rem" }}>+ Thêm NCC mới</button>
       </div>
+
+      {/* Thanh công cụ tìm kiếm và lọc trạng thái (UC7.3 & UC7.4) */}
+      <div className="flex gap-3 mb-4 flex-wrap items-center" style={{ background: "white", padding: "12px 14px", borderRadius: "10px", border: "1px solid var(--color-bone)" }}>
+        <input
+          type="text"
+          placeholder="🔍 Tìm theo mã NCC, tên công ty, người liên hệ, SĐT, MST..."
+          value={supplierSearch}
+          onChange={(e) => setSupplierSearch(e.target.value)}
+          style={{ flex: 1, minWidth: 240, border: "1px solid var(--color-bone)", borderRadius: "8px", padding: "7px 12px", fontSize: "0.82rem" }}
+        />
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value as "all" | "active" | "inactive")}
+          aria-label="Lọc theo tình trạng hợp tác"
+          style={{ border: "1px solid var(--color-bone)", borderRadius: "8px", padding: "7px 12px", fontSize: "0.82rem", background: "white" }}
+        >
+          <option value="all">Tất cả trạng thái ({app.suppliers.length})</option>
+          <option value="active">Đang hợp tác ({app.suppliers.filter((s) => s.cooperationStatus === "active").length})</option>
+          <option value="inactive">Ngừng hợp tác ({app.suppliers.filter((s) => s.cooperationStatus === "inactive").length})</option>
+        </select>
+        {(supplierSearch || statusFilter !== "all") && (
+          <button
+            type="button"
+            onClick={() => {
+              setSupplierSearch("");
+              setStatusFilter("all");
+            }}
+            style={{ background: "none", border: "none", color: "#DC2626", fontSize: "0.78rem", cursor: "pointer", fontWeight: 600 }}
+          >
+            ✕ Xóa lọc
+          </button>
+        )}
+      </div>
+
       <div className="flex flex-col gap-3">
-        {app.suppliers.map((s) => {
+        {filteredSuppliers.map((s) => {
           const receipts = app.importReceipts.filter((receipt) => receipt.supplierId === s.id || receipt.supplierId === s.displayCode);
-          const total = receipts.filter((receipt) => receipt.status === "Đã nhập kho").reduce((sum, receipt) => sum + receipt.lines.reduce((lineSum, line) => lineSum + line.quantity * line.unitPrice, 0), 0);
-          return <div key={s.id} style={{ background: "white", borderRadius: "10px", padding: "16px 20px", border: "1px solid var(--color-bone)", display: "flex", gap: "14px", alignItems: "center" }}>
-            <div style={{ width: 44, height: 44, color: "var(--color-forest)", background: "var(--color-parchment)", borderRadius: "10px", display: "grid", placeItems: "center" }}><Icon name="truck" size={21} /></div>
-            <div style={{ flex: 1 }}>
-              <div className="flex items-center gap-2 mb-1">
-                <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.72rem", color: "var(--color-moss)" }}>{s.displayCode}</span>
-                <span style={{ background: s.cooperationStatus === "active" ? "#DCFCE7" : "#F3F4F6", color: s.cooperationStatus === "active" ? "#15803D" : "#6B7280", padding: "1px 7px", borderRadius: "8px", fontSize: "0.68rem", fontWeight: 600 }}>{s.cooperationStatus === "active" ? "Đang hợp tác" : "Ngừng hợp tác"}</span>
+          const confirmedReceipts = receipts.filter((receipt) => receipt.status === "Đã nhập kho");
+          const total = confirmedReceipts.reduce((sum, receipt) => sum + receipt.lines.reduce((lineSum, line) => lineSum + line.quantity * line.unitPrice, 0), 0);
+          return (
+            <div key={s.id} style={{ background: "white", borderRadius: "10px", padding: "16px 20px", border: "1px solid var(--color-bone)", display: "flex", gap: "14px", alignItems: "center" }}>
+              <div style={{ width: 44, height: 44, color: "var(--color-forest)", background: "var(--color-parchment)", borderRadius: "10px", display: "grid", placeItems: "center" }}>
+                <Icon name="truck" size={21} />
               </div>
-              <div style={{ fontWeight: 700 }}>{s.name}</div>
-              <div style={{ fontSize: "0.78rem", color: "#6B7280" }}>{s.contactPerson} · {s.phone} · {receipts.length} phiếu nhập</div>
+              <div style={{ flex: 1 }}>
+                <div className="flex items-center gap-2 mb-1 flex-wrap">
+                  <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.72rem", color: "var(--color-moss)", fontWeight: 700 }}>{s.displayCode}</span>
+                  <span style={{ background: s.cooperationStatus === "active" ? "#DCFCE7" : "#F3F4F6", color: s.cooperationStatus === "active" ? "#15803D" : "#6B7280", padding: "1px 7px", borderRadius: "8px", fontSize: "0.68rem", fontWeight: 600 }}>
+                    {s.cooperationStatus === "active" ? "Đang hợp tác" : "Ngừng hợp tác"}
+                  </span>
+                  {s.statusReason && (
+                    <span style={{ fontSize: "0.7rem", color: "#9CA3AF", fontStyle: "italic" }}>
+                      ({s.statusReason})
+                    </span>
+                  )}
+                </div>
+                <div style={{ fontWeight: 700, fontSize: "0.95rem" }}>{s.name}</div>
+                <div style={{ fontSize: "0.78rem", color: "#6B7280" }}>
+                  {s.contactPerson} · 📞 {s.phone} · {receipts.length} phiếu ({confirmedReceipts.length} đã chốt)
+                </div>
+              </div>
+              <div style={{ textAlign: "right", display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6 }}>
+                <div>
+                  <div style={{ fontSize: "0.72rem", color: "#9CA3AF" }}>Tổng lũy kế đã chốt</div>
+                  <div style={{ fontFamily: "var(--font-mono)", fontWeight: 700, color: "var(--color-forest)", fontSize: "0.95rem" }}>{fmt(total)}</div>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setSelectedSupplierProfile(s)}
+                    style={{ border: "1px solid var(--color-forest)", borderRadius: 6, background: "var(--color-forest)", color: "white", padding: "5px 10px", cursor: "pointer", fontSize: "0.75rem", fontWeight: 600 }}
+                  >
+                    👁 Hồ sơ NCC (UC7.3)
+                  </button>
+                  <button
+                    onClick={() => setAction(s)}
+                    style={{ border: "1px solid var(--color-bone)", borderRadius: 6, background: "white", padding: "5px 10px", cursor: "pointer", fontSize: "0.75rem" }}
+                  >
+                    Sửa
+                  </button>
+                </div>
+              </div>
             </div>
-            <div style={{ textAlign: "right" }}>
-              <div style={{ fontSize: "0.72rem", color: "#9CA3AF" }}>Tổng nhập</div>
-              <div style={{ fontFamily: "var(--font-mono)", fontWeight: 700, color: "var(--color-forest)" }}>{fmt(total)}</div>
-              <button onClick={() => setAction(s)} style={{ marginTop: 5, border: "1px solid var(--color-bone)", borderRadius: 6, background: "white", padding: "4px 8px", cursor: "pointer", fontSize: "0.72rem" }}>Sửa</button>
-            </div>
-          </div>
+          );
         })}
+        {filteredSuppliers.length === 0 && (
+          <div style={{ background: "white", borderRadius: 10, padding: 32, textAlign: "center", color: "#9CA3AF", border: "1px dashed var(--color-bone)" }}>
+            Không tìm thấy nhà cung cấp nào phù hợp.
+          </div>
+        )}
       </div>
+
       {action && <SupplierForm app={app} supplier={action === "new" ? undefined : action} onClose={() => setAction(null)} />}
+      {selectedSupplierProfile && (
+        <SupplierProfileModal
+          supplier={selectedSupplierProfile}
+          app={app}
+          onClose={() => setSelectedSupplierProfile(null)}
+          onOpenReceipt={(receiptId) => {
+            setSelectedSupplierProfile(null);
+            // Có thể mở xem chi tiết phiếu nếu cần
+          }}
+        />
+      )}
     </div>
   );
 }
 
-// ─── Promotions ───────────────────────────────────────────────────────────────
+// ─── Promotions (UC8.2 - UC8.5) ───────────────────────────────────────────────
 function PromotionsTab({ app }: { app: ReturnType<typeof useApp> }) {
   const [action, setAction] = useState<Promotion | "new" | null>(null);
+  const [promoSearch, setPromoSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive" | "expired">("all");
+  const [typeFilter, setTypeFilter] = useState<"all" | "percentage" | "fixed">("all");
+  const [selectedPromoDetail, setSelectedPromoDetail] = useState<Promotion | null>(null);
+
+  // Modal tạm dừng chương trình (UC8.5)
+  const [stoppingPromo, setStoppingPromo] = useState<Promotion | null>(null);
+  const [stopReason, setStopReason] = useState("");
+  const [stopError, setStopError] = useState("");
+
+  const now = new Date();
+
+  // Lọc danh sách khuyến mãi đa chiều (UC8.4)
+  const filteredPromotions = app.promotions.filter((p) => {
+    const isExpired = new Date(p.endsAt) < now;
+    if (statusFilter === "active" && (p.status !== "active" || isExpired)) return false;
+    if (statusFilter === "inactive" && (p.status !== "inactive" || isExpired)) return false;
+    if (statusFilter === "expired" && !isExpired) return false;
+    if (typeFilter !== "all" && p.discountType !== typeFilter) return false;
+    if (promoSearch.trim()) {
+      const q = promoSearch.toLowerCase();
+      const matchCode = p.code.toLowerCase().includes(q);
+      const matchName = p.name.toLowerCase().includes(q);
+      return matchCode || matchName;
+    }
+    return true;
+  });
+
+  const handlePauseSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!stoppingPromo) return;
+    if (!stopReason.trim()) {
+      return setStopError("Bắt buộc phải nhập lý do tạm dừng chương trình (UC8.5)!");
+    }
+    const res = app.pausePromotion(stoppingPromo.id, stopReason.trim());
+    if (!res.ok) {
+      return setStopError(res.message);
+    }
+    setStoppingPromo(null);
+    setStopReason("");
+    setStopError("");
+  };
+
+  const handleToggleStatus = (p: Promotion) => {
+    const isExpired = new Date(p.endsAt) < now;
+    if (p.status === "active") {
+      // Mở modal nhập lý do tạm dừng
+      setStoppingPromo(p);
+      setStopReason("");
+      setStopError("");
+    } else {
+      // Kích hoạt lại
+      if (isExpired) {
+        return alert("Chương trình đã quá hạn thời gian hiệu lực, không thể kích hoạt lại (UC8.5)!");
+      }
+      const res = app.resumePromotion(p.id);
+      if (!res.ok) alert(res.message);
+    }
+  };
+
   return (
     <div>
-      <div className="flex justify-between items-center mb-4">
-        <h2 style={{ fontFamily: "var(--font-display)", fontSize: "1.4rem", color: "var(--color-bark)" }}>Quản lý khuyến mãi</h2>
-        <button onClick={() => setAction("new")} style={{ background: "var(--color-forest)", color: "white", padding: "8px 16px", borderRadius: "8px", border: "none", cursor: "pointer", fontWeight: 600, fontSize: "0.85rem" }}>+ Tạo mã giảm</button>
+      <div className="flex flex-wrap justify-between items-center gap-3 mb-4">
+        <div>
+          <h2 style={{ fontFamily: "var(--font-display)", fontSize: "1.4rem", color: "var(--color-bark)" }}>Quản lý chính sách khuyến mãi (UC8.2 - UC8.5)</h2>
+          <p style={{ fontSize: "0.8rem", color: "#6B7280", margin: 0 }}>
+            Kiểm soát mã giảm giá, giới hạn ngân sách, theo dõi doanh thu và tra cứu đơn áp dụng thực tế.
+          </p>
+        </div>
+        <button
+          onClick={() => setAction("new")}
+          style={{ background: "var(--color-forest)", color: "white", padding: "9px 18px", borderRadius: "8px", border: "none", cursor: "pointer", fontWeight: 700, fontSize: "0.85rem", display: "flex", alignItems: "center", gap: 6 }}
+        >
+          <span>+</span> Tạo mã giảm mới (UC8.2)
+        </button>
       </div>
-      <div className="flex flex-col gap-3">
-        {app.promotions.map((p) => (
-          <div key={p.id} style={{ background: "white", borderRadius: "10px", padding: "14px 18px", border: "1px solid var(--color-bone)", display: "flex", gap: "14px", alignItems: "center" }}>
-            <div style={{ background: "var(--color-parchment)", borderRadius: "8px", padding: "10px 14px", textAlign: "center", minWidth: 110 }}>
-              <div style={{ fontFamily: "var(--font-mono)", fontWeight: 700, color: "var(--color-forest)", letterSpacing: "0.05em" }}>{p.code}</div>
-              <div style={{ fontSize: "0.7rem", color: "var(--color-amber)", fontWeight: 600 }}>{p.discountType === "percentage" ? `Giảm ${p.discountValue}%` : `Giảm ${fmt(p.discountValue)}`}</div>
-            </div>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: "0.85rem", fontWeight: 600, marginBottom: "2px" }}>{p.name} · Tối thiểu: {fmt(p.minimumRental)} · Phạm vi: {p.scope === "all" ? "Tất cả" : p.scope === "products" ? "Theo sản phẩm" : "Theo danh mục"}</div>
-              <div style={{ fontSize: "0.72rem", color: "#9CA3AF" }}>Hết hạn: {new Date(p.endsAt).toLocaleDateString("vi-VN")} · Đã dùng: {p.usedCount}/{p.totalUsageLimit ?? "∞"} lượt</div>
-              <div style={{ background: "var(--color-bone)", borderRadius: "3px", height: "4px", marginTop: "5px", overflow: "hidden" }}>
-                <div style={{ height: "100%", background: "var(--color-forest)", width: `${p.totalUsageLimit ? Math.min(100, p.usedCount / p.totalUsageLimit * 100) : 0}%` }} />
+
+      {/* Bộ lọc và thanh tra cứu (UC8.4) */}
+      <div style={{ background: "white", padding: "12px 16px", borderRadius: "10px", border: "1px solid var(--color-bone)", display: "flex", flexWrap: "wrap", gap: 12, alignItems: "center", marginBottom: 16 }}>
+        <div style={{ flex: 1, minWidth: 220 }}>
+          <input
+            type="text"
+            value={promoSearch}
+            onChange={(e) => setPromoSearch(e.target.value)}
+            placeholder="🔍 Tìm kiếm theo mã code hoặc tên chương trình..."
+            style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid var(--color-bone)", fontSize: "0.85rem" }}
+          />
+        </div>
+        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+          <span style={{ fontSize: "0.8rem", fontWeight: 600, color: "var(--color-bark)" }}>Trạng thái:</span>
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value as any)}
+            style={{ padding: "8px 12px", borderRadius: 8, border: "1px solid var(--color-bone)", fontSize: "0.85rem", background: "white" }}
+          >
+            <option value="all">Tất cả ({app.promotions.length})</option>
+            <option value="active">Đang hoạt động</option>
+            <option value="inactive">Tạm dừng</option>
+            <option value="expired">Đã hết hạn</option>
+          </select>
+        </div>
+        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+          <span style={{ fontSize: "0.8rem", fontWeight: 600, color: "var(--color-bark)" }}>Loại giảm:</span>
+          <select
+            value={typeFilter}
+            onChange={(e) => setTypeFilter(e.target.value as any)}
+            style={{ padding: "8px 12px", borderRadius: 8, border: "1px solid var(--color-bone)", fontSize: "0.85rem", background: "white" }}
+          >
+            <option value="all">Tất cả hình thức</option>
+            <option value="percentage">Phần trăm (%)</option>
+            <option value="fixed">Số tiền cố định (VNĐ)</option>
+          </select>
+        </div>
+      </div>
+
+      {/* Danh sách khuyến mãi */}
+      {filteredPromotions.length === 0 ? (
+        <div style={{ background: "white", borderRadius: 10, padding: 36, textAlign: "center", border: "1px dashed var(--color-bone)" }}>
+          <p style={{ color: "#6B7280", margin: 0 }}>Không tìm thấy chương trình khuyến mãi nào phù hợp với bộ lọc hiện tại.</p>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-3">
+          {filteredPromotions.map((p) => {
+            const isExpired = new Date(p.endsAt) < now;
+            const usagePercent = p.totalUsageLimit ? Math.min(100, (p.usedCount / p.totalUsageLimit) * 100) : 0;
+            const isFull = p.totalUsageLimit !== null && p.usedCount >= p.totalUsageLimit;
+
+            return (
+              <div
+                key={p.id}
+                style={{
+                  background: "white",
+                  borderRadius: "10px",
+                  padding: "16px 20px",
+                  border: isExpired ? "1px dashed #D1D5DB" : "1px solid var(--color-bone)",
+                  display: "flex",
+                  gap: "16px",
+                  alignItems: "center",
+                  flexWrap: "wrap",
+                  opacity: isExpired || p.status === "inactive" ? 0.85 : 1,
+                }}
+              >
+                {/* Badge mã code */}
+                <div style={{ background: "var(--color-parchment)", borderRadius: "10px", padding: "12px 16px", textAlign: "center", minWidth: 125, border: "1px solid var(--color-bone)" }}>
+                  <div style={{ fontFamily: "var(--font-mono)", fontWeight: 800, color: "var(--color-forest)", letterSpacing: "0.06em", fontSize: "1rem" }}>
+                    {p.code}
+                  </div>
+                  <div style={{ fontSize: "0.75rem", color: "#D97706", fontWeight: 700, marginTop: 2 }}>
+                    {p.discountType === "percentage" ? `Giảm ${p.discountValue}%` : `Giảm ${fmt(p.discountValue)}`}
+                  </div>
+                  {p.maxDiscount && (
+                    <div style={{ fontSize: "0.68rem", color: "#6B7280" }}>
+                      Tối đa {fmt(p.maxDiscount)}
+                    </div>
+                  )}
+                </div>
+
+                {/* Thông tin chương trình */}
+                <div style={{ flex: 1, minWidth: 260 }}>
+                  <div className="flex items-center gap-2 mb-1 flex-wrap">
+                    <strong style={{ fontSize: "0.95rem", color: "var(--color-bark)" }}>{p.name}</strong>
+                    {isExpired ? (
+                      <span style={{ background: "#FEE2E2", color: "#B91C1C", padding: "2px 8px", borderRadius: 6, fontSize: "0.7rem", fontWeight: 700 }}>Đã hết hạn</span>
+                    ) : p.status === "inactive" ? (
+                      <span style={{ background: "#FEF3C7", color: "#B45309", padding: "2px 8px", borderRadius: 6, fontSize: "0.7rem", fontWeight: 700 }}>Tạm dừng</span>
+                    ) : isFull ? (
+                      <span style={{ background: "#FEE2E2", color: "#DC2626", padding: "2px 8px", borderRadius: 6, fontSize: "0.7rem", fontWeight: 700 }}>Hết lượt</span>
+                    ) : (
+                      <span style={{ background: "#DCFCE7", color: "#15803D", padding: "2px 8px", borderRadius: 6, fontSize: "0.7rem", fontWeight: 700 }}>Đang hiệu lực</span>
+                    )}
+                  </div>
+
+                  <div style={{ fontSize: "0.8rem", color: "#4B5563", marginBottom: 4 }}>
+                    Đơn tối thiểu: <strong>{fmt(p.minimumRental)}</strong> · Phạm vi:{" "}
+                    <strong>{p.scope === "all" ? "Tất cả thiết bị" : p.scope === "products" ? `Theo sản phẩm (${p.productIds.length})` : `Theo danh mục (${p.categoryIds.length})`}</strong>
+                  </div>
+
+                  <div style={{ fontSize: "0.74rem", color: "#6B7280" }}>
+                    Hiệu lực: {new Date(p.startsAt).toLocaleDateString("vi-VN")} → {new Date(p.endsAt).toLocaleDateString("vi-VN")} · Đã dùng: <strong>{p.usedCount}</strong> / {p.totalUsageLimit ?? "∞"} lượt
+                  </div>
+
+                  {/* Thanh tiến độ sử dụng lượt */}
+                  {p.totalUsageLimit && (
+                    <div style={{ background: "var(--color-bone)", borderRadius: "4px", height: "6px", marginTop: "6px", overflow: "hidden", maxWidth: 300 }}>
+                      <div style={{ height: "100%", background: usagePercent >= 90 ? "#EF4444" : "var(--color-forest)", width: `${usagePercent}%`, transition: "width 0.3s ease" }} />
+                    </div>
+                  )}
+
+                  {/* Lý do tạm dừng nếu có */}
+                  {p.status === "inactive" && p.stopReason && (
+                    <div style={{ marginTop: 6, fontSize: "0.74rem", color: "#92400E", background: "#FEF3C7", padding: "3px 8px", borderRadius: 6, display: "inline-block" }}>
+                      ⚠️ Lý do tạm dừng: {p.stopReason}
+                    </div>
+                  )}
+                </div>
+
+                {/* Các nút hành động */}
+                <div style={{ display: "flex", flexDirection: "column", gap: 6, alignItems: "stretch", minWidth: 150 }}>
+                  {/* Nút xem chi tiết & đơn áp dụng (UC8.4) */}
+                  <button
+                    onClick={() => setSelectedPromoDetail(p)}
+                    style={{
+                      background: "white",
+                      border: "1px solid var(--color-forest)",
+                      color: "var(--color-forest)",
+                      borderRadius: 6,
+                      padding: "6px 12px",
+                      cursor: "pointer",
+                      fontSize: "0.78rem",
+                      fontWeight: 700,
+                      textAlign: "center",
+                    }}
+                  >
+                    👁 Xem đơn áp dụng (UC8.4)
+                  </button>
+
+                  <div style={{ display: "flex", gap: 6 }}>
+                    {/* Nút sửa */}
+                    <button
+                      onClick={() => setAction(p)}
+                      style={{
+                        flex: 1,
+                        border: "1px solid var(--color-bone)",
+                        borderRadius: 6,
+                        background: "white",
+                        padding: "5px 8px",
+                        cursor: "pointer",
+                        fontSize: "0.75rem",
+                        fontWeight: 600,
+                      }}
+                    >
+                      ✏️ Sửa (UC8.3)
+                    </button>
+
+                    {/* Nút tạm dừng / kích hoạt lại (UC8.5) */}
+                    <button
+                      onClick={() => handleToggleStatus(p)}
+                      style={{
+                        flex: 1,
+                        border: "1px solid",
+                        borderColor: p.status === "active" ? "#F59E0B" : "#10B981",
+                        background: p.status === "active" ? "#FFFBEB" : "#ECFDF5",
+                        color: p.status === "active" ? "#B45309" : "#047857",
+                        borderRadius: 6,
+                        padding: "5px 8px",
+                        cursor: "pointer",
+                        fontSize: "0.75rem",
+                        fontWeight: 600,
+                      }}
+                    >
+                      {p.status === "active" ? "⏸ Tạm dừng" : "▶ Kích hoạt"}
+                    </button>
+                  </div>
+                </div>
               </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Modal Form tạo/sửa khuyến mãi (UC8.2 & UC8.3) */}
+      {action && (
+        <PromotionForm
+          app={app}
+          promotion={action === "new" ? undefined : action}
+          onClose={() => setAction(null)}
+        />
+      )}
+
+      {/* Modal tra cứu chi tiết và thống kê doanh thu / đơn hàng áp dụng (UC8.4) */}
+      {selectedPromoDetail && (
+        <PromotionDetailModal
+          promotion={selectedPromoDetail}
+          app={app}
+          onClose={() => setSelectedPromoDetail(null)}
+          onEdit={() => {
+            setAction(selectedPromoDetail);
+            setSelectedPromoDetail(null);
+          }}
+          onToggleStatus={() => {
+            handleToggleStatus(selectedPromoDetail);
+            // Cập nhật lại modal detail
+            const updated = app.promotions.find((item) => item.id === selectedPromoDetail.id);
+            if (updated) setSelectedPromoDetail(updated);
+          }}
+        />
+      )}
+
+      {/* Modal xác nhận lý do tạm dừng chương trình (UC8.5) */}
+      {stoppingPromo && (
+        <FormModal
+          title={`Tạm dừng khuyến mãi: ${stoppingPromo.code}`}
+          description="Bắt buộc nhập lý do tạm dừng để ghi nhận Audit Log theo đúng quy tắc UC8.5."
+          onClose={() => setStoppingPromo(null)}
+        >
+          <form onSubmit={handlePauseSubmit} className="grid gap-4 mt-4">
+            <label style={labelStyle}>
+              Lý do tạm dừng chương trình (Bắt buộc)
+              <textarea
+                rows={3}
+                value={stopReason}
+                onChange={(e) => setStopReason(e.target.value)}
+                placeholder="VD: Hết ngân sách chiến dịch tháng này / Phát hiện gian lận lạm dụng mã / Tạm dừng theo chỉ đạo của ban giám đốc..."
+                style={fieldStyle}
+              />
+            </label>
+            {stopError && (
+              <div role="alert" style={{ color: "#B91C1C", background: "#FEE2E2", padding: 10, borderRadius: 8, fontSize: "0.85rem" }}>
+                {stopError}
+              </div>
+            )}
+            <div className="modal-footer mt-2" style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
+              <button
+                type="button"
+                onClick={() => setStoppingPromo(null)}
+                style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid var(--color-bone)", background: "white", cursor: "pointer" }}
+              >
+                Hủy
+              </button>
+              <button
+                type="submit"
+                style={{ padding: "8px 18px", borderRadius: 8, border: "none", background: "#D97706", color: "white", fontWeight: 700, cursor: "pointer" }}
+              >
+                ⏸ Xác nhận tạm dừng (UC8.5)
+              </button>
             </div>
-            <div><span style={{ background: p.status === "active" ? "#DCFCE7" : "#F3F4F6", color: p.status === "active" ? "#15803D" : "#6B7280", padding: "4px 10px", borderRadius: "10px", fontSize: "0.72rem", fontWeight: 600 }}>{p.status === "active" ? "Hoạt động" : "Tạm dừng"}</span><button onClick={() => setAction(p)} style={{ display: "block", marginTop: 7, border: "1px solid var(--color-bone)", borderRadius: 6, background: "white", padding: "4px 8px", cursor: "pointer", fontSize: "0.72rem" }}>Sửa</button></div>
-          </div>
-        ))}
-      </div>
-      {action && <PromotionForm app={app} promotion={action === "new" ? undefined : action} onClose={() => setAction(null)} />}
+          </form>
+        </FormModal>
+      )}
     </div>
   );
 }
 
-// ─── Stock Adjustments (UC20 & UC22) ──────────────────────────────────────────
+// ─── Stock Adjustments (UC6.10 & UC6.11) ──────────────────────────────────────────
 function StockAdjustTab({ app }: { app: ReturnType<typeof useApp> }) {
   const [showModal, setShowModal] = useState(false);
+  const [showAuditModal, setShowAuditModal] = useState(false);
   const [selectedEquipId, setSelectedEquipId] = useState("");
   const [newStatus, setNewStatus] = useState<EquipmentStatus>("Thất lạc");
   const [reason, setReason] = useState("");
@@ -1116,6 +2119,7 @@ function StockAdjustTab({ app }: { app: ReturnType<typeof useApp> }) {
           reason: notes.trim() || reason.trim(),
         },
       ],
+      autoApprove: true, // Khi Admin tự lập phiếu thì tự động duyệt
     });
 
     if (res.ok) {
@@ -1131,26 +2135,32 @@ function StockAdjustTab({ app }: { app: ReturnType<typeof useApp> }) {
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-4">
+      <div className="flex justify-between items-center mb-4 flex-wrap gap-2">
         <div>
           <h2 style={{ fontFamily: "var(--font-display)", fontSize: "1.4rem", color: "var(--color-bark)", marginBottom: 4 }}>
-            Điều chỉnh kho sau kiểm kê (UC20 & UC22)
+            Kiểm kê & Điều chỉnh kho (UC6.10 & UC6.11)
           </h2>
           <p style={{ color: "#6B7280", fontSize: "0.85rem" }}>
-            Lập phiếu điều chỉnh khi phát hiện chênh lệch, mất mát hoặc hư hỏng thiết bị trong các đợt kiểm kê định kỳ.
+            Tách biệt tài sản khách đang thuê, lập phiếu đề nghị điều chỉnh chờ duyệt và kiểm tra xung đột đơn tương lai trước khi duyệt kho.
           </p>
         </div>
-        <button onClick={() => setShowModal(true)}
-          style={{ background: "var(--color-forest)", color: "white", padding: "9px 18px", borderRadius: 8, border: "none", cursor: "pointer", fontWeight: 700, fontSize: "0.85rem" }}>
-          + Lập phiếu điều chỉnh
-        </button>
+        <div className="flex gap-2">
+          <button onClick={() => setShowAuditModal(true)}
+            style={{ background: "var(--color-amber)", color: "white", padding: "9px 18px", borderRadius: 8, border: "none", cursor: "pointer", fontWeight: 700, fontSize: "0.85rem" }}>
+            📋 Kiểm kê kho (UC6.10)
+          </button>
+          <button onClick={() => setShowModal(true)}
+            style={{ background: "var(--color-forest)", color: "white", padding: "9px 18px", borderRadius: 8, border: "none", cursor: "pointer", fontWeight: 700, fontSize: "0.85rem" }}>
+            + Lập phiếu thủ công
+          </button>
+        </div>
       </div>
 
       <div style={{ background: "white", borderRadius: 12, border: "1px solid var(--color-bone)", overflow: "hidden" }}>
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead>
             <tr style={{ background: "var(--color-parchment)", fontSize: "0.8rem", fontWeight: 600, color: "var(--color-bark)" }}>
-              {["Mã phiếu", "Ngày lập", "Người lập", "Lý do chung", "Thiết bị điều chỉnh", "Trạng thái cũ → Mới"].map((h) => (
+              {["Mã phiếu", "Ngày lập", "Người lập", "Lý do chung", "Thiết bị điều chỉnh", "Trạng thái cũ → Mới", "Tình trạng", "Phê duyệt", "Thao tác"].map((h) => (
                 <th key={h} style={{ padding: "11px 14px", textAlign: "left" }}>{h}</th>
               ))}
             </tr>
@@ -1182,6 +2192,52 @@ function StockAdjustTab({ app }: { app: ReturnType<typeof useApp> }) {
                       </strong>
                     </div>
                   ))}
+                </td>
+                <td style={{ padding: "11px 14px" }}>
+                  <span style={{
+                    background: sa.status === "Chờ duyệt" ? "#FEF3C7" : sa.status === "Từ chối" ? "#FEE2E2" : "#DCFCE7",
+                    color: sa.status === "Chờ duyệt" ? "#B45309" : sa.status === "Từ chối" ? "#DC2626" : "#15803D",
+                    padding: "3px 8px",
+                    borderRadius: 8,
+                    fontSize: "0.72rem",
+                    fontWeight: 700
+                  }}>
+                    {sa.status || "Đã duyệt"}
+                  </span>
+                </td>
+                <td style={{ padding: "11px 14px", fontSize: "0.75rem", color: "#6B7280" }}>
+                  {sa.approvedBy ? `${sa.approvedBy}` : sa.status === "Chờ duyệt" ? "Chưa duyệt" : "Tự động"}
+                  {sa.approvedAt && <div style={{ fontSize: "0.7rem", color: "#9CA3AF" }}>{sa.approvedAt}</div>}
+                </td>
+                <td style={{ padding: "11px 14px" }}>
+                  {sa.status === "Chờ duyệt" ? (
+                    <div className="flex gap-1">
+                      <button
+                        onClick={() => {
+                          const res = app.approveStockAdjustment(sa.id);
+                          if (res.ok) alert("Đã phê duyệt điều chỉnh kho thành công! Kho đã được cập nhật.");
+                          else alert(res.message);
+                        }}
+                        style={{ background: "var(--color-forest)", color: "white", border: "none", borderRadius: 6, padding: "5px 10px", fontSize: "0.72rem", cursor: "pointer", fontWeight: 700 }}
+                      >
+                        ✓ Duyệt (UC6.11)
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (confirm("Bạn có chắc chắn muốn từ chối đề nghị điều chỉnh kho này?")) {
+                            const res = app.rejectStockAdjustment(sa.id);
+                            if (res.ok) alert("Đã từ chối phiếu điều chỉnh!");
+                            else alert(res.message);
+                          }
+                        }}
+                        style={{ background: "white", border: "1px solid #DC2626", color: "#DC2626", borderRadius: 6, padding: "5px 8px", fontSize: "0.72rem", cursor: "pointer", fontWeight: 600 }}
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ) : (
+                    <span style={{ fontSize: "0.75rem", color: "#9CA3AF" }}>Đã chốt</span>
+                  )}
                 </td>
               </tr>
             ))}
@@ -1237,6 +2293,8 @@ function StockAdjustTab({ app }: { app: ReturnType<typeof useApp> }) {
           </form>
         </FormModal>
       )}
+
+      {showAuditModal && <InventoryAuditModal app={app} onClose={() => setShowAuditModal(false)} />}
     </div>
   );
 }
@@ -1250,6 +2308,7 @@ function StaffAccountsTab({ app }: { app: ReturnType<typeof useApp> }) {
   const [permStaff, setPermStaff] = useState<StaffAccount | null>(null);
   const [lockModalStaff, setLockModalStaff] = useState<StaffAccount | null>(null);
   const [lockReason, setLockReason] = useState("Nghỉ việc từ " + new Date().toLocaleDateString("vi-VN"));
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "locked">("all");
 
   const filtered = app.staffAccounts.filter((s) => {
     const matchSearch =
@@ -1259,7 +2318,8 @@ function StaffAccountsTab({ app }: { app: ReturnType<typeof useApp> }) {
       s.phone.includes(search) ||
       s.email.toLowerCase().includes(search.toLowerCase());
     const matchRole = roleFilter === "all" || s.role === roleFilter;
-    return matchSearch && matchRole;
+    const matchStatus = statusFilter === "all" || s.status === statusFilter;
+    return matchSearch && matchRole && matchStatus;
   });
 
   const handleOpenAdd = () => {
@@ -1269,6 +2329,7 @@ function StaffAccountsTab({ app }: { app: ReturnType<typeof useApp> }) {
       id: newId,
       username: `nv_${nextNum}`,
       name: "",
+      password: "GearGo@2026",
       role: "Nhân viên kho",
       phone: "",
       email: "",
@@ -1338,6 +2399,15 @@ function StaffAccountsTab({ app }: { app: ReturnType<typeof useApp> }) {
           <option value="Quản trị viên">Quản trị viên</option>
           <option value="Nhân viên kho">Nhân viên kho</option>
           <option value="Nhân viên chăm sóc KH">Nhân viên chăm sóc KH</option>
+        </select>
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value as any)}
+          style={{ border: "1px solid var(--color-bone)", borderRadius: 8, padding: "8px 12px", fontSize: "0.85rem", background: "white" }}
+        >
+          <option value="all">Tất cả trạng thái</option>
+          <option value="active">Đang hoạt động</option>
+          <option value="locked">Đang bị khóa</option>
         </select>
       </div>
 
@@ -1508,6 +2578,54 @@ function StaffAccountsTab({ app }: { app: ReturnType<typeof useApp> }) {
                   <option value="Quản trị viên">Quản trị viên</option>
                 </select>
               </div>
+
+              {/* Mật khẩu khởi tạo ban đầu (UC1.7) */}
+              {isNew && (
+                <div>
+                  <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 700, marginBottom: 4 }}>Mật khẩu khởi tạo *</label>
+                  <input
+                    required
+                    value={editingStaff.password || "GearGo@2026"}
+                    onChange={(e) => setEditingStaff({ ...editingStaff, password: e.target.value })}
+                    style={{ width: "100%", border: "1px solid var(--color-bone)", borderRadius: 8, padding: 8, fontSize: "0.85rem", fontFamily: "var(--font-mono)" }}
+                  />
+                  <span style={{ fontSize: "0.72rem", color: "#6B7280" }}>Mật khẩu tạm thời cấp cho nhân viên đăng nhập lần đầu.</span>
+                </div>
+              )}
+
+              {/* Gán quyền nghiệp vụ ban đầu (UC1.7.1) */}
+              {isNew && (
+                <div style={{ background: "#F9FAFB", border: "1px solid #E5E7EB", borderRadius: 8, padding: 12 }}>
+                  <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 700, marginBottom: 6 }}>
+                    Gán quyền nghiệp vụ ban đầu (UC1.7.1):
+                  </label>
+                  <div className="flex flex-col gap-2">
+                    {[
+                      "Quản lý kho thiết bị",
+                      "Bàn giao & Nhận trả",
+                      "Lập phụ phí & Đối soát",
+                      "Xem báo cáo doanh thu",
+                      "Quản lý khuyến mãi"
+                    ].map((pKey) => {
+                      const isChecked = (editingStaff.permissions || []).includes(pKey);
+                      return (
+                        <label key={pKey} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.8rem", cursor: "pointer" }}>
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={(e) => {
+                              const cur = editingStaff.permissions || [];
+                              const next = e.target.checked ? [...cur, pKey] : cur.filter((x) => x !== pKey);
+                              setEditingStaff({ ...editingStaff, permissions: next });
+                            }}
+                          />
+                          <span>{pKey}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
 
               <div className="flex gap-2 mt-2">
                 <button type="button" onClick={() => setEditingStaff(null)} className="btn btn-secondary btn-md" style={{ flex: 1 }}>Hủy</button>

@@ -10,6 +10,7 @@ export default function ProductsView() {
   const [brand, setBrand] = useState("Tất cả");
   const [sort, setSort] = useState("popular");
   const [qty, setQty] = useState(1);
+  const [detailTab, setDetailTab] = useState<"specs" | "accessories" | "policy">("specs");
 
   const categories = ["Tất cả", ...Array.from(new Set(app.products.map((p) => p.category)))];
   const brands = ["Tất cả", ...Array.from(new Set(app.products.map((p) => p.brand)))];
@@ -120,6 +121,137 @@ export default function ProductsView() {
             <div style={{ marginTop: "16px", background: "#EFF6FF", borderRadius: "8px", padding: "10px 14px", fontSize: "0.78rem", color: "#1E40AF" }}>
               <strong>📌 Lưu ý:</strong> Giá tham khảo — không cam kết còn hàng đến khi đặt đơn và thanh toán. Giỏ thuê không giữ số lượng.
             </div>
+          </div>
+        </div>
+
+        {/* Khối Tabs Thông số kỹ thuật, Phụ kiện & Chính sách nhận trả (UC2.2) */}
+        <div style={{ marginTop: 32, background: "white", borderRadius: 16, border: "1px solid var(--color-bone)", overflow: "hidden" }}>
+          <div className="flex border-b border-gray-200" style={{ background: "var(--color-parchment)", padding: "0 16px", overflowX: "auto" }}>
+            {[
+              { id: "specs" as const, label: "📋 Thông số kỹ thuật chi tiết", badge: "Chuẩn thiết bị" },
+              { id: "accessories" as const, label: "🎒 Phụ kiện bàn giao kèm theo", badge: "Checklist tại quầy" },
+              { id: "policy" as const, label: "🛡️ Chính sách nhận trả & bảo đảm cọc", badge: "Minh bạch 100%" },
+            ].map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => setDetailTab(t.id)}
+                style={{
+                  padding: "14px 20px",
+                  fontSize: "0.88rem",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  background: "none",
+                  border: "none",
+                  borderBottom: detailTab === t.id ? "3px solid var(--color-forest)" : "3px solid transparent",
+                  color: detailTab === t.id ? "var(--color-forest)" : "#6B7280",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  whiteSpace: "nowrap",
+                  transition: "all 0.2s ease"
+                }}
+              >
+                <span>{t.label}</span>
+                <span style={{ fontSize: "0.68rem", padding: "2px 7px", borderRadius: 6, background: detailTab === t.id ? "rgba(27,63,47,0.12)" : "#E5E7EB", color: detailTab === t.id ? "var(--color-forest)" : "#6B7280", fontWeight: 600 }}>
+                  {t.badge}
+                </span>
+              </button>
+            ))}
+          </div>
+
+          <div style={{ padding: 24 }}>
+            {detailTab === "specs" && (
+              <div>
+                <h3 style={{ fontSize: "1.05rem", fontWeight: 700, color: "var(--color-bark)", marginBottom: 12 }}>
+                  Thông số chi tiết sản phẩm {p.name}
+                </h3>
+                <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))" }}>
+                  {[
+                    { label: "Kích thước sử dụng", value: p.dimensions || (p.capacity === "4 người" ? "240 × 210 × 140 cm" : "210 × 150 × 115 cm") },
+                    { label: "Kích thước gấp gọn", value: p.specifications?.["Gấp gọn"] || "58 × 16 × 16 cm (trong túi đựng)" },
+                    { label: "Trọng lượng trọn bộ", value: p.specifications?.["Trọng lượng"] || (p.category === "Lều trại" ? "3.6 kg" : p.category === "Đèn" ? "280g" : "1.2 kg") },
+                    { label: "Chất liệu khung & vỏ", value: p.specifications?.["Chất liệu"] || "Vải Polyester 210T tráng bạc chống tia UV50+, khung nhôm 7001" },
+                    { label: "Chỉ số chống nước", value: p.specifications?.["Chống nước"] || "PU 3000mm (chịu được mưa rào lớn)" },
+                    { label: "Xuất xứ & Phân phối", value: `Chính hãng ${p.brand} · Nhập khẩu & bảo dưỡng bởi GearGo` },
+                    { label: "Mức giá trị bồi thường tối đa", value: `${fmt(p.compensation)} (khi làm mất hoặc hỏng hoàn toàn thiết bị)` },
+                    { label: "Chu kỳ bảo dưỡng kỹ thuật", value: "Kiểm tra khử khuẩn, tra dầu & test khung sau mỗi lần nhận trả đồ" },
+                  ].map((s, idx) => (
+                    <div key={idx} style={{ background: "var(--color-parchment)", borderRadius: 10, padding: "12px 14px", border: "1px solid var(--color-bone)" }}>
+                      <div style={{ fontSize: "0.75rem", color: "#6B7280", marginBottom: 3 }}>{s.label}</div>
+                      <div style={{ fontSize: "0.85rem", fontWeight: 700, color: "var(--color-bark)" }}>{s.value}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {detailTab === "accessories" && (
+              <div>
+                <h3 style={{ fontSize: "1.05rem", fontWeight: 700, color: "var(--color-bark)", marginBottom: 6 }}>
+                  Danh mục phụ kiện kèm theo khi bàn giao (Checklist nghiệm thu)
+                </h3>
+                <p style={{ fontSize: "0.82rem", color: "#6B7280", marginBottom: 14 }}>
+                  Quý khách và nhân viên sẽ cùng kiểm đếm số lượng các chi tiết này tại quầy theo biên bản BBBG trước khi mang về:
+                </p>
+                <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))" }}>
+                  {[
+                    { name: "Túi đựng chuyên dụng có quai xách", qty: "1 chiếc", note: "Nguyên vẹn, khóa kéo mượt" },
+                    { name: p.category === "Lều trại" ? "Thân lều chính & Lớp phủ nóc chống mưa" : "Thân thiết bị chính nguyên bản", qty: "1 bộ", note: "Không rách, sạch sẽ, thơm tho" },
+                    { name: p.category === "Lều trại" ? "Bộ cọc ghim đất chống lốc gió" : "Dây sạc / Phụ kiện nguồn", qty: p.category === "Lều trại" ? "8 - 12 chiếc" : "1 sợi Type-C", note: "Thép cứng cáp, không cong vênh" },
+                    { name: p.category === "Lều trại" ? "Khung nhôm hợp kim dựng chính" : "Hộp bảo vệ chống sốc", qty: p.category === "Lều trại" ? "2 - 3 thanh gấp" : "1 chiếc", note: "Khớp nối đàn hồi tốt" },
+                    { name: "Dây dù phản quang buộc giằng chống gió", qty: "4 - 6 sợi", note: "Kèm khóa tăng giảm độ căng" },
+                    { name: "Tờ hướng dẫn dựng & gấp gọn đồ dã ngoại", qty: "1 bản", note: "Kèm mã QR xem video hướng dẫn" },
+                  ].map((acc, idx) => (
+                    <div key={idx} style={{ display: "flex", alignItems: "flex-start", gap: 10, background: "#F9FAFB", border: "1px solid #E5E7EB", borderRadius: 10, padding: "12px 14px" }}>
+                      <div style={{ width: 22, height: 22, borderRadius: "50%", background: "var(--color-forest)", color: "white", display: "grid", placeItems: "center", fontSize: "0.75rem", fontWeight: 700, flexShrink: 0 }}>
+                        ✓
+                      </div>
+                      <div>
+                        <div style={{ fontWeight: 700, fontSize: "0.86rem", color: "var(--color-bark)" }}>{acc.name}</div>
+                        <div style={{ fontSize: "0.76rem", color: "var(--color-forest)", fontWeight: 600 }}>Số lượng: {acc.qty}</div>
+                        <div style={{ fontSize: "0.72rem", color: "#6B7280" }}>{acc.note}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {detailTab === "policy" && (
+              <div className="flex flex-col gap-3">
+                <h3 style={{ fontSize: "1.05rem", fontWeight: 700, color: "var(--color-bark)", marginBottom: 4 }}>
+                  Chính sách nhận trả & Bảo đảm cọc tại GearGo (UC8.1)
+                </h3>
+                <div className="grid gap-3" style={{ gridTemplateColumns: "1fr 1fr" }}>
+                  <div style={{ background: "#F0FDF4", border: "1px solid #BBF7D0", borderRadius: 10, padding: "14px 16px" }}>
+                    <div style={{ fontWeight: 700, color: "#166534", fontSize: "0.88rem", marginBottom: 6 }}>
+                      🏠 Nhận và hoàn trả trực tiếp tại cửa hàng
+                    </div>
+                    <ul style={{ margin: 0, paddingLeft: 18, fontSize: "0.8rem", color: "#14532D", lineHeight: 1.6 }}>
+                      <li><strong>Địa chỉ:</strong> 128 Nguyễn Đình Chiểu, Phường Võ Thị Sáu, Quận 3, TP.HCM.</li>
+                      <li><strong>Giờ làm việc:</strong> 08:00 – 20:00 tất cả các ngày trong tuần (kể cả Lễ, Tết).</li>
+                      <li><strong>Nghiệm thu:</strong> Nhân viên hướng dẫn kiểm tra và thử thiết bị trước khi mang đi.</li>
+                    </ul>
+                  </div>
+
+                  <div style={{ background: "#EFF6FF", border: "1px solid #BFDBFE", borderRadius: 10, padding: "14px 16px" }}>
+                    <div style={{ fontWeight: 700, color: "#1E40AF", fontSize: "0.88rem", marginBottom: 6 }}>
+                      💳 Quy chế tiền cọc & Hoàn cọc tự động
+                    </div>
+                    <ul style={{ margin: 0, paddingLeft: 18, fontSize: "0.8rem", color: "#1E3A8A", lineHeight: 1.6 }}>
+                      <li><strong>Tiền cọc:</strong> Chỉ thu tạm ứng theo đơn vị chiếc, không tính theo ngày thuê.</li>
+                      <li><strong>Hoàn cọc 100%:</strong> Chuyển khoản hoàn lại lập tức trong 5-15 phút sau khi nghiệm thu đồ nguyên vẹn.</li>
+                      <li><strong>Biên lai điện tử:</strong> Biên bản nhận trả và phiếu hoàn cọc được gửi qua SMS / Email của quý khách.</li>
+                    </ul>
+                  </div>
+                </div>
+
+                <div style={{ background: "#FFFBEB", border: "1px solid #FDE68A", borderRadius: 10, padding: "12px 16px", fontSize: "0.8rem", color: "#92400E" }}>
+                  <strong>🔄 Chính sách hủy đơn & Phạt trễ hạn:</strong> Hủy miễn phí nếu báo trước &gt;48 giờ; hủy trong 24-48 giờ chịu phí 30%; trả đồ trễ hạn tính hệ số phạt 150% đơn giá ngày theo quy chế toàn hệ thống.
+                </div>
+              </div>
+            )}
           </div>
         </div>
 

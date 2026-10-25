@@ -63,6 +63,7 @@ export interface Supplier {
   taxCode: string;
   note: string;
   cooperationStatus: "active" | "inactive";
+  statusReason?: string; // Lý do ngừng hợp tác / thay đổi trạng thái (UC7.4)
 }
 
 export interface Promotion {
@@ -82,6 +83,9 @@ export interface Promotion {
   perCustomerLimit: number | null;
   usedCount: number;
   status: "active" | "inactive";
+  stopReason?: string; // Lý do tạm dừng / ngừng chương trình (UC8.5)
+  updatedAt?: string;
+  updatedBy?: string;
 }
 
 export interface PromotionUsage {
@@ -150,6 +154,8 @@ export interface Surcharge {
   reviewedBy?: string;
   reviewedAt?: string;
   customerResponse?: string;
+  resolutionNote?: string;
+  originalAmount?: number;
 }
 
 export type TransactionStatus = "Đang xử lý" | "Thành công" | "Thất bại" | "Hết hạn";
@@ -163,6 +169,8 @@ export interface MoneyTransaction {
   createdAt: string;
   completedAt?: string;
   note?: string;
+  referenceCode?: string; // Mã tham chiếu / mã đối soát ngân hàng (FT... hoặc POS-...)
+  method?: string; // VietQR / Tiền mặt / Máy POS / Chuyển khoản
 }
 
 export interface ImportReceiptLine {
@@ -174,6 +182,31 @@ export interface ImportReceiptLine {
   equipmentCodes: string[];
   receivingCondition?: string;
   note?: string;
+  // Bổ sung kiểm định chất lượng UC7.7 & UC7.7.2:
+  acceptedQty?: number; // Số lượng đạt chuẩn
+  acceptedCodes?: string[]; // Mã thiết bị đạt -> vào kho Sẵn sàng
+  damagedQty?: number; // Số lượng lỗi chấp nhận bảo hành (UC7.7.2)
+  damagedCodes?: string[]; // Mã thiết bị lỗi -> vào kho Đang bảo trì
+  damageNotes?: string; // Mô tả lỗi kỹ thuật
+  rejectedQty?: number; // Số lượng từ chối trả lại NCC -> không tăng kho
+  rejectionReason?: string; // Lý do từ chối
+  priceZeroReason?: string; // Lý do đơn giá 0 (hàng tặng/bảo hành - UC7.5.1)
+}
+
+export interface ImportReceiptAdjustment {
+  id: string; // DCNH-...
+  importReceiptId: string;
+  type: "Giá vốn" | "Số lượng" | "Thông tin chứng từ";
+  previousValue: string;
+  newValue: string;
+  reason: string;
+  evidence?: string;
+  status: "Chờ duyệt" | "Đã duyệt" | "Từ chối";
+  createdBy: string;
+  createdAt: string;
+  approvedBy?: string;
+  approvedAt?: string;
+  reviewNote?: string;
 }
 
 export interface ImportReceipt {
@@ -190,6 +223,9 @@ export interface ImportReceipt {
   createdBy: string;
   confirmedAt?: string;
   lines: ImportReceiptLine[];
+  inspectedBy?: string; // Nhân viên kho kiểm nhận thực tế (UC7.7)
+  inspectedAt?: string;
+  adjustments?: ImportReceiptAdjustment[]; // Các bản ghi điều chỉnh sau chốt (UC7.10)
 }
 
 export interface HandoverItemCheck {
@@ -206,11 +242,26 @@ export interface HandoverRecord {
   handoverAt: string;
   staffName: string;
   customerName: string;
+  receiverName?: string; // Họ tên người nhận thực tế tại quầy (UC4.2)
+  receiverPhone?: string; // SĐT người nhận tại quầy
+  receiverIdCard?: string; // Số CCCD/Định danh người nhận
+  isAuthorizedReceiver?: boolean; // Nhận thay được ủy quyền (dòng 1.1)
+  earlyPickupConfirmed?: boolean; // Chấp thuận nhận sớm hơn lịch hẹn (dòng 1.2)
   items: HandoverItemCheck[];
   accessoriesChecklist: { name: string; checked: boolean }[];
   initialNotes?: string;
   photoUrls?: string[];
   signatureConfirmed: boolean;
+}
+
+// UC4.4: Lịch sử liên hệ xử lý quá hạn
+export interface ContactLog {
+  id: string;
+  contactedAt: string;
+  staffName: string;
+  outcome: "Hẹn giờ trả mới" | "Xin gia hạn thêm" | "Không nghe máy" | "Khách báo mất" | "Khác";
+  note: string;
+  newExpectedTime?: string;
 }
 
 export interface ReturnReceiptItem {
@@ -220,6 +271,7 @@ export interface ReturnReceiptItem {
   note?: string;
   surchargeAmount: number;
   maintenanceReceiptId?: string;
+  lostApproved?: boolean; // Quản trị viên duyệt kết luận mất (UC4.3 Dòng phụ 3.2 & 814)
 }
 
 export interface ReturnReceipt {
@@ -230,6 +282,22 @@ export interface ReturnReceipt {
   staffName: string;
   items: ReturnReceiptItem[];
   isFinalReturn: boolean; // la_lan_tra_cuoi: true khi tất cả thiết bị của đơn đã xử lý xong
+  note?: string;
+  photoUrls?: string[]; // Ảnh bằng chứng hư hại khi nhận trả
+}
+
+// UC5.4: Bảng đối soát cọc và hoàn tất đơn (Reconciliation Statement)
+export interface ReconciliationStatement {
+  confirmedAt?: string;
+  confirmedBy?: string;
+  depositCollected: number; // Tiền cọc thực thu ban đầu
+  totalApprovedSurcharges: number; // Tổng phụ phí bồi thường & quá hạn đã duyệt
+  totalPriorSettlements: number; // Các khoản thu thêm/hoàn cọc đã xử lý trước đó
+  netDifference: number; // Chênh lệch còn lại = depositCollected - totalApprovedSurcharges - totalPriorSettlements
+  settlementType: "refund" | "collect" | "balanced"; // Hoàn cọc (UC5.6) | Thu thêm (UC5.5) | Cân bằng (Dòng 5.1)
+  status: "draft" | "confirmed" | "locked"; // Dự thảo -> Đã xác nhận căn cứ (Bước 4) -> Đã khóa hoàn tất (Bước 7)
+  lockedAt?: string;
+  lockedBy?: string;
   note?: string;
 }
 
@@ -259,6 +327,10 @@ export interface StockAdjustmentReceipt {
   createdAt: string;
   createdBy: string;
   reason: string;
+  status: "Chờ duyệt" | "Đã duyệt" | "Từ chối";
+  approvedBy?: string;
+  approvedAt?: string;
+  note?: string;
   lines: StockAdjustmentLine[];
 }
 
@@ -266,6 +338,7 @@ export interface StaffAccount {
   id: string; // NV-001
   username: string;
   name: string;
+  password?: string;
   role: "Quản trị viên" | "Nhân viên kho" | "Nhân viên chăm sóc KH";
   phone: string;
   email: string;
@@ -302,6 +375,10 @@ export interface Order {
   handedOverAt?: string;
   returnedAt?: string;
   reconciledAt?: string;
+  reconciliation?: ReconciliationStatement;
+  contactLogs?: ContactLog[]; // UC4.4: Lịch sử gọi điện nhắc và xử lý quá hạn
+  shortageReported?: { reportedAt: string; staffName: string; note: string; status: "Chờ xử lý" | "Đã giải quyết" }; // UC4.1 Dòng phụ 5.1
+  noShowReported?: { reportedAt: string; staffName: string; note: string }; // UC4.5 Dòng phụ 4.2
   statusHistory: { status: OrderStatus; at: string; by: string }[];
 }
 
@@ -326,6 +403,7 @@ export interface CustomerAccount {
   name: string;
   phone: string;
   email: string;
+  password?: string;
   address: string;
   status: "active" | "locked";
   lockedReason?: string;
@@ -346,16 +424,40 @@ export interface AppNotification {
   link?: string;
 }
 
+export interface AccessoryFeeItem {
+  accessoryName: string;
+  defaultFee: number;
+}
+
 export interface RentalPolicyConfig {
-  holdMinutes: number; // Mặc định 15 phút
+  version: string; // VD: "v1.0", "v1.1" (UC8.1.1)
+  effectiveDate: string; // Ngày bắt đầu áp dụng
+  changeReason?: string; // Lý do điều chỉnh phiên bản
+  holdMinutes: number; // Mặc định 15 phút giữ chỗ
+  standardPickupTime: string; // Giờ nhận máy tiêu chuẩn trong ngày (VD: "08:00")
+  standardReturnTime: string; // Giờ trả máy tiêu chuẩn trong ngày (VD: "20:00")
   cancellationFreeHours: number; // Mặc định >48h miễn phí
   cancellationTier1Hours: number; // 24-48h
   cancellationTier1FeePercent: number; // 30%
   cancellationTier2FeePercent: number; // 100% (<24h)
-  overdueMultiplier: number; // Hệ số phạt trễ 150%
-  minDepositPercentage: number; // 100%
+  overdueMultiplier: number; // Hệ số phạt trễ hạn (1.5 = 150%/ngày)
+  minDepositPercentage: number; // Tỷ lệ đặt cọc tối thiểu (100%)
+  damageCompensationPercent: number; // Tỷ lệ đền bù hư hỏng cơ bản (% giá trị thiết bị, VD: 50%)
+  accessoryLossFeeSchedule: AccessoryFeeItem[]; // Biểu phí đền bù mất phụ kiện
+  adminApprovalFeeThreshold: number; // Ngưỡng phụ phí cần Quản trị viên duyệt (VD: 1.000.000 đ)
+  reminderPickupHoursBefore: number; // Lịch nhắc nhận máy trước X giờ (VD: 4h)
+  reminderReturnHoursBefore: number; // Lịch nhắc hẹn trả trước X giờ (VD: 2h)
   updatedAt: string;
   updatedBy: string;
+}
+
+export interface PolicyVersion {
+  version: string;
+  effectiveDate: string;
+  updatedAt: string;
+  updatedBy: string;
+  changeReason: string;
+  configSnapshot: RentalPolicyConfig;
 }
 
 export interface AuditLogEntry {
@@ -395,6 +497,7 @@ export const INITIAL_CATEGORIES: Category[] = [
 export const INITIAL_SUPPLIERS: Supplier[] = [
   { id: "SUP-001", displayCode: "NCC001", name: "Naturehike Việt Nam", contactPerson: "Lê Minh Tuấn", phone: "0909 123 456", email: "sales@naturehike.vn", address: "TP. Hồ Chí Minh", taxCode: "0312345678", note: "Nhà cung cấp lều và đồ ngủ chính.", cooperationStatus: "active" },
   { id: "SUP-002", displayCode: "NCC002", name: "Outdoor Pro", contactPerson: "Trần Thu Hà", phone: "0912 345 678", email: "contact@outdoorpro.vn", address: "Hà Nội", taxCode: "0109876543", note: "Thiết bị bếp và chiếu sáng.", cooperationStatus: "active" },
+  { id: "SUP-003", displayCode: "NCC003", name: "Kovea Camping Gear", contactPerson: "Phạm Quốc Hùng", phone: "0938 789 012", email: "contact@koveavietnam.com", address: "Đà Nẵng", taxCode: "0401239876", note: "Tạm dừng nhập hàng do chất lượng khung lều không đạt.", cooperationStatus: "inactive", statusReason: "Vi phạm chất lượng khung lều đợt giao T8/2024 (UC7.4)" },
 ];
 
 export const INITIAL_PROMOTIONS: Promotion[] = [
@@ -738,7 +841,18 @@ export const DEMO_ORDER_PARTIAL: Order = {
       ],
     },
   ],
-  surcharges: [],
+  surcharges: [
+    {
+      id: "SC-001",
+      type: "Bồi thường hỏng hóc",
+      equipmentId: "L003",
+      amount: 250000,
+      reason: "Rách mép lều góc phải và cong 1 thanh cọc lều",
+      status: "Tranh chấp",
+      createdBy: "NV Kho Mai",
+      customerResponse: "Thanh cọc lều đã bị hơi cong từ lúc nhận tại quầy, tôi có chụp ảnh xác nhận lúc giao đồ",
+    },
+  ],
   transactions: [
     {
       id: "GD-20241206-002",
@@ -897,8 +1011,8 @@ export const INITIAL_MAINTENANCE_RECEIPTS: MaintenanceReceipt[] = [
   },
 ];
 
-export const fmt = (n: number) =>
-  n.toLocaleString("vi-VN") + "đ";
+export const fmt = (n?: number | null) =>
+  (n ?? 0).toLocaleString("vi-VN") + "đ";
 
 export const statusColors: Record<string, { bg: string; text: string }> = {
   "Chờ thanh toán": { bg: "#FEF3C7", text: "#B45309" },
@@ -943,18 +1057,31 @@ export const INITIAL_REVIEWS: Review[] = [
 ];
 
 export const INITIAL_STAFF_ACCOUNTS: StaffAccount[] = [
-  { id: "NV-001", username: "admin", name: "Nguyễn Văn Trưởng (Admin)", role: "Quản trị viên", phone: "0909 000 001", email: "admin@geargo.vn", status: "active", createdAt: "01/01/2024" },
-  { id: "NV-002", username: "nv_mai", name: "Lê Thị Mai", role: "Nhân viên kho", phone: "0909 000 002", email: "mai.lt@geargo.vn", status: "active", createdAt: "15/02/2024" },
-  { id: "NV-003", username: "nv_tuan", name: "Trần Tuấn", role: "Nhân viên kho", phone: "0909 000 003", email: "tuan.t@geargo.vn", status: "active", createdAt: "10/03/2024" },
-  { id: "NV-004", username: "nv_hung", name: "Vũ Huy Hùng", role: "Nhân viên chăm sóc KH", phone: "0909 000 004", email: "hung.vh@geargo.vn", status: "locked", lockedReason: "Nghỉ việc từ 01/10/2024", createdAt: "01/04/2024" },
+  { id: "NV-001", username: "admin", name: "Nguyễn Văn Trưởng (Admin)", password: "admin123", role: "Quản trị viên", phone: "0909 000 001", email: "admin@geargo.vn", status: "active", permissions: ["Quản lý kho thiết bị", "Bàn giao & Nhận trả", "Lập phụ phí & Đối soát", "Xem báo cáo doanh thu", "Quản lý khuyến mãi"], createdAt: "01/01/2024" },
+  { id: "NV-002", username: "nv_mai", name: "Lê Thị Mai", password: "staff123", role: "Nhân viên kho", phone: "0909 000 002", email: "mai.lt@geargo.vn", status: "active", permissions: ["Quản lý kho thiết bị", "Bàn giao & Nhận trả"], createdAt: "15/02/2024" },
+  { id: "NV-003", username: "nv_tuan", name: "Trần Tuấn", password: "staff123", role: "Nhân viên kho", phone: "0909 000 003", email: "tuan.t@geargo.vn", status: "active", permissions: ["Quản lý kho thiết bị", "Bàn giao & Nhận trả"], createdAt: "10/03/2024" },
+  { id: "NV-004", username: "nv_hung", name: "Vũ Huy Hùng", password: "staff123", role: "Nhân viên chăm sóc KH", phone: "0909 000 004", email: "hung.vh@geargo.vn", status: "locked", lockedReason: "Nghỉ việc từ 01/10/2024 (UC1.11 Demo)", permissions: ["Lập phụ phí & Đối soát"], createdAt: "01/04/2024" },
 ];
 
 export const INITIAL_STOCK_ADJUSTMENTS: StockAdjustmentReceipt[] = [
+  {
+    id: "PDCK-20241201-01",
+    createdAt: "01/12/2024 10:30",
+    createdBy: "NV Kho Tuấn",
+    reason: "Kiểm kê định kỳ tháng 12/2024: Phát hiện dây lều L005 đứt cần bảo trì",
+    status: "Chờ duyệt",
+    lines: [
+      { equipmentId: "L005", previousStatus: "Sẵn sàng", newStatus: "Đang bảo trì", reason: "Đứt dây chằng và rách bao ngoài khi đối chiếu kiểm kê" },
+    ],
+  },
   {
     id: "PDCK-20240901-01",
     createdAt: "01/09/2024 16:00",
     createdBy: "Quản trị viên",
     reason: "Kiểm kê kho định kỳ Quý 3/2024",
+    status: "Đã duyệt",
+    approvedBy: "Quản trị viên",
+    approvedAt: "01/09/2024 16:30",
     lines: [
       { equipmentId: "L004", previousStatus: "Sẵn sàng", newStatus: "Đang bảo trì", reason: "Phát hiện rách nhẹ cửa khi kiểm kê định kỳ" },
     ],
@@ -967,6 +1094,7 @@ export const INITIAL_CUSTOMERS: CustomerAccount[] = [
     name: "Nguyễn Văn An",
     phone: "0901 234 567",
     email: "an.nguyen@gmail.com",
+    password: "123456",
     address: "142 Hai Bà Trưng, Phường Đa Kao, Quận 1, TP.HCM",
     status: "active",
     createdAt: "01/10/2024",
@@ -979,6 +1107,7 @@ export const INITIAL_CUSTOMERS: CustomerAccount[] = [
     name: "Trần Minh Quang",
     phone: "0918 765 432",
     email: "quang.tm@gmail.com",
+    password: "123456",
     address: "88 Nguyễn Thị Minh Khai, Quận 3, TP.HCM",
     status: "active",
     createdAt: "15/10/2024",
@@ -991,6 +1120,7 @@ export const INITIAL_CUSTOMERS: CustomerAccount[] = [
     name: "Lê Thị Bích Ngọc",
     phone: "0933 888 999",
     email: "bichngoc.le@gmail.com",
+    password: "123456",
     address: "24 Đường số 5, Phường An Phú, TP. Thủ Đức",
     status: "active",
     createdAt: "05/11/2024",
@@ -1003,9 +1133,10 @@ export const INITIAL_CUSTOMERS: CustomerAccount[] = [
     name: "Hoàng Đức Nam",
     phone: "0977 112 233",
     email: "nam.hd@yahoo.com",
+    password: "123456",
     address: "105 Lê Duẩn, Hoàn Kiếm, Hà Nội",
     status: "locked",
-    lockedReason: "Chậm trả đồ >7 ngày và chưa thanh toán phụ phí bồi thường",
+    lockedReason: "Chậm trả đồ >7 ngày và chưa thanh toán phụ phí bồi thường (UC1.11 Demo)",
     createdAt: "12/08/2024",
     totalOrders: 1,
     totalSpent: 450000,
@@ -1044,16 +1175,68 @@ export const INITIAL_NOTIFICATIONS: AppNotification[] = [
 ];
 
 export const INITIAL_POLICIES: RentalPolicyConfig = {
+  version: "v1.2",
+  effectiveDate: "01/12/2024",
+  changeReason: "Ban hành biểu phí đền bù phụ kiện và cập nhật ngưỡng duyệt phụ phí 1.000.000 đ",
   holdMinutes: 15,
+  standardPickupTime: "08:00",
+  standardReturnTime: "20:00",
   cancellationFreeHours: 48,
   cancellationTier1Hours: 24,
   cancellationTier1FeePercent: 30,
   cancellationTier2FeePercent: 100,
   overdueMultiplier: 1.5,
   minDepositPercentage: 100,
+  damageCompensationPercent: 50,
+  accessoryLossFeeSchedule: [
+    { accessoryName: "Pin dự phòng chính hãng", defaultFee: 450000 },
+    { accessoryName: "Củ sạc nhanh & Cáp USB-C", defaultFee: 300000 },
+    { accessoryName: "Nắp ống kính (Lens Cap)", defaultFee: 150000 },
+    { accessoryName: "Thẻ nhớ tốc độ cao 128GB", defaultFee: 600000 },
+    { accessoryName: "Dây đeo cổ thao tác nhanh", defaultFee: 250000 },
+    { accessoryName: "Túi chống sốc cao cấp", defaultFee: 500000 },
+  ],
+  adminApprovalFeeThreshold: 1000000,
+  reminderPickupHoursBefore: 4,
+  reminderReturnHoursBefore: 2,
   updatedAt: "01/12/2024 10:00",
   updatedBy: "Nguyễn Văn Trưởng (Admin)",
 };
+
+export const INITIAL_POLICY_VERSIONS: PolicyVersion[] = [
+  {
+    version: "v1.0",
+    effectiveDate: "01/10/2024",
+    updatedAt: "01/10/2024 08:00",
+    updatedBy: "Hệ thống GearGo",
+    changeReason: "Khởi tạo chính sách thuê mượn và tỷ lệ cọc ban đầu",
+    configSnapshot: {
+      ...INITIAL_POLICIES,
+      version: "v1.0",
+      effectiveDate: "01/10/2024",
+      cancellationTier1FeePercent: 20,
+      adminApprovalFeeThreshold: 500000,
+      updatedAt: "01/10/2024 08:00",
+      updatedBy: "Hệ thống GearGo",
+    },
+  },
+  {
+    version: "v1.1",
+    effectiveDate: "15/11/2024",
+    updatedAt: "15/11/2024 14:30",
+    updatedBy: "Nguyễn Văn Trưởng (Admin)",
+    changeReason: "Nâng tỷ lệ phạt hủy 24-48h lên 30% để hạn chế giữ chỗ ảo mùa cao điểm",
+    configSnapshot: {
+      ...INITIAL_POLICIES,
+      version: "v1.1",
+      effectiveDate: "15/11/2024",
+      cancellationTier1FeePercent: 30,
+      adminApprovalFeeThreshold: 800000,
+      updatedAt: "15/11/2024 14:30",
+      updatedBy: "Nguyễn Văn Trưởng (Admin)",
+    },
+  },
+];
 
 export const INITIAL_AUDIT_LOGS: AuditLogEntry[] = [
   {

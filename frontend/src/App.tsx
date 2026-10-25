@@ -3,10 +3,11 @@ import {
   Role, Order, Equipment, CartItem,
   INITIAL_PRODUCTS, INITIAL_EQUIPMENT, INITIAL_IMPORT_RECEIPTS, INITIAL_CATEGORIES,
   INITIAL_SUPPLIERS, INITIAL_PROMOTIONS, INITIAL_REVIEWS, INITIAL_ORDERS, INITIAL_MAINTENANCE_RECEIPTS, INITIAL_STAFF_ACCOUNTS, INITIAL_STOCK_ADJUSTMENTS, DEMO_ORDER, DEMO_ORDER_COMPLETED,
-  INITIAL_CUSTOMERS, INITIAL_NOTIFICATIONS, INITIAL_POLICIES, INITIAL_AUDIT_LOGS, INITIAL_FINANCIAL_ADJUSTMENTS,
+  INITIAL_CUSTOMERS, INITIAL_NOTIFICATIONS, INITIAL_POLICIES, INITIAL_POLICY_VERSIONS, INITIAL_AUDIT_LOGS, INITIAL_FINANCIAL_ADJUSTMENTS,
   Product, Category, Supplier, Promotion, PromotionUsage, ActionResult, OrderStatus, AssignedEquipment, Surcharge, MoneyTransaction, ImportReceipt, Review,
   HandoverRecord, ReturnReceipt, ReturnReceiptItem, MaintenanceReceipt, StaffAccount, StockAdjustmentReceipt, StockAdjustmentLine,
-  CustomerAccount, AppNotification, RentalPolicyConfig, AuditLogEntry, FinancialAdjustment,
+  CustomerAccount, AppNotification, RentalPolicyConfig, PolicyVersion, AuditLogEntry, FinancialAdjustment, ReconciliationStatement, ContactLog,
+  ImportReceiptAdjustment,
   fmt, statusColors,
 } from "./store";
 import LandingView from "./views/LandingView";
@@ -47,9 +48,10 @@ export interface AppState {
   customers: CustomerAccount[];
   notifications: AppNotification[];
   policies: RentalPolicyConfig;
+  policyVersions: PolicyVersion[];
   auditLogs: AuditLogEntry[];
   financialAdjustments: FinancialAdjustment[];
-  currentUser: { name: string; email: string; phone: string; role: Role } | null;
+  currentUser: { id?: string; username?: string; name: string; email: string; phone: string; role: Role; permissions?: string[]; address?: string } | null;
   pickupDate: string;
   returnDate: string;
   pickupHour: string;
@@ -79,15 +81,23 @@ export interface AppState {
   updateCartQty: (productId: string, delta: number) => void;
   createOrder: (promoCode: string) => string;
   payOrder: (orderId: string, succeed?: boolean) => void;
+  confirmReconciliation: (orderId: string, note?: string) => ActionResult<ReconciliationStatement>;
+  finalizeOrderWithoutPayment: (orderId: string, note?: string) => ActionResult;
   settleOrder: (orderId: string, succeed?: boolean, details?: { method?: string; note?: string; amount?: number }) => void;
   cancelOrder: (orderId: string, reason?: string) => void;
   getCancellationQuote: (orderId: string) => { fee: number; refund: number };
   advanceOrderStatus: (orderId: string, status: OrderStatus, by?: string) => void;
   assignEquipment: (orderId: string, assigned: AssignedEquipment[]) => void;
+  completePreparation: (orderId: string, assignedEquipmentIds: { productId: string; equipmentId: string }[], staffName?: string) => ActionResult<void>;
+  reportEquipmentShortage: (orderId: string, note: string, staffName?: string) => ActionResult<void>;
   createHandoverRecord: (orderId: string, record: Omit<HandoverRecord, "id" | "handoverAt">) => ActionResult<HandoverRecord>;
   changeAssignedEquipment: (orderId: string, oldEquipmentId: string, newEquipmentId: string) => ActionResult;
-  createReturnReceipt: (orderId: string, input: { returnItems: ReturnReceiptItem[]; staffName: string; note?: string }) => ActionResult<ReturnReceipt>;
+  createReturnReceipt: (orderId: string, input: { returnItems: ReturnReceiptItem[]; staffName: string; note?: string; photoUrls?: string[] }) => ActionResult<ReturnReceipt>;
   checkOrderOverdue: (order: Order) => { isOverdue: boolean; overdueHours: number; overdueDays: number; surcharge: number };
+  addContactLog: (orderId: string, log: Omit<ContactLog, "id" | "contactedAt">) => ActionResult<ContactLog>;
+  getOverdueConflicts: (orderId: string) => Array<{ equipmentId: string; nextOrderId: string; nextCustomerName: string; nextPickupTime: string; availableSubstitutes: string[] }>;
+  reportCustomerNoShow: (orderId: string, note: string, staffName?: string) => ActionResult<void>;
+  approveLostEquipment: (orderId: string, equipmentId: string, staffName?: string) => ActionResult<void>;
   saveMaintenanceReceipt: (receipt: MaintenanceReceipt) => ActionResult<MaintenanceReceipt>;
   updateMaintenanceStatus: (id: string, status: MaintenanceReceipt["status"], actualCost?: number, note?: string) => ActionResult;
   toggleStaffLock: (staffId: string, reason?: string) => ActionResult;
@@ -96,16 +106,41 @@ export interface AppState {
   toggleCustomerLock: (customerId: string, reason?: string) => ActionResult;
   sendNotification: (notif: { title: string; message: string; type: AppNotification["type"]; targetRole: AppNotification["targetRole"] }) => ActionResult<AppNotification>;
   markNotificationRead: (id: string) => void;
-  updatePolicy: (policy: Partial<RentalPolicyConfig>) => ActionResult;
+  updatePolicy: (policy: Partial<RentalPolicyConfig>, changeReason?: string, effectiveDate?: string) => ActionResult;
+  pausePromotion: (promoId: string, reason: string) => ActionResult;
+  resumePromotion: (promoId: string) => ActionResult;
   addAuditLog: (entry: { actor: string; role: string; action: string; targetEntity: string; targetId: string; detail: string }) => void;
   saveFinancialAdjustment: (adj: Omit<FinancialAdjustment, "id" | "createdAt">) => ActionResult<FinancialAdjustment>;
-  login: (user: { name: string; email: string; phone: string; role: Role }) => void;
+  login: (user: { id?: string; username?: string; name: string; email: string; phone: string; role: Role; permissions?: string[]; address?: string }) => void;
   logout: () => void;
-  createStockAdjustment: (receipt: { reason: string; createdBy: string; lines: StockAdjustmentLine[] }) => ActionResult<StockAdjustmentReceipt>;
+  updateCurrentUserProfile: (info: { name: string; phone: string; email: string }) => ActionResult;
+  changeCurrentUserPassword: (oldPass: string, newPass: string) => ActionResult;
+  createStockAdjustment: (receipt: { reason: string; createdBy: string; lines: StockAdjustmentLine[]; autoApprove?: boolean }) => ActionResult<StockAdjustmentReceipt>;
+  approveStockAdjustment: (id: string, note?: string) => ActionResult;
+  rejectStockAdjustment: (id: string, note?: string) => ActionResult;
   addSurcharge: (orderId: string, surcharge: Surcharge) => void;
   approveSurcharge: (orderId: string, surchargeId: string) => void;
   rejectSurcharge: (orderId: string, surchargeId: string) => void;
-  confirmImportReceipt: (receiptId: string) => string | null;
+  disputeSurcharge: (orderId: string, surchargeId: string, customerResponse: string) => void;
+  resolveDisputedSurcharge: (orderId: string, surchargeId: string, resolution: "approved" | "rejected" | "adjusted", finalAmount: number, resolutionNote: string) => void;
+  confirmImportReceipt: (
+    receiptId: string,
+    inspection?: {
+      inspectedBy: string;
+      lines: {
+        productId: string;
+        acceptedCodes: string[];
+        damagedCodes?: string[];
+        damageNotes?: string;
+        rejectedQty?: number;
+        rejectionReason?: string;
+      }[];
+    }
+  ) => string | null;
+  toggleSupplierStatus: (supplierId: string, status: "active" | "inactive", reason: string) => ActionResult;
+  createImportAdjustment: (adjustment: Omit<ImportReceiptAdjustment, "id" | "createdAt" | "status">) => ActionResult<ImportReceiptAdjustment>;
+  approveImportAdjustment: (receiptId: string, adjustmentId: string, approvedBy?: string) => ActionResult;
+  rejectImportAdjustment: (receiptId: string, adjustmentId: string, reason?: string) => ActionResult;
   markEquipmentReturned: (orderId: string, equipmentId: string, condition: string, note: string) => void;
   transferEquipment: (equipmentId: string, newProductId: string) => ActionResult<Equipment>;
   addReview: (input: { orderId: string; productId: string; rating: number; comment: string; images?: string[] }) => ActionResult<Review>;
@@ -142,9 +177,10 @@ interface PersistedState {
   customers?: CustomerAccount[];
   notifications?: AppNotification[];
   policies?: RentalPolicyConfig;
+  policyVersions?: PolicyVersion[];
   auditLogs?: AuditLogEntry[];
   financialAdjustments?: FinancialAdjustment[];
-  currentUser?: { name: string; email: string; phone: string; role: Role } | null;
+  currentUser?: { id?: string; username?: string; name: string; email: string; phone: string; role: Role; permissions?: string[]; address?: string } | null;
   pickupDate: string;
   returnDate: string;
   pickupHour?: string;
@@ -222,10 +258,11 @@ export default function App() {
   const [customers, setCustomers] = useState<CustomerAccount[]>(persistedState?.customers ?? INITIAL_CUSTOMERS);
   const [notifications, setNotifications] = useState<AppNotification[]>(persistedState?.notifications ?? INITIAL_NOTIFICATIONS);
   const [policies, setPolicies] = useState<RentalPolicyConfig>(persistedState?.policies ?? INITIAL_POLICIES);
+  const [policyVersions, setPolicyVersions] = useState<PolicyVersion[]>(persistedState?.policyVersions ?? INITIAL_POLICY_VERSIONS);
   const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>(persistedState?.auditLogs ?? INITIAL_AUDIT_LOGS);
   const [financialAdjustments, setFinancialAdjustments] = useState<FinancialAdjustment[]>(persistedState?.financialAdjustments ?? INITIAL_FINANCIAL_ADJUSTMENTS);
-  const [currentUser, setCurrentUser] = useState<{ name: string; email: string; phone: string; role: Role } | null>(
-    persistedState?.currentUser ?? { name: "Nguyễn Văn An", email: "an.nguyen@gmail.com", phone: "0901 234 567", role: "customer" }
+  const [currentUser, setCurrentUser] = useState<{ id?: string; username?: string; name: string; email: string; phone: string; role: Role; permissions?: string[]; address?: string } | null>(
+    persistedState?.currentUser ?? { id: "KH001", name: "Nguyễn Văn An", email: "an.nguyen@gmail.com", phone: "0901 234 567", role: "customer" }
   );
   const [notifDropdownOpen, setNotifDropdownOpen] = useState(false);
   const [pickupDate, setPickupDate] = useState(persistedState?.pickupDate ?? "");
@@ -235,6 +272,7 @@ export default function App() {
   const [newOrderId, setNewOrderId] = useState<string | null>(persistedState?.newOrderId ?? null);
   const [appliedPromoCode, setAppliedPromoCode] = useState(persistedState?.appliedPromoCode ?? "");
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [showUserProfileModal, setShowUserProfileModal] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
@@ -278,9 +316,10 @@ export default function App() {
     const state: PersistedState = {
       schemaVersion: 2, categories, products, suppliers, promotions, promotionUsages,
       equipment, orders, cart, importReceipts, reviews, maintenanceReceipts, staffAccounts, stockAdjustments, pickupDate, returnDate, pickupHour, returnHour, newOrderId, appliedPromoCode,
+      policies, policyVersions,
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  }, [categories, products, suppliers, promotions, promotionUsages, equipment, orders, cart, importReceipts, reviews, maintenanceReceipts, staffAccounts, stockAdjustments, pickupDate, returnDate, pickupHour, returnHour, newOrderId, appliedPromoCode]);
+  }, [categories, products, suppliers, promotions, promotionUsages, equipment, orders, cart, importReceipts, reviews, maintenanceReceipts, staffAccounts, stockAdjustments, pickupDate, returnDate, pickupHour, returnHour, newOrderId, appliedPromoCode, policies, policyVersions]);
 
   const hasValidRentalPeriod = () => {
     if (!pickupDate || !returnDate) return false;
@@ -379,6 +418,20 @@ export default function App() {
   const saveEquipment = (input: Equipment): ActionResult<Equipment> => {
     if (!equipment.some((item) => item.id === input.id)) return { ok: false, message: "Không tìm thấy thiết bị." };
     if (!input.condition.trim()) return { ok: false, message: "Vui lòng nhập tình trạng thiết bị.", fieldErrors: { condition: "Tình trạng là bắt buộc." } };
+
+    // UC6.14 Dòng phụ 3.1: Chặn chuyển sang "Ngừng sử dụng" khi thiết bị đang cho thuê
+    if (input.equipmentStatus === "Ngừng sử dụng") {
+      const activeRented = orders.find(
+        (o) => o.status === "Đang thuê" && o.assignedEquipment.some((ae) => ae.equipmentId === input.id && !ae.returnedAt)
+      );
+      if (activeRented) {
+        return {
+          ok: false,
+          message: `Thiết bị ${input.id} đang được khách thuê trong đơn ${activeRented.id}. Không thể ngừng sử dụng khi chưa thu hồi hoặc giải quyết bồi hoàn! (UC6.14 Dòng 3.1)`,
+        };
+      }
+    }
+
     const equipmentItem = { ...input, displayCode: normalizeCode(input.displayCode || input.id), includedAccessories: input.includedAccessories ?? [], note: input.note ?? "" };
     setEquipment((current) => current.map((item) => item.id === equipmentItem.id ? equipmentItem : item));
     return { ok: true, data: equipmentItem };
@@ -396,6 +449,28 @@ export default function App() {
     const exists = suppliers.some((item) => item.id === supplier.id);
     setSuppliers((current) => exists ? current.map((item) => item.id === supplier.id ? supplier : item) : [...current, supplier]);
     return { ok: true, data: supplier };
+  };
+
+  // UC7.4: Thay đổi tình trạng hợp tác nhà cung cấp kèm lý do
+  const toggleSupplierStatus = (supplierId: string, status: "active" | "inactive", reason: string): ActionResult => {
+    const supplier = suppliers.find((s) => s.id === supplierId);
+    if (!supplier) return { ok: false, message: "Không tìm thấy nhà cung cấp." };
+    if (!reason.trim()) return { ok: false, message: "Vui lòng nhập lý do thay đổi trạng thái hợp tác (theo UC7.4)." };
+
+    setSuppliers((prev) =>
+      prev.map((s) => (s.id === supplierId ? { ...s, cooperationStatus: status, statusReason: reason.trim() } : s))
+    );
+
+    addAuditLog({
+      actor: "Quản trị viên",
+      role: "admin",
+      action: `Đổi trạng thái NCC (${status === "active" ? "Đang hợp tác" : "Ngừng hợp tác"})`,
+      targetEntity: "Supplier",
+      targetId: supplierId,
+      detail: `Lý do: ${reason.trim()}`,
+    });
+
+    return { ok: true, data: undefined };
   };
 
   const savePromotion = (input: Promotion): ActionResult<Promotion> => {
@@ -439,10 +514,19 @@ export default function App() {
     const displayCode = normalizeCode(input.displayCode || input.id);
     if (!displayCode) return { ok: false, message: "Vui lòng nhập mã phiếu nhập." };
     if (importReceipts.some((receipt) => receipt.id !== input.id && normalizeCode(receipt.displayCode || receipt.id) === displayCode)) return { ok: false, message: "Mã phiếu nhập đã tồn tại." };
-    if (!suppliers.some((supplier) => supplier.id === input.supplierId && supplier.cooperationStatus === "active")) return { ok: false, message: "Vui lòng chọn nhà cung cấp đang hợp tác." };
+    if (!suppliers.some((supplier) => supplier.id === input.supplierId && supplier.cooperationStatus === "active")) return { ok: false, message: "Vui lòng chọn nhà cung cấp đang hợp tác (UC7.5)." };
     if (input.lines.length === 0) return { ok: false, message: "Phiếu nhập cần ít nhất một dòng sản phẩm." };
-    const invalidLine = input.lines.find((line) => line.quantity <= 0 || line.unitPrice < 0 || !products.some((product) => product.id === line.productId));
-    if (invalidLine) return { ok: false, message: "Số lượng, đơn giá hoặc sản phẩm trong phiếu chưa hợp lệ." };
+    
+    // UC7.5.1: Đơn giá không âm; đơn giá 0 phải có lý do (hàng tặng/bảo hành)
+    for (const line of input.lines) {
+      if (line.quantity <= 0 || !Number.isInteger(line.quantity)) return { ok: false, message: "Số lượng từng dòng phải là số nguyên dương." };
+      if (line.unitPrice < 0) return { ok: false, message: "Đơn giá nhập không được âm." };
+      if (line.unitPrice === 0 && !line.priceZeroReason?.trim() && !line.note?.trim()) {
+        return { ok: false, message: `Sản phẩm với đơn giá 0 ₫ bắt buộc phải nhập lý do (hàng khuyến mãi/tài trợ/bảo hành) theo UC7.5.1!` };
+      }
+      if (!products.some((product) => product.id === line.productId)) return { ok: false, message: "Sản phẩm không tồn tại trong danh mục." };
+    }
+
     const receipt: ImportReceipt = { ...input, id: input.id || makeId("RECEIPT"), displayCode };
     const exists = importReceipts.some((item) => item.id === receipt.id);
     setImportReceipts((current) => exists ? current.map((item) => item.id === receipt.id ? receipt : item) : [...current, receipt]);
@@ -577,15 +661,18 @@ export default function App() {
       setPromotionUsages((current) => current.map((usage) => usage.orderId === orderId && usage.status === "reserved" ? { ...usage, status: "used", usedAt: new Date().toISOString() } : usage));
     }
     setOrders((prev) => prev.map((o) => {
-      if (o.id !== orderId || o.status !== "Chờ thanh toán") return o;
+      // UC5.1: Sinh mã đối soát ngân hàng Bank Reference Code (ví dụ FT241025...)
+      const refCode = `FT${Date.now().toString().slice(-8)}${Math.floor(Math.random() * 90 + 10)}`;
       const transaction: MoneyTransaction = {
         id: `GD-${Date.now()}`,
         type: "Thanh toán ban đầu",
         amount: o.rental - o.discount + o.depositTotal,
         status: succeed ? "Thành công" : "Thất bại",
         createdAt: now,
-        completedAt: now,
-        note: succeed ? "Thanh toán mô phỏng thành công" : "Ngân hàng từ chối giao dịch mô phỏng",
+        completedAt: succeed ? now : undefined,
+        note: succeed ? "Thanh toán trực tuyến VietQR 24/7 thành công" : "Ngân hàng/Cổng thanh toán từ chối giao dịch",
+        referenceCode: succeed ? refCode : undefined,
+        method: "VietQR 24/7",
       };
       return succeed
         ? {
@@ -599,12 +686,146 @@ export default function App() {
     }));
   };
 
+  // UC5.4 Bước 4: Xác nhận bảng đối soát - Lưu căn cứ và số phải thu/hoàn, giữ trạng thái "Chờ đối soát"
+  const confirmReconciliation = (orderId: string, note?: string): ActionResult<ReconciliationStatement> => {
+    const order = orders.find((o) => o.id === orderId);
+    if (!order) return { ok: false, message: "Không tìm thấy đơn hàng cần đối soát." };
+
+    // Kiểm tra Tiền điều kiện & Dòng sự kiện 1.1:
+    const debt = order.assignedEquipment.filter((ae) => !ae.returnedAt);
+    if (debt.length > 0) {
+      return { ok: false, message: `Còn ${debt.length} thiết bị chưa nhận trả/chưa kết luận mất. Vui lòng giải quyết trước khi đối soát!` };
+    }
+    const pendingSurcharges = order.surcharges.filter((s) => s.status === "Chờ duyệt");
+    if (pendingSurcharges.length > 0) {
+      return { ok: false, message: `Còn ${pendingSurcharges.length} phụ phí đang chờ duyệt. Vui lòng phê duyệt hoặc từ chối trước!` };
+    }
+    const disputedSurcharges = order.surcharges.filter((s) => s.status === "Tranh chấp");
+    if (disputedSurcharges.length > 0) {
+      return { ok: false, message: `Có ${disputedSurcharges.length} phụ phí đang tranh chấp. Cần thỏa thuận xong với khách trước!` };
+    }
+
+    const now = new Date().toLocaleString("vi-VN");
+    const approved = order.surcharges.filter((s) => s.status === "Đã duyệt").reduce((sum, s) => sum + s.amount, 0);
+
+    // Tính toán các khoản tiền đã hoàn hoặc thu bổ sung trước đó
+    const priorRefund = (order.transactions || [])
+      .filter((t) => (t.type === "Hoàn cọc" || t.type === "Hoàn tiền hủy") && t.status === "Thành công")
+      .reduce((s, t) => s + t.amount, 0);
+    const priorCollect = (order.transactions || [])
+      .filter((t) => t.type === "Thu thêm" && t.status === "Thành công")
+      .reduce((s, t) => s + t.amount, 0);
+    const priorSettled = priorCollect - priorRefund;
+
+    // Số dư chênh lệch còn lại: Cọc thực thu - Phụ phí hợp lệ - Các khoản đã xử lý trước
+    const netDifference = order.depositTotal - approved - priorSettled;
+
+    const statement: ReconciliationStatement = {
+      confirmedAt: now,
+      confirmedBy: currentUser?.name || "Nhân viên",
+      depositCollected: order.depositTotal,
+      totalApprovedSurcharges: approved,
+      totalPriorSettlements: priorSettled,
+      netDifference,
+      settlementType: netDifference === 0 ? "balanced" : netDifference > 0 ? "refund" : "collect",
+      status: "confirmed",
+      note: note || "Đã xác nhận căn cứ bảng đối soát cọc",
+    };
+
+    setOrders((prev) => prev.map((o) => (o.id === orderId ? { ...o, reconciliation: statement } : o)));
+
+    addAuditLog({
+      actor: currentUser?.name || "Nhân viên",
+      role: currentUser?.role || "staff",
+      action: "Xác nhận bảng đối soát (UC5.4 Bước 4)",
+      targetEntity: "Order",
+      targetId: orderId,
+      detail: `Căn cứ: Cọc ${fmt(order.depositTotal)}, Phí duyệt: ${fmt(approved)}, Đã xử lý trước: ${fmt(priorSettled)}, Chênh lệch: ${fmt(Math.abs(netDifference))} (${netDifference > 0 ? "Phải hoàn" : netDifference < 0 ? "Phải thu" : "Cân bằng 0đ"})`,
+    });
+
+    return { ok: true, data: statement };
+  };
+
+  // UC5.4 Bước 5.1 & 6, 7: Chốt đối soát trực tiếp khi chênh lệch bằng 0 (bỏ qua giao dịch tiền)
+  const finalizeOrderWithoutPayment = (orderId: string, note?: string): ActionResult => {
+    const order = orders.find((o) => o.id === orderId);
+    if (!order) return { ok: false, message: "Không tìm thấy đơn hàng." };
+    if (order.status !== "Chờ đối soát") return { ok: false, message: "Đơn hàng phải ở trạng thái Chờ đối soát." };
+
+    // Kiểm tra tiền điều kiện
+    const debt = order.assignedEquipment.filter((ae) => !ae.returnedAt);
+    if (debt.length > 0) return { ok: false, message: `Còn ${debt.length} thiết bị chưa trả` };
+    const pendingSurcharges = order.surcharges.filter((s) => s.status === "Chờ duyệt");
+    if (pendingSurcharges.length > 0) return { ok: false, message: `Còn ${pendingSurcharges.length} phụ phí chưa duyệt` };
+
+    const approved = order.surcharges.filter((s) => s.status === "Đã duyệt").reduce((sum, s) => sum + s.amount, 0);
+    const priorRefund = (order.transactions || [])
+      .filter((t) => (t.type === "Hoàn cọc" || t.type === "Hoàn tiền hủy") && t.status === "Thành công")
+      .reduce((s, t) => s + t.amount, 0);
+    const priorCollect = (order.transactions || [])
+      .filter((t) => t.type === "Thu thêm" && t.status === "Thành công")
+      .reduce((s, t) => s + t.amount, 0);
+    const priorSettled = priorCollect - priorRefund;
+    const netDifference = order.depositTotal - approved - priorSettled;
+
+    if (netDifference !== 0) {
+      return { ok: false, message: `Số tiền chênh lệch là ${fmt(Math.abs(netDifference))}, không thể chốt theo luồng chênh lệch 0 đ (Dòng 5.1)!` };
+    }
+
+    const now = new Date().toLocaleString("vi-VN");
+    const statement: ReconciliationStatement = {
+      confirmedAt: order.reconciliation?.confirmedAt || now,
+      confirmedBy: order.reconciliation?.confirmedBy || currentUser?.name || "Nhân viên",
+      depositCollected: order.depositTotal,
+      totalApprovedSurcharges: approved,
+      totalPriorSettlements: priorSettled,
+      netDifference: 0,
+      settlementType: "balanced",
+      status: "locked",
+      lockedAt: now,
+      lockedBy: currentUser?.name || "Nhân viên",
+      note: note || "Chốt đối soát cân bằng không phát sinh chênh lệch tiền (Dòng 5.1)",
+    };
+
+    setOrders((prev) => prev.map((o) => {
+      if (o.id !== orderId) return o;
+      return {
+        ...o,
+        status: "Hoàn tất",
+        reconciledAt: now,
+        reconciliation: statement,
+        statusHistory: [...o.statusHistory, { status: "Hoàn tất" as OrderStatus, at: now, by: currentUser?.name || "Nhân viên" }],
+      };
+    }));
+
+    addAuditLog({
+      actor: currentUser?.name || "Nhân viên",
+      role: currentUser?.role || "staff",
+      action: "Khóa đối soát & Hoàn tất đơn (UC5.4 Bước 5.1/6/7)",
+      targetEntity: "Order",
+      targetId: orderId,
+      detail: `Khóa đối soát chênh lệch 0 đ - Chuyển Hoàn tất đơn ${orderId}`,
+    });
+
+    return { ok: true, data: undefined };
+  };
+
+  // UC5.4 Bước 5, 6, 7: Quyết toán tiền (UC5.5 Thu thêm hoặc UC5.6 Hoàn cọc) và khóa đối soát
   const settleOrder = (orderId: string, succeed = true, details?: { method?: string; note?: string; amount?: number }) => {
     const now = new Date().toLocaleString("vi-VN");
     setOrders((prev) => prev.map((o) => {
       if (o.id !== orderId || o.status !== "Chờ đối soát") return o;
       const approved = o.surcharges.filter((s) => s.status === "Đã duyệt").reduce((sum, s) => sum + s.amount, 0);
-      const difference = o.depositTotal - approved;
+
+      const priorRefund = (o.transactions || [])
+        .filter((t) => (t.type === "Hoàn cọc" || t.type === "Hoàn tiền hủy") && t.status === "Thành công")
+        .reduce((s, t) => s + t.amount, 0);
+      const priorCollect = (o.transactions || [])
+        .filter((t) => t.type === "Thu thêm" && t.status === "Thành công")
+        .reduce((s, t) => s + t.amount, 0);
+      const priorSettled = priorCollect - priorRefund;
+      const difference = o.depositTotal - approved - priorSettled;
+
       const amount = details?.amount ?? Math.abs(difference);
       const defaultNote = succeed ? (difference >= 0 ? "Hoàn cọc thành công" : "Thu thêm thành công") : "Giao dịch đối soát thất bại";
       const fullNote = details?.note || (details?.method ? `${defaultNote} qua ${details.method}` : defaultNote);
@@ -617,25 +838,48 @@ export default function App() {
         completedAt: now,
         note: fullNote,
       };
+
       if (succeed) {
         addAuditLog({
-          actor: "NV Kho Mai",
-          role: "staff",
+          actor: currentUser?.name || "Nhân viên",
+          role: currentUser?.role || "staff",
           action: difference >= 0 ? "Hoàn cọc đối soát (UC5.6)" : "Thu thêm đối soát (UC5.5)",
           targetEntity: "Order",
           targetId: orderId,
           detail: `${fullNote} - Số tiền: ${fmt(amount)}`,
         });
       }
+
+      // Khóa bảng đối soát khi giao dịch thành công (UC5.4 Bước 7)
+      const updatedStatement: ReconciliationStatement = {
+        ...(o.reconciliation || {
+          confirmedAt: now,
+          confirmedBy: currentUser?.name || "Nhân viên",
+          depositCollected: o.depositTotal,
+          totalApprovedSurcharges: approved,
+          totalPriorSettlements: priorSettled,
+          netDifference: difference,
+          settlementType: difference >= 0 ? "refund" : "collect",
+        }),
+        status: succeed ? "locked" : (o.reconciliation?.status || "confirmed"),
+        lockedAt: succeed ? now : undefined,
+        lockedBy: succeed ? (currentUser?.name || "Nhân viên") : undefined,
+      };
+
       return succeed
         ? {
             ...o,
             status: "Hoàn tất",
             reconciledAt: now,
+            reconciliation: updatedStatement,
             transactions: [...(o.transactions ?? []), transaction],
-            statusHistory: [...o.statusHistory, { status: "Hoàn tất" as OrderStatus, at: now, by: "Nhân viên" }],
+            statusHistory: [...o.statusHistory, { status: "Hoàn tất" as OrderStatus, at: now, by: currentUser?.name || "Nhân viên" }],
           }
-        : { ...o, transactions: [...(o.transactions ?? []), transaction] };
+        : {
+            ...o,
+            reconciliation: updatedStatement,
+            transactions: [...(o.transactions ?? []), transaction],
+          };
     }));
   };
 
@@ -655,9 +899,9 @@ export default function App() {
   const cancelOrder = (orderId: string, reason?: string) => {
     const quote = getCancellationQuote(orderId);
     const now = new Date().toLocaleString("vi-VN");
-    const cancellationReason = reason?.trim() || "Khách yêu cầu hủy";
     setOrders((prev) => prev.map((o) => {
-      if (o.id !== orderId || !["Chờ thanh toán", "Đã xác nhận"].includes(o.status)) return o;
+      // UC3.4: Cho phép hủy đơn đối với mọi trạng thái trước khi bàn giao thiết bị
+      if (o.id !== orderId || !["Chờ thanh toán", "Đã xác nhận", "Đang chuẩn bị", "Sẵn sàng nhận"].includes(o.status)) return o;
       const refundTransaction: MoneyTransaction | null = o.paidAt
         ? {
             id: `GD-${Date.now()}`,
@@ -750,6 +994,202 @@ export default function App() {
     setEquipment((prev) => prev.map((e) =>
       ids.includes(e.id) ? { ...e, equipmentStatus: "Đang thuê" } : e
     ));
+  };
+
+  // UC4.1: Hoàn tất chuẩn bị & Phân công serial (Lưu vào order, chuyển Sẵn sàng nhận & gửi thông báo)
+  const completePreparation = (
+    orderId: string,
+    assignedEquipmentIds: { productId: string; equipmentId: string }[],
+    staffName = "Nhân viên kho"
+  ): ActionResult<void> => {
+    const order = orders.find((o) => o.id === orderId);
+    if (!order) return { ok: false, message: "Không tìm thấy đơn hàng." };
+    if (!["Đã xác nhận", "Đang chuẩn bị"].includes(order.status)) {
+      return { ok: false, message: "Chỉ đơn Đã xác nhận hoặc Đang chuẩn bị mới có thể lưu phân công." };
+    }
+
+    // Kiểm tra đủ số lượng từng món theo đơn (UC4.1 bước 5)
+    for (const item of order.items) {
+      const count = assignedEquipmentIds.filter((a) => a.productId === item.productId).length;
+      if (count < item.qty) {
+        return { ok: false, message: `Chưa phân công đủ số lượng cho sản phẩm: ${item.productName} (Yêu cầu ${item.qty}, mới gán ${count}).` };
+      }
+    }
+
+    const now = new Date().toLocaleString("vi-VN");
+    const assigned: AssignedEquipment[] = assignedEquipmentIds.map((a) => ({
+      equipmentId: a.equipmentId,
+      productId: a.productId,
+      assignedAt: now,
+    }));
+
+    // Cập nhật trạng thái đơn sang "Sẵn sàng nhận" và lưu assignedEquipment (UC4.1 bước 6)
+    setOrders((prev) => prev.map((o) => {
+      if (o.id !== orderId) return o;
+      return {
+        ...o,
+        assignedEquipment: assigned,
+        status: "Sẵn sàng nhận",
+        shortageReported: undefined, // Xóa cảnh báo thiếu nếu đã soạn đủ
+        statusHistory: [...o.statusHistory, { status: "Sẵn sàng nhận", at: now, by: `${staffName}: Đã phân công đủ ${assigned.length} thiết bị` }],
+      };
+    }));
+
+    // Gửi thông báo cho khách hàng (Dòng 725 & 730)
+    sendNotification({
+      title: "Thiết bị đã sẵn sàng nhận!",
+      message: `Đơn hàng #${order.id} của quý khách đã được chuẩn bị đầy đủ thiết bị và sẵn sàng nhận tại cửa hàng.`,
+      type: "order",
+      targetRole: "customer",
+    });
+
+    return { ok: true, data: undefined };
+  };
+
+  // UC4.1 Dòng phụ 5.1: Cảnh báo không đủ thiết bị soạn hàng
+  const reportEquipmentShortage = (orderId: string, note: string, staffName = "Nhân viên kho"): ActionResult<void> => {
+    const order = orders.find((o) => o.id === orderId);
+    if (!order) return { ok: false, message: "Không tìm thấy đơn hàng." };
+    const now = new Date().toLocaleString("vi-VN");
+
+    setOrders((prev) => prev.map((o) => {
+      if (o.id !== orderId) return o;
+      return {
+        ...o,
+        shortageReported: { reportedAt: now, staffName, note, status: "Chờ xử lý" },
+        statusHistory: [...o.statusHistory, { status: o.status, at: now, by: `${staffName}: Báo thiếu thiết bị - ${note}` }],
+      };
+    }));
+
+    sendNotification({
+      title: "Cảnh báo thiếu thiết bị soạn hàng",
+      message: `Đơn hàng #${order.id} (${order.customerName}) thiếu thiết bị: ${note}. Quản trị viên vui lòng can thiệp xử lý với khách.`,
+      type: "system",
+      targetRole: "admin",
+    });
+
+    return { ok: true, data: undefined };
+  };
+
+  // UC4.4: Thêm nhật ký liên hệ xử lý quá hạn (Contact Log)
+  const addContactLog = (orderId: string, log: Omit<ContactLog, "id" | "contactedAt">): ActionResult<ContactLog> => {
+    const order = orders.find((o) => o.id === orderId);
+    if (!order) return { ok: false, message: "Không tìm thấy đơn hàng." };
+    const now = new Date().toLocaleString("vi-VN");
+    const newLog: ContactLog = {
+      id: `CLOG-${Date.now()}`,
+      contactedAt: now,
+      ...log,
+    };
+
+    setOrders((prev) => prev.map((o) => {
+      if (o.id !== orderId) return o;
+      return {
+        ...o,
+        contactLogs: [newLog, ...(o.contactLogs || [])],
+        statusHistory: [...o.statusHistory, { status: o.status, at: now, by: `${log.staffName}: Liên hệ khách (${log.outcome}) - ${log.note}` }],
+      };
+    }));
+
+    return { ok: true, data: newLog };
+  };
+
+  // UC4.4: Kiểm tra ảnh hưởng lịch thuê kế tiếp (Supply Chain Conflict Detection)
+  const getOverdueConflicts = (orderId: string) => {
+    const order = orders.find((o) => o.id === orderId);
+    if (!order) return [];
+    const overdueDebts = order.assignedEquipment.filter((ae) => !ae.returnedAt).map((ae) => ae.equipmentId);
+    if (overdueDebts.length === 0) return [];
+
+    const conflicts: Array<{
+      equipmentId: string;
+      nextOrderId: string;
+      nextCustomerName: string;
+      nextPickupTime: string;
+      availableSubstitutes: string[];
+    }> = [];
+
+    // Tìm các đơn sắp tới có gán thiết bị này
+    const upcomingOrders = orders.filter((o) =>
+      o.id !== orderId &&
+      ["Đã xác nhận", "Đang chuẩn bị", "Sẵn sàng nhận"].includes(o.status)
+    );
+
+    for (const uo of upcomingOrders) {
+      for (const ae of uo.assignedEquipment) {
+        if (overdueDebts.includes(ae.equipmentId)) {
+          const substitutes = equipment
+            .filter((e) => e.productId === ae.productId && e.equipmentStatus === "Sẵn sàng" && e.id !== ae.equipmentId)
+            .map((e) => e.id);
+
+          conflicts.push({
+            equipmentId: ae.equipmentId,
+            nextOrderId: uo.id,
+            nextCustomerName: uo.customerName,
+            nextPickupTime: uo.pickupTime,
+            availableSubstitutes: substitutes,
+          });
+        }
+      }
+    }
+
+    return conflicts;
+  };
+
+  // UC4.5 Dòng phụ 4.2: Ghi nhận khách không đến nhận tại quầy (No-Show)
+  const reportCustomerNoShow = (orderId: string, note: string, staffName = "Nhân viên kho"): ActionResult<void> => {
+    const order = orders.find((o) => o.id === orderId);
+    if (!order) return { ok: false, message: "Không tìm thấy đơn hàng." };
+    const now = new Date().toLocaleString("vi-VN");
+
+    setOrders((prev) => prev.map((o) => {
+      if (o.id !== orderId) return o;
+      return {
+        ...o,
+        noShowReported: { reportedAt: now, staffName, note },
+        statusHistory: [...o.statusHistory, { status: o.status, at: now, by: `${staffName}: Ghi nhận khách không đến nhận (${note})` }],
+      };
+    }));
+
+    sendNotification({
+      title: "Khách hàng không đến nhận đồ",
+      message: `Đơn hàng #${order.id} (${order.customerName}) quá giờ hẹn nhận nhưng khách chưa đến. Ghi chú: ${note}. Quản trị viên vui lòng xử lý theo UC3.4.`,
+      type: "order",
+      targetRole: "admin",
+    });
+
+    return { ok: true, data: undefined };
+  };
+
+  // UC4.3 Dòng phụ 3.2: Duyệt kết luận mất thiết bị & dừng tính trễ
+  const approveLostEquipment = (orderId: string, equipmentId: string, staffName = "Quản trị viên"): ActionResult<void> => {
+    const order = orders.find((o) => o.id === orderId);
+    if (!order) return { ok: false, message: "Không tìm thấy đơn hàng." };
+    const now = new Date().toLocaleString("vi-VN");
+
+    // Cập nhật lostApproved trong returnReceipts
+    const updatedReceipts = order.returnReceipts?.map((rc) => ({
+      ...rc,
+      items: rc.items.map((it) => it.equipmentId === equipmentId ? { ...it, lostApproved: true } : it),
+    }));
+
+    // Cập nhật trạng thái thiết bị sang Thất lạc
+    setEquipment((prev) => prev.map((e) =>
+      e.id === equipmentId ? { ...e, equipmentStatus: "Thất lạc" } : e
+    ));
+
+    // Duyệt phụ phí bồi thường nếu có
+    setOrders((prev) => prev.map((o) => {
+      if (o.id !== orderId) return o;
+      return {
+        ...o,
+        returnReceipts: updatedReceipts,
+        surcharges: o.surcharges.map((s) => s.equipmentId === equipmentId ? { ...s, status: "Đã duyệt" } : s),
+        statusHistory: [...o.statusHistory, { status: o.status, at: now, by: `${staffName}: Duyệt kết luận mất thiết bị ${equipmentId}` }],
+      };
+    }));
+
+    return { ok: true, data: undefined };
   };
 
   // UC10: Đổi thiết bị đã gán trước khi bàn giao nếu phát hiện lỗi
@@ -908,6 +1348,7 @@ export default function App() {
       items: input.returnItems,
       isFinalReturn,
       note: input.note || "",
+      photoUrls: input.photoUrls || [],
     };
 
     const newStatus: OrderStatus = isFinalReturn ? "Đã nhận trả" : "Đang thuê";
@@ -1033,7 +1474,84 @@ export default function App() {
         : o
     ));
 
-  const confirmImportReceipt = (receiptId: string): string | null => {
+  // UC5.2 Dòng phụ 5.1: Khách hàng khiếu nại phụ phí -> Chuyển sang "Tranh chấp"
+  const disputeSurcharge = (orderId: string, surchargeId: string, customerResponse: string) => {
+    setOrders((prev) =>
+      prev.map((o) =>
+        o.id === orderId
+          ? {
+              ...o,
+              surcharges: o.surcharges.map((s) =>
+                s.id === surchargeId
+                  ? {
+                      ...s,
+                      status: "Tranh chấp" as const,
+                      customerResponse: customerResponse.trim(),
+                    }
+                  : s
+              ),
+            }
+          : o
+      )
+    );
+  };
+
+  // UC5.3 Dòng chính 4 & 5: Quản trị viên xử lý kết luận tranh chấp phụ phí
+  const resolveDisputedSurcharge = (
+    orderId: string,
+    surchargeId: string,
+    resolution: "approved" | "rejected" | "adjusted",
+    finalAmount: number,
+    resolutionNote: string
+  ) => {
+    const now = new Date().toLocaleString("vi-VN");
+    setOrders((prev) =>
+      prev.map((o) =>
+        o.id === orderId
+          ? {
+              ...o,
+              surcharges: o.surcharges.map((s) => {
+                if (s.id !== surchargeId) return s;
+                if (resolution === "rejected") {
+                  return {
+                    ...s,
+                    amount: 0,
+                    status: "Từ chối" as const,
+                    reviewedBy: "Quản trị viên",
+                    reviewedAt: now,
+                    resolutionNote,
+                  };
+                }
+                return {
+                  ...s,
+                  originalAmount: s.originalAmount || s.amount,
+                  amount: finalAmount,
+                  status: "Đã duyệt" as const,
+                  reviewedBy: "Quản trị viên",
+                  reviewedAt: now,
+                  resolutionNote,
+                };
+              }),
+            }
+          : o
+      )
+    );
+  };
+
+  const confirmImportReceipt = (
+    receiptId: string,
+    inspection?: {
+      inspectedBy: string;
+      lines: {
+        productId: string;
+        acceptedCodes: string[];
+        damagedCodes?: string[];
+        damageNotes?: string;
+        rejectedQty?: number;
+        rejectionReason?: string;
+      }[];
+    }
+  ): string | null => {
     const receipt = importReceipts.find((item) => item.id === receiptId);
     if (!receipt || receipt.status !== "Nháp") return "Phiếu không tồn tại hoặc đã được xử lý.";
     const supplier = suppliers.find((item) => item.id === receipt.supplierId);
@@ -1041,42 +1559,239 @@ export default function App() {
     if (receipt.lines.some((line) => !Number.isInteger(line.quantity) || line.quantity <= 0 || line.unitPrice < 0 || !products.some((product) => product.id === line.productId))) {
       return "Chi tiết phiếu nhập có sản phẩm, số lượng hoặc đơn giá không hợp lệ.";
     }
-    const codes = receipt.lines.flatMap((line) => line.equipmentCodes.map((code) => code.trim()));
-    const expected = receipt.lines.reduce((sum, line) => sum + line.quantity, 0);
-    if (codes.length !== expected || codes.some((code) => !code)) return "Số mã thiết bị không khớp số lượng thực nhận.";
-    if (new Set(codes).size !== codes.length || codes.some((code) => equipment.some((item) => item.id === code))) {
-      return "Mã thiết bị bị trùng trong phiếu hoặc đã tồn tại trong kho.";
-    }
+
     const now = new Date().toLocaleString("vi-VN");
-    const newEquipment: Equipment[] = receipt.lines.flatMap((line) =>
-      line.equipmentCodes.map((code) => ({
-        id: code,
-        displayCode: code,
-        importReceiptLineId: line.id,
-        productId: line.productId,
-        originalProductId: line.productId,
-        importReceiptId: receipt.id,
-        importDate: new Date().toISOString().slice(0, 10),
-        importPrice: line.unitPrice,
-        condition: line.receivingCondition || "Mới",
-        includedAccessories: [],
-        note: line.note || "",
-        equipmentStatus: "Sẵn sàng",
-        rentCount: 0,
-      }))
-    );
+    const nowDateOnly = new Date().toISOString().slice(0, 10);
+    let newEquipment: Equipment[] = [];
+    let updatedReceiptLines = receipt.lines;
+
+    if (inspection && inspection.lines) {
+      // UC7.7 & UC7.7.2: Kiểm định chất lượng hàng thực nhận
+      const newMaintReceipts: MaintenanceReceipt[] = [];
+
+      for (const inspLine of inspection.lines) {
+        const line = receipt.lines.find((l) => l.productId === inspLine.productId);
+        const unitPrice = line?.unitPrice || 0;
+
+        // A. Hàng đạt chuẩn -> Trạng thái Sẵn sàng
+        inspLine.acceptedCodes.forEach((code) => {
+          newEquipment.push({
+            id: code,
+            displayCode: code,
+            importReceiptLineId: line?.id,
+            productId: inspLine.productId,
+            originalProductId: inspLine.productId,
+            importReceiptId: receipt.id,
+            importDate: nowDateOnly,
+            importPrice: unitPrice,
+            condition: "Mới 100%",
+            includedAccessories: [],
+            note: "Kiểm nhận đạt chuẩn nhập kho",
+            equipmentStatus: "Sẵn sàng",
+            rentCount: 0,
+          });
+        });
+
+        // B. Hàng lỗi chấp nhận bảo hành (UC7.7.2) -> Trạng thái Đang bảo trì
+        inspLine.damagedCodes?.forEach((code) => {
+          newEquipment.push({
+            id: code,
+            displayCode: code,
+            importReceiptLineId: line?.id,
+            productId: inspLine.productId,
+            originalProductId: inspLine.productId,
+            importReceiptId: receipt.id,
+            importDate: nowDateOnly,
+            importPrice: unitPrice,
+            condition: "Lỗi khi nhập kho (chờ xử lý)",
+            includedAccessories: [],
+            note: inspLine.damageNotes || "Hàng lỗi khi nhập kho (UC7.7.2)",
+            equipmentStatus: "Đang bảo trì",
+            rentCount: 0,
+          });
+
+          newMaintReceipts.push({
+            id: `PBTI-${Date.now().toString().slice(-4)}-${code}`,
+            equipmentId: code,
+            issueDescription: `Hàng lỗi khi giao nhận từ NCC ${supplier.name}: ${inspLine.damageNotes || "Lỗi kỹ thuật xuất xưởng"} (UC7.7.2)`,
+            estimatedCost: 0,
+            status: "Đang sửa chữa",
+            createdAt: now,
+          });
+        });
+      }
+
+      if (newMaintReceipts.length > 0) {
+        setMaintenanceReceipts((prev) => [...newMaintReceipts, ...prev]);
+      }
+
+      updatedReceiptLines = receipt.lines.map((line) => {
+        const insp = inspection.lines.find((il) => il.productId === line.productId);
+        if (!insp) return line;
+        return {
+          ...line,
+          acceptedQty: insp.acceptedCodes.length,
+          acceptedCodes: insp.acceptedCodes,
+          damagedQty: insp.damagedCodes?.length || 0,
+          damagedCodes: insp.damagedCodes,
+          damageNotes: insp.damageNotes,
+          rejectedQty: insp.rejectedQty || 0,
+          rejectionReason: insp.rejectionReason,
+          equipmentCodes: [...insp.acceptedCodes, ...(insp.damagedCodes || [])],
+        };
+      });
+    } else {
+      // Cách xác nhận cũ trực tiếp
+      const codes = receipt.lines.flatMap((line) => line.equipmentCodes.map((code) => code.trim()));
+      const expected = receipt.lines.reduce((sum, line) => sum + line.quantity, 0);
+      if (codes.length !== expected || codes.some((code) => !code)) return "Số mã thiết bị không khớp số lượng thực nhận.";
+      if (new Set(codes).size !== codes.length || codes.some((code) => equipment.some((item) => item.id === code))) {
+        return "Mã thiết bị bị trùng trong phiếu hoặc đã tồn tại trong kho.";
+      }
+      newEquipment = receipt.lines.flatMap((line) =>
+        line.equipmentCodes.map((code) => ({
+          id: code,
+          displayCode: code,
+          importReceiptLineId: line.id,
+          productId: line.productId,
+          originalProductId: line.productId,
+          importReceiptId: receipt.id,
+          importDate: nowDateOnly,
+          importPrice: line.unitPrice,
+          condition: line.receivingCondition || "Mới",
+          includedAccessories: [],
+          note: line.note || "",
+          equipmentStatus: "Sẵn sàng",
+          rentCount: 0,
+        }))
+      );
+    }
+
     setEquipment((prev) => [...prev, ...newEquipment]);
     setImportReceipts((prev) => prev.map((item) =>
       item.id === receiptId ? {
         ...item,
         supplierName: supplier.name,
-        lines: item.lines.map((line) => ({ ...line, productNameSnapshot: products.find((product) => product.id === line.productId)?.name ?? "" })),
+        lines: updatedReceiptLines.map((line) => ({ ...line, productNameSnapshot: products.find((product) => product.id === line.productId)?.name ?? "" })),
         status: "Đã nhập kho",
         confirmedAt: now,
-        receivedAt: new Date().toISOString().slice(0, 10),
+        receivedAt: nowDateOnly,
+        inspectedBy: inspection?.inspectedBy || "Quản trị viên",
       } : item
     ));
+
+    addAuditLog({
+      actor: inspection?.inspectedBy || "Quản trị viên",
+      role: "admin",
+      action: "Xác nhận nhập kho (UC7.7)",
+      targetEntity: "ImportReceipt",
+      targetId: receiptId,
+      detail: `Đã kích hoạt ${newEquipment.length} thiết bị mới vào kho từ NCC ${supplier.name}`,
+    });
+
     return null;
+  };
+
+  // UC7.10: Lập đề nghị xử lý sai lệch phiếu nhập đã chốt (Chờ duyệt)
+  const createImportAdjustment = (input: Omit<ImportReceiptAdjustment, "id" | "createdAt" | "status">): ActionResult<ImportReceiptAdjustment> => {
+    const receipt = importReceipts.find((r) => r.id === input.importReceiptId);
+    if (!receipt) return { ok: false, message: "Không tìm thấy phiếu nhập gốc." };
+    if (receipt.status !== "Đã nhập kho") return { ok: false, message: "Chỉ phiếu đã nhập kho mới cần xử lý sai lệch." };
+
+    const newAdj: ImportReceiptAdjustment = {
+      ...input,
+      id: `DCNH-${Date.now().toString().slice(-4)}`,
+      status: "Chờ duyệt",
+      createdAt: new Date().toLocaleString("vi-VN"),
+    };
+
+    setImportReceipts((prev) =>
+      prev.map((r) =>
+        r.id === input.importReceiptId
+          ? { ...r, adjustments: [...(r.adjustments || []), newAdj] }
+          : r
+      )
+    );
+
+    addAuditLog({
+      actor: input.createdBy,
+      role: "staff",
+      action: "Lập đề nghị điều chỉnh phiếu nhập (UC7.10)",
+      targetEntity: "ImportReceipt",
+      targetId: input.importReceiptId,
+      detail: `Loại: ${input.type} - Lý do: ${input.reason}`,
+    });
+
+    return { ok: true, data: newAdj };
+  };
+
+  // UC7.10 & UC7.10.1: Duyệt điều chỉnh phiếu nhập có kiểm tra lịch thuê tương lai
+  const approveImportAdjustment = (receiptId: string, adjustmentId: string, approvedBy = "Quản trị viên"): ActionResult => {
+    const receipt = importReceipts.find((r) => r.id === receiptId);
+    if (!receipt) return { ok: false, message: "Không tìm thấy phiếu nhập." };
+    const adj = receipt.adjustments?.find((a) => a.id === adjustmentId);
+    if (!adj) return { ok: false, message: "Không tìm thấy bản đề nghị điều chỉnh." };
+
+    // Dòng phụ 4.1: Kiểm tra an toàn lịch thuê tương lai nếu điều chỉnh số lượng
+    if (adj.type === "Số lượng") {
+      const relatedEquips = equipment.filter((e) => e.importReceiptId === receiptId);
+      const inRentOrFuture = relatedEquips.some((e) =>
+        orders.some((o) =>
+          (o.status === "Đang thuê" || o.status === "Đang chuẩn bị" || o.status === "Sẵn sàng nhận") &&
+          (o.assignedEquipmentIds?.includes(e.id) || o.items.some((it) => it.equipmentId === e.id))
+        )
+      );
+      if (inRentOrFuture) {
+        return {
+          ok: false,
+          message: "Cảnh báo an toàn (Dòng phụ 4.1): Thiết bị trong lô nhập này đang được khách thuê hoặc đã gán lịch giao sắp tới. Vui lòng xử lý cam kết khách hàng trước khi giảm kho!",
+        };
+      }
+    }
+
+    const now = new Date().toLocaleString("vi-VN");
+    setImportReceipts((prev) =>
+      prev.map((r) => {
+        if (r.id !== receiptId) return r;
+        const updatedAdjustments = (r.adjustments || []).map((a) =>
+          a.id === adjustmentId
+            ? { ...a, status: "Đã duyệt" as const, approvedBy, approvedAt: now }
+            : a
+        );
+        return { ...r, adjustments: updatedAdjustments };
+      })
+    );
+
+    addAuditLog({
+      actor: approvedBy,
+      role: "admin",
+      action: "Duyệt điều chỉnh phiếu nhập (UC7.10)",
+      targetEntity: "ImportReceipt",
+      targetId: receiptId,
+      detail: `Mã điều chỉnh: ${adjustmentId} - Loại: ${adj.type}`,
+    });
+
+    return { ok: true, data: undefined };
+  };
+
+  const rejectImportAdjustment = (receiptId: string, adjustmentId: string, reason = ""): ActionResult => {
+    const receipt = importReceipts.find((r) => r.id === receiptId);
+    if (!receipt) return { ok: false, message: "Không tìm thấy phiếu nhập." };
+
+    const now = new Date().toLocaleString("vi-VN");
+    setImportReceipts((prev) =>
+      prev.map((r) => {
+        if (r.id !== receiptId) return r;
+        const updatedAdjustments = (r.adjustments || []).map((a) =>
+          a.id === adjustmentId
+            ? { ...a, status: "Từ chối" as const, approvedBy: "Quản trị viên", approvedAt: now, reviewNote: reason }
+            : a
+        );
+        return { ...r, adjustments: updatedAdjustments };
+      })
+    );
+
+    return { ok: true, data: undefined };
   };
 
   const markEquipmentReturned = (orderId: string, equipmentId: string, condition: string, note: string) => {
@@ -1128,32 +1843,123 @@ export default function App() {
     return { ok: true, data: undefined };
   };
 
-  // UC20 & UC22: Phiếu Điều Chỉnh Kho Sau Kiểm Kê
-  const createStockAdjustment = (input: { reason: string; createdBy: string; lines: StockAdjustmentLine[] }): ActionResult<StockAdjustmentReceipt> => {
+  // UC6.10: Kiểm kê và đề nghị điều chỉnh kho
+  const createStockAdjustment = (input: { reason: string; createdBy: string; lines: StockAdjustmentLine[]; autoApprove?: boolean }): ActionResult<StockAdjustmentReceipt> => {
     if (!input.lines.length) return { ok: false, message: "Phiếu điều chỉnh phải có ít nhất 1 dòng thiết bị." };
     const now = new Date().toLocaleString("vi-VN");
     const id = `PDCK-${Date.now()}`;
+    const autoApprove = input.autoApprove ?? false;
     const newReceipt: StockAdjustmentReceipt = {
       id,
       createdAt: now,
-      createdBy: input.createdBy || "Quản trị viên",
-      reason: input.reason || "Điều chỉnh sau kiểm kê kho",
+      createdBy: input.createdBy || "Nhân viên kho",
+      reason: input.reason || "Kiểm kê định kỳ kho",
+      status: autoApprove ? "Đã duyệt" : "Chờ duyệt",
+      approvedBy: autoApprove ? input.createdBy : undefined,
+      approvedAt: autoApprove ? now : undefined,
       lines: input.lines,
     };
 
-    // Cập nhật trạng thái các thiết bị trong kho
-    setEquipment((prev) => prev.map((e) => {
-      const line = input.lines.find((l) => l.equipmentId === e.id);
-      if (!line) return e;
-      return {
-        ...e,
-        equipmentStatus: line.newStatus,
-        condition: line.newStatus === "Ngừng sử dụng" ? "Hỏng hoàn toàn (Sau kiểm kê)" : e.condition,
-      };
-    }));
+    // Nếu tự động duyệt (ví dụ Quản trị viên lập trực tiếp) thì cập nhật kho ngay
+    if (autoApprove) {
+      setEquipment((prev) => prev.map((e) => {
+        const line = input.lines.find((l) => l.equipmentId === e.id);
+        if (!line) return e;
+        return {
+          ...e,
+          equipmentStatus: line.newStatus,
+          condition: line.newStatus === "Ngừng sử dụng" ? "Hỏng hoàn toàn (Sau kiểm kê)" : e.condition,
+        };
+      }));
+    }
 
     setStockAdjustments((prev) => [newReceipt, ...prev]);
     return { ok: true, data: newReceipt };
+  };
+
+  // UC6.11 & UC6.11.1: Quản trị viên duyệt điều chỉnh kho có kiểm tra ảnh hưởng lịch thuê
+  const approveStockAdjustment = (id: string, note?: string): ActionResult => {
+    const receipt = stockAdjustments.find((r) => r.id === id);
+    if (!receipt) return { ok: false, message: "Không tìm thấy phiếu điều chỉnh kho." };
+    if (receipt.status === "Đã duyệt") return { ok: false, message: "Phiếu này đã được phê duyệt trước đó." };
+
+    // UC6.11.1: Kiểm tra ảnh hưởng lịch thuê đối với từng thiết bị trong phiếu
+    for (const line of receipt.lines) {
+      if (line.newStatus === "Thất lạc" || line.newStatus === "Ngừng sử dụng") {
+        // Kiểm tra thiết bị đang ở nhà khách
+        const activeRented = orders.find(
+          (o) => o.status === "Đang thuê" && o.assignedEquipment.some((ae) => ae.equipmentId === line.equipmentId && !ae.returnedAt)
+        );
+        if (activeRented) {
+          return {
+            ok: false,
+            message: `Thiết bị ${line.equipmentId} đang ở khách thuê (Đơn ${activeRented.id}). Cần thu hồi hoặc giải quyết bồi hoàn trước khi điều chỉnh mất/ngừng dùng! (UC6.11 Dòng 2.1)`,
+          };
+        }
+
+        // Kiểm tra đơn đã cam kết sắp giao (Đang chuẩn bị, Sẵn sàng nhận)
+        const upcomingOrder = orders.find(
+          (o) => ["Đang chuẩn bị", "Sẵn sàng nhận"].includes(o.status) && o.assignedEquipment.some((ae) => ae.equipmentId === line.equipmentId)
+        );
+        if (upcomingOrder) {
+          return {
+            ok: false,
+            message: `Thiết bị ${line.equipmentId} đã được gán cho Đơn ${upcomingOrder.id} (${upcomingOrder.status}). Vui lòng điều phối thiết bị thay thế trước khi duyệt giảm kho! (UC6.11.1)`,
+          };
+        }
+      }
+    }
+
+    const now = new Date().toLocaleString("vi-VN");
+    // Cập nhật trạng thái các thiết bị trong kho
+    setEquipment((prev) =>
+      prev.map((e) => {
+        const line = receipt.lines.find((l) => l.equipmentId === e.id);
+        if (!line) return e;
+        return {
+          ...e,
+          equipmentStatus: line.newStatus,
+          condition: line.newStatus === "Ngừng sử dụng" ? "Hỏng hoàn toàn (Sau kiểm kê)" : e.condition,
+        };
+      })
+    );
+
+    // Cập nhật trạng thái phiếu điều chỉnh
+    setStockAdjustments((prev) =>
+      prev.map((r) =>
+        r.id === id
+          ? {
+              ...r,
+              status: "Đã duyệt",
+              approvedBy: "Quản trị viên",
+              approvedAt: now,
+              note: note || r.note,
+            }
+          : r
+      )
+    );
+
+    return { ok: true, data: undefined };
+  };
+
+  const rejectStockAdjustment = (id: string, note?: string): ActionResult => {
+    const receipt = stockAdjustments.find((r) => r.id === id);
+    if (!receipt) return { ok: false, message: "Không tìm thấy phiếu điều chỉnh kho." };
+    const now = new Date().toLocaleString("vi-VN");
+    setStockAdjustments((prev) =>
+      prev.map((r) =>
+        r.id === id
+          ? {
+              ...r,
+              status: "Từ chối",
+              approvedBy: "Quản trị viên",
+              approvedAt: now,
+              note: note || "Từ chối điều chỉnh (Dữ liệu kho giữ nguyên)",
+            }
+          : r
+      )
+    );
+    return { ok: true, data: undefined };
   };
 
   const saveCustomer = (customer: CustomerAccount): ActionResult<CustomerAccount> => {
@@ -1198,15 +2004,130 @@ export default function App() {
     setNotifications((prev) => prev.map((n) => n.id === id ? { ...n, isRead: true } : n));
   };
 
-  const updatePolicy = (patch: Partial<RentalPolicyConfig>): ActionResult => {
+  // UC8.1 & UC8.1.1: Cấu hình chính sách có phiên bản & lưu snapshot lịch sử
+  const updatePolicy = (
+    patch: Partial<RentalPolicyConfig>,
+    changeReason = "Cập nhật quy định thuê mượn và biểu phí bồi thường",
+    effectiveDate = new Date().toLocaleDateString("vi-VN")
+  ): ActionResult => {
+    // Validation theo UC8.1 dòng phụ 2.1: Chặn giá trị âm hoặc mâu thuẫn mốc hủy
+    if (patch.holdMinutes !== undefined && patch.holdMinutes <= 0) {
+      return { ok: false, message: "Thời gian giữ chỗ phải lớn hơn 0 phút." };
+    }
+    if (patch.overdueMultiplier !== undefined && patch.overdueMultiplier <= 0) {
+      return { ok: false, message: "Hệ số phạt trễ hạn phải lớn hơn 0." };
+    }
+    if (
+      (patch.cancellationTier1FeePercent !== undefined && (patch.cancellationTier1FeePercent < 0 || patch.cancellationTier1FeePercent > 100)) ||
+      (patch.cancellationTier2FeePercent !== undefined && (patch.cancellationTier2FeePercent < 0 || patch.cancellationTier2FeePercent > 100))
+    ) {
+      return { ok: false, message: "Tỷ lệ phí hủy phải nằm trong khoảng từ 0% đến 100%." };
+    }
+    const tier1 = patch.cancellationTier1FeePercent ?? policies.cancellationTier1FeePercent;
+    const tier2 = patch.cancellationTier2FeePercent ?? policies.cancellationTier2FeePercent;
+    if (tier1 > tier2) {
+      return { ok: false, message: "Mâu thuẫn mốc hủy: Phí hủy trước 24-48h không được cao hơn phí hủy sát giờ (<24h)." };
+    }
+
+    // Tự động sinh phiên bản mới: v1.x -> v1.(x+1)
+    const currentVerNum = parseFloat(policies.version?.replace("v", "") || "1.2");
+    const newVersion = `v${(currentVerNum + 0.1).toFixed(1)}`;
+    const nowStr = new Date().toLocaleString("vi-VN");
+    const updatedBy = role === "admin" ? "Nguyễn Văn Trưởng (Admin)" : "Nhân viên hệ thống";
+
+    // Lưu snapshot phiên bản cũ vào lịch sử policyVersions (UC8.1.1)
+    const oldSnapshot: PolicyVersion = {
+      version: policies.version || "v1.2",
+      effectiveDate: policies.effectiveDate || "01/12/2024",
+      updatedAt: policies.updatedAt,
+      updatedBy: policies.updatedBy,
+      changeReason: policies.changeReason || "Phiên bản tiền nhiệm",
+      configSnapshot: { ...policies },
+    };
+    setPolicyVersions((prev) => [oldSnapshot, ...prev]);
+
     const updated: RentalPolicyConfig = {
       ...policies,
       ...patch,
-      updatedAt: new Date().toLocaleString("vi-VN"),
-      updatedBy: role === "admin" ? "Nguyễn Văn Trưởng (Admin)" : "Nhân viên hệ thống",
+      version: newVersion,
+      effectiveDate,
+      changeReason,
+      updatedAt: nowStr,
+      updatedBy,
     };
     setPolicies(updated);
-    addAuditLog({ actor: "Admin", role: "Quản trị viên", action: "Cập nhật chính sách thuê", targetEntity: "RentalPolicy", targetId: "GLOBAL-POLICY", detail: "Thay đổi cấu hình thời gian giữ chỗ, tỷ lệ phí phạt hủy hoặc hệ số phạt trễ" });
+    addAuditLog({
+      actor: "Admin",
+      role: "Quản trị viên",
+      action: `Ban hành chính sách mới (${newVersion})`,
+      targetEntity: "RentalPolicy",
+      targetId: newVersion,
+      detail: `Áp dụng từ ${effectiveDate}: ${changeReason}`,
+    });
+    return { ok: true, data: undefined };
+  };
+
+  // UC8.5: Tạm dừng / Ngừng chương trình khuyến mãi kèm lý do
+  const pausePromotion = (promoId: string, reason: string): ActionResult => {
+    if (!reason.trim()) return { ok: false, message: "Vui lòng nhập lý do tạm dừng/ngừng chương trình (bắt buộc theo UC8.5)." };
+    const promo = promotions.find((p) => p.id === promoId);
+    if (!promo) return { ok: false, message: "Khuyến mãi không tồn tại." };
+    if (promo.status === "inactive") return { ok: false, message: "Chương trình đã ở trạng thái tạm dừng." };
+
+    setPromotions((prev) =>
+      prev.map((p) =>
+        p.id === promoId
+          ? {
+              ...p,
+              status: "inactive",
+              stopReason: reason.trim(),
+              updatedAt: new Date().toLocaleString("vi-VN"),
+              updatedBy: "Quản trị viên",
+            }
+          : p
+      )
+    );
+    addAuditLog({
+      actor: "Admin",
+      role: "Quản trị viên",
+      action: "Ngừng chương trình khuyến mãi",
+      targetEntity: "Promotion",
+      targetId: promo.code,
+      detail: `Tạm dừng mã ${promo.code}. Lý do: ${reason.trim()}`,
+    });
+    return { ok: true, data: undefined };
+  };
+
+  // UC8.5: Kích hoạt lại chương trình khuyến mãi (kiểm tra hạn)
+  const resumePromotion = (promoId: string): ActionResult => {
+    const promo = promotions.find((p) => p.id === promoId);
+    if (!promo) return { ok: false, message: "Khuyến mãi không tồn tại." };
+    if (promo.status === "active") return { ok: false, message: "Chương trình đang hoạt động." };
+    if (new Date(promo.endsAt).getTime() < Date.now()) {
+      return { ok: false, message: "Không thể kích hoạt lại chương trình đã hết hạn thời gian (theo quy tắc UC8.5)." };
+    }
+
+    setPromotions((prev) =>
+      prev.map((p) =>
+        p.id === promoId
+          ? {
+              ...p,
+              status: "active",
+              stopReason: undefined,
+              updatedAt: new Date().toLocaleString("vi-VN"),
+              updatedBy: "Quản trị viên",
+            }
+          : p
+      )
+    );
+    addAuditLog({
+      actor: "Admin",
+      role: "Quản trị viên",
+      action: "Kích hoạt lại khuyến mãi",
+      targetEntity: "Promotion",
+      targetId: promo.code,
+      detail: `Mở lại chương trình ${promo.code}`,
+    });
     return { ok: true, data: undefined };
   };
 
@@ -1244,18 +2165,92 @@ export default function App() {
     return { ok: true, data: newAdj };
   };
 
-  const login = (user: { name: string; email: string; phone: string; role: Role }) => {
+  const login = (user: { id?: string; username?: string; name: string; email: string; phone: string; role: Role; permissions?: string[]; address?: string }) => {
     setCurrentUser(user);
     setRole(user.role);
-    addAuditLog({ actor: user.name, role: user.role === "admin" ? "Quản trị viên" : user.role === "staff" ? "Nhân viên" : "Khách hàng", action: "Đăng nhập", targetEntity: "Session", targetId: user.email, detail: `Đăng nhập thành công với vai trò ${user.role}` });
+    addAuditLog({
+      actor: user.name,
+      role: user.role === "admin" ? "Quản trị viên" : user.role === "staff" ? "Nhân viên" : "Khách hàng",
+      action: "Đăng nhập (UC1.2)",
+      targetEntity: "Session",
+      targetId: user.email || user.username || user.id || "SESSION",
+      detail: `Đăng nhập thành công với vai trò ${user.role}`
+    });
     if (user.role === "admin") setPage("admin");
     else if (user.role === "staff") setPage("staff");
     else setPage("landing");
   };
 
+  // Cập nhật hồ sơ cá nhân của tài khoản đang đăng nhập (UC1.6)
+  const updateCurrentUserProfile = (info: { name: string; phone: string; email: string }): ActionResult => {
+    if (!currentUser) return { ok: false, message: "Chưa đăng nhập hệ thống." };
+    setCurrentUser((prev) => (prev ? { ...prev, ...info } : null));
+
+    // Cập nhật thông tin vào danh sách thực thể tương ứng (UC1.6)
+    if (role === "admin" || role === "staff") {
+      setStaffAccounts((prev) =>
+        prev.map((s) => (s.id === currentUser.id || s.email === currentUser.email ? { ...s, ...info } : s))
+      );
+    } else {
+      setCustomers((prev) =>
+        prev.map((c) => (c.id === currentUser.id || c.email === currentUser.email ? { ...c, ...info } : c))
+      );
+    }
+
+    addAuditLog({
+      actor: info.name,
+      role: role === "admin" ? "Quản trị viên" : role === "staff" ? "Nhân viên" : "Khách hàng",
+      action: "Cập nhật hồ sơ cá nhân (UC1.6)",
+      targetEntity: "UserProfile",
+      targetId: currentUser.id || info.email,
+      detail: `Cập nhật thông tin liên hệ: SĐT ${info.phone}, Email ${info.email}`
+    });
+    return { ok: true };
+  };
+
+  // Đổi mật khẩu tài khoản người dùng đang đăng nhập (UC1.12)
+  const changeCurrentUserPassword = (oldPass: string, newPass: string): ActionResult => {
+    if (!currentUser) return { ok: false, message: "Chưa đăng nhập hệ thống." };
+    let currentStoredPass = "123456";
+    if (role === "admin" || role === "staff") {
+      const staff = staffAccounts.find((s) => s.id === currentUser.id || s.email === currentUser.email || s.username === currentUser.username);
+      currentStoredPass = staff?.password || (role === "admin" ? "admin123" : "staff123");
+    } else {
+      const cust = customers.find((c) => c.id === currentUser.id || c.email === currentUser.email);
+      currentStoredPass = cust?.password || "123456";
+    }
+
+    if (oldPass !== currentStoredPass) {
+      return { ok: false, message: "Mật khẩu hiện tại không chính xác." };
+    }
+    if (newPass.length < 6) {
+      return { ok: false, message: "Mật khẩu mới tối thiểu 6 ký tự." };
+    }
+
+    if (role === "admin" || role === "staff") {
+      setStaffAccounts((prev) =>
+        prev.map((s) => (s.id === currentUser.id || s.email === currentUser.email || s.username === currentUser.username ? { ...s, password: newPass } : s))
+      );
+    } else {
+      setCustomers((prev) =>
+        prev.map((c) => (c.id === currentUser.id || c.email === currentUser.email ? { ...c, password: newPass } : c))
+      );
+    }
+
+    addAuditLog({
+      actor: currentUser.name,
+      role: role === "admin" ? "Quản trị viên" : role === "staff" ? "Nhân viên" : "Khách hàng",
+      action: "Đổi mật khẩu tài khoản (UC1.12)",
+      targetEntity: "UserSecurity",
+      targetId: currentUser.id || currentUser.email,
+      detail: "Người dùng đổi mật khẩu bảo mật cá nhân thành công"
+    });
+    return { ok: true };
+  };
+
   const logout = () => {
     const actorName = currentUser?.name || "Người dùng";
-    addAuditLog({ actor: actorName, role: role === "admin" ? "Quản trị viên" : role === "staff" ? "Nhân viên" : "Khách hàng", action: "Đăng xuất", targetEntity: "Session", targetId: currentUser?.email || "SESSION", detail: "Đăng xuất tài khoản khỏi phiên làm việc" });
+    addAuditLog({ actor: actorName, role: role === "admin" ? "Quản trị viên" : role === "staff" ? "Nhân viên" : "Khách hàng", action: "Đăng xuất (UC1.3)", targetEntity: "Session", targetId: currentUser?.email || "SESSION", detail: "Đăng xuất tài khoản khỏi phiên làm việc" });
     setCurrentUser(null);
     setRole("customer");
     setPage("landing");
@@ -1344,15 +2339,23 @@ export default function App() {
     updateCartQty,
     createOrder,
     payOrder,
+    confirmReconciliation,
+    finalizeOrderWithoutPayment,
     settleOrder,
     cancelOrder,
     getCancellationQuote,
     advanceOrderStatus,
     assignEquipment,
+    completePreparation,
+    reportEquipmentShortage,
     createHandoverRecord,
     changeAssignedEquipment,
     createReturnReceipt,
     checkOrderOverdue,
+    addContactLog,
+    getOverdueConflicts,
+    reportCustomerNoShow,
+    approveLostEquipment,
     saveMaintenanceReceipt,
     updateMaintenanceStatus,
     toggleStaffLock,
@@ -1362,15 +2365,28 @@ export default function App() {
     sendNotification,
     markNotificationRead,
     updatePolicy,
+    policyVersions,
+    pausePromotion,
+    resumePromotion,
     addAuditLog,
     saveFinancialAdjustment,
     login,
     logout,
+    updateCurrentUserProfile,
+    changeCurrentUserPassword,
     createStockAdjustment,
+    approveStockAdjustment,
+    rejectStockAdjustment,
     addSurcharge,
     approveSurcharge,
     rejectSurcharge,
+    disputeSurcharge,
+    resolveDisputedSurcharge,
     confirmImportReceipt,
+    toggleSupplierStatus,
+    createImportAdjustment,
+    approveImportAdjustment,
+    rejectImportAdjustment,
     markEquipmentReturned,
     transferEquipment,
     addReview,
@@ -1590,18 +2606,49 @@ export default function App() {
             {/* Auth Actions & User Info & Logout */}
             {currentUser ? (
               <div className="flex items-center gap-2 flex-shrink-0">
-                <div style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(255,255,255,0.08)", padding: "4px 10px", borderRadius: 10, border: "1px solid rgba(255,255,255,0.15)", flexShrink: 0 }}>
-                  <div style={{ width: 28, height: 28, borderRadius: "50%", background: "var(--color-amber)", display: "grid", placeItems: "center", color: "white", fontWeight: 700, fontSize: "0.75rem", flexShrink: 0 }}>
+                <button
+                  type="button"
+                  onClick={() => setShowUserProfileModal(true)}
+                  title="Nhấn để xem thông tin hồ sơ & đổi mật khẩu (UC1.5, UC1.6, UC1.12)"
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                    background: "rgba(255,255,255,0.08)",
+                    padding: "4px 10px",
+                    borderRadius: 10,
+                    border: "1px solid rgba(255,255,255,0.18)",
+                    cursor: "pointer",
+                    textAlign: "left",
+                    transition: "all 0.2s ease"
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255, 255, 255, 0.16)")}
+                  onMouseLeave={(e) => (e.currentTarget.style.background = "rgba(255, 255, 255, 0.08)")}
+                >
+                  <div style={{
+                    width: 28,
+                    height: 28,
+                    borderRadius: "50%",
+                    background: role === "admin" ? "#D97706" : role === "staff" ? "#2563EB" : "var(--color-amber)",
+                    display: "grid",
+                    placeItems: "center",
+                    color: "white",
+                    fontWeight: 700,
+                    fontSize: "0.75rem",
+                    flexShrink: 0
+                  }}>
                     {currentUser.name.charAt(0)}
                   </div>
                   <div style={{ textAlign: "left", whiteSpace: "nowrap" }}>
                     <div style={{ color: "white", fontSize: "0.8rem", fontWeight: 700, lineHeight: 1.2, whiteSpace: "nowrap" }}>{currentUser.name}</div>
-                    <div style={{ color: "#B9C9C0", fontSize: "0.68rem", whiteSpace: "nowrap" }}>{currentUser.phone}</div>
+                    <div style={{ color: "#D1D5DB", fontSize: "0.68rem", whiteSpace: "nowrap" }}>
+                      {role === "admin" ? "Quản trị viên" : role === "staff" ? "Nhân viên" : "Khách hàng"} • Hồ sơ ⚙
+                    </div>
                   </div>
-                </div>
+                </button>
                 <button
                   onClick={() => state.logout()}
-                  title="Đăng xuất khỏi hệ thống"
+                  title="Đăng xuất khỏi hệ thống (UC1.3)"
                   style={{
                     padding: "6px 11px",
                     borderRadius: 9,
@@ -1819,7 +2866,310 @@ export default function App() {
             </div>
           </div>
         )}
+
+        {/* Modal Hồ sơ cá nhân & Đổi mật khẩu (UC1.5, UC1.6, UC1.12) */}
+        {showUserProfileModal && currentUser && (
+          <UserProfileModal
+            currentUser={currentUser}
+            role={role}
+            onClose={() => setShowUserProfileModal(false)}
+            onUpdateProfile={state.updateCurrentUserProfile}
+            onChangePassword={state.changeCurrentUserPassword}
+          />
+        )}
       </div>
     </AppContext.Provider>
+  );
+}
+
+// ─── Modal Xem & Sửa Thông Tin Cá Nhân / Đổi Mật Khẩu (UC1.5, UC1.6, UC1.12) ──
+function UserProfileModal({
+  currentUser,
+  role,
+  onClose,
+  onUpdateProfile,
+  onChangePassword,
+}: {
+  currentUser: {
+    id?: string;
+    username?: string;
+    name: string;
+    email: string;
+    phone: string;
+    role: Role;
+    permissions?: string[];
+    address?: string;
+  };
+  role: Role;
+  onClose: () => void;
+  onUpdateProfile: (info: { name: string; phone: string; email: string }) => ActionResult;
+  onChangePassword: (oldPass: string, newPass: string) => ActionResult;
+}) {
+  const [tab, setTab] = useState<"info" | "password">("info");
+  const [name, setName] = useState(currentUser.name);
+  const [phone, setPhone] = useState(currentUser.phone);
+  const [email, setEmail] = useState(currentUser.email);
+  const [infoMsg, setInfoMsg] = useState("");
+  const [infoError, setInfoError] = useState("");
+
+  const [oldPass, setOldPass] = useState("");
+  const [newPass, setNewPass] = useState("");
+  const [confirmPass, setConfirmPass] = useState("");
+  const [passMsg, setPassMsg] = useState("");
+  const [passError, setPassError] = useState("");
+
+  const handleSaveInfo = (e: React.FormEvent) => {
+    e.preventDefault();
+    setInfoMsg("");
+    setInfoError("");
+    if (!name.trim()) {
+      setInfoError("Vui lòng nhập họ và tên.");
+      return;
+    }
+    if (!phone.trim()) {
+      setInfoError("Vui lòng nhập số điện thoại.");
+      return;
+    }
+    if (!email.trim() || !email.includes("@")) {
+      setInfoError("Địa chỉ email không hợp lệ.");
+      return;
+    }
+    const res = onUpdateProfile({ name: name.trim(), phone: phone.trim(), email: email.trim() });
+    if (res.ok) {
+      setInfoMsg("✓ Cập nhật thông tin cá nhân thành công!");
+    } else {
+      setInfoError(res.message);
+    }
+  };
+
+  const handleChangePass = (e: React.FormEvent) => {
+    e.preventDefault();
+    setPassMsg("");
+    setPassError("");
+    if (!oldPass) {
+      setPassError("Vui lòng nhập mật khẩu hiện tại.");
+      return;
+    }
+    if (newPass.length < 6) {
+      setPassError("Mật khẩu mới tối thiểu 6 ký tự.");
+      return;
+    }
+    if (newPass !== confirmPass) {
+      setPassError("Xác nhận mật khẩu mới không khớp.");
+      return;
+    }
+    const res = onChangePassword(oldPass, newPass);
+    if (res.ok) {
+      setPassMsg("✓ Đổi mật khẩu thành công!");
+      setOldPass("");
+      setNewPass("");
+      setConfirmPass("");
+    } else {
+      setPassError(res.message);
+    }
+  };
+
+  return (
+    <div role="dialog" aria-modal="true" className="modal-overlay">
+      <div className="modal-container" style={{ maxWidth: 540 }}>
+        <div className="modal-header">
+          <div className="flex items-center gap-2.5">
+            <div style={{
+              width: 38,
+              height: 38,
+              borderRadius: "50%",
+              background: role === "admin" ? "#D97706" : role === "staff" ? "#2563EB" : "var(--color-amber)",
+              color: "white",
+              display: "grid",
+              placeItems: "center",
+              fontWeight: 700,
+              fontSize: "1rem"
+            }}>
+              {currentUser.name.charAt(0)}
+            </div>
+            <div>
+              <h3 className="modal-title" style={{ fontSize: "1.1rem" }}>{currentUser.name}</h3>
+              <p style={{ fontSize: "0.78rem", color: "#6B7280" }}>
+                {role === "admin" ? "Quản trị viên hệ thống" : role === "staff" ? "Nhân viên tác nghiệp" : "Khách hàng GearGo"} {currentUser.id ? `• ${currentUser.id}` : ""}
+              </p>
+            </div>
+          </div>
+          <button onClick={onClose} className="btn btn-ghost btn-sm text-lg" aria-label="Đóng modal">×</button>
+        </div>
+
+        {/* Tab switch */}
+        <div className="flex border-b border-gray-200 px-5 pt-2" style={{ gap: 8, background: "#F9FAFB" }}>
+          <button
+            type="button"
+            onClick={() => setTab("info")}
+            style={{
+              padding: "8px 14px",
+              fontSize: "0.84rem",
+              fontWeight: 700,
+              borderBottom: tab === "info" ? "2px solid var(--color-forest)" : "2px solid transparent",
+              color: tab === "info" ? "var(--color-forest)" : "#6B7280",
+              background: "none",
+              cursor: "pointer"
+            }}
+          >
+            Hồ sơ cá nhân (UC1.5, UC1.6)
+          </button>
+          <button
+            type="button"
+            onClick={() => setTab("password")}
+            style={{
+              padding: "8px 14px",
+              fontSize: "0.84rem",
+              fontWeight: 700,
+              borderBottom: tab === "password" ? "2px solid var(--color-forest)" : "2px solid transparent",
+              color: tab === "password" ? "var(--color-forest)" : "#6B7280",
+              background: "none",
+              cursor: "pointer"
+            }}
+          >
+            Đổi mật khẩu (UC1.12)
+          </button>
+        </div>
+
+        <div className="modal-body" style={{ padding: 20 }}>
+          {tab === "info" ? (
+            <form onSubmit={handleSaveInfo} className="flex flex-col gap-3.5">
+              {/* Thông tin định danh cố định */}
+              <div style={{ background: "#F3F4F6", borderRadius: 8, padding: "10px 14px" }}>
+                <div className="grid gap-2" style={{ gridTemplateColumns: "1fr 1fr", fontSize: "0.8rem" }}>
+                  <div>
+                    <span style={{ color: "#6B7280" }}>Mã tài khoản: </span>
+                    <strong style={{ fontFamily: "var(--font-mono)" }}>{currentUser.id || "N/A"}</strong>
+                  </div>
+                  <div>
+                    <span style={{ color: "#6B7280" }}>Tên đăng nhập: </span>
+                    <strong style={{ fontFamily: "var(--font-mono)" }}>@{currentUser.username || currentUser.email.split("@")[0]}</strong>
+                  </div>
+                  <div>
+                    <span style={{ color: "#6B7280" }}>Vai trò: </span>
+                    <span className="badge" style={{ background: role === "admin" ? "#FEF3C7" : role === "staff" ? "#E0E7FF" : "#DCFCE7", color: role === "admin" ? "#B45309" : role === "staff" ? "#3730A3" : "#15803D", fontWeight: 700 }}>
+                      {role === "admin" ? "Quản trị viên" : role === "staff" ? "Nhân viên" : "Khách hàng"}
+                    </span>
+                  </div>
+                  <div>
+                    <span style={{ color: "#6B7280" }}>Trạng thái: </span>
+                    <span className="badge badge-success">Hoạt động</span>
+                  </div>
+                </div>
+
+                {/* Nhóm quyền nghiệp vụ nếu là nhân viên */}
+                {currentUser.permissions && currentUser.permissions.length > 0 && (
+                  <div style={{ marginTop: 8, paddingTop: 8, borderTop: "1px dashed #D1D5DB" }}>
+                    <div style={{ fontSize: "0.75rem", color: "#4B5563", fontWeight: 600, marginBottom: 4 }}>
+                      Nhóm quyền nghiệp vụ được gán (UC1.10):
+                    </div>
+                    <div className="flex gap-1.5 flex-wrap">
+                      {currentUser.permissions.map((p) => (
+                        <span key={p} style={{ background: "#EEF2FF", color: "#4338CA", fontSize: "0.7rem", fontWeight: 600, padding: "2px 7px", borderRadius: 6 }}>
+                          ✓ {p}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Thông tin có thể cập nhật (UC1.6) */}
+              <div>
+                <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 700, marginBottom: 4 }}>Họ và tên</label>
+                <input
+                  type="text"
+                  required
+                  value={name}
+                  onChange={(e) => { setName(e.target.value); setInfoMsg(""); setInfoError(""); }}
+                  className="form-input"
+                />
+              </div>
+
+              <div className="grid gap-3" style={{ gridTemplateColumns: "1fr 1fr" }}>
+                <div>
+                  <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 700, marginBottom: 4 }}>Số điện thoại</label>
+                  <input
+                    type="tel"
+                    required
+                    value={phone}
+                    onChange={(e) => { setPhone(e.target.value); setInfoMsg(""); setInfoError(""); }}
+                    className="form-input"
+                  />
+                </div>
+                <div>
+                  <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 700, marginBottom: 4 }}>Email</label>
+                  <input
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => { setEmail(e.target.value); setInfoMsg(""); setInfoError(""); }}
+                    className="form-input"
+                  />
+                </div>
+              </div>
+
+              {infoMsg && <div className="badge badge-success" style={{ padding: 8, textAlign: "center" }}>{infoMsg}</div>}
+              {infoError && <div className="form-error-msg">{infoError}</div>}
+
+              <div className="flex gap-2 mt-2">
+                <button type="button" onClick={onClose} className="btn btn-secondary btn-md" style={{ flex: 1 }}>Đóng</button>
+                <button type="submit" className="btn btn-primary btn-md" style={{ flex: 1 }}>Lưu thông tin</button>
+              </div>
+            </form>
+          ) : (
+            <form onSubmit={handleChangePass} className="flex flex-col gap-3.5">
+              <p style={{ fontSize: "0.8rem", color: "#6B7280", margin: 0 }}>
+                Nhập mật khẩu hiện tại và tạo mật khẩu mới an toàn tối thiểu 6 ký tự.
+              </p>
+
+              <div>
+                <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 700, marginBottom: 4 }}>Mật khẩu hiện tại *</label>
+                <input
+                  type="password"
+                  required
+                  placeholder="Nhập mật khẩu đang dùng"
+                  value={oldPass}
+                  onChange={(e) => { setOldPass(e.target.value); setPassMsg(""); setPassError(""); }}
+                  className="form-input"
+                />
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 700, marginBottom: 4 }}>Mật khẩu mới *</label>
+                <input
+                  type="password"
+                  required
+                  placeholder="Tối thiểu 6 ký tự"
+                  value={newPass}
+                  onChange={(e) => { setNewPass(e.target.value); setPassMsg(""); setPassError(""); }}
+                  className="form-input"
+                />
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 700, marginBottom: 4 }}>Xác nhận mật khẩu mới *</label>
+                <input
+                  type="password"
+                  required
+                  placeholder="Nhập lại mật khẩu mới"
+                  value={confirmPass}
+                  onChange={(e) => { setConfirmPass(e.target.value); setPassMsg(""); setPassError(""); }}
+                  className="form-input"
+                />
+              </div>
+
+              {passMsg && <div className="badge badge-success" style={{ padding: 8, textAlign: "center" }}>{passMsg}</div>}
+              {passError && <div className="form-error-msg">{passError}</div>}
+
+              <div className="flex gap-2 mt-2">
+                <button type="button" onClick={onClose} className="btn btn-secondary btn-md" style={{ flex: 1 }}>Hủy</button>
+                <button type="submit" className="btn btn-primary btn-md" style={{ flex: 1 }}>Xác nhận đổi mật khẩu</button>
+              </div>
+            </form>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }

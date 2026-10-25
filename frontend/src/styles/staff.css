@@ -158,3 +158,117 @@
   padding: 24px;
   box-shadow: 0 2px 10px rgba(17, 35, 27, 0.04);
 }
+
+/* ─── UC5.4: Bảng đối soát cọc & Quyết toán chuẩn ───────────────────────── */
+.reconcile-step-flow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 20px;
+  padding: 12px 16px;
+  background: var(--color-parchment);
+  border: 1px solid var(--color-bone);
+  border-radius: 12px;
+}
+
+.reconcile-step-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #6B7280;
+}
+
+.reconcile-step-item.active {
+  color: var(--color-forest);
+  font-weight: 700;
+}
+
+.reconcile-step-badge {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 0.72rem;
+  background: #E5E7EB;
+  color: #4B5563;
+}
+
+.reconcile-step-item.active .reconcile-step-badge {
+  background: var(--color-forest);
+  color: #ffffff;
+}
+
+.reconcile-step-item.completed .reconcile-step-badge {
+  background: #10B981;
+  color: #ffffff;
+}
+
+.reconcile-sheet-card {
+  background: #ffffff;
+  border: 1px solid var(--color-bone);
+  border-radius: 14px;
+  overflow: hidden;
+  margin-bottom: 18px;
+}
+
+.reconcile-sheet-header {
+  background: var(--color-parchment);
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--color-bone);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.reconcile-sheet-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 18px;
+  border-bottom: 1px solid #F3F4F6;
+  font-size: 0.86rem;
+}
+
+.reconcile-sheet-row:last-child {
+  border-bottom: none;
+}
+
+.locked-seal {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 800;
+  background: #DCFCE7;
+  color: #15803D;
+  border: 1.5px solid #86EFAC;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.reconcile-trace-btn {
+  background: #ffffff;
+  border: 1px solid var(--color-bone);
+  color: var(--color-bark);
+  border-radius: 6px;
+  padding: 3px 8px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.reconcile-trace-btn:hover {
+  background: var(--color-parchment);
+  border-color: var(--color-forest);
+  color: var(--color-forest);
+}
+
