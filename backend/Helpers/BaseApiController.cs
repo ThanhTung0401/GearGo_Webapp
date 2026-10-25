@@ -39,9 +39,11 @@ public abstract class BaseApiController : ControllerBase
         DomainConstants.Errors.SurchargeNotFound or
         DomainConstants.Errors.ReconciliationNotFound or
         DomainConstants.Errors.TransactionNotFound or
-        DomainConstants.Errors.ProductNotFound => 404,
+        DomainConstants.Errors.ProductNotFound or
+        DomainConstants.Errors.AccountNotFound => 404,
 
         DomainConstants.Errors.Forbidden or
+        DomainConstants.Errors.PermissionChanged or
         DomainConstants.Errors.ForbiddenCostInspection or
         DomainConstants.Errors.NotAssignedStaff => 403,
 
@@ -62,7 +64,9 @@ public abstract class BaseApiController : ControllerBase
         DomainConstants.Errors.MissingReceiptEvidence or
         DomainConstants.Errors.DuplicateEquipmentCode or
         DomainConstants.Errors.AdjustmentViolatesCommitment or
-        DomainConstants.Errors.ReceiptAlreadyApplied => 409,
+        DomainConstants.Errors.ReceiptAlreadyApplied or
+        DomainConstants.Errors.ContactExists or
+        DomainConstants.Errors.LastActiveAdmin => 409,
 
         _ => 400
     };
