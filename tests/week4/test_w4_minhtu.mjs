@@ -37,8 +37,8 @@ function generateToken(role, maTaiKhoan = 3, email = 'admin@geargo.vn') {
   return `${header}.${payload}.${sig}`;
 }
 
-let adminToken = generateToken('QuanTriVien', 3, 'admin@geargo.vn');
-let staffToken = generateToken('NhanVien', 3, 'staff@geargo.vn');
+let adminToken = generateToken('QuanTriVien', 1, 'admin@geargo.vn');
+let staffToken = generateToken('NhanVien', 2, 'staff@geargo.vn');
 let customerToken = generateToken('KhachHang', 3, 'customer@geargo.vn');
 
 async function callApi(endpoint, options = {}) {
@@ -116,9 +116,9 @@ async function runTests() {
   const t5 = await callApi(`/api/v1/qua-han?trang=1&soMoiTrang=10`, {
     headers: { Authorization: `Bearer ${staffToken}` }
   });
-  assert(t5.status === 200 && Array.isArray(t5.data.items), 'Truy vấn danh sách đơn quá hạn phân trang thành công');
+  assert(t5.status === 200 && Array.isArray(t5.data?.items), 'Truy vấn danh sách đơn quá hạn phân trang thành công');
 
-  const don1QuaHan = t5.data.items.find(d => d.maDonThue === 1);
+  const don1QuaHan = t5.data?.items?.find(d => d.maDonThue === 1);
   if (don1QuaHan) {
     assert(don1QuaHan.soThietBiChuaTra > 0,
       `Đơn #1 được gắn nhãn quá hạn chính xác: có ${don1QuaHan.soThietBiChuaTra} thiết bị chưa trả (đúng quy tắc W4-T2)`);
