@@ -1728,10 +1728,41 @@ export function AdjustmentsTab({ app }: { app: ReturnType<typeof useApp> }) {
   );
 }
 
-// ─── 6. Nhật Ký Hệ Thống - Audit Log (UC10.4) ──────────────────────────────────
+// ─── 6. Nhật Ký Hệ Thống - Audit Log (UC10.4 & UC10.4.2) ─────────────────────────
 export function AuditLogTab({ app }: { app: ReturnType<typeof useApp> }) {
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
+  const [fromDate, setFromDate] = useState("2024-01-01");
+  const [toDate, setToDate] = useState("2024-12-31");
+
+  // State mở xem chứng từ liên quan từ nhật ký (UC10.4.2)
+  const [inspectDoc, setInspectDoc] = useState<{
+    type: "order" | "import" | "equipment" | "generic";
+    id: string;
+    title: string;
+    data?: any;
+  } | null>(null);
+
+  // State xem chi tiết biến động sự kiện (UC10.4 Bước 4)
+  const [selectedEvent, setSelectedEvent] = useState<AuditLogEntry | null>(null);
+
+  // Hàm kiểm tra ngày nằm trong khoảng lọc
+  const isWithinRange = (dateStr?: string) => {
+    if (!dateStr) return true;
+    let d: Date;
+    const dmy = dateStr.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+    if (dmy) {
+      d = new Date(parseInt(dmy[3], 10), parseInt(dmy[2], 10) - 1, parseInt(dmy[1], 10));
+    } else {
+      d = new Date(dateStr.replace(" ", "T"));
+    }
+    if (isNaN(d.getTime())) return true;
+    const start = fromDate ? new Date(fromDate + "T00:00:00") : null;
+    const end = toDate ? new Date(toDate + "T23:59:59") : null;
+    if (start && d < start) return false;
+    if (end && d > end) return false;
+    return true;
+  };
 
   const filtered = app.auditLogs.filter((l) => {
     const matchSearch =
@@ -1741,18 +1772,66 @@ export function AuditLogTab({ app }: { app: ReturnType<typeof useApp> }) {
       l.targetId.toLowerCase().includes(search.toLowerCase()) ||
       l.detail.toLowerCase().includes(search.toLowerCase());
     const matchRole = roleFilter === "all" || l.role === roleFilter;
-    return matchSearch && matchRole;
+    const matchDate = isWithinRange(l.timestamp);
+    return matchSearch && matchRole && matchDate;
   });
+
+  // Xử lý mở chứng từ liên quan (UC10.4.2)
+  const handleOpenRelatedDoc = (targetEntity: string, targetId: string) => {
+    // 1. Kiểm tra nếu là Đơn hàng (DT-...)
+    const order = app.orders.find((o) => o.id === targetId || targetId.startsWith("DT-"));
+    if (order && (targetEntity.toLowerCase().includes("order") || targetId.startsWith("DT-"))) {
+      setInspectDoc({
+        type: "order",
+        id: order.id,
+        title: `Chứng từ đơn thuê — ${order.id}`,
+        data: order,
+      });
+      return;
+    }
+
+    // 2. Kiểm tra nếu là Phiếu nhập kho (PN-...)
+    const receipt = app.importReceipts.find((r) => r.id === targetId || targetId.startsWith("PN-"));
+    if (receipt && (targetEntity.toLowerCase().includes("import") || targetId.startsWith("PN-"))) {
+      setInspectDoc({
+        type: "import",
+        id: receipt.id,
+        title: `Chứng từ phiếu nhập kho — ${receipt.id}`,
+        data: receipt,
+      });
+      return;
+    }
+
+    // 3. Kiểm tra nếu là Thiết bị
+    const equip = app.equipment.find((e) => e.id === targetId);
+    if (equip) {
+      setInspectDoc({
+        type: "equipment",
+        id: equip.id,
+        title: `Hồ sơ vòng đời thiết bị — ${equip.id}`,
+        data: equip,
+      });
+      return;
+    }
+
+    // 4. Mở thông tin tham chiếu chung
+    setInspectDoc({
+      type: "generic",
+      id: targetId,
+      title: `Chứng từ tham chiếu: ${targetEntity} #${targetId}`,
+      data: { entity: targetEntity, id: targetId },
+    });
+  };
 
   return (
     <div>
       <div className="flex justify-between items-center mb-4 flex-wrap gap-3">
         <div>
           <h2 style={{ fontFamily: "var(--font-display)", fontSize: "1.4rem", color: "var(--color-bark)", marginBottom: 4 }}>
-            Nhật ký hệ thống — Audit Log (UC10.4)
+            Nhật ký hệ thống — Audit Log (UC10.4 & UC10.4.2)
           </h2>
           <p style={{ color: "#6B7280", fontSize: "0.85rem" }}>
-            Lưu vết toàn bộ thao tác quan trọng: phân quyền, đổi trạng thái đơn, sửa xóa chứng từ, đổi chính sách.
+            Truy vết toàn bộ thao tác quan trọng: phân quyền, đổi trạng thái đơn, sửa xóa chứng từ, đổi chính sách. Không cho phép sửa xóa qua giao diện tra cứu (Read-only).
           </p>
         </div>
         <button
@@ -1763,9 +1842,9 @@ export function AuditLogTab({ app }: { app: ReturnType<typeof useApp> }) {
         </button>
       </div>
 
-      {/* Filter */}
-      <div className="flex gap-3 mb-4 flex-wrap">
-        <div style={{ position: "relative", minWidth: 280 }}>
+      {/* Filter kết hợp thời gian (UC10.4 Dòng sự kiện 2) */}
+      <div className="flex gap-3 mb-4 flex-wrap items-center">
+        <div style={{ position: "relative", minWidth: 260, flex: 1 }}>
           <input
             type="text"
             placeholder="Tìm theo người thực hiện, hành động, chứng từ..."
@@ -1786,6 +1865,23 @@ export function AuditLogTab({ app }: { app: ReturnType<typeof useApp> }) {
           <option value="Nhân viên">Nhân viên kho / CSKH</option>
           <option value="Khách hàng">Khách hàng</option>
         </select>
+
+        <div className="flex items-center gap-1.5 bg-white border border-bone rounded-lg p-1.5 px-3 text-xs shadow-xs">
+          <span style={{ color: "var(--color-forest)", fontWeight: 700 }}>Thời gian:</span>
+          <input
+            type="date"
+            value={fromDate}
+            onChange={(e) => setFromDate(e.target.value)}
+            style={{ border: "1px solid var(--color-bone)", borderRadius: 4, padding: "2px 5px", fontSize: "0.75rem" }}
+          />
+          <span>→</span>
+          <input
+            type="date"
+            value={toDate}
+            onChange={(e) => setToDate(e.target.value)}
+            style={{ border: "1px solid var(--color-bone)", borderRadius: 4, padding: "2px 5px", fontSize: "0.75rem" }}
+          />
+        </div>
       </div>
 
       {/* Bảng timeline audit */}
@@ -1793,46 +1889,262 @@ export function AuditLogTab({ app }: { app: ReturnType<typeof useApp> }) {
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead>
             <tr style={{ background: "var(--color-parchment)", fontSize: "0.8rem", fontWeight: 600, color: "var(--color-bark)" }}>
-              {["Thời gian", "Người thực hiện", "Vai trò", "Hành động", "Đối tượng tác động", "Chi tiết nội dung"].map((h) => (
+              {["Thời gian", "Người thực hiện", "Vai trò", "Hành động", "Đối tượng tác động (UC10.4.2)", "Chi tiết nội dung", "Thao tác"].map((h) => (
                 <th key={h} style={{ padding: "11px 14px", textAlign: "left" }}>{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {filtered.map((log, i) => (
-              <tr key={log.id} style={{ borderTop: "1px solid var(--color-bone)", background: i % 2 === 0 ? "white" : "var(--color-cream)" }}>
-                <td style={{ padding: "11px 14px", fontFamily: "var(--font-mono)", fontSize: "0.75rem", color: "#6B7280", whiteSpace: "nowrap" }}>
-                  {log.timestamp}
-                </td>
-                <td style={{ padding: "11px 14px", fontWeight: 700, fontSize: "0.85rem", color: "var(--color-bark)" }}>
-                  {log.actor}
-                </td>
-                <td style={{ padding: "11px 14px" }}>
-                  <span style={{
-                    fontSize: "0.7rem",
-                    fontWeight: 700,
-                    padding: "2px 8px",
-                    borderRadius: 6,
-                    background: log.role === "Quản trị viên" ? "#FEF3C7" : log.role === "Nhân viên" ? "#E0E7FF" : "#F3F4F6",
-                    color: log.role === "Quản trị viên" ? "#B45309" : log.role === "Nhân viên" ? "#3730A3" : "#4B5563"
-                  }}>
-                    {log.role}
-                  </span>
-                </td>
-                <td style={{ padding: "11px 14px", fontSize: "0.82rem", fontWeight: 600, color: "var(--color-forest)" }}>
-                  {log.action}
-                </td>
-                <td style={{ padding: "11px 14px", fontFamily: "var(--font-mono)", fontSize: "0.78rem" }}>
-                  <span style={{ color: "#6B7280" }}>{log.targetEntity}:</span> <strong>{log.targetId}</strong>
-                </td>
-                <td style={{ padding: "11px 14px", fontSize: "0.8rem", color: "#374151" }}>
-                  {log.detail}
+            {filtered.length === 0 ? (
+              <tr>
+                <td colSpan={7} style={{ padding: "36px 0", textAlign: "center", color: "#6B7280", fontSize: "0.85rem" }}>
+                  Không tìm thấy nhật ký biến động phù hợp với bộ lọc đã chọn.
                 </td>
               </tr>
-            ))}
+            ) : (
+              filtered.map((log, i) => (
+                <tr key={log.id} style={{ borderTop: "1px solid var(--color-bone)", background: i % 2 === 0 ? "white" : "var(--color-cream)" }}>
+                  <td style={{ padding: "11px 14px", fontFamily: "var(--font-mono)", fontSize: "0.75rem", color: "#6B7280", whiteSpace: "nowrap" }}>
+                    {log.timestamp}
+                  </td>
+                  <td style={{ padding: "11px 14px", fontWeight: 700, fontSize: "0.85rem", color: "var(--color-bark)" }}>
+                    {log.actor}
+                  </td>
+                  <td style={{ padding: "11px 14px" }}>
+                    <span style={{
+                      fontSize: "0.7rem",
+                      fontWeight: 700,
+                      padding: "2px 8px",
+                      borderRadius: 6,
+                      background: log.role === "Quản trị viên" ? "#FEF3C7" : log.role === "Nhân viên" ? "#E0E7FF" : "#F3F4F6",
+                      color: log.role === "Quản trị viên" ? "#B45309" : log.role === "Nhân viên" ? "#3730A3" : "#4B5563"
+                    }}>
+                      {log.role}
+                    </span>
+                  </td>
+                  <td style={{ padding: "11px 14px", fontSize: "0.82rem", fontWeight: 600, color: "var(--color-forest)" }}>
+                    {log.action}
+                  </td>
+                  {/* Nhấn vào để mở chứng từ liên quan (UC10.4.2) */}
+                  <td style={{ padding: "11px 14px", fontFamily: "var(--font-mono)", fontSize: "0.78rem" }}>
+                    <button
+                      onClick={() => handleOpenRelatedDoc(log.targetEntity, log.targetId)}
+                      style={{ background: "none", border: "none", cursor: "pointer", textAlign: "left", padding: 0 }}
+                      title="Nhấn để mở chứng từ đối chiếu (UC10.4.2)"
+                    >
+                      <span style={{ color: "#6B7280" }}>{log.targetEntity}:</span>{" "}
+                      <strong style={{ color: "var(--color-forest)", textDecoration: "underline" }}>
+                        {log.targetId} 🔍
+                      </strong>
+                    </button>
+                  </td>
+                  <td style={{ padding: "11px 14px", fontSize: "0.8rem", color: "#374151" }}>
+                    {log.detail}
+                  </td>
+                  <td style={{ padding: "11px 14px" }}>
+                    <button
+                      onClick={() => setSelectedEvent(log)}
+                      className="btn btn-secondary btn-sm"
+                      style={{ padding: "3px 8px", fontSize: "0.72rem" }}
+                    >
+                      Chi tiết
+                    </button>
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>
+
+      {/* ─── MODAL XEM CHI TIẾT SỰ KIỆN BIẾN ĐỘNG (UC10.4 Bước 4) ───────────── */}
+      {selectedEvent && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+          <div style={{ background: "white", borderRadius: 12, maxWidth: 640, width: "100%", overflow: "hidden", display: "flex", flexDirection: "column", boxShadow: "0 20px 25px -5px rgba(0,0,0,0.2)" }}>
+            <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--color-bone)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div>
+                <h3 style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: "1.1rem", color: "var(--color-bark)" }}>
+                  Chi tiết sự kiện truy vết (Audit Event #{selectedEvent.id})
+                </h3>
+                <div style={{ fontSize: "0.75rem", color: "#6B7280" }}>Thời điểm: {selectedEvent.timestamp}</div>
+              </div>
+              <button onClick={() => setSelectedEvent(null)} style={{ border: "none", background: "none", cursor: "pointer", padding: 4 }}>
+                <Icon name="close" size={20} />
+              </button>
+            </div>
+
+            <div style={{ padding: 20, overflowY: "auto", fontSize: "0.85rem" }}>
+              <div className="grid gap-3 mb-4" style={{ gridTemplateColumns: "1fr 1fr" }}>
+                <div style={{ background: "var(--color-parchment)", borderRadius: 8, padding: 12 }}>
+                  <div style={{ fontSize: "0.75rem", color: "#6B7280" }}>Người thực hiện:</div>
+                  <strong style={{ color: "var(--color-bark)" }}>{selectedEvent.actor}</strong>
+                  <div style={{ fontSize: "0.72rem", color: "var(--color-forest)", marginTop: 2 }}>Vai trò: {selectedEvent.role}</div>
+                </div>
+
+                <div style={{ background: "var(--color-parchment)", borderRadius: 8, padding: 12 }}>
+                  <div style={{ fontSize: "0.75rem", color: "#6B7280" }}>Đối tượng biến động:</div>
+                  <strong style={{ fontFamily: "var(--font-mono)" }}>{selectedEvent.targetEntity}: {selectedEvent.targetId}</strong>
+                  <div style={{ marginTop: 4 }}>
+                    <button
+                      onClick={() => {
+                        const entity = selectedEvent.targetEntity;
+                        const id = selectedEvent.targetId;
+                        setSelectedEvent(null);
+                        handleOpenRelatedDoc(entity, id);
+                      }}
+                      className="btn btn-secondary btn-sm"
+                      style={{ padding: "2px 8px", fontSize: "0.7rem" }}
+                    >
+                      Mở chứng từ đối chiếu (UC10.4.2)
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ background: "#F9FAFB", border: "1px solid var(--color-bone)", borderRadius: 8, padding: 14 }}>
+                <div style={{ fontSize: "0.75rem", color: "#6B7280", fontWeight: 700, marginBottom: 4 }}>HÀNH ĐỘNG & NỘI DUNG BIẾN ĐỘNG:</div>
+                <div style={{ fontWeight: 600, color: "var(--color-forest)", marginBottom: 6 }}>{selectedEvent.action}</div>
+                <div style={{ color: "#374151", lineHeight: 1.5 }}>{selectedEvent.detail}</div>
+              </div>
+
+              <div style={{ marginTop: 14, fontSize: "0.75rem", color: "#9CA3AF", fontStyle: "italic" }}>
+                🔒 Nhật ký kiểm toán được niêm phong bất biến. Chức năng tra cứu chỉ hỗ trợ đọc (Read-only) và không cung cấp thao tác sửa/xóa theo chuẩn an toàn thông tin (UC10.4 Dòng phụ 4.2).
+              </div>
+            </div>
+
+            <div style={{ padding: "12px 20px", borderTop: "1px solid var(--color-bone)", display: "flex", justifyContent: "flex-end" }}>
+              <button onClick={() => setSelectedEvent(null)} className="btn btn-secondary btn-sm">Đóng</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── MODAL XEM CHỨNG TỪ LIÊN QUAN TỪ NHẬT KÝ (UC10.4.2) ─────────────── */}
+      {inspectDoc && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+          <div style={{ background: "white", borderRadius: 12, maxWidth: 760, width: "100%", maxHeight: "85vh", overflow: "hidden", display: "flex", flexDirection: "column", boxShadow: "0 20px 25px -5px rgba(0,0,0,0.2)" }}>
+            <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--color-bone)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div>
+                <h3 style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: "1.1rem", color: "var(--color-bark)" }}>
+                  {inspectDoc.title}
+                </h3>
+                <div style={{ fontSize: "0.75rem", color: "var(--color-forest)", fontWeight: 600 }}>Chế độ tra cứu chứng từ gốc (Read-only — UC10.4.2)</div>
+              </div>
+              <button onClick={() => setInspectDoc(null)} style={{ border: "none", background: "none", cursor: "pointer", padding: 4 }}>
+                <Icon name="close" size={20} />
+              </button>
+            </div>
+
+            <div style={{ padding: 20, overflowY: "auto", flex: 1, fontSize: "0.82rem" }}>
+              {inspectDoc.type === "order" && (
+                <div>
+                  <div className="grid gap-3 mb-4" style={{ gridTemplateColumns: "repeat(3, 1fr)" }}>
+                    <div style={{ background: "var(--color-parchment)", borderRadius: 8, padding: 10 }}>
+                      <div style={{ fontSize: "0.72rem", color: "#6B7280" }}>Khách hàng</div>
+                      <strong>{inspectDoc.data.customerName}</strong>
+                      <div style={{ color: "#6B7280" }}>{inspectDoc.data.customerPhone}</div>
+                    </div>
+                    <div style={{ background: "var(--color-parchment)", borderRadius: 8, padding: 10 }}>
+                      <div style={{ fontSize: "0.72rem", color: "#6B7280" }}>Trạng thái</div>
+                      <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--color-forest)" }}>{inspectDoc.data.status}</span>
+                      <div style={{ color: "#6B7280" }}>Tạo lúc: {inspectDoc.data.createdAt}</div>
+                    </div>
+                    <div style={{ background: "var(--color-parchment)", borderRadius: 8, padding: 10 }}>
+                      <div style={{ fontSize: "0.72rem", color: "#6B7280" }}>Tổng tiền thanh toán</div>
+                      <strong style={{ fontFamily: "var(--font-mono)", color: "var(--color-forest)", fontSize: "1.1rem" }}>{fmt(inspectDoc.data.rental - inspectDoc.data.discount + inspectDoc.data.depositTotal)}</strong>
+                      <div style={{ color: "#6B7280" }}>Cọc: {fmt(inspectDoc.data.depositTotal)}</div>
+                    </div>
+                  </div>
+
+                  <h4 style={{ fontWeight: 700, marginBottom: 8 }}>Danh sách thiết bị thuê:</h4>
+                  <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: 16 }}>
+                    <thead>
+                      <tr style={{ background: "var(--color-parchment)", textAlign: "left" }}>
+                        <th style={{ padding: "6px 8px" }}>Tên sản phẩm</th>
+                        <th style={{ padding: "6px 8px" }}>Số lượng</th>
+                        <th style={{ padding: "6px 8px" }}>Số ngày</th>
+                        <th style={{ padding: "6px 8px" }}>Đơn giá</th>
+                        <th style={{ padding: "6px 8px" }}>Thành tiền</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {inspectDoc.data.items.map((it: any, idx: number) => (
+                        <tr key={idx} style={{ borderTop: "1px solid var(--color-bone)" }}>
+                          <td style={{ padding: "6px 8px", fontWeight: 600 }}>{it.productName}</td>
+                          <td style={{ padding: "6px 8px" }}>{it.qty}</td>
+                          <td style={{ padding: "6px 8px" }}>{it.days} ngày</td>
+                          <td style={{ padding: "6px 8px", fontFamily: "var(--font-mono)" }}>{fmt(it.pricePerDay)}</td>
+                          <td style={{ padding: "6px 8px", fontFamily: "var(--font-mono)", fontWeight: 700 }}>{fmt(it.pricePerDay * it.qty * it.days)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {inspectDoc.type === "import" && (
+                <div>
+                  <div className="grid gap-3 mb-4" style={{ gridTemplateColumns: "1fr 1fr" }}>
+                    <div style={{ background: "var(--color-parchment)", borderRadius: 8, padding: 10 }}>
+                      <div style={{ fontSize: "0.72rem", color: "#6B7280" }}>Nhà cung cấp</div>
+                      <strong>{inspectDoc.data.supplierName} ({inspectDoc.data.supplierId})</strong>
+                    </div>
+                    <div style={{ background: "var(--color-parchment)", borderRadius: 8, padding: 10 }}>
+                      <div style={{ fontSize: "0.72rem", color: "#6B7280" }}>Trạng thái & Ngày xác nhận</div>
+                      <strong style={{ color: "var(--color-forest)" }}>{inspectDoc.data.status}</strong> — {inspectDoc.data.confirmedAt || inspectDoc.data.createdAt}
+                    </div>
+                  </div>
+
+                  <h4 style={{ fontWeight: 700, marginBottom: 8 }}>Vật phẩm nhập kho:</h4>
+                  <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                    <thead>
+                      <tr style={{ background: "var(--color-parchment)", textAlign: "left" }}>
+                        <th style={{ padding: "6px 8px" }}>Sản phẩm</th>
+                        <th style={{ padding: "6px 8px" }}>Số lượng</th>
+                        <th style={{ padding: "6px 8px" }}>Đơn giá</th>
+                        <th style={{ padding: "6px 8px" }}>Thành tiền</th>
+                        <th style={{ padding: "6px 8px" }}>Mã sinh ra</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {inspectDoc.data.lines.map((l: any, idx: number) => (
+                        <tr key={idx} style={{ borderTop: "1px solid var(--color-bone)" }}>
+                          <td style={{ padding: "6px 8px", fontWeight: 600 }}>{l.productNameSnapshot || l.productId}</td>
+                          <td style={{ padding: "6px 8px" }}>{l.quantity}</td>
+                          <td style={{ padding: "6px 8px", fontFamily: "var(--font-mono)" }}>{fmt(l.unitPrice)}</td>
+                          <td style={{ padding: "6px 8px", fontFamily: "var(--font-mono)", fontWeight: 700 }}>{fmt(l.quantity * l.unitPrice)}</td>
+                          <td style={{ padding: "6px 8px", fontFamily: "var(--font-mono)", color: "var(--color-amber)" }}>{l.equipmentCodes.join(", ")}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {inspectDoc.type === "equipment" && (
+                <div style={{ background: "var(--color-parchment)", borderRadius: 8, padding: 14 }}>
+                  <div style={{ fontSize: "0.75rem", color: "#6B7280" }}>Mã định danh thiết bị:</div>
+                  <strong style={{ fontFamily: "var(--font-mono)", fontSize: "1.2rem", color: "var(--color-forest)" }}>{inspectDoc.data.id}</strong>
+                  <div style={{ marginTop: 8 }}>Tình trạng hiện tại: <strong>{inspectDoc.data.condition}</strong> · Trạng thái kho: <strong>{inspectDoc.data.equipmentStatus}</strong></div>
+                  <div style={{ marginTop: 4 }}>Số lượt cho thuê lũy kế: <strong>{inspectDoc.data.rentCount} lượt</strong> · Ngày nhập kho: {inspectDoc.data.importDate}</div>
+                </div>
+              )}
+
+              {inspectDoc.type === "generic" && (
+                <div style={{ background: "var(--color-parchment)", borderRadius: 8, padding: 14 }}>
+                  <div>Chứng từ tham chiếu: <strong>{inspectDoc.data.entity}</strong></div>
+                  <div>Mã định danh: <strong style={{ fontFamily: "var(--font-mono)" }}>{inspectDoc.data.id}</strong></div>
+                  <div style={{ marginTop: 8, color: "#6B7280" }}>Dữ liệu gốc được lưu trữ trong cơ sở dữ liệu hệ thống.</div>
+                </div>
+              )}
+            </div>
+
+            <div style={{ padding: "12px 20px", borderTop: "1px solid var(--color-bone)", display: "flex", justifyContent: "flex-end" }}>
+              <button onClick={() => setInspectDoc(null)} className="btn btn-secondary btn-sm">Đóng</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
