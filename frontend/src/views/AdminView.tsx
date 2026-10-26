@@ -2718,64 +2718,166 @@ function StaffAccountsTab({ app }: { app: ReturnType<typeof useApp> }) {
   );
 }
 
-// ─── Reports (UC25 - 4 Trụ Cột Báo Cáo Tài Chính Chuẩn) ────────────────────────
+// ─── Reports (UC25, UC10.1 - UC10.3 Chuẩn Nghiệp Vụ) ──────────────────────────
 function ReportsTab({ app }: { app: ReturnType<typeof useApp> }) {
   const [reportSubTab, setReportSubTab] = useState<"operational" | "revenue" | "cashflow" | "inventory">("operational");
   const [fromDate, setFromDate] = useState("2024-01-01");
   const [toDate, setToDate] = useState("2024-12-31");
+  const [supplierFilter, setSupplierFilter] = useState("all");
 
-  // Tính toán số liệu thực tế từ store
-  const totalCompletedOrders = app.orders.filter((o) => o.status === "Hoàn tất");
-  const pureRentalRevenue = totalCompletedOrders.reduce((sum, o) => sum + (o.rental - o.discount), 0);
-  const approvedSurcharges = app.orders.flatMap((o) => o.surcharges.filter((s) => s.status === "Đã duyệt"));
+  // State cho Drill-down cấu thành số liệu (UC10.1 bước 4 & UC10.2 bước 5)
+  const [drilldownData, setDrilldownData] = useState<{
+    title: string;
+    subtitle: string;
+    type: "orders" | "equipment" | "damage";
+    items: any[];
+  } | null>(null);
+
+  // State xem chứng từ phiếu nhập kho đối chiếu trực tiếp (UC10.3 bước 6)
+  const [viewingReceipt, setViewingReceipt] = useState<ImportReceipt | null>(null);
+
+  // Kiểm tra ngày hợp lệ (UC10.1.1 & Dòng sự kiện phụ 2.1: Ngày kết thúc trước bắt đầu)
+  const isDateInvalid = Boolean(fromDate && toDate && fromDate > toDate);
+
+  // Hàm chuẩn hóa & kiểm tra ngày nằm trong kỳ báo cáo (UC10.1.1)
+  const isWithinRange = (dateStr?: string) => {
+    if (!dateStr) return true;
+    let d: Date;
+    const dmy = dateStr.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+    if (dmy) {
+      d = new Date(parseInt(dmy[3], 10), parseInt(dmy[2], 10) - 1, parseInt(dmy[1], 10));
+    } else {
+      d = new Date(dateStr.replace(" ", "T"));
+    }
+    if (isNaN(d.getTime())) return true;
+    const start = fromDate ? new Date(fromDate + "T00:00:00") : null;
+    const end = toDate ? new Date(toDate + "T23:59:59") : null;
+    if (start && d < start) return false;
+    if (end && d > end) return false;
+    return true;
+  };
+
+  // ── 1. Dữ liệu Báo cáo Vận hành (UC10.1) ──────────────────────────────────
+  // Đơn cần giao theo giờ dự kiến trong kỳ
+  const ordersToPickup = app.orders.filter(
+    (o) => ["Đã xác nhận", "Đang chuẩn bị", "Sẵn sàng nhận"].includes(o.status) && isWithinRange(o.pickupTime)
+  );
+  // Đơn cần nhận trả theo giờ dự kiến trong kỳ
+  const ordersToReturn = app.orders.filter(
+    (o) => o.status === "Đang thuê" && isWithinRange(o.returnTime)
+  );
+  // Đơn quá hạn tại thời điểm tổng hợp (quá hạn so với giờ hiện tại)
+  const now = new Date();
+  const overdueOrders = app.orders.filter((o) => {
+    if (o.status !== "Đang thuê") return false;
+    const retD = new Date(o.returnTime.replace(" ", "T"));
+    return !isNaN(retD.getTime()) && retD < now;
+  });
+  // Đơn chờ đối soát theo trạng thái hiện tại
+  const pendingReconcileOrders = app.orders.filter((o) => o.status === "Chờ đối soát");
+  // Lượt thuê đã bàn giao trong kỳ
+  const handedOverOrders = app.orders.filter((o) => o.handedOverAt && isWithinRange(o.handedOverAt));
+  // Số lần hỏng có kết luận theo thiết bị
+  const damageRecords = app.orders.flatMap((o) =>
+    (o.returnReceipts || []).flatMap((r) =>
+      r.items
+        .filter((it) => it.condition !== "Bình thường" && it.condition !== "Cần vệ sinh")
+        .map((it) => ({
+          ...it,
+          orderId: o.id,
+          customerName: o.customerName,
+          returnedAt: r.returnedAt,
+          staffName: r.staffName,
+        }))
+    )
+  );
+
+  // ── 2. Dữ liệu Báo cáo Doanh thu & Dòng tiền (UC10.2, UC10.2.1) ───────────
+  // Chỉ tính đơn Hoàn tất theo ngày hoàn tất
+  const completedOrders = app.orders.filter(
+    (o) => o.status === "Hoàn tất" && isWithinRange(o.reconciledAt || o.returnedAt || o.createdAt)
+  );
+  const pureRentalRevenue = completedOrders.reduce((sum, o) => sum + (o.rental - o.discount), 0);
+  const approvedSurcharges = app.orders.flatMap((o) =>
+    o.surcharges.filter((s) => s.status === "Đã duyệt" && isWithinRange(s.reviewedAt || o.createdAt))
+  );
   const surchargeRevenue = approvedSurcharges.reduce((sum, s) => sum + s.amount, 0);
-  const cancellationFees = app.orders.filter((o) => o.status === "Khách hủy").reduce((sum, o) => sum + (o.cancellationFee || 0), 0);
-  const currentHeldDeposit = app.orders.filter((o) => ["Đang thuê", "Đã nhận trả", "Chờ đối soát"].includes(o.status)).reduce((sum, o) => sum + o.depositTotal, 0);
+  const cancellationFees = app.orders
+    .filter((o) => o.status === "Khách hủy" && isWithinRange(o.createdAt))
+    .reduce((sum, o) => sum + (o.cancellationFee || 0), 0);
+  const currentHeldDeposit = app.orders
+    .filter((o) => ["Đang thuê", "Đã nhận trả", "Chờ đối soát"].includes(o.status))
+    .reduce((sum, o) => sum + o.depositTotal, 0);
 
-  // Dòng tiền
-  const totalCashInflow = app.orders.reduce((sum, o) => {
-    const initPay = o.paidAt ? (o.rental - o.discount + o.depositTotal) : 0;
-    const extraPay = o.transactions.filter((t) => t.type === "Thu thêm" && t.status === "Thành công").reduce((s, t) => s + t.amount, 0);
-    return sum + initPay + extraPay;
-  }, 0);
+  // Tỷ lệ hủy đơn: (Khách hủy + Cửa hàng hủy) / (Tổng đơn tạo - Đơn hết hạn) (Quy tắc UC10.2)
+  const createdInPeriod = app.orders.filter((o) => isWithinRange(o.createdAt));
+  const canceledCount = createdInPeriod.filter((o) => o.status === "Khách hủy" || o.status === "Cửa hàng hủy").length;
+  const expiredCount = createdInPeriod.filter((o) => o.status === "Hết hạn").length;
+  const validDenominator = createdInPeriod.length - expiredCount;
+  const cancellationRate = validDenominator > 0 ? ((canceledCount / validDenominator) * 100).toFixed(1) : "0.0";
 
-  const totalCashOutflow = app.orders.reduce((sum, o) => {
-    const refundRefund = o.transactions.filter((t) => (t.type === "Hoàn cọc" || t.type === "Hoàn tiền hủy") && t.status === "Thành công").reduce((s, t) => s + t.amount, 0);
-    return sum + refundRefund;
-  }, 0);
+  // Khách quay lại: Khách có ít nhất 2 lượt thuê hoàn tất tính đến hiện tại (Quy tắc UC10.2)
+  const customerCompletedCounts: Record<string, number> = {};
+  app.orders
+    .filter((o) => o.status === "Hoàn tất")
+    .forEach((o) => {
+      customerCompletedCounts[o.customerPhone] = (customerCompletedCounts[o.customerPhone] || 0) + 1;
+    });
+  const returningCustomersCount = Object.values(customerCompletedCounts).filter((cnt) => cnt >= 2).length;
 
+  // Dòng tiền thực tế
+  const inRangeTransactions = app.orders
+    .flatMap((o) => o.transactions.map((t) => ({ ...t, orderId: o.id, customerName: o.customerName })))
+    .filter((t) => isWithinRange(t.completedAt || t.createdAt));
+  const totalCashInflow = inRangeTransactions
+    .filter((t) => (t.type === "Thanh toán ban đầu" || t.type === "Thu thêm") && t.status === "Thành công")
+    .reduce((s, t) => s + t.amount, 0);
+  const totalCashOutflow = inRangeTransactions
+    .filter((t) => (t.type === "Hoàn cọc" || t.type === "Hoàn tiền hủy") && t.status === "Thành công")
+    .reduce((s, t) => s + t.amount, 0);
   const netCashflow = totalCashInflow - totalCashOutflow;
 
-  // Nhập kho
-  const totalImportAssetValue = app.importReceipts.filter((r) => r.status === "Đã nhập kho").reduce((sum, r) => sum + r.lines.reduce((ls, l) => ls + l.quantity * l.unitPrice, 0), 0);
+  // ── 3. Dữ liệu Báo cáo Nhập kho (UC10.3) ──────────────────────────────────
+  const inRangeImports = app.importReceipts.filter(
+    (r) =>
+      r.status === "Đã nhập kho" &&
+      isWithinRange(r.confirmedAt || r.receivedAt || r.createdAt) &&
+      (supplierFilter === "all" || r.supplierId === supplierFilter || r.supplierName === supplierFilter)
+  );
+  const totalImportAssetValue = inRangeImports.reduce(
+    (sum, r) => sum + r.lines.reduce((ls, l) => ls + l.quantity * l.unitPrice, 0),
+    0
+  );
 
   return (
     <div>
+      {/* Tiêu đề & Bộ chọn kỳ báo cáo (UC10.1, UC10.1.1) */}
       <div className="flex justify-between items-center mb-5 flex-wrap gap-3">
         <div>
           <h2 style={{ fontFamily: "var(--font-display)", fontSize: "1.5rem", color: "var(--color-bark)", marginBottom: 4 }}>
-            Báo cáo & Phân tích chuyên sâu (UC25, UC10.1 - UC10.3)
+            Báo cáo & Phân tích chuyên sâu (UC10.1 - UC10.3)
           </h2>
           <p style={{ color: "#6B7280", fontSize: "0.85rem" }}>
-            Hệ thống 4 báo cáo tách biệt, tuân thủ nghiêm ngặt nguyên tắc kế toán tài chính.
+            Hệ thống 4 báo cáo tách biệt, tuân thủ nghiêm ngặt nguyên tắc kế toán tài chính và hỗ trợ truy vết cấu thành.
           </p>
         </div>
-        {/* Bộ chọn thời gian & Xuất file (UC10.1, UC10.2) */}
+
+        {/* Bộ lọc khoảng ngày & Xuất file */}
         <div className="flex items-center gap-2 flex-wrap">
-          <div className="flex items-center gap-1.5 bg-white border border-bone rounded-lg p-1.5 px-3 text-xs">
-            <span style={{ color: "#6B7280" }}>Kỳ báo cáo:</span>
+          <div className="flex items-center gap-1.5 bg-white border border-bone rounded-lg p-1.5 px-3 text-xs shadow-xs">
+            <span style={{ color: "var(--color-forest)", fontWeight: 700 }}>Kỳ báo cáo:</span>
             <input
               type="date"
               value={fromDate}
               onChange={(e) => setFromDate(e.target.value)}
-              style={{ border: "1px solid var(--color-bone)", borderRadius: 4, padding: "2px 6px", fontSize: "0.75rem" }}
+              style={{ border: "1px solid var(--color-bone)", borderRadius: 4, padding: "3px 6px", fontSize: "0.78rem" }}
             />
             <span>→</span>
             <input
               type="date"
               value={toDate}
               onChange={(e) => setToDate(e.target.value)}
-              style={{ border: "1px solid var(--color-bone)", borderRadius: 4, padding: "2px 6px", fontSize: "0.75rem" }}
+              style={{ border: "1px solid var(--color-bone)", borderRadius: 4, padding: "3px 6px", fontSize: "0.78rem" }}
             />
           </div>
           <button
@@ -2787,104 +2889,199 @@ function ReportsTab({ app }: { app: ReturnType<typeof useApp> }) {
         </div>
       </div>
 
-      {/* Sub tabs điều hướng 4 báo cáo */}
+      {/* Cảnh báo ngày không hợp lệ (Dòng sự kiện phụ 2.1) */}
+      {isDateInvalid && (
+        <div style={{ background: "#FEE2E2", border: "1px solid #FCA5A5", color: "#B91C1C", borderRadius: 8, padding: "10px 16px", marginBottom: 16, fontSize: "0.85rem", display: "flex", alignItems: "center", gap: 8 }}>
+          <strong>Lỗi kỳ báo cáo:</strong> Ngày kết thúc ({toDate}) không được nhỏ hơn ngày bắt đầu ({fromDate}). Vui lòng điều chỉnh lại bộ lọc để cập nhật dữ liệu.
+        </div>
+      )}
+
+      {/* Sub-tabs điều hướng 4 báo cáo */}
       <div className="flex gap-2 mb-6 border-b border-bone pb-3 flex-wrap">
         {[
-          { key: "operational" as const, label: "1. Vận hành kho", icon: "tool" as IconName },
-          { key: "revenue" as const, label: "2. Doanh thu thuần (Không tính cọc)", icon: "chart" as IconName },
-          { key: "cashflow" as const, label: "3. Dòng tiền thực tế (Cashflow)", icon: "wallet" as IconName },
-          { key: "inventory" as const, label: "4. Nhập kho & Tài sản", icon: "package" as IconName },
+          { key: "operational" as const, label: "1. Vận hành kho (UC10.1)", icon: "tool" as IconName },
+          { key: "revenue" as const, label: "2. Doanh thu thuần (UC10.2)", icon: "chart" as IconName },
+          { key: "cashflow" as const, label: "3. Dòng tiền thực tế (UC10.2.1)", icon: "wallet" as IconName },
+          { key: "inventory" as const, label: "4. Nhập kho & Tài sản (UC10.3)", icon: "package" as IconName },
         ].map((tab) => (
-          <button key={tab.key} onClick={() => setReportSubTab(tab.key)}
+          <button
+            key={tab.key}
+            onClick={() => setReportSubTab(tab.key)}
             style={{
               background: reportSubTab === tab.key ? "var(--color-forest)" : "white",
               color: reportSubTab === tab.key ? "white" : "var(--color-bark)",
               border: `1px solid ${reportSubTab === tab.key ? "var(--color-forest)" : "var(--color-bone)"}`,
-              borderRadius: 8, padding: "9px 16px", cursor: "pointer", fontWeight: 700, fontSize: "0.82rem"
-            }}>
+              borderRadius: 8,
+              padding: "9px 16px",
+              cursor: "pointer",
+              fontWeight: 700,
+              fontSize: "0.82rem",
+            }}
+          >
             <span className="icon-label"><Icon name={tab.icon} size={16} /> {tab.label}</span>
           </button>
         ))}
       </div>
 
-      {/* ─── Báo cáo 1: Vận hành kho ────────────────────────────────────────── */}
+      {/* ─── BÁO CÁO 1: VẬN HÀNH KHO (UC10.1 & UC10.1.1) ─────────────────────── */}
       {reportSubTab === "operational" && (
-        <div className="grid gap-6" style={{ gridTemplateColumns: "1fr 1fr" }}>
-          <div style={{ background: "white", borderRadius: 12, padding: 20, border: "1px solid var(--color-bone)" }}>
-            <h3 style={{ fontWeight: 700, color: "var(--color-bark)", marginBottom: 14, fontSize: "1rem" }}>
-              Hiệu suất sử dụng thiết bị (Công suất kho)
-            </h3>
-            {(() => {
-              const totalEquip = app.equipment.length;
-              const rentedEquip = app.equipment.filter((e) => e.equipmentStatus === "Đang thuê").length;
-              const availEquip = app.equipment.filter((e) => e.equipmentStatus === "Sẵn sàng").length;
-              const maintEquip = app.equipment.filter((e) => e.equipmentStatus === "Đang bảo trì").length;
-              const lostEquip = app.equipment.filter((e) => e.equipmentStatus === "Thất lạc" || e.equipmentStatus === "Ngừng sử dụng").length;
-              const rate = totalEquip > 0 ? Math.round((rentedEquip / totalEquip) * 100) : 0;
+        <div>
+          {/* Lưới 6 chỉ tiêu vận hành trọng yếu (Click để Drill-down - Bước 4 UC10.1) */}
+          <div className="grid gap-3 mb-6" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))" }}>
+            <div
+              onClick={() => setDrilldownData({ title: "Danh sách đơn cần giao trong kỳ", subtitle: `Có ${ordersToPickup.length} đơn có giờ nhận dự kiến trong kỳ ${fromDate} → ${toDate}`, type: "orders", items: ordersToPickup })}
+              style={{ background: "white", borderRadius: 10, padding: 14, border: "1px solid var(--color-bone)", cursor: "pointer", transition: "transform 0.15s ease", boxShadow: "0 1px 3px rgba(0,0,0,0.03)" }}
+              className="hover:border-forest"
+            >
+              <div style={{ fontSize: "0.75rem", color: "#6B7280", fontWeight: 600 }}>Đơn cần giao trong kỳ</div>
+              <div style={{ fontFamily: "var(--font-mono)", fontSize: "1.7rem", fontWeight: 800, color: "var(--color-forest)", marginTop: 2 }}>
+                {ordersToPickup.length}
+              </div>
+              <div style={{ fontSize: "0.7rem", color: "var(--color-amber)", marginTop: 4 }}>🔍 Nhấn để xem danh sách</div>
+            </div>
 
-              return (
-                <div>
-                  <div className="flex items-end gap-3 mb-4">
-                    <span style={{ fontFamily: "var(--font-mono)", fontSize: "2.5rem", fontWeight: 800, color: "var(--color-forest)", lineHeight: 1 }}>{rate}%</span>
-                    <span style={{ fontSize: "0.85rem", color: "#6B7280" }}>công suất thiết bị đang cho thuê thực tế</span>
-                  </div>
-                  <div style={{ height: 12, background: "#E5E7EB", borderRadius: 6, overflow: "hidden", display: "flex", marginBottom: 16 }}>
-                    <div style={{ width: `${(rentedEquip / totalEquip) * 100}%`, background: "#1D4ED8" }} title="Đang thuê" />
-                    <div style={{ width: `${(availEquip / totalEquip) * 100}%`, background: "#15803D" }} title="Sẵn sàng" />
-                    <div style={{ width: `${(maintEquip / totalEquip) * 100}%`, background: "#F59E0B" }} title="Bảo trì" />
-                    <div style={{ width: `${(lostEquip / totalEquip) * 100}%`, background: "#EF4444" }} title="Hỏng/Mất" />
-                  </div>
-                  <div className="grid gap-2" style={{ gridTemplateColumns: "repeat(2, 1fr)", fontSize: "0.82rem" }}>
-                    <div className="flex items-center gap-2"><span style={{ width: 10, height: 10, borderRadius: "50%", background: "#1D4ED8" }} /> Đang thuê: <strong>{rentedEquip}</strong></div>
-                    <div className="flex items-center gap-2"><span style={{ width: 10, height: 10, borderRadius: "50%", background: "#15803D" }} /> Sẵn sàng: <strong>{availEquip}</strong></div>
-                    <div className="flex items-center gap-2"><span style={{ width: 10, height: 10, borderRadius: "50%", background: "#F59E0B" }} /> Đang bảo dưỡng: <strong>{maintEquip}</strong></div>
-                    <div className="flex items-center gap-2"><span style={{ width: 10, height: 10, borderRadius: "50%", background: "#EF4444" }} /> Thất lạc/Ngừng dùng: <strong>{lostEquip}</strong></div>
-                  </div>
-                </div>
-              );
-            })()}
+            <div
+              onClick={() => setDrilldownData({ title: "Danh sách đơn cần nhận trả trong kỳ", subtitle: `Có ${ordersToReturn.length} đơn có hạn trả dự kiến trong kỳ`, type: "orders", items: ordersToReturn })}
+              style={{ background: "white", borderRadius: 10, padding: 14, border: "1px solid var(--color-bone)", cursor: "pointer", boxShadow: "0 1px 3px rgba(0,0,0,0.03)" }}
+              className="hover:border-forest"
+            >
+              <div style={{ fontSize: "0.75rem", color: "#6B7280", fontWeight: 600 }}>Đơn cần nhận trả trong kỳ</div>
+              <div style={{ fontFamily: "var(--font-mono)", fontSize: "1.7rem", fontWeight: 800, color: "#2563EB", marginTop: 2 }}>
+                {ordersToReturn.length}
+              </div>
+              <div style={{ fontSize: "0.7rem", color: "var(--color-amber)", marginTop: 4 }}>🔍 Nhấn để xem danh sách</div>
+            </div>
+
+            <div
+              onClick={() => setDrilldownData({ title: "Danh sách đơn quá hạn tại thời điểm tổng hợp", subtitle: `Đơn quá giờ trả dự kiến nhưng chưa trả đủ thiết bị`, type: "orders", items: overdueOrders })}
+              style={{ background: overdueOrders.length > 0 ? "#FEF2F2" : "white", borderRadius: 10, padding: 14, border: `1px solid ${overdueOrders.length > 0 ? "#F87171" : "var(--color-bone)"}`, cursor: "pointer" }}
+            >
+              <div style={{ fontSize: "0.75rem", color: overdueOrders.length > 0 ? "#B91C1C" : "#6B7280", fontWeight: 600 }}>Đơn quá hạn hiện tại</div>
+              <div style={{ fontFamily: "var(--font-mono)", fontSize: "1.7rem", fontWeight: 800, color: overdueOrders.length > 0 ? "#DC2626" : "var(--color-bark)", marginTop: 2 }}>
+                {overdueOrders.length}
+              </div>
+              <div style={{ fontSize: "0.7rem", color: overdueOrders.length > 0 ? "#DC2626" : "#9CA3AF", marginTop: 4 }}>Cần gọi điện xử lý ngay</div>
+            </div>
+
+            <div
+              onClick={() => setDrilldownData({ title: "Danh sách đơn chờ đối soát cọc", subtitle: `Thiết bị đã nhận trả xong, đang chờ thủ quỹ hoàn/thu cọc`, type: "orders", items: pendingReconcileOrders })}
+              style={{ background: "white", borderRadius: 10, padding: 14, border: "1px solid var(--color-bone)", cursor: "pointer" }}
+              className="hover:border-forest"
+            >
+              <div style={{ fontSize: "0.75rem", color: "#6B7280", fontWeight: 600 }}>Đơn chờ đối soát cọc</div>
+              <div style={{ fontFamily: "var(--font-mono)", fontSize: "1.7rem", fontWeight: 800, color: "#D97706", marginTop: 2 }}>
+                {pendingReconcileOrders.length}
+              </div>
+              <div style={{ fontSize: "0.7rem", color: "var(--color-amber)", marginTop: 4 }}>🔍 Nhấn để xem danh sách</div>
+            </div>
+
+            <div
+              onClick={() => setDrilldownData({ title: "Danh sách lượt thuê đã bàn giao thành công", subtitle: `Các đơn đã giao thiết bị cho khách trong kỳ`, type: "orders", items: handedOverOrders })}
+              style={{ background: "white", borderRadius: 10, padding: 14, border: "1px solid var(--color-bone)", cursor: "pointer" }}
+              className="hover:border-forest"
+            >
+              <div style={{ fontSize: "0.75rem", color: "#6B7280", fontWeight: 600 }}>Lượt thuê đã bàn giao</div>
+              <div style={{ fontFamily: "var(--font-mono)", fontSize: "1.7rem", fontWeight: 800, color: "var(--color-forest)", marginTop: 2 }}>
+                {handedOverOrders.length}
+              </div>
+              <div style={{ fontSize: "0.7rem", color: "#6B7280", marginTop: 4 }}>Tổng lượt giao trong kỳ</div>
+            </div>
+
+            <div
+              onClick={() => setDrilldownData({ title: "Chi tiết các trường hợp thiết bị hư hỏng/mất mát", subtitle: `Danh sách biên bản nhận trả ghi nhận thiết bị hỏng có kết luận`, type: "damage", items: damageRecords })}
+              style={{ background: damageRecords.length > 0 ? "#FFFBEB" : "white", borderRadius: 10, padding: 14, border: "1px solid var(--color-bone)", cursor: "pointer" }}
+            >
+              <div style={{ fontSize: "0.75rem", color: "#92400E", fontWeight: 600 }}>Lần hỏng có kết luận</div>
+              <div style={{ fontFamily: "var(--font-mono)", fontSize: "1.7rem", fontWeight: 800, color: "#B45309", marginTop: 2 }}>
+                {damageRecords.length}
+              </div>
+              <div style={{ fontSize: "0.7rem", color: "#B45309", marginTop: 4 }}>🔍 Chi tiết từng biên bản</div>
+            </div>
           </div>
 
-          <div style={{ background: "white", borderRadius: 12, padding: 20, border: "1px solid var(--color-bone)" }}>
-            <h3 style={{ fontWeight: 700, color: "var(--color-bark)", marginBottom: 14, fontSize: "1rem" }}>
-              Top thiết bị có số lượt thuê cao nhất
-            </h3>
-            <div className="flex flex-col gap-2">
-              {[...app.equipment].sort((a, b) => b.rentCount - a.rentCount).slice(0, 5).map((e, idx) => {
-                const prod = app.products.find((p) => p.id === e.productId);
+          {/* Công suất kho và Top thiết bị */}
+          <div className="grid gap-6" style={{ gridTemplateColumns: "1fr 1fr" }}>
+            <div style={{ background: "white", borderRadius: 12, padding: 20, border: "1px solid var(--color-bone)" }}>
+              <h3 style={{ fontWeight: 700, color: "var(--color-bark)", marginBottom: 14, fontSize: "1rem" }}>
+                Hiệu suất sử dụng thiết bị (Công suất kho)
+              </h3>
+              {(() => {
+                const totalEquip = app.equipment.length;
+                const rentedEquip = app.equipment.filter((e) => e.equipmentStatus === "Đang thuê").length;
+                const availEquip = app.equipment.filter((e) => e.equipmentStatus === "Sẵn sàng").length;
+                const maintEquip = app.equipment.filter((e) => e.equipmentStatus === "Đang bảo trì").length;
+                const lostEquip = app.equipment.filter((e) => e.equipmentStatus === "Thất lạc" || e.equipmentStatus === "Ngừng sử dụng").length;
+                const rate = totalEquip > 0 ? Math.round((rentedEquip / totalEquip) * 100) : 0;
+
                 return (
-                  <div key={e.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 12px", background: "var(--color-parchment)", borderRadius: 8 }}>
-                    <div className="flex items-center gap-2">
-                      <span style={{ fontFamily: "var(--font-mono)", fontWeight: 700, color: "var(--color-amber)", width: 18 }}>#{idx + 1}</span>
-                      <div>
-                        <strong style={{ fontFamily: "var(--font-mono)", color: "var(--color-forest)" }}>{e.id}</strong> — {prod?.name}
-                        <div style={{ fontSize: "0.72rem", color: "#6B7280" }}>{e.condition} · Nhập {e.importDate}</div>
-                      </div>
+                  <div>
+                    <div className="flex items-end gap-3 mb-4">
+                      <span style={{ fontFamily: "var(--font-mono)", fontSize: "2.5rem", fontWeight: 800, color: "var(--color-forest)", lineHeight: 1 }}>{rate}%</span>
+                      <span style={{ fontSize: "0.85rem", color: "#6B7280" }}>công suất thiết bị đang cho thuê thực tế</span>
                     </div>
-                    <span style={{ fontFamily: "var(--font-mono)", fontWeight: 700, color: "var(--color-bark)" }}>{e.rentCount} lần thuê</span>
+                    <div style={{ height: 12, background: "#E5E7EB", borderRadius: 6, overflow: "hidden", display: "flex", marginBottom: 16 }}>
+                      <div style={{ width: `${totalEquip > 0 ? (rentedEquip / totalEquip) * 100 : 0}%`, background: "#1D4ED8" }} title="Đang thuê" />
+                      <div style={{ width: `${totalEquip > 0 ? (availEquip / totalEquip) * 100 : 0}%`, background: "#15803D" }} title="Sẵn sàng" />
+                      <div style={{ width: `${totalEquip > 0 ? (maintEquip / totalEquip) * 100 : 0}%`, background: "#F59E0B" }} title="Bảo trì" />
+                      <div style={{ width: `${totalEquip > 0 ? (lostEquip / totalEquip) * 100 : 0}%`, background: "#EF4444" }} title="Hỏng/Mất" />
+                    </div>
+                    <div className="grid gap-2" style={{ gridTemplateColumns: "repeat(2, 1fr)", fontSize: "0.82rem" }}>
+                      <div className="flex items-center gap-2"><span style={{ width: 10, height: 10, borderRadius: "50%", background: "#1D4ED8" }} /> Đang thuê: <strong>{rentedEquip}</strong></div>
+                      <div className="flex items-center gap-2"><span style={{ width: 10, height: 10, borderRadius: "50%", background: "#15803D" }} /> Sẵn sàng: <strong>{availEquip}</strong></div>
+                      <div className="flex items-center gap-2"><span style={{ width: 10, height: 10, borderRadius: "50%", background: "#F59E0B" }} /> Đang bảo dưỡng: <strong>{maintEquip}</strong></div>
+                      <div className="flex items-center gap-2"><span style={{ width: 10, height: 10, borderRadius: "50%", background: "#EF4444" }} /> Thất lạc/Ngừng dùng: <strong>{lostEquip}</strong></div>
+                    </div>
                   </div>
                 );
-              })}
+              })()}
+            </div>
+
+            <div style={{ background: "white", borderRadius: 12, padding: 20, border: "1px solid var(--color-bone)" }}>
+              <h3 style={{ fontWeight: 700, color: "var(--color-bark)", marginBottom: 14, fontSize: "1rem" }}>
+                Top thiết bị có số lượt thuê cao nhất
+              </h3>
+              <div className="flex flex-col gap-2">
+                {[...app.equipment].sort((a, b) => b.rentCount - a.rentCount).slice(0, 5).map((e, idx) => {
+                  const prod = app.products.find((p) => p.id === e.productId);
+                  return (
+                    <div key={e.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 12px", background: "var(--color-parchment)", borderRadius: 8 }}>
+                      <div className="flex items-center gap-2">
+                        <span style={{ fontFamily: "var(--font-mono)", fontWeight: 700, color: "var(--color-amber)", width: 18 }}>#{idx + 1}</span>
+                        <div>
+                          <strong style={{ fontFamily: "var(--font-mono)", color: "var(--color-forest)" }}>{e.id}</strong> — {prod?.name}
+                          <div style={{ fontSize: "0.72rem", color: "#6B7280" }}>{e.condition} · Nhập {e.importDate}</div>
+                        </div>
+                      </div>
+                      <span style={{ fontFamily: "var(--font-mono)", fontWeight: 700, color: "var(--color-bark)" }}>{e.rentCount} lần thuê</span>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* ─── Báo cáo 2: Doanh thu thuần (Không tính cọc) ─────────────────────── */}
+      {/* ─── BÁO CÁO 2: DOANH THU THUẦN (UC10.2 & UC10.2.1) ─────────────────── */}
       {reportSubTab === "revenue" && (
         <div>
-          {/* Alert chuẩn kế toán */}
+          {/* Alert nguyên tắc kế toán bất di bất dịch */}
           <div style={{ background: "#EFF6FF", border: "1px solid #BFDBFE", borderRadius: 10, padding: "12px 18px", marginBottom: 20, color: "#1E40AF", fontSize: "0.85rem" }}>
-            <strong>💡 NGUYÊN TẮC KẾ TOÁN BẤT DI BẤT DỊCH:</strong> Tiền cọc là khoản nợ phải trả lại cho khách sau khi hoàn tất thuê đồ. Tiền cọc <strong>tuyệt đối không được tính vào doanh thu</strong> kinh doanh của GearGo.
+            <strong>💡 NGUYÊN TẮC KẾ TOÁN BẤT DI BẤT DỊCH (UC10.2):</strong> Tiền cọc là khoản nợ phải trả lại cho khách sau khi đối soát xong. Tiền cọc <strong>tuyệt đối không được tính vào doanh thu</strong> kinh doanh của GearGo.
           </div>
 
+          {/* 3 Thẻ Doanh thu cốt lõi */}
           <div className="grid gap-4 mb-6" style={{ gridTemplateColumns: "repeat(3, 1fr)" }}>
-            <div style={{ background: "white", borderRadius: 12, padding: 18, border: "1px solid var(--color-bone)" }}>
+            <div
+              onClick={() => setDrilldownData({ title: "Danh sách đơn thuê hoàn tất cấu thành doanh thu", subtitle: `Các đơn đã thanh toán và quyết toán hoàn tất trong kỳ`, type: "orders", items: completedOrders })}
+              style={{ background: "white", borderRadius: 12, padding: 18, border: "1px solid var(--color-bone)", cursor: "pointer" }}
+              className="hover:border-forest"
+            >
               <div style={{ fontSize: "0.78rem", color: "#6B7280", fontWeight: 600 }}>Doanh thu tiền thuê thuần</div>
               <div style={{ fontFamily: "var(--font-mono)", fontSize: "1.6rem", fontWeight: 800, color: "var(--color-forest)", marginTop: 4 }}>
                 {fmt(pureRentalRevenue)}
               </div>
-              <div style={{ fontSize: "0.72rem", color: "#9CA3AF", marginTop: 4 }}>Từ các đơn thuê đã hoàn tất (sau voucher)</div>
+              <div style={{ fontSize: "0.72rem", color: "var(--color-amber)", marginTop: 4 }}>Từ {completedOrders.length} đơn hoàn tất trong kỳ 🔍</div>
             </div>
 
             <div style={{ background: "white", borderRadius: 12, padding: 18, border: "1px solid var(--color-bone)" }}>
@@ -2892,7 +3089,7 @@ function ReportsTab({ app }: { app: ReturnType<typeof useApp> }) {
               <div style={{ fontFamily: "var(--font-mono)", fontSize: "1.6rem", fontWeight: 800, color: "#D97706", marginTop: 4 }}>
                 +{fmt(surchargeRevenue)}
               </div>
-              <div style={{ fontSize: "0.72rem", color: "#9CA3AF", marginTop: 4 }}>Bồi thường hư hỏng, quá hạn, vệ sinh đã duyệt</div>
+              <div style={{ fontSize: "0.72rem", color: "#9CA3AF", marginTop: 4 }}>{approvedSurcharges.length} khoản bồi thường/quá hạn đã duyệt</div>
             </div>
 
             <div style={{ background: "var(--color-forest)", borderRadius: 12, padding: 18, color: "white" }}>
@@ -2900,18 +3097,19 @@ function ReportsTab({ app }: { app: ReturnType<typeof useApp> }) {
               <div style={{ fontFamily: "var(--font-mono)", fontSize: "1.8rem", fontWeight: 800, marginTop: 4 }}>
                 {fmt(pureRentalRevenue + surchargeRevenue)}
               </div>
-              <div style={{ fontSize: "0.72rem", opacity: 0.8, marginTop: 4 }}>Thuê thuần + Phụ phí giữ lại</div>
+              <div style={{ fontSize: "0.72rem", opacity: 0.8, marginTop: 4 }}>Thuê thuần + Phụ phí được giữ lại</div>
             </div>
           </div>
 
-          <div className="grid gap-6" style={{ gridTemplateColumns: "1.5fr 1fr" }}>
+          {/* Phân bổ danh mục & Chỉ số mở rộng (Tỷ lệ hủy & Khách quay lại) */}
+          <div className="grid gap-6 mb-6" style={{ gridTemplateColumns: "1.4fr 1fr" }}>
             <div style={{ background: "white", borderRadius: 12, padding: 20, border: "1px solid var(--color-bone)" }}>
               <h3 style={{ fontWeight: 700, color: "var(--color-bark)", marginBottom: 12, fontSize: "0.95rem" }}>
-                Doanh thu phân bổ theo danh mục sản phẩm
+                Doanh thu phân bổ theo danh mục sản phẩm trong kỳ
               </h3>
               {app.categories.map((c) => {
                 const catProds = app.products.filter((p) => p.category === c.name || p.categoryId === c.id).map((p) => p.id);
-                const catRev = totalCompletedOrders.flatMap((o) => o.items).filter((it) => catProds.includes(it.productId)).reduce((s, it) => s + it.pricePerDay * it.qty * it.days, 0);
+                const catRev = completedOrders.flatMap((o) => o.items).filter((it) => catProds.includes(it.productId)).reduce((s, it) => s + it.pricePerDay * it.qty * it.days, 0);
                 const percent = pureRentalRevenue > 0 ? Math.round((catRev / pureRentalRevenue) * 100) : 0;
 
                 return (
@@ -2928,30 +3126,55 @@ function ReportsTab({ app }: { app: ReturnType<typeof useApp> }) {
               })}
             </div>
 
-            <div style={{ background: "white", borderRadius: 12, padding: 20, border: "1px solid var(--color-bone)" }}>
-              <h3 style={{ fontWeight: 700, color: "var(--color-bark)", marginBottom: 12, fontSize: "0.95rem" }}>
-                Thu nhập khác (Trình bày riêng)
-              </h3>
-              <div style={{ background: "#F9FAFB", borderRadius: 8, padding: 14, marginBottom: 12 }}>
-                <div style={{ fontSize: "0.78rem", color: "#6B7280" }}>Phí phạt hủy đơn giữ lại (UC07)</div>
-                <div style={{ fontFamily: "var(--font-mono)", fontSize: "1.3rem", fontWeight: 700, color: "var(--color-bark)", marginTop: 2 }}>
-                  {fmt(cancellationFees)}
+            <div className="flex flex-col gap-3">
+              {/* Chỉ tiêu theo quy tắc UC10.2: Tỷ lệ hủy đơn & Khách quay lại */}
+              <div style={{ background: "white", borderRadius: 12, padding: 18, border: "1px solid var(--color-bone)" }}>
+                <h3 style={{ fontWeight: 700, color: "var(--color-bark)", marginBottom: 10, fontSize: "0.9rem" }}>
+                  Chỉ số chuyển đổi & Chăm sóc khách hàng (UC10.2)
+                </h3>
+                <div className="grid gap-2" style={{ gridTemplateColumns: "1fr 1fr" }}>
+                  <div style={{ background: "var(--color-parchment)", borderRadius: 8, padding: 10 }}>
+                    <div style={{ fontSize: "0.72rem", color: "#6B7280" }}>Tỷ lệ hủy đơn (BR22)</div>
+                    <div style={{ fontFamily: "var(--font-mono)", fontSize: "1.4rem", fontWeight: 800, color: "#DC2626", marginTop: 2 }}>
+                      {cancellationRate}%
+                    </div>
+                    <div style={{ fontSize: "0.68rem", color: "#9CA3AF" }}>{canceledCount} hủy / {validDenominator} đơn tạo</div>
+                  </div>
+
+                  <div style={{ background: "var(--color-parchment)", borderRadius: 8, padding: 10 }}>
+                    <div style={{ fontSize: "0.72rem", color: "#6B7280" }}>Khách quay lại (≥2 lần)</div>
+                    <div style={{ fontFamily: "var(--font-mono)", fontSize: "1.4rem", fontWeight: 800, color: "var(--color-forest)", marginTop: 2 }}>
+                      {returningCustomersCount}
+                    </div>
+                    <div style={{ fontSize: "0.68rem", color: "#9CA3AF" }}>Khách có ≥2 đơn hoàn tất</div>
+                  </div>
                 </div>
-                <div style={{ fontSize: "0.7rem", color: "#9CA3AF", marginTop: 4 }}>Thu từ khách hủy đơn sát giờ (&lt;48h)</div>
               </div>
-              <div style={{ background: "#FFFBEB", borderRadius: 8, padding: 14, border: "1px solid #FDE68A" }}>
-                <div style={{ fontSize: "0.78rem", color: "#92400E" }}>Tiền cọc đang tạm giữ trong các đơn mở</div>
-                <div style={{ fontFamily: "var(--font-mono)", fontSize: "1.3rem", fontWeight: 700, color: "#B45309", marginTop: 2 }}>
-                  {fmt(currentHeldDeposit)}
+
+              {/* Thu nhập khác & Cọc đang giữ */}
+              <div style={{ background: "white", borderRadius: 12, padding: 18, border: "1px solid var(--color-bone)" }}>
+                <div style={{ background: "#F9FAFB", borderRadius: 8, padding: 12, marginBottom: 10 }}>
+                  <div style={{ fontSize: "0.75rem", color: "#6B7280" }}>Thu nhập khác: Phí hủy đơn giữ lại (UC07)</div>
+                  <div style={{ fontFamily: "var(--font-mono)", fontSize: "1.2rem", fontWeight: 700, color: "var(--color-bark)", marginTop: 2 }}>
+                    {fmt(cancellationFees)}
+                  </div>
+                  <div style={{ fontSize: "0.68rem", color: "#9CA3AF" }}>Thu từ khách hủy sát giờ hẹn (&lt;48h)</div>
                 </div>
-                <div style={{ fontSize: "0.7rem", color: "#B45309", marginTop: 4 }}>Sẽ hoàn trả cho khách sau khi đối soát</div>
+
+                <div style={{ background: "#FFFBEB", borderRadius: 8, padding: 12, border: "1px solid #FDE68A" }}>
+                  <div style={{ fontSize: "0.75rem", color: "#92400E", fontWeight: 600 }}>Tiền cọc đang tạm giữ trong các đơn mở</div>
+                  <div style={{ fontFamily: "var(--font-mono)", fontSize: "1.2rem", fontWeight: 700, color: "#B45309", marginTop: 2 }}>
+                    {fmt(currentHeldDeposit)}
+                  </div>
+                  <div style={{ fontSize: "0.68rem", color: "#B45309" }}>Nợ phải hoàn trả khách sau khi đối soát</div>
+                </div>
               </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* ─── Báo cáo 3: Dòng tiền thực tế (Cashflow) ────────────────────────── */}
+      {/* ─── BÁO CÁO 3: DÒNG TIỀN THỰC TẾ (UC10.2.1 CASHFLOW) ────────────────── */}
       {reportSubTab === "cashflow" && (
         <div>
           <div className="grid gap-4 mb-6" style={{ gridTemplateColumns: "repeat(3, 1fr)" }}>
@@ -2960,7 +3183,7 @@ function ReportsTab({ app }: { app: ReturnType<typeof useApp> }) {
               <div style={{ fontFamily: "var(--font-mono)", fontSize: "1.6rem", fontWeight: 800, color: "#15803D", marginTop: 4 }}>
                 +{fmt(totalCashInflow)}
               </div>
-              <div style={{ fontSize: "0.72rem", color: "#6B7280", marginTop: 4 }}>Thanh toán ban đầu (thuê + cọc) + Thu thêm</div>
+              <div style={{ fontSize: "0.72rem", color: "#6B7280", marginTop: 4 }}>Tiền thuê + Cọc ban đầu + Thu thêm phụ phí</div>
             </div>
 
             <div style={{ background: "white", borderRadius: 12, padding: 18, border: "1px solid var(--color-bone)" }}>
@@ -2976,29 +3199,59 @@ function ReportsTab({ app }: { app: ReturnType<typeof useApp> }) {
               <div style={{ fontFamily: "var(--font-mono)", fontSize: "1.6rem", fontWeight: 800, color: netCashflow >= 0 ? "var(--color-forest)" : "#DC2626", marginTop: 4 }}>
                 {netCashflow >= 0 ? "+" : ""}{fmt(netCashflow)}
               </div>
-              <div style={{ fontSize: "0.72rem", color: "#6B7280", marginTop: 4 }}>Lượng tiền thực tế còn lại trong tài khoản</div>
+              <div style={{ fontSize: "0.72rem", color: "#6B7280", marginTop: 4 }}>Lượng tiền thực tế chênh lệch trong tài khoản</div>
             </div>
           </div>
 
+          {/* Bảng đối chiếu chênh lệch Doanh thu vs Dòng tiền (Bước 6 UC10.2) */}
+          <div style={{ background: "white", borderRadius: 12, padding: 18, border: "1px solid var(--color-bone)", marginBottom: 20 }}>
+            <h3 style={{ fontWeight: 700, color: "var(--color-bark)", fontSize: "0.95rem", marginBottom: 8 }}>
+              Bảng đối chiếu chênh lệch: Doanh thu thuần vs Dòng tiền thực tế (UC10.2 - Bước 6)
+            </h3>
+            <p style={{ fontSize: "0.8rem", color: "#6B7280", marginBottom: 12 }}>
+              Giải thích nguyên nhân chênh lệch giữa Doanh thu ghi nhận trên đơn hoàn tất và Dòng tiền ra vào tài khoản ngân hàng trong kỳ.
+            </p>
+            <div style={{ background: "var(--color-parchment)", borderRadius: 8, padding: 12, fontSize: "0.82rem" }}>
+              <div className="flex justify-between py-1 border-b border-bone">
+                <span>(A) Tổng doanh thu thuần ghi nhận (Thuê + Phụ phí giữ lại):</span>
+                <strong style={{ fontFamily: "var(--font-mono)", color: "var(--color-forest)" }}>{fmt(pureRentalRevenue + surchargeRevenue)}</strong>
+              </div>
+              <div className="flex justify-between py-1 border-b border-bone">
+                <span>(B) Dòng tiền ròng thực tế qua tài khoản (Net Cashflow):</span>
+                <strong style={{ fontFamily: "var(--font-mono)" }}>{fmt(netCashflow)}</strong>
+              </div>
+              <div className="flex justify-between py-1 border-b border-bone" style={{ color: "#B45309" }}>
+                <span>(+) Tiền cọc khách hàng đang tạm giữ trong các đơn mở (Chưa hoàn):</span>
+                <strong style={{ fontFamily: "var(--font-mono)" }}>+{fmt(currentHeldDeposit)}</strong>
+              </div>
+              <div className="flex justify-between py-1" style={{ color: "#4B5563" }}>
+                <span>(+) Khoản thu nhập từ phí hủy đơn:</span>
+                <strong style={{ fontFamily: "var(--font-mono)" }}>+{fmt(cancellationFees)}</strong>
+              </div>
+            </div>
+          </div>
+
+          {/* Chi tiết từng giao dịch */}
           <div style={{ background: "white", borderRadius: 12, padding: 20, border: "1px solid var(--color-bone)" }}>
             <h3 style={{ fontWeight: 700, color: "var(--color-bark)", marginBottom: 12, fontSize: "0.95rem" }}>
-              Chi tiết giao dịch dòng tiền (Money Transactions)
+              Chi tiết giao dịch dòng tiền trong kỳ ({inRangeTransactions.length} giao dịch)
             </h3>
             <div className="responsive-table" style={{ overflow: "auto" }}>
               <table style={{ width: "100%", borderCollapse: "collapse" }}>
                 <thead>
                   <tr style={{ background: "var(--color-parchment)", fontSize: "0.78rem", fontWeight: 600, color: "var(--color-bark)" }}>
-                    {["Mã GD", "Loại giao dịch", "Đơn hàng", "Số tiền", "Trạng thái", "Ngày hoàn tất"].map((h) => (
+                    {["Mã GD", "Loại giao dịch", "Đơn hàng", "Khách hàng", "Số tiền", "Trạng thái", "Ngày hoàn tất"].map((h) => (
                       <th key={h} style={{ padding: "9px 12px", textAlign: "left" }}>{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {app.orders.flatMap((o) => o.transactions.map((t) => ({ ...t, orderId: o.id }))).map((t, idx) => (
+                  {inRangeTransactions.map((t, idx) => (
                     <tr key={`${t.id}-${idx}`} style={{ borderTop: "1px solid var(--color-bone)", fontSize: "0.8rem" }}>
                       <td style={{ padding: "9px 12px", fontFamily: "var(--font-mono)", fontWeight: 700, color: "var(--color-forest)" }}>{t.id}</td>
                       <td style={{ padding: "9px 12px", fontWeight: 600 }}>{t.type}</td>
                       <td style={{ padding: "9px 12px", fontFamily: "var(--font-mono)" }}>{t.orderId}</td>
+                      <td style={{ padding: "9px 12px" }}>{t.customerName}</td>
                       <td style={{ padding: "9px 12px", fontFamily: "var(--font-mono)", fontWeight: 700, color: t.type === "Thanh toán ban đầu" || t.type === "Thu thêm" ? "#15803D" : "#DC2626" }}>
                         {t.type === "Thanh toán ban đầu" || t.type === "Thu thêm" ? "+" : "−"}{fmt(t.amount)}
                       </td>
@@ -3017,72 +3270,250 @@ function ReportsTab({ app }: { app: ReturnType<typeof useApp> }) {
         </div>
       )}
 
-      {/* ─── Báo cáo 4: Nhập kho & Tài sản ──────────────────────────────────── */}
+      {/* ─── BÁO CÁO 4: NHẬP KHO & TÀI SẢN (UC10.3) ─────────────────────────── */}
       {reportSubTab === "inventory" && (
-        <div className="grid gap-6" style={{ gridTemplateColumns: "1fr 1fr" }}>
-          <div style={{ background: "white", borderRadius: 12, padding: 20, border: "1px solid var(--color-bone)" }}>
-            <h3 style={{ fontWeight: 700, color: "var(--color-bark)", marginBottom: 12, fontSize: "0.95rem" }}>
-              Tổng tài sản nhập kho theo Nhà cung cấp
-            </h3>
-            <div style={{ background: "var(--color-parchment)", borderRadius: 10, padding: 14, marginBottom: 16 }}>
-              <div style={{ fontSize: "0.78rem", color: "#6B7280" }}>Tổng giá trị thiết bị đã nhập kho:</div>
-              <div style={{ fontFamily: "var(--font-mono)", fontSize: "1.8rem", fontWeight: 800, color: "var(--color-forest)" }}>
-                {fmt(totalImportAssetValue)}
-              </div>
+        <div>
+          {/* Lọc nhà cung cấp & Tổng tài sản */}
+          <div className="flex justify-between items-center mb-4 flex-wrap gap-3">
+            <div className="flex items-center gap-2">
+              <span style={{ fontSize: "0.82rem", fontWeight: 600 }}>Lọc theo Nhà cung cấp:</span>
+              <select
+                value={supplierFilter}
+                onChange={(e) => setSupplierFilter(e.target.value)}
+                style={{ border: "1px solid var(--color-bone)", borderRadius: 8, padding: "6px 12px", fontSize: "0.82rem", background: "white" }}
+              >
+                <option value="all">Tất cả nhà cung cấp</option>
+                {app.suppliers.map((s) => (
+                  <option key={s.id} value={s.id}>{s.name} ({s.id})</option>
+                ))}
+              </select>
             </div>
-            <div className="flex flex-col gap-3">
-              {app.suppliers.map((s) => {
-                const receipts = app.importReceipts.filter((r) => r.status === "Đã nhập kho" && (r.supplierId === s.id || r.supplierId === s.displayCode));
-                const supVal = receipts.reduce((sum, r) => sum + r.lines.reduce((ls, l) => ls + l.quantity * l.unitPrice, 0), 0);
-                return (
-                  <div key={s.id} style={{ display: "flex", justifyContent: "space-between", padding: "10px 12px", background: "#F9FAFB", borderRadius: 8 }}>
-                    <div>
-                      <strong style={{ fontSize: "0.85rem" }}>{s.name}</strong>
-                      <div style={{ fontSize: "0.72rem", color: "#6B7280" }}>{receipts.length} phiếu nhập đã duyệt</div>
-                    </div>
-                    <span style={{ fontFamily: "var(--font-mono)", fontWeight: 700, color: "var(--color-forest)" }}>{fmt(supVal)}</span>
-                  </div>
-                );
-              })}
+            <div style={{ background: "var(--color-parchment)", borderRadius: 8, padding: "6px 14px", border: "1px solid var(--color-bone)", fontSize: "0.85rem" }}>
+              Tổng giá trị nhập kho: <strong style={{ fontFamily: "var(--font-mono)", color: "var(--color-forest)" }}>{fmt(totalImportAssetValue)}</strong>
             </div>
           </div>
 
-          <div style={{ background: "white", borderRadius: 12, padding: 20, border: "1px solid var(--color-bone)" }}>
-            <h3 style={{ fontWeight: 700, color: "var(--color-bark)", marginBottom: 12, fontSize: "0.95rem" }}>
-              Thiết bị khấu hao & Chuyển loại (Giáng cấp)
-            </h3>
-            <p style={{ fontSize: "0.8rem", color: "#6B7280", marginBottom: 14 }}>
-              Danh sách thiết bị đã qua nhiều lần sử dụng và được chuyển sang dòng sản phẩm Tiết kiệm (khấu hao tài sản).
-            </p>
-            {(() => {
-              const movedEquips = app.equipment.filter((e) => e.productId !== e.originalProductId);
-              if (movedEquips.length === 0) {
+          <div className="grid gap-6 mb-6" style={{ gridTemplateColumns: "1.2fr 1fr" }}>
+            {/* Chi tiết từng phiếu nhập (UC10.3 bước 3 & 4) */}
+            <div style={{ background: "white", borderRadius: 12, padding: 20, border: "1px solid var(--color-bone)" }}>
+              <h3 style={{ fontWeight: 700, color: "var(--color-bark)", marginBottom: 12, fontSize: "0.95rem" }}>
+                Danh sách chứng từ nhập kho thực tế (UC10.3)
+              </h3>
+              <p style={{ fontSize: "0.78rem", color: "#6B7280", marginBottom: 12 }}>
+                Chỉ tính các phiếu đã hoàn tất nhập kho theo biên bản kiểm định. Nhấn nút "Mở chứng từ" để đối chiếu vật phẩm.
+              </p>
+              <div className="responsive-table" style={{ overflow: "auto" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                  <thead>
+                    <tr style={{ background: "var(--color-parchment)", fontSize: "0.78rem", fontWeight: 600, color: "var(--color-bark)" }}>
+                      {["Mã phiếu", "Nhà cung cấp", "Ngày xác nhận", "Số dòng", "Tổng giá trị", "Thao tác"].map((h) => (
+                        <th key={h} style={{ padding: "8px 10px", textAlign: "left" }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {inRangeImports.map((r) => {
+                      const totalVal = r.lines.reduce((s, l) => s + l.quantity * l.unitPrice, 0);
+                      return (
+                        <tr key={r.id} style={{ borderTop: "1px solid var(--color-bone)", fontSize: "0.8rem" }}>
+                          <td style={{ padding: "8px 10px", fontFamily: "var(--font-mono)", fontWeight: 700, color: "var(--color-forest)" }}>{r.id}</td>
+                          <td style={{ padding: "8px 10px" }}>{r.supplierName}</td>
+                          <td style={{ padding: "8px 10px", color: "#6B7280" }}>{r.confirmedAt || r.createdAt}</td>
+                          <td style={{ padding: "8px 10px" }}>{r.lines.length} sản phẩm</td>
+                          <td style={{ padding: "8px 10px", fontFamily: "var(--font-mono)", fontWeight: 700, color: "var(--color-forest)" }}>{fmt(totalVal)}</td>
+                          <td style={{ padding: "8px 10px" }}>
+                            <button
+                              onClick={() => setViewingReceipt(r)}
+                              className="btn btn-secondary btn-sm"
+                              style={{ padding: "3px 8px", fontSize: "0.72rem" }}
+                            >
+                              🔍 Mở chứng từ
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Thiết bị khấu hao & Chuyển loại */}
+            <div style={{ background: "white", borderRadius: 12, padding: 20, border: "1px solid var(--color-bone)" }}>
+              <h3 style={{ fontWeight: 700, color: "var(--color-bark)", marginBottom: 12, fontSize: "0.95rem" }}>
+                Thiết bị khấu hao & Chuyển loại (Giáng cấp)
+              </h3>
+              <p style={{ fontSize: "0.8rem", color: "#6B7280", marginBottom: 14 }}>
+                Danh sách thiết bị đã qua nhiều lần sử dụng và được chuyển sang dòng sản phẩm Tiết kiệm (khấu hao tài sản).
+              </p>
+              {(() => {
+                const movedEquips = app.equipment.filter((e) => e.productId !== e.originalProductId);
+                if (movedEquips.length === 0) {
+                  return (
+                    <div style={{ background: "var(--color-parchment)", borderRadius: 8, padding: 14, textAlign: "center", color: "#6B7280", fontSize: "0.85rem" }}>
+                      Chưa có thiết bị nào được giáng cấp loại.
+                    </div>
+                  );
+                }
                 return (
-                  <div style={{ background: "var(--color-parchment)", borderRadius: 8, padding: 14, textAlign: "center", color: "#6B7280", fontSize: "0.85rem" }}>
-                    Chưa có thiết bị nào được giáng cấp loại.
+                  <div className="flex flex-col gap-2">
+                    {movedEquips.map((e) => {
+                      const curr = app.products.find((p) => p.id === e.productId);
+                      const orig = app.products.find((p) => p.id === e.originalProductId);
+                      return (
+                        <div key={e.id} style={{ background: "#FFF7ED", border: "1px solid #FFEDD5", borderRadius: 8, padding: "10px 12px" }}>
+                          <div className="flex justify-between">
+                            <strong style={{ fontFamily: "var(--font-mono)", color: "var(--color-forest)" }}>{e.id}</strong>
+                            <span style={{ fontSize: "0.72rem", color: "#C2410C", fontWeight: 700 }}>Đã thuê {e.rentCount} lần</span>
+                          </div>
+                          <div style={{ fontSize: "0.78rem", color: "#4B5563", marginTop: 2 }}>
+                            Gốc: <strong>{orig?.name}</strong> → Hiện tại: <strong>{curr?.name}</strong>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 );
-              }
-              return (
-                <div className="flex flex-col gap-2">
-                  {movedEquips.map((e) => {
-                    const curr = app.products.find((p) => p.id === e.productId);
-                    const orig = app.products.find((p) => p.id === e.originalProductId);
-                    return (
-                      <div key={e.id} style={{ background: "#FFF7ED", border: "1px solid #FFEDD5", borderRadius: 8, padding: "10px 12px" }}>
-                        <div className="flex justify-between">
-                          <strong style={{ fontFamily: "var(--font-mono)", color: "var(--color-forest)" }}>{e.id}</strong>
-                          <span style={{ fontSize: "0.72rem", color: "#C2410C", fontWeight: 700 }}>Đã thuê {e.rentCount} lần</span>
-                        </div>
-                        <div style={{ fontSize: "0.78rem", color: "#4B5563", marginTop: 2 }}>
-                          Gốc: <strong>{orig?.name}</strong> → Hiện tại: <strong>{curr?.name}</strong>
-                        </div>
-                      </div>
-                    );
-                  })}
+              })()}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── MODAL DRILL-DOWN CẤU THÀNH CHỈ TIÊU (UC10.1 Bước 4 & UC10.2 Bước 5) ─── */}
+      {drilldownData && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+          <div style={{ background: "white", borderRadius: 12, maxWidth: 800, width: "100%", maxHeight: "85vh", overflow: "hidden", display: "flex", flexDirection: "column", boxShadow: "0 20px 25px -5px rgba(0,0,0,0.2)" }}>
+            <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--color-bone)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div>
+                <h3 style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: "1.1rem", color: "var(--color-bark)" }}>
+                  {drilldownData.title}
+                </h3>
+                <div style={{ fontSize: "0.75rem", color: "#6B7280" }}>{drilldownData.subtitle}</div>
+              </div>
+              <button onClick={() => setDrilldownData(null)} style={{ border: "none", background: "none", cursor: "pointer", padding: 4 }}>
+                <Icon name="close" size={20} />
+              </button>
+            </div>
+
+            <div style={{ padding: 20, overflowY: "auto", flex: 1 }}>
+              {drilldownData.items.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "40px 0", color: "#6B7280", fontSize: "0.85rem" }}>
+                  Không có bản ghi nào cấu thành chỉ tiêu trong kỳ đã chọn.
                 </div>
-              );
-            })()}
+              ) : drilldownData.type === "orders" ? (
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.8rem" }}>
+                  <thead>
+                    <tr style={{ background: "var(--color-parchment)", textAlign: "left" }}>
+                      <th style={{ padding: "8px 12px" }}>Mã đơn</th>
+                      <th style={{ padding: "8px 12px" }}>Khách hàng</th>
+                      <th style={{ padding: "8px 12px" }}>Trạng thái</th>
+                      <th style={{ padding: "8px 12px" }}>Ngày hẹn lấy</th>
+                      <th style={{ padding: "8px 12px" }}>Ngày hẹn trả</th>
+                      <th style={{ padding: "8px 12px" }}>Tiền thuê</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {drilldownData.items.map((o: Order) => (
+                      <tr key={o.id} style={{ borderTop: "1px solid var(--color-bone)" }}>
+                        <td style={{ padding: "8px 12px", fontFamily: "var(--font-mono)", fontWeight: 700, color: "var(--color-forest)" }}>{o.id}</td>
+                        <td style={{ padding: "8px 12px" }}>{o.customerName} ({o.customerPhone})</td>
+                        <td style={{ padding: "8px 12px" }}>
+                          <span style={{ fontSize: "0.7rem", padding: "2px 8px", borderRadius: 4, background: "#F3F4F6", fontWeight: 700 }}>{o.status}</span>
+                        </td>
+                        <td style={{ padding: "8px 12px", color: "#6B7280" }}>{o.pickupTime}</td>
+                        <td style={{ padding: "8px 12px", color: "#6B7280" }}>{o.returnTime}</td>
+                        <td style={{ padding: "8px 12px", fontFamily: "var(--font-mono)", fontWeight: 700 }}>{fmt(o.rental - o.discount)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : (
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.8rem" }}>
+                  <thead>
+                    <tr style={{ background: "var(--color-parchment)", textAlign: "left" }}>
+                      <th style={{ padding: "8px 12px" }}>Mã đơn</th>
+                      <th style={{ padding: "8px 12px" }}>Mã thiết bị</th>
+                      <th style={{ padding: "8px 12px" }}>Tình trạng khi trả</th>
+                      <th style={{ padding: "8px 12px" }}>Phụ phí bồi thường</th>
+                      <th style={{ padding: "8px 12px" }}>Nhân viên kết luận</th>
+                      <th style={{ padding: "8px 12px" }}>Ghi chú</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {drilldownData.items.map((dm: any, i: number) => (
+                      <tr key={i} style={{ borderTop: "1px solid var(--color-bone)" }}>
+                        <td style={{ padding: "8px 12px", fontFamily: "var(--font-mono)", fontWeight: 700, color: "var(--color-forest)" }}>{dm.orderId}</td>
+                        <td style={{ padding: "8px 12px", fontFamily: "var(--font-mono)", fontWeight: 700 }}>{dm.equipmentId}</td>
+                        <td style={{ padding: "8px 12px", color: "#DC2626", fontWeight: 600 }}>{dm.condition}</td>
+                        <td style={{ padding: "8px 12px", fontFamily: "var(--font-mono)", fontWeight: 700, color: "#D97706" }}>{fmt(dm.surchargeAmount || 0)}</td>
+                        <td style={{ padding: "8px 12px" }}>{dm.staffName}</td>
+                        <td style={{ padding: "8px 12px", color: "#6B7280" }}>{dm.note || "—"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+
+            <div style={{ padding: "12px 20px", borderTop: "1px solid var(--color-bone)", display: "flex", justifyContent: "flex-end" }}>
+              <button onClick={() => setDrilldownData(null)} className="btn btn-secondary btn-sm">Đóng</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── MODAL XEM CHỨNG TỪ PHIẾU NHẬP KHO ĐỐI CHIẾU (UC10.3 Bước 6) ──────── */}
+      {viewingReceipt && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+          <div style={{ background: "white", borderRadius: 12, maxWidth: 720, width: "100%", maxHeight: "85vh", overflow: "hidden", display: "flex", flexDirection: "column", boxShadow: "0 20px 25px -5px rgba(0,0,0,0.2)" }}>
+            <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--color-bone)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div>
+                <h3 style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: "1.1rem", color: "var(--color-bark)" }}>
+                  Chứng từ phiếu nhập kho — {viewingReceipt.id}
+                </h3>
+                <div style={{ fontSize: "0.75rem", color: "#6B7280" }}>Nhà cung cấp: {viewingReceipt.supplierName} · Xác nhận: {viewingReceipt.confirmedAt || viewingReceipt.createdAt}</div>
+              </div>
+              <button onClick={() => setViewingReceipt(null)} style={{ border: "none", background: "none", cursor: "pointer", padding: 4 }}>
+                <Icon name="close" size={20} />
+              </button>
+            </div>
+
+            <div style={{ padding: 20, overflowY: "auto", flex: 1 }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.8rem", marginBottom: 16 }}>
+                <thead>
+                  <tr style={{ background: "var(--color-parchment)", textAlign: "left" }}>
+                    <th style={{ padding: "8px 10px" }}>Sản phẩm</th>
+                    <th style={{ padding: "8px 10px" }}>Số lượng</th>
+                    <th style={{ padding: "8px 10px" }}>Đơn giá</th>
+                    <th style={{ padding: "8px 10px" }}>Thành tiền</th>
+                    <th style={{ padding: "8px 10px" }}>Mã thiết bị sinh ra</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {viewingReceipt.lines.map((l, idx) => (
+                    <tr key={idx} style={{ borderTop: "1px solid var(--color-bone)" }}>
+                      <td style={{ padding: "8px 10px", fontWeight: 600 }}>{l.productNameSnapshot || l.productId}</td>
+                      <td style={{ padding: "8px 10px" }}>{l.quantity}</td>
+                      <td style={{ padding: "8px 10px", fontFamily: "var(--font-mono)" }}>{fmt(l.unitPrice)}</td>
+                      <td style={{ padding: "8px 10px", fontFamily: "var(--font-mono)", fontWeight: 700, color: "var(--color-forest)" }}>{fmt(l.quantity * l.unitPrice)}</td>
+                      <td style={{ padding: "8px 10px", fontFamily: "var(--font-mono)", fontSize: "0.75rem", color: "var(--color-amber)" }}>
+                        {l.equipmentCodes.join(", ")}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+
+              <div style={{ background: "#F9FAFB", borderRadius: 8, padding: 12, fontSize: "0.8rem" }}>
+                <div><strong>Người tạo:</strong> {viewingReceipt.createdBy} · <strong>Trạng thái:</strong> {viewingReceipt.status}</div>
+                {viewingReceipt.note && <div style={{ marginTop: 4 }}><strong>Ghi chú:</strong> {viewingReceipt.note}</div>}
+              </div>
+            </div>
+
+            <div style={{ padding: "12px 20px", borderTop: "1px solid var(--color-bone)", display: "flex", justifyContent: "flex-end" }}>
+              <button onClick={() => setViewingReceipt(null)} className="btn btn-secondary btn-sm">Đóng</button>
+            </div>
           </div>
         </div>
       )}
