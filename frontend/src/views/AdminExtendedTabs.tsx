@@ -248,6 +248,9 @@ export function ReviewsTab({ app }: { app: ReturnType<typeof useApp> }) {
   const [search, setSearch] = useState("");
   const [hideModalReview, setHideModalReview] = useState<Review | null>(null);
   const [hideReason, setHideReason] = useState("Vi phạm ngôn từ / Spammer");
+  const [orderBasisReview, setOrderBasisReview] = useState<Review | null>(null);
+  const [replyModalReview, setReplyModalReview] = useState<Review | null>(null);
+  const [replyText, setReplyText] = useState("");
 
   const filtered = app.reviews.filter((r) => {
     const matchRating = ratingFilter === 0 || r.rating === ratingFilter;
@@ -265,6 +268,17 @@ export function ReviewsTab({ app }: { app: ReturnType<typeof useApp> }) {
     setHideModalReview(null);
   };
 
+  const handleConfirmReply = () => {
+    if (!replyModalReview || !replyText.trim()) return;
+    app.replyReview(replyModalReview.id, replyText.trim());
+    setReplyModalReview(null);
+    setReplyText("");
+  };
+
+  const orderBasisDetail = orderBasisReview
+    ? app.orders.find((o) => o.id === orderBasisReview.orderId)
+    : null;
+
   return (
     <div>
       <div className="flex justify-between items-center mb-4 flex-wrap gap-3">
@@ -273,12 +287,20 @@ export function ReviewsTab({ app }: { app: ReturnType<typeof useApp> }) {
             Kiểm duyệt đánh giá sản phẩm (UC9.2)
           </h2>
           <p style={{ color: "#6B7280", fontSize: "0.85rem" }}>
-            Kiểm tra và ẩn các đánh giá có nội dung thô tục, sai sự thật hoặc quảng cáo không hợp lệ.
+            Kiểm tra và xử lý đánh giá theo quy tắc khách quan: Đánh giá điểm thấp không phải lý do vi phạm.
           </p>
         </div>
         <span className="badge badge-success" style={{ padding: "6px 12px", fontSize: "0.8rem" }}>
           Tổng cộng {app.reviews.length} đánh giá
         </span>
+      </div>
+
+      {/* Thông điệp nghiệp vụ bất biến UC9.2 */}
+      <div style={{ background: "#EFF6FF", border: "1px solid #BFDBFE", borderRadius: 10, padding: "10px 14px", marginBottom: 16, display: "flex", alignItems: "center", gap: 10 }}>
+        <span style={{ fontSize: "1.2rem" }}>⚖️</span>
+        <div style={{ fontSize: "0.8rem", color: "#1E40AF" }}>
+          <strong>Quy tắc bất biến kiểm duyệt (UC9.2):</strong> Điểm đánh giá thấp (1 - 2 sao) tự nó không phải căn cứ vi phạm. Hệ thống bảo vệ tính khách quan của phản hồi, không cho phép sửa đổi điểm số hoặc bình luận của khách. Quản trị viên chỉ ẩn khi nội dung chứa từ ngữ thô tục, quảng cáo spam hoặc hình ảnh phản cảm.
+        </div>
       </div>
 
       {/* Filters */}
@@ -342,8 +364,8 @@ export function ReviewsTab({ app }: { app: ReturnType<typeof useApp> }) {
               <div style={{ flex: 1 }}>
                 <div className="flex items-center gap-3 mb-1.5 flex-wrap">
                   <strong style={{ fontSize: "0.95rem", color: "var(--color-bark)" }}>{rev.productName || rev.productId}</strong>
-                  <span style={{ color: "#E07A43", fontWeight: 700, fontSize: "0.85rem" }}>{"★".repeat(rev.rating)}</span>
-                  <span style={{ fontSize: "0.75rem", color: "#9CA3AF" }}>Mã đơn: {rev.orderId}</span>
+                  <span style={{ color: "#E07A43", fontWeight: 700, fontSize: "0.85rem" }}>{"★".repeat(rev.rating)}{"☆".repeat(5 - rev.rating)}</span>
+                  <span style={{ fontSize: "0.75rem", color: "#64748B", background: "#F1F5F9", padding: "2px 6px", borderRadius: 4 }}>Đơn #{rev.orderId}</span>
                   <span style={{
                     fontSize: "0.7rem",
                     fontWeight: 700,
@@ -354,10 +376,43 @@ export function ReviewsTab({ app }: { app: ReturnType<typeof useApp> }) {
                   }}>
                     {rev.status === "active" ? "✓ Đang hiển thị" : "✕ Đã ẩn vi phạm"}
                   </span>
+                  <span style={{ fontSize: "0.68rem", background: "#ECFDF5", color: "#059669", padding: "2px 6px", borderRadius: 4, fontWeight: 600 }}>
+                    ✓ Đã xác thực đơn thuê thực tế
+                  </span>
                 </div>
-                <div style={{ fontSize: "0.88rem", color: "#374151", lineHeight: 1.5, marginBottom: 8 }}>
+
+                <div style={{ fontSize: "0.88rem", color: "#374151", lineHeight: 1.5, marginBottom: 8, fontStyle: "italic" }}>
                   "{rev.comment}"
                 </div>
+
+                {/* Ảnh đính kèm (UC9.1.2) */}
+                {rev.images && rev.images.length > 0 && (
+                  <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 10, flexWrap: "wrap" }}>
+                    <span style={{ fontSize: "0.75rem", color: "#64748B", fontWeight: 600 }}>Ảnh dã ngoại:</span>
+                    {rev.images.map((img, idx) => (
+                      <img
+                        key={idx}
+                        src={img}
+                        alt={`Ảnh đánh giá ${idx + 1}`}
+                        style={{ width: 60, height: 60, objectFit: "cover", borderRadius: 6, border: "1px solid #CBD5E1", cursor: "pointer" }}
+                        onClick={() => window.open(img, "_blank")}
+                        title="Click để xem ảnh kích thước gốc"
+                      />
+                    ))}
+                  </div>
+                )}
+
+                {/* Phản hồi chính thức của cửa hàng (storeResponse) */}
+                {(rev.storeResponse || rev.response) && (
+                  <div style={{ background: "#F0FDF4", borderLeft: "3px solid #16A34A", borderRadius: "0 8px 8px 0", padding: "8px 12px", marginBottom: 8 }}>
+                    <div style={{ fontSize: "0.74rem", fontWeight: 700, color: "#166534", display: "flex", justifyContent: "space-between" }}>
+                      <span>💬 Phản hồi từ GearGo ({rev.storeResponse?.respondedBy || "Cửa hàng"})</span>
+                      <span style={{ fontWeight: 400, color: "#64748B" }}>{rev.storeResponse?.respondedAt}</span>
+                    </div>
+                    <p style={{ margin: "4px 0 0", fontSize: "0.8rem", color: "#14532D" }}>{rev.storeResponse?.response || rev.response}</p>
+                  </div>
+                )}
+
                 <div style={{ fontSize: "0.75rem", color: "#6B7280" }}>
                   Người gửi: <strong>{rev.customerName}</strong> ({rev.customerId}) · Ngày gửi: {rev.createdAt}
                   {rev.hiddenReason && (
@@ -368,28 +423,74 @@ export function ReviewsTab({ app }: { app: ReturnType<typeof useApp> }) {
                 </div>
               </div>
 
-              <div>
+              {/* Nhóm nút hành động */}
+              <div style={{ display: "flex", flexDirection: "column", gap: 6, minWidth: 150 }}>
+                {/* Nút xem căn cứ đơn thuê (UC9.2.1) */}
+                <button
+                  type="button"
+                  onClick={() => setOrderBasisReview(rev)}
+                  style={{
+                    background: "#F8FAFC",
+                    border: "1px solid #CBD5E1",
+                    color: "#334155",
+                    borderRadius: 8,
+                    padding: "6px 10px",
+                    fontSize: "0.75rem",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    textAlign: "center"
+                  }}
+                >
+                  📋 Căn cứ đơn thuê
+                </button>
+
+                {/* Nút viết phản hồi từ cửa hàng */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setReplyModalReview(rev);
+                    setReplyText(rev.storeResponse?.response || rev.response || "");
+                  }}
+                  style={{
+                    background: "#F0FDF4",
+                    border: "1px solid #BBF7D0",
+                    color: "#15803D",
+                    borderRadius: 8,
+                    padding: "6px 10px",
+                    fontSize: "0.75rem",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    textAlign: "center"
+                  }}
+                >
+                  💬 {rev.storeResponse ? "Sửa phản hồi" : "Phản hồi"}
+                </button>
+
+                {/* Nút Ẩn / Bỏ ẩn */}
                 {rev.status === "active" ? (
                   <button
+                    type="button"
                     onClick={() => {
                       setHideModalReview(rev);
-                      setHideReason("Vi phạm ngôn từ / Spammer");
+                      setHideReason("Vi phạm ngôn từ / Thô tục");
                     }}
                     style={{
                       background: "white",
                       border: "1px solid #FECACA",
                       color: "#DC2626",
                       borderRadius: 8,
-                      padding: "6px 12px",
-                      fontSize: "0.78rem",
+                      padding: "6px 10px",
+                      fontSize: "0.75rem",
                       fontWeight: 600,
-                      cursor: "pointer"
+                      cursor: "pointer",
+                      textAlign: "center"
                     }}
                   >
-                    Ẩn vi phạm
+                    ✕ Ẩn vi phạm
                   </button>
                 ) : (
                   <button
+                    type="button"
                     onClick={() => {
                       app.reviews = app.reviews.map((r) => r.id === rev.id ? { ...r, status: "active", hiddenReason: undefined } : r);
                       app.addAuditLog({ actor: "Admin", role: "Quản trị viên", action: "Bỏ ẩn đánh giá", targetEntity: "Review", targetId: rev.id, detail: "Mở hiển thị lại đánh giá đã kiểm duyệt" });
@@ -399,13 +500,14 @@ export function ReviewsTab({ app }: { app: ReturnType<typeof useApp> }) {
                       border: "1px solid var(--color-bone)",
                       color: "var(--color-forest)",
                       borderRadius: 8,
-                      padding: "6px 12px",
-                      fontSize: "0.78rem",
+                      padding: "6px 10px",
+                      fontSize: "0.75rem",
                       fontWeight: 700,
-                      cursor: "pointer"
+                      cursor: "pointer",
+                      textAlign: "center"
                     }}
                   >
-                    Bỏ ẩn
+                    ✓ Bỏ ẩn
                   </button>
                 )}
               </div>
@@ -414,27 +516,117 @@ export function ReviewsTab({ app }: { app: ReturnType<typeof useApp> }) {
         )}
       </div>
 
-      {/* Modal Ẩn đánh giá */}
+      {/* Modal Căn cứ đơn thuê (UC9.2.1) */}
+      {orderBasisReview && (
+        <div role="dialog" aria-modal="true" className="modal-overlay">
+          <div className="modal-container" style={{ maxWidth: 560 }}>
+            <div className="modal-header">
+              <h3 className="modal-title">Căn cứ đơn thuê thực tế (UC9.2.1)</h3>
+              <button onClick={() => setOrderBasisReview(null)} className="btn btn-ghost btn-sm text-lg">×</button>
+            </div>
+            <div className="modal-body">
+              <div style={{ background: "#F8FAFC", borderRadius: 8, padding: 12, border: "1px solid #E2E8F0", marginBottom: 12 }}>
+                <div className="flex justify-between items-center mb-2">
+                  <span style={{ fontSize: "0.85rem", fontWeight: 700, color: "var(--color-bark)" }}>Đơn thuê #{orderBasisReview.orderId}</span>
+                  <span className="badge badge-success">{orderBasisDetail?.status || "Hoàn tất"}</span>
+                </div>
+                <div style={{ fontSize: "0.78rem", color: "#475569", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+                  <div>Khách thuê: <strong>{orderBasisReview.customerName}</strong></div>
+                  <div>Mã khách hàng: <strong>{orderBasisReview.customerId}</strong></div>
+                  <div>Sản phẩm đánh giá: <strong>{orderBasisReview.productName}</strong></div>
+                  <div>Ngày đặt: <strong>{orderBasisDetail?.createdAt || "Chuyến đi gần nhất"}</strong></div>
+                </div>
+              </div>
+
+              {orderBasisDetail && (
+                <div className="mb-3">
+                  <div style={{ fontSize: "0.8rem", fontWeight: 700, marginBottom: 6 }}>Danh sách thiết bị trong đơn:</div>
+                  <div style={{ border: "1px solid #E2E8F0", borderRadius: 8, overflow: "hidden" }}>
+                    {orderBasisDetail.items.map((it, idx) => (
+                      <div key={idx} style={{ padding: "8px 12px", borderBottom: idx < orderBasisDetail.items.length - 1 ? "1px solid #E2E8F0" : "none", display: "flex", justifyContent: "space-between", fontSize: "0.78rem" }}>
+                        <span>{it.productName} (x{it.qty})</span>
+                        <span style={{ color: "#64748B" }}>{it.days} ngày · {fmt(it.price * it.qty * it.days)}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginTop: 8, fontSize: "0.8rem", fontWeight: 700 }}>
+                    <span>Tổng tiền thanh toán đơn:</span>
+                    <span style={{ color: "var(--color-forest)" }}>{fmt(orderBasisDetail.total)}</span>
+                  </div>
+                </div>
+              )}
+
+              <div style={{ background: "#FEF3C7", border: "1px solid #FDE68A", borderRadius: 8, padding: 10, fontSize: "0.75rem", color: "#92400E" }}>
+                ✓ Đơn thuê đã được nghiệm thu và hoàn tất bàn giao / trả đồ đầy đủ. Đánh giá của khách hàng đủ điều kiện hiển thị công khai.
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button onClick={() => setOrderBasisReview(null)} className="btn btn-secondary btn-sm">Đóng</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Phản hồi chính thức từ GearGo (UC9.2) */}
+      {replyModalReview && (
+        <div role="dialog" aria-modal="true" className="modal-overlay">
+          <div className="modal-container" style={{ maxWidth: 480 }}>
+            <div className="modal-header">
+              <h3 className="modal-title">Phản hồi chính thức từ GearGo (UC9.2)</h3>
+              <button onClick={() => setReplyModalReview(null)} className="btn btn-ghost btn-sm text-lg">×</button>
+            </div>
+            <div className="modal-body">
+              <div style={{ background: "#F8FAFC", borderRadius: 8, padding: 10, border: "1px solid #E2E8F0", marginBottom: 12, fontSize: "0.8rem" }}>
+                <div style={{ fontWeight: 700, color: "var(--color-bark)" }}>{replyModalReview.customerName} đánh giá {replyModalReview.rating} sao:</div>
+                <div style={{ fontStyle: "italic", color: "#475569", marginTop: 2 }}>"{replyModalReview.comment}"</div>
+              </div>
+              <div className="form-group mb-3">
+                <label className="form-label">Nội dung phản hồi từ Cửa hàng / Admin</label>
+                <textarea
+                  rows={4}
+                  value={replyText}
+                  onChange={(e) => setReplyText(e.target.value)}
+                  placeholder="GearGo trân trọng cảm ơn quý khách đã phản hồi..."
+                  className="form-textarea"
+                  style={{ fontSize: "0.85rem" }}
+                />
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button onClick={() => setReplyModalReview(null)} className="btn btn-secondary btn-sm">Hủy</button>
+              <button onClick={handleConfirmReply} className="btn btn-primary btn-sm" disabled={!replyText.trim()}>
+                Lưu và phát hành phản hồi
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Ẩn đánh giá vi phạm */}
       {hideModalReview && (
         <div role="dialog" aria-modal="true" className="modal-overlay">
-          <div className="modal-container" style={{ maxWidth: 440 }}>
+          <div className="modal-container" style={{ maxWidth: 460 }}>
             <div className="modal-header">
               <h3 className="modal-title">Ẩn đánh giá vi phạm</h3>
               <button onClick={() => setHideModalReview(null)} className="btn btn-ghost btn-sm text-lg">×</button>
             </div>
             <div className="modal-body">
-              <p style={{ fontSize: "0.85rem", color: "#4B5563", marginBottom: 10 }}>
-                Đánh giá này sẽ bị ẩn khỏi giao diện xem sản phẩm của khách hàng. Chọn hoặc nhập lý do:
+              <div style={{ background: "#FEF2F2", border: "1px solid #FCA5A5", borderRadius: 8, padding: 10, marginBottom: 12, fontSize: "0.75rem", color: "#991B1B" }}>
+                <strong>LƯU Ý NGHIỆP VỤ BẮT BUỘC:</strong> Điểm đánh giá 1-2 sao tự nó KHÔNG phải lý do vi phạm. Chỉ được ẩn khi nhận xét có từ ngữ thô tục, quảng cáo spam hoặc hình ảnh phản cảm.
+              </div>
+              <p style={{ fontSize: "0.82rem", color: "#4B5563", marginBottom: 8 }}>
+                Chọn căn cứ vi phạm chuẩn:
               </p>
               <select
                 value={hideReason}
                 onChange={(e) => setHideReason(e.target.value)}
                 style={{ width: "100%", border: "1px solid var(--color-bone)", borderRadius: 8, padding: 10, fontSize: "0.85rem", marginBottom: 12, background: "white" }}
               >
-                <option value="Vi phạm ngôn từ / Spammer">Vi phạm ngôn từ / Thô tục</option>
-                <option value="Thông tin sai sự thật về thiết bị">Thông tin sai sự thật về thiết bị</option>
+                <option value="Vi phạm ngôn từ / Thô tục">Vi phạm ngôn từ / Xúc phạm thô tục</option>
                 <option value="Chứa liên kết quảng cáo spam">Chứa liên kết quảng cáo spam</option>
-                <option value="Tranh chấp đơn hàng đang giải quyết">Tranh chấp đơn hàng đang giải quyết</option>
+                <option value="Hình ảnh phản cảm, không liên quan dã ngoại">Hình ảnh phản cảm, không liên quan dã ngoại</option>
+                <option value="Tiết lộ thông tin cá nhân trái phép">Tiết lộ thông tin cá nhân trái phép</option>
+                <option value="Thông tin hoàn toàn sai sự thật">Thông tin hoàn toàn sai sự thật (đã xác minh đối chiếu)</option>
               </select>
               <div className="flex gap-2">
                 <button onClick={() => setHideModalReview(null)} className="btn btn-secondary btn-md" style={{ flex: 1 }}>Hủy</button>
@@ -1048,34 +1240,69 @@ export function PoliciesTab({ app }: { app: ReturnType<typeof useApp> }) {
   );
 }
 
-// ─── 4. Soạn & Gửi Thông Báo Hệ Thống (UC9.4) ─────────────────────────────────
+// ─── 4. Soạn & Gửi Thông Báo Hệ Thống (UC9.4 & UC9.4.1) ────────────────────────
 export function NotificationsTab({ app }: { app: ReturnType<typeof useApp> }) {
   const [title, setTitle] = useState("");
   const [message, setMessage] = useState("");
   const [targetRole, setTargetRole] = useState<AppNotification["targetRole"]>("all");
   const [type, setType] = useState<AppNotification["type"]>("info");
+  const [category, setCategory] = useState<"order" | "rental" | "finance" | "promo" | "system">("system");
+  const [hasActionLink, setHasActionLink] = useState(false);
+  const [actionType, setActionType] = useState<"order" | "page" | "reviews">("order");
+  const [actionTargetId, setActionTargetId] = useState("");
+  const [actionLabel, setActionLabel] = useState("");
   const [sentSuccess, setSentSuccess] = useState(false);
+
+  // Bộ lọc danh sách đã phát
+  const [filterRole, setFilterRole] = useState<string>("all");
+  const [filterCategory, setFilterCategory] = useState<string>("all");
 
   const handleSend = (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim() || !message.trim()) return;
-    app.sendNotification({ title, message, targetRole, type });
+
+    app.sendNotification({
+      title: title.trim(),
+      message: message.trim(),
+      targetRole,
+      type,
+      category,
+      actionLink: hasActionLink ? {
+        type: actionType,
+        targetId: actionType === "order" ? (actionTargetId.trim() || "ORD-001") : undefined,
+        label: actionLabel.trim() || (actionType === "order" ? "Xem chi tiết đơn →" : actionType === "reviews" ? "Đánh giá chuyến đi →" : "Khám phá catalog →"),
+      } : undefined
+    });
+
     setTitle("");
     setMessage("");
+    setHasActionLink(false);
+    setActionTargetId("");
+    setActionLabel("");
     setSentSuccess(true);
-    setTimeout(() => setSentSuccess(false), 3000);
+    setTimeout(() => setSentSuccess(false), 3500);
   };
+
+  const filteredHistory = app.notifications.filter((n) => {
+    const matchRole = filterRole === "all" || n.targetRole === filterRole || n.targetRole === "all";
+    const matchCat = filterCategory === "all" || n.category === filterCategory;
+    return matchRole && matchCat;
+  });
 
   return (
     <div className="grid gap-6" style={{ gridTemplateColumns: "1.2fr 1fr" }}>
-      {/* Form soạn tin */}
+      {/* Form soạn tin & Live Preview */}
       <div style={{ background: "white", borderRadius: 12, border: "1px solid var(--color-bone)", padding: 22 }}>
-        <h2 style={{ fontFamily: "var(--font-display)", fontSize: "1.3rem", color: "var(--color-bark)", marginBottom: 4 }}>
-          Soạn thông báo hệ thống (UC9.4)
-        </h2>
-        <p style={{ color: "#6B7280", fontSize: "0.82rem", marginBottom: 16 }}>
-          Phát thông báo đẩy đến danh sách khách hàng hoặc nhân viên trực ban.
-        </p>
+        <div className="flex justify-between items-start mb-3">
+          <div>
+            <h2 style={{ fontFamily: "var(--font-display)", fontSize: "1.3rem", color: "var(--color-bark)", marginBottom: 4 }}>
+              Soạn & Phát hành thông báo (UC9.4)
+            </h2>
+            <p style={{ color: "#6B7280", fontSize: "0.82rem" }}>
+              Gửi thông báo đẩy tức thời đến khách hàng hoặc nhân viên trực ban kèm Deep Link điều hướng đích (UC9.3.1).
+            </p>
+          </div>
+        </div>
 
         <form onSubmit={handleSend} className="flex flex-col gap-4">
           <div>
@@ -1089,7 +1316,7 @@ export function NotificationsTab({ app }: { app: ReturnType<typeof useApp> }) {
             />
           </div>
 
-          <div className="grid gap-3" style={{ gridTemplateColumns: "1fr 1fr" }}>
+          <div className="grid gap-3" style={{ gridTemplateColumns: "1fr 1fr 1fr" }}>
             <div>
               <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 700, marginBottom: 5 }}>Nhóm nhận tin</label>
               <select
@@ -1117,13 +1344,28 @@ export function NotificationsTab({ app }: { app: ReturnType<typeof useApp> }) {
                 <option value="alert">Khẩn cấp (Đỏ)</option>
               </select>
             </div>
+
+            <div>
+              <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 700, marginBottom: 5 }}>Danh mục nghiệp vụ</label>
+              <select
+                value={category}
+                onChange={(e) => setCategory(e.target.value as any)}
+                style={{ width: "100%", border: "1px solid var(--color-bone)", borderRadius: 8, padding: 10, fontSize: "0.85rem", background: "white" }}
+              >
+                <option value="system">⚙️ Hệ thống</option>
+                <option value="rental">⛺ Đơn thuê</option>
+                <option value="order">📦 Đơn hàng</option>
+                <option value="finance">💰 Tài chính / Cọc</option>
+                <option value="promo">🎁 Khuyến mãi</option>
+              </select>
+            </div>
           </div>
 
           <div>
             <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 700, marginBottom: 5 }}>Nội dung chi tiết</label>
             <textarea
               required
-              rows={4}
+              rows={3}
               placeholder="Nhập nội dung thông báo gửi đến người dùng..."
               value={message}
               onChange={(e) => setMessage(e.target.value)}
@@ -1131,33 +1373,181 @@ export function NotificationsTab({ app }: { app: ReturnType<typeof useApp> }) {
             />
           </div>
 
+          {/* Cấu hình Deep Link điều hướng (UC9.3.1 & UC9.4.1) */}
+          <div style={{ background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: 8, padding: 12 }}>
+            <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: "0.82rem", fontWeight: 700, color: "var(--color-bark)" }}>
+              <input
+                type="checkbox"
+                checked={hasActionLink}
+                onChange={(e) => setHasActionLink(e.target.checked)}
+              />
+              🔗 Gắn liên kết hành động điều hướng (Deep-link - UC9.3.1)
+            </label>
+
+            {hasActionLink && (
+              <div className="grid gap-3 mt-3" style={{ gridTemplateColumns: "1fr 1fr" }}>
+                <div>
+                  <label style={{ display: "block", fontSize: "0.75rem", fontWeight: 600, color: "#475569", marginBottom: 4 }}>Trang đích điều hướng</label>
+                  <select
+                    value={actionType}
+                    onChange={(e) => setActionType(e.target.value as any)}
+                    style={{ width: "100%", border: "1px solid #CBD5E1", borderRadius: 6, padding: "6px 10px", fontSize: "0.8rem", background: "white" }}
+                  >
+                    <option value="order">Chi tiết đơn hàng cụ thể (UC9.3.1)</option>
+                    <option value="reviews">Trang đánh giá sản phẩm (UC9.1)</option>
+                    <option value="page">Trang danh mục thuê đồ</option>
+                  </select>
+                </div>
+
+                {actionType === "order" ? (
+                  <div>
+                    <label style={{ display: "block", fontSize: "0.75rem", fontWeight: 600, color: "#475569", marginBottom: 4 }}>Mã đơn hàng đích</label>
+                    <input
+                      type="text"
+                      placeholder="VD: ORD-001 hoặc ORD-002"
+                      value={actionTargetId}
+                      onChange={(e) => setActionTargetId(e.target.value)}
+                      style={{ width: "100%", border: "1px solid #CBD5E1", borderRadius: 6, padding: "6px 10px", fontSize: "0.8rem" }}
+                    />
+                  </div>
+                ) : (
+                  <div>
+                    <label style={{ display: "block", fontSize: "0.75rem", fontWeight: 600, color: "#475569", marginBottom: 4 }}>Nhãn nút bấm</label>
+                    <input
+                      type="text"
+                      placeholder={actionType === "reviews" ? "Đánh giá ngay →" : "Xem đồ dã ngoại →"}
+                      value={actionLabel}
+                      onChange={(e) => setActionLabel(e.target.value)}
+                      style={{ width: "100%", border: "1px solid #CBD5E1", borderRadius: 6, padding: "6px 10px", fontSize: "0.8rem" }}
+                    />
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* BƯỚC 4 UC9.4: KHUNG LIVE PREVIEW (Xem trước thông báo trước khi phát hành) */}
+          <div style={{ background: "#F1F5F9", borderRadius: 10, padding: 14, border: "1px dashed #94A3B8" }}>
+            <div style={{ fontSize: "0.75rem", fontWeight: 800, color: "#475569", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8, display: "flex", alignItems: "center", gap: 6 }}>
+              <span>👁️ BƯỚC 4 UC9.4: XEM TRƯỚC THÔNG BÁO (LIVE PREVIEW)</span>
+              <span style={{ fontSize: "0.68rem", fontWeight: 400, color: "#64748B" }}>Mô phỏng giao diện người nhận</span>
+            </div>
+
+            <div style={{ background: "white", borderRadius: 8, padding: 12, border: "1px solid #E2E8F0", boxShadow: "0 2px 4px rgba(0,0,0,0.04)" }}>
+              <div className="flex justify-between items-start mb-1.5">
+                <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                  <strong style={{ fontSize: "0.85rem", color: "var(--color-bark)" }}>
+                    {title.trim() || "(Chưa nhập tiêu đề)"}
+                  </strong>
+                  <span style={{
+                    fontSize: "0.65rem",
+                    fontWeight: 700,
+                    padding: "1px 6px",
+                    borderRadius: 4,
+                    background: category === "rental" ? "#FEF3C7" : category === "order" ? "#DBEAFE" : category === "finance" ? "#DCFCE7" : "#F3F4F6",
+                    color: category === "rental" ? "#B45309" : category === "order" ? "#1D4ED8" : category === "finance" ? "#15803D" : "#4B5563"
+                  }}>
+                    {category.toUpperCase()}
+                  </span>
+                </div>
+                <span style={{
+                  fontSize: "0.65rem",
+                  fontWeight: 700,
+                  padding: "1px 6px",
+                  borderRadius: 4,
+                  background: type === "alert" ? "#FEE2E2" : type === "warning" ? "#FEF3C7" : "#DCFCE7",
+                  color: type === "alert" ? "#DC2626" : type === "warning" ? "#B45309" : "#15803D"
+                }}>
+                  {targetRole === "all" ? "TẤT CẢ" : targetRole.toUpperCase()}
+                </span>
+              </div>
+
+              <p style={{ fontSize: "0.78rem", color: "#4B5563", margin: "4px 0 8px", lineHeight: 1.45 }}>
+                {message.trim() || "(Chưa nhập nội dung thông báo...)"}
+              </p>
+
+              <div className="flex justify-between items-center pt-2 border-t border-gray-100">
+                <span style={{ fontSize: "0.68rem", color: "#9CA3AF" }}>Vừa xong</span>
+                {hasActionLink && (
+                  <span style={{ fontSize: "0.74rem", fontWeight: 700, color: "#1D4ED8", background: "#EFF6FF", padding: "3px 8px", borderRadius: 4 }}>
+                    {actionLabel.trim() || (actionType === "order" ? `Xem đơn #${actionTargetId || "ORD-001"} →` : actionType === "reviews" ? "Đánh giá ngay →" : "Xem catalog →")}
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+
           <div className="flex items-center gap-3">
             <button type="submit" className="btn btn-primary btn-md">
-              Gửi thông báo ngay
+              ✓ Xác nhận & Phát hành thông báo (UC9.4)
             </button>
             {sentSuccess && (
-              <span className="badge badge-success">✓ Đã phát thông báo thành công!</span>
+              <span className="badge badge-success">✓ Đã phát thông báo thành công đến đối tượng mục tiêu!</span>
             )}
           </div>
         </form>
       </div>
 
-      {/* Danh sách đã phát */}
+      {/* Danh sách đã phát & Bộ lọc */}
       <div style={{ background: "white", borderRadius: 12, border: "1px solid var(--color-bone)", padding: 22, display: "flex", flexDirection: "column" }}>
-        <h3 style={{ fontFamily: "var(--font-display)", fontSize: "1.1rem", color: "var(--color-bark)", marginBottom: 14 }}>
-          Thông báo gần đây ({app.notifications.length})
-        </h3>
-        <div style={{ overflowY: "auto", maxHeight: 420, display: "flex", flexDirection: "column", gap: 10 }}>
-          {app.notifications.map((n) => (
+        <div className="flex justify-between items-center mb-3">
+          <h3 style={{ fontFamily: "var(--font-display)", fontSize: "1.1rem", color: "var(--color-bark)" }}>
+            Thông báo đã phát ({filteredHistory.length})
+          </h3>
+        </div>
+
+        {/* Bộ lọc lịch sử phát */}
+        <div className="flex gap-2 mb-3">
+          <select
+            value={filterRole}
+            onChange={(e) => setFilterRole(e.target.value)}
+            style={{ flex: 1, border: "1px solid var(--color-bone)", borderRadius: 6, padding: "5px 8px", fontSize: "0.75rem", background: "white" }}
+          >
+            <option value="all">Tất cả đối tượng</option>
+            <option value="customer">Khách hàng</option>
+            <option value="staff">Nhân viên kho</option>
+            <option value="admin">Quản trị viên</option>
+          </select>
+
+          <select
+            value={filterCategory}
+            onChange={(e) => setFilterCategory(e.target.value)}
+            style={{ flex: 1, border: "1px solid var(--color-bone)", borderRadius: 6, padding: "5px 8px", fontSize: "0.75rem", background: "white" }}
+          >
+            <option value="all">Tất cả danh mục</option>
+            <option value="rental">⛺ Đơn thuê</option>
+            <option value="order">📦 Đơn hàng</option>
+            <option value="finance">💰 Tài chính</option>
+            <option value="system">⚙️ Hệ thống</option>
+          </select>
+        </div>
+
+        <div style={{ overflowY: "auto", maxHeight: 480, display: "flex", flexDirection: "column", gap: 10 }}>
+          {filteredHistory.map((n) => (
             <div key={n.id} style={{ border: "1px solid var(--color-bone)", borderRadius: 10, padding: 12, background: "var(--color-cream)" }}>
               <div className="flex justify-between items-start mb-1">
-                <strong style={{ fontSize: "0.85rem", color: "var(--color-bark)" }}>{n.title}</strong>
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <strong style={{ fontSize: "0.85rem", color: "var(--color-bark)" }}>{n.title}</strong>
+                  {n.category && (
+                    <span style={{ fontSize: "0.62rem", fontWeight: 700, padding: "1px 5px", borderRadius: 3, background: "#E2E8F0", color: "#475569" }}>
+                      {n.category.toUpperCase()}
+                    </span>
+                  )}
+                </div>
                 <span style={{ fontSize: "0.68rem", fontWeight: 700, padding: "2px 6px", borderRadius: 4, background: n.type === "alert" ? "#FEE2E2" : n.type === "warning" ? "#FEF3C7" : "#DBEAFE", color: n.type === "alert" ? "#DC2626" : n.type === "warning" ? "#B45309" : "#1D4ED8" }}>
                   {n.targetRole.toUpperCase()}
                 </span>
               </div>
               <p style={{ fontSize: "0.78rem", color: "#4B5563", lineHeight: 1.4, margin: "4px 0" }}>{n.message}</p>
-              <div style={{ fontSize: "0.68rem", color: "#9CA3AF" }}>{n.createdAt}</div>
+              
+              <div className="flex justify-between items-center mt-2 pt-1 border-t border-gray-200">
+                <span style={{ fontSize: "0.68rem", color: "#9CA3AF" }}>{n.createdAt}</span>
+                {n.actionLink && (
+                  <span style={{ fontSize: "0.7rem", fontWeight: 600, color: "#2563EB" }}>
+                    🔗 {n.actionLink.label || "Liên kết"}
+                  </span>
+                )}
+              </div>
             </div>
           ))}
         </div>

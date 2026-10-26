@@ -288,7 +288,10 @@ export default function ProductsView() {
                     <div key={rev.id} style={{ background: "white", borderRadius: 12, padding: 18, border: "1px solid var(--color-bone)", display: "flex", flexDirection: "column", gap: 10 }}>
                       <div className="flex justify-between items-start">
                         <div>
-                          <div style={{ fontWeight: 700, fontSize: "0.9rem", color: "var(--color-bark)" }}>{rev.customerName}</div>
+                          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                            <span style={{ fontWeight: 700, fontSize: "0.9rem", color: "var(--color-bark)" }}>{rev.customerName}</span>
+                            <span style={{ fontSize: "0.68rem", background: "#ECFDF5", color: "#059669", padding: "1px 6px", borderRadius: 4, fontWeight: 600 }}>✓ Khách thuê thực tế</span>
+                          </div>
                           <div style={{ fontSize: "0.72rem", color: "#9CA3AF" }}>{rev.createdAt} · Đơn #{rev.orderId}</div>
                         </div>
                         <div style={{ color: "#F59E0B", fontSize: "0.85rem" }}>{"★".repeat(rev.rating)}{"☆".repeat(5 - rev.rating)}</div>
@@ -296,10 +299,34 @@ export default function ProductsView() {
                       <p style={{ fontSize: "0.85rem", color: "var(--color-bark)", margin: 0, lineHeight: 1.5 }}>
                         "{rev.comment}"
                       </p>
-                      {rev.response && (
-                        <div style={{ background: "var(--color-parchment)", borderRadius: 10, padding: "10px 14px", fontSize: "0.8rem", color: "var(--color-bark)", border: "1px solid var(--color-bone)" }}>
-                          <span style={{ display: "inline-block", background: "var(--color-forest)", color: "white", padding: "2px 8px", borderRadius: 4, fontSize: "0.7rem", fontWeight: 700, marginRight: 6 }}>GearGo phản hồi</span>
-                          {rev.response}
+
+                      {/* Hiển thị ảnh dã ngoại thực tế (UC9.1.2) */}
+                      {rev.images && rev.images.length > 0 && (
+                        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 2 }}>
+                          {rev.images.map((img, idx) => (
+                            <img
+                              key={idx}
+                              src={img}
+                              alt={`Ảnh thực tế ${idx + 1}`}
+                              style={{ width: 72, height: 72, objectFit: "cover", borderRadius: 8, border: "1px solid #E2E8F0", cursor: "pointer" }}
+                              onClick={() => window.open(img, "_blank")}
+                              title="Click để xem ảnh lớn"
+                            />
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Phản hồi chính thức từ GearGo (UC9.2) */}
+                      {(rev.storeResponse || rev.response) && (
+                        <div style={{ background: "#F0FDF4", borderRadius: 8, padding: "10px 12px", fontSize: "0.8rem", color: "#166534", borderLeft: "3px solid #16A34A" }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.72rem", fontWeight: 700, marginBottom: 4 }}>
+                            <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                              <span style={{ background: "var(--color-forest)", color: "white", padding: "1px 6px", borderRadius: 3, fontSize: "0.68rem" }}>GearGo</span>
+                              {rev.storeResponse?.respondedBy || "Cửa hàng"} phản hồi:
+                            </span>
+                            <span style={{ color: "#64748B", fontWeight: 400 }}>{rev.storeResponse?.respondedAt}</span>
+                          </div>
+                          <div style={{ lineHeight: 1.45 }}>{rev.storeResponse?.response || rev.response}</div>
                         </div>
                       )}
                     </div>

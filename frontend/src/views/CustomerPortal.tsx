@@ -1333,6 +1333,34 @@ function MyOrdersView() {
                   📑 Xem Bảng đối soát cọc & Hoàn tất đơn (UC5.4)
                 </button>
               )}
+
+              {/* Nút tắt viết đánh giá sản phẩm (UC9.1) */}
+              {detail.status === "Hoàn tất" && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    sessionStorage.setItem("geargo_profile_section", "reviews");
+                    setViewingOrder(null);
+                    app.setPage("profile");
+                  }}
+                  style={{
+                    background: "#FEF3C7",
+                    border: "1px solid #FCD34D",
+                    color: "#92400E",
+                    padding: "8px 12px",
+                    borderRadius: 8,
+                    fontSize: "0.78rem",
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    textAlign: "left",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6
+                  }}
+                >
+                  ⭐ Viết đánh giá trải nghiệm sản phẩm (UC9.1) →
+                </button>
+              )}
             </div>
 
             {/* Lịch sử trạng thái */}
@@ -2589,7 +2617,14 @@ function AIAdvisorView() {
 // ─── Hồ sơ cá nhân & Đổi mật khẩu & Đánh giá (ProfileView - UC1.5, UC1.6, UC1.12, UC9.1) ─
 function ProfileView() {
   const app = useApp();
-  const [section, setSection] = useState<"profile" | "security" | "reviews">("profile");
+  const [section, setSection] = useState<"profile" | "security" | "reviews">(() => {
+    const pref = sessionStorage.getItem("geargo_profile_section");
+    if (pref === "reviews" || pref === "security" || pref === "profile") {
+      sessionStorage.removeItem("geargo_profile_section");
+      return pref as "profile" | "security" | "reviews";
+    }
+    return "profile";
+  });
 
   const defaultProfile = {
     name: "Nguyễn Văn An",
@@ -2881,8 +2916,8 @@ function ProfileView() {
                             </div>
                             {existing ? (
                               <div className="text-right">
-                                <span className="text-amber font-bold">
-                                  {"★".repeat(existing.rating)}
+                                <span className="text-amber font-bold text-sm">
+                                  {"★".repeat(existing.rating)}{"☆".repeat(5 - existing.rating)}
                                 </span>
                                 <div className="text-xs text-emerald-600 font-semibold">
                                   ✓ Đã đánh giá
@@ -2897,6 +2932,9 @@ function ProfileView() {
                                     productName: item.productName,
                                   });
                                   setReviewError("");
+                                  setRating(5);
+                                  setComment("");
+                                  setReviewImage("");
                                 }}
                                 className="btn btn-secondary btn-sm"
                               >
@@ -2906,52 +2944,157 @@ function ProfileView() {
                           </div>
 
                           {existing && (
-                            <div className="mt-2 bg-white p-2 rounded text-xs text-gray-600 italic">
-                              "{existing.comment}"
+                            <div className="mt-2.5 flex flex-col gap-2">
+                              <div className="bg-white p-2.5 rounded-lg border border-bone text-xs text-gray-700 italic">
+                                "{existing.comment}"
+                              </div>
+                              {/* Hiển thị ảnh đính kèm thực tế UC9.1.2 */}
+                              {existing.images && existing.images.length > 0 && (
+                                <div className="flex gap-2 items-center flex-wrap">
+                                  <span className="text-xs text-gray-500 font-medium">Ảnh thực tế:</span>
+                                  {existing.images.map((img, idx) => (
+                                    <img
+                                      key={idx}
+                                      src={img}
+                                      alt="Ảnh dã ngoại thực tế"
+                                      style={{ width: 56, height: 56, objectFit: "cover", borderRadius: 6, border: "1px solid #CBD5E1", cursor: "pointer" }}
+                                      onClick={() => window.open(img, "_blank")}
+                                      title="Xem ảnh gốc"
+                                    />
+                                  ))}
+                                </div>
+                              )}
+                              {/* Phản hồi chính thức từ GearGo (UC9.2) */}
+                              {(existing.storeResponse || existing.response) && (
+                                <div style={{ background: "#F0FDF4", borderLeft: "3px solid #16A34A", borderRadius: "0 6px 6px 0", padding: "8px 12px" }}>
+                                  <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "#166534", display: "flex", justifyContent: "space-between" }}>
+                                    <span>💬 Phản hồi từ GearGo ({existing.storeResponse?.respondedBy || "Cửa hàng"})</span>
+                                    <span style={{ fontWeight: 400, color: "#64748B" }}>{existing.storeResponse?.respondedAt}</span>
+                                  </div>
+                                  <div style={{ fontSize: "0.78rem", color: "#14532D", marginTop: 4, lineHeight: 1.45 }}>
+                                    {existing.storeResponse?.response || existing.response}
+                                  </div>
+                                </div>
+                              )}
                             </div>
                           )}
 
                           {isCurrentReviewing && (
-                            <form onSubmit={handleSendReview} className="mt-3 bg-white p-3 rounded-lg border border-bone">
-                              <h4 className="font-bold text-xs mb-2">Đánh giá cho {reviewingTarget.productName}</h4>
-                              <div className="form-group mb-2">
-                                <label className="form-label">Số sao</label>
-                                <select
-                                  value={rating}
-                                  onChange={(e) => setRating(Number(e.target.value))}
-                                  className="form-select max-w-xs"
-                                >
-                                  {[5, 4, 3, 2, 1].map((v) => (
-                                    <option key={v} value={v}>
-                                      {v} sao {"★".repeat(v)}
-                                    </option>
-                                  ))}
-                                </select>
+                            <form onSubmit={handleSendReview} className="mt-3 bg-white p-4 rounded-lg border border-bone shadow-sm">
+                              <div className="flex justify-between items-center mb-3 border-b border-bone pb-2">
+                                <h4 className="font-bold text-sm text-bark">Đánh giá trải nghiệm: {reviewingTarget.productName}</h4>
+                                <span className="badge badge-neutral text-xs">Mã đơn #{reviewingTarget.orderId}</span>
                               </div>
-                              <div className="form-group mb-2">
-                                <label className="form-label">Nhận xét trải nghiệm</label>
+
+                              {/* Bộ chọn sao tương tác */}
+                              <div className="mb-3">
+                                <label className="form-label mb-1">Mức độ hài lòng của bạn</label>
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  {[1, 2, 3, 4, 5].map((s) => (
+                                    <button
+                                      key={s}
+                                      type="button"
+                                      onClick={() => setRating(s)}
+                                      style={{
+                                        background: rating >= s ? "#FEF3C7" : "#F3F4F6",
+                                        border: `1px solid ${rating >= s ? "#F59E0B" : "#E5E7EB"}`,
+                                        color: rating >= s ? "#D97706" : "#9CA3AF",
+                                        borderRadius: 8,
+                                        padding: "6px 10px",
+                                        cursor: "pointer",
+                                        fontSize: "0.8rem",
+                                        fontWeight: 700,
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: 4,
+                                        transition: "all 0.15s ease"
+                                      }}
+                                    >
+                                      <span>★</span> {s} {s === 5 ? "Rất tốt" : s === 4 ? "Tốt" : s === 3 ? "Bình thường" : s === 2 ? "Chưa tốt" : "Tệ"}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+
+                              <div className="form-group mb-3">
+                                <label className="form-label">Nhận xét chi tiết chuyến đi</label>
                                 <textarea
                                   required
                                   value={comment}
                                   onChange={(e) => setComment(e.target.value)}
-                                  rows={2}
-                                  placeholder="Đồ dùng thực tế có tốt không..."
+                                  rows={3}
+                                  placeholder="Chia sẻ trải nghiệm thực tế: độ bền, độ sạch sẽ, khả năng chống mưa nắng của thiết bị..."
                                   className="form-textarea"
                                 />
                               </div>
+
+                              {/* Đính kèm ảnh dã ngoại (UC9.1.2) */}
+                              <div className="mb-3">
+                                <label className="form-label mb-1">Ảnh thực tế từ chuyến dã ngoại (UC9.1.2)</label>
+                                <div className="flex gap-2 mb-2">
+                                  <input
+                                    type="url"
+                                    placeholder="Dán URL ảnh dã ngoại (https://...)"
+                                    value={reviewImage}
+                                    onChange={(e) => setReviewImage(e.target.value)}
+                                    className="form-input flex-1"
+                                    style={{ fontSize: "0.82rem" }}
+                                  />
+                                  {reviewImage && (
+                                    <button
+                                      type="button"
+                                      onClick={() => setReviewImage("")}
+                                      className="btn btn-secondary btn-sm"
+                                    >
+                                      Xóa ảnh
+                                    </button>
+                                  )}
+                                </div>
+
+                                {/* Gợi ý chọn nhanh ảnh mẫu */}
+                                <div className="text-xs text-gray-500 mb-1.5">Gợi ý chọn nhanh ảnh dã ngoại mẫu:</div>
+                                <div className="flex gap-2 flex-wrap">
+                                  {[
+                                    { label: "🏕️ Cắm trại bờ hồ", url: "https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?w=600&auto=format&fit=crop" },
+                                    { label: "🌄 Lều hoàng hôn", url: "https://images.unsplash.com/photo-1510312305653-8ed496efae75?w=600&auto=format&fit=crop" },
+                                    { label: "☕ Bếp dã ngoại", url: "https://images.unsplash.com/photo-1478131143081-80f7f84ca84d?w=600&auto=format&fit=crop" },
+                                  ].map((sample, idx) => (
+                                    <button
+                                      key={idx}
+                                      type="button"
+                                      onClick={() => setReviewImage(sample.url)}
+                                      className="btn btn-ghost btn-sm"
+                                      style={{ fontSize: "0.72rem", border: "1px dashed #CBD5E1", padding: "3px 8px" }}
+                                    >
+                                      {sample.label}
+                                    </button>
+                                  ))}
+                                </div>
+
+                                {reviewImage && (
+                                  <div className="mt-2 p-1 bg-parchment rounded-lg border border-bone inline-block">
+                                    <img
+                                      src={reviewImage}
+                                      alt="Xem trước ảnh đánh giá"
+                                      style={{ width: 80, height: 80, objectFit: "cover", borderRadius: 6 }}
+                                    />
+                                  </div>
+                                )}
+                              </div>
+
                               {reviewError && (
                                 <div className="form-error-msg mb-2">{reviewError}</div>
                               )}
                               <div className="flex gap-2">
                                 <button type="submit" className="btn btn-primary btn-sm">
-                                  Gửi đánh giá
+                                  ✓ Gửi đánh giá ngay
                                 </button>
                                 <button
                                   type="button"
                                   onClick={() => setReviewingTarget(null)}
                                   className="btn btn-secondary btn-sm"
                                 >
-                                  Hủy
+                                  Hủy bỏ
                                 </button>
                               </div>
                             </form>

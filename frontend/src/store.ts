@@ -396,6 +396,12 @@ export interface Review {
   status: "active" | "hidden";
   hiddenReason?: string;
   hiddenBy?: string;
+  storeResponse?: {
+    response: string;
+    respondedAt: string;
+    respondedBy: string;
+  };
+  verifiedRental?: boolean;
 }
 
 export interface CustomerAccount {
@@ -419,6 +425,12 @@ export interface AppNotification {
   message: string;
   type: "info" | "success" | "warning" | "alert";
   targetRole: "all" | "customer" | "staff" | "admin";
+  category?: "order" | "rental" | "finance" | "promo" | "system";
+  actionLink?: {
+    type: "order" | "page" | "reviews";
+    targetId?: string;
+    label?: string;
+  };
   createdAt: string;
   isRead: boolean;
   link?: string;
@@ -1038,9 +1050,19 @@ export const INITIAL_REVIEWS: Review[] = [
     customerId: "KH002",
     customerName: "Nguyễn Văn An",
     rating: 5,
-    comment: "Lều rất chắc chắn, chống mưa tốt trong chuyến đi Ba Vì. Đầy đủ cọc và dây chằng phụ kiện.",
-    createdAt: "2024-11-20 16:30",
+    comment: "Lều rất chắc chắn, chống mưa tốt trong chuyến đi Ba Vì. Đầy đủ cọc và dây chằng phụ kiện, khung nhôm nhẹ dễ dựng.",
+    images: [
+      "https://images.unsplash.com/photo-1510312305653-8ed496efae75?w=500&auto=format&fit=crop",
+      "https://images.unsplash.com/photo-1478131143081-80f7f84ca84d?w=500&auto=format&fit=crop"
+    ],
+    createdAt: "20/11/2024 16:30",
     status: "active",
+    verifiedRental: true,
+    storeResponse: {
+      response: "Cảm ơn quý khách đã tin tưởng dịch vụ của GearGo! Chúc bạn luôn có những chuyến camping tuyệt vời.",
+      respondedAt: "21/11/2024 09:15",
+      respondedBy: "CSKH Mai"
+    }
   },
   {
     id: "REV-002",
@@ -1050,10 +1072,32 @@ export const INITIAL_REVIEWS: Review[] = [
     customerId: "KH002",
     customerName: "Nguyễn Văn An",
     rating: 4,
-    comment: "Đèn sáng tốt, pin dùng cả đêm, cầm vừa tay và móc treo tiện lợi.",
-    createdAt: "2024-11-20 16:35",
+    comment: "Đèn sáng tốt, pin dùng cả đêm, cầm vừa tay và móc treo tiện lợi trên nóc lều.",
+    images: [
+      "https://images.unsplash.com/photo-1508873696983-2df5293cb395?w=500&auto=format&fit=crop"
+    ],
+    createdAt: "20/11/2024 16:35",
     status: "active",
+    verifiedRental: true,
   },
+  {
+    id: "REV-003",
+    orderId: "DT-20241210-042",
+    productId: "P001",
+    productName: "Lều 4 người – Tiêu chuẩn",
+    customerId: "KH003",
+    customerName: "Lê Thị Bích Ngọc",
+    rating: 1,
+    comment: "Sản phẩm bị bẩn bên trong và nhân viên giao hàng trễ 15 phút.",
+    createdAt: "12/12/2024 10:15",
+    status: "active",
+    verifiedRental: true,
+    storeResponse: {
+      response: "GearGo thành thật xin lỗi chị Ngọc về sự cố vệ sinh. Chúng tôi đã tiến hành bảo dưỡng khử khuẩn lại toàn bộ lô lều và gửi tặng chị mã giảm 20% cho chuyến đi tới.",
+      respondedAt: "12/12/2024 11:00",
+      respondedBy: "Quản trị viên"
+    }
+  }
 ];
 
 export const INITIAL_STAFF_ACCOUNTS: StaffAccount[] = [
@@ -1151,6 +1195,12 @@ export const INITIAL_NOTIFICATIONS: AppNotification[] = [
     message: "Đơn hàng DT-20241210-042 của quý khách đã được xác nhận. Vui lòng nhận thiết bị đúng giờ vào 15/12/2024.",
     type: "success",
     targetRole: "customer",
+    category: "order",
+    actionLink: {
+      type: "order",
+      targetId: "DT-20241210-042",
+      label: "Xem đơn hàng"
+    },
     createdAt: "10/12/2024 14:45",
     isRead: false,
   },
@@ -1160,18 +1210,45 @@ export const INITIAL_NOTIFICATIONS: AppNotification[] = [
     message: "Lều L004 đang bảo trì quá 7 ngày chưa hoàn tất nghiệm thu.",
     type: "warning",
     targetRole: "staff",
+    category: "rental",
+    actionLink: {
+      type: "page",
+      targetId: "equipment",
+      label: "Kiểm tra kho"
+    },
     createdAt: "11/12/2024 08:30",
     isRead: false,
   },
   {
     id: "NOTIF-003",
-    title: "Thông báo cập nhật chính sách cọc",
-    message: "Hệ thống GearGo cập nhật chính sách hoàn cọc tự động qua cổng thanh toán.",
+    title: "Thông báo cập nhật chính sách cọc (v1.2)",
+    message: "Hệ thống GearGo cập nhật chính sách hoàn cọc tự động và biểu phí phụ kiện mới.",
     type: "info",
     targetRole: "all",
+    category: "system",
+    actionLink: {
+      type: "page",
+      targetId: "policies",
+      label: "Xem chính sách"
+    },
     createdAt: "01/12/2024 09:00",
     isRead: true,
   },
+  {
+    id: "NOTIF-004",
+    title: "Mời bạn đánh giá chuyến đi cùng GearGo!",
+    message: "Đơn thuê DT-DEMO-001 đã hoàn tất đối soát và hoàn cọc. Chia sẻ cảm nhận và ảnh dã ngoại để nhận voucher 10% nhé!",
+    type: "info",
+    targetRole: "customer",
+    category: "order",
+    actionLink: {
+      type: "reviews",
+      targetId: "DT-DEMO-001",
+      label: "Viết đánh giá ngay"
+    },
+    createdAt: "20/11/2024 17:00",
+    isRead: false,
+  }
 ];
 
 export const INITIAL_POLICIES: RentalPolicyConfig = {

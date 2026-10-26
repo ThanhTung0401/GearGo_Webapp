@@ -104,8 +104,16 @@ export interface AppState {
   saveStaffAccount: (staff: StaffAccount) => ActionResult<StaffAccount>;
   saveCustomer: (customer: CustomerAccount) => ActionResult<CustomerAccount>;
   toggleCustomerLock: (customerId: string, reason?: string) => ActionResult;
-  sendNotification: (notif: { title: string; message: string; type: AppNotification["type"]; targetRole: AppNotification["targetRole"] }) => ActionResult<AppNotification>;
+  sendNotification: (notif: {
+    title: string;
+    message: string;
+    type: AppNotification["type"];
+    targetRole: AppNotification["targetRole"];
+    category?: AppNotification["category"];
+    actionLink?: AppNotification["actionLink"];
+  }) => ActionResult<AppNotification>;
   markNotificationRead: (id: string) => void;
+  replyReview: (reviewId: string, response: string, responderName?: string) => ActionResult;
   updatePolicy: (policy: Partial<RentalPolicyConfig>, changeReason?: string, effectiveDate?: string) => ActionResult;
   pausePromotion: (promoId: string, reason: string) => ActionResult;
   resumePromotion: (promoId: string) => ActionResult;
@@ -265,6 +273,7 @@ export default function App() {
     persistedState?.currentUser ?? { id: "KH001", name: "Nguyễn Văn An", email: "an.nguyen@gmail.com", phone: "0901 234 567", role: "customer" }
   );
   const [notifDropdownOpen, setNotifDropdownOpen] = useState(false);
+  const [notifFilter, setNotifFilter] = useState<"all" | "unread" | "order" | "system">("all");
   const [pickupDate, setPickupDate] = useState(persistedState?.pickupDate ?? "");
   const [returnDate, setReturnDate] = useState(persistedState?.returnDate ?? "");
   const [pickupHour, setPickupHour] = useState(persistedState?.pickupHour ?? "09:00");
@@ -972,6 +981,37 @@ export default function App() {
     const remaining = reviews.filter((r) => r.productId === rev.productId && r.id !== reviewId && r.status === "active");
     const avg = remaining.length ? Number((remaining.reduce((sum, r) => sum + r.rating, 0) / remaining.length).toFixed(1)) : 5.0;
     setProducts((prev) => prev.map((p) => p.id === rev.productId ? { ...p, rating: avg, reviews: remaining.length } : p));
+
+    return { ok: true, data: undefined };
+  };
+
+  const replyReview = (reviewId: string, response: string, responderName = "Quản trị viên"): ActionResult => {
+    const rev = reviews.find((r) => r.id === reviewId);
+    if (!rev) return { ok: false, message: "Không tìm thấy đánh giá tương ứng." };
+    if (!response.trim()) return { ok: false, message: "Vui lòng nhập nội dung phản hồi của cửa hàng." };
+
+    const now = new Date().toLocaleString("vi-VN");
+    setReviews((prev) => prev.map((r) =>
+      r.id === reviewId
+        ? {
+            ...r,
+            storeResponse: {
+              response: response.trim(),
+              respondedAt: now,
+              respondedBy: responderName,
+            },
+          }
+        : r
+    ));
+
+    addAuditLog({
+      actor: responderName,
+      role: "Quản trị viên",
+      action: "Phản hồi đánh giá (UC9.2)",
+      targetEntity: "Review",
+      targetId: reviewId,
+      detail: `Phản hồi cho khách hàng ${rev.customerName} tại sản phẩm ${rev.productName || rev.productId}`,
+    });
 
     return { ok: true, data: undefined };
   };
@@ -1983,7 +2023,14 @@ export default function App() {
     return { ok: true, data: undefined };
   };
 
-  const sendNotification = (notif: { title: string; message: string; type: AppNotification["type"]; targetRole: AppNotification["targetRole"] }): ActionResult<AppNotification> => {
+  const sendNotification = (notif: {
+    title: string;
+    message: string;
+    type: AppNotification["type"];
+    targetRole: AppNotification["targetRole"];
+    category?: AppNotification["category"];
+    actionLink?: AppNotification["actionLink"];
+  }): ActionResult<AppNotification> => {
     if (!notif.title.trim()) return { ok: false, message: "Tiêu đề không được để trống" };
     if (!notif.message.trim()) return { ok: false, message: "Nội dung không được để trống" };
     const newNotif: AppNotification = {
@@ -1992,11 +2039,13 @@ export default function App() {
       message: notif.message,
       type: notif.type,
       targetRole: notif.targetRole,
+      category: notif.category || "system",
+      actionLink: notif.actionLink,
       createdAt: new Date().toLocaleString("vi-VN"),
       isRead: false,
     };
     setNotifications((prev) => [newNotif, ...prev]);
-    addAuditLog({ actor: "Admin", role: "Quản trị viên", action: "Gửi thông báo hệ thống", targetEntity: "AppNotification", targetId: newNotif.id, detail: `Tiêu đề: ${newNotif.title} - Đối tượng: ${newNotif.targetRole}` });
+    addAuditLog({ actor: "Admin", role: "Quản trị viên", action: "Gửi thông báo hệ thống (UC9.4)", targetEntity: "AppNotification", targetId: newNotif.id, detail: `Tiêu đề: ${newNotif.title} - Đối tượng: ${newNotif.targetRole}` });
     return { ok: true, data: newNotif };
   };
 
@@ -2364,6 +2413,7 @@ export default function App() {
     toggleCustomerLock,
     sendNotification,
     markNotificationRead,
+    replyReview,
     updatePolicy,
     policyVersions,
     pausePromotion,
@@ -2517,23 +2567,24 @@ export default function App() {
                 )}
               </button>
 
-              {/* Notification Popover Drawer (UC9.3) */}
+              {/* Notification Popover Drawer (UC9.3 & UC9.3.1) */}
               {notifDropdownOpen && (
                 <div style={{
                   position: "absolute",
                   right: 0,
                   top: 46,
-                  width: 360,
-                  maxHeight: 460,
+                  width: 390,
+                  maxHeight: 520,
                   background: "white",
                   borderRadius: 14,
-                  boxShadow: "0 16px 40px rgba(0,0,0,0.25)",
+                  boxShadow: "0 20px 45px rgba(0,0,0,0.25)",
                   border: "1px solid var(--color-bone)",
                   zIndex: 200,
                   display: "flex",
                   flexDirection: "column",
                   overflow: "hidden"
                 }}>
+                  {/* Header Drawer */}
                   <div style={{
                     padding: "14px 16px",
                     background: "var(--color-forest)",
@@ -2543,61 +2594,161 @@ export default function App() {
                     alignItems: "center"
                   }}>
                     <div>
-                      <div style={{ fontWeight: 700, fontSize: "0.92rem" }}>Trung tâm thông báo</div>
-                      <div style={{ fontSize: "0.72rem", color: "#C7D5CC" }}>Cập nhật đơn hàng & thông báo hệ thống</div>
+                      <div style={{ fontWeight: 800, fontSize: "0.95rem" }}>🔔 Trung tâm thông báo (UC9.3)</div>
+                      <div style={{ fontSize: "0.72rem", color: "#C7D5CC" }}>Thông báo nghiệp vụ & điều hướng đích (UC9.3.1)</div>
                     </div>
                     <button
                       onClick={() => setNotifDropdownOpen(false)}
-                      style={{ background: "transparent", border: 0, color: "white", fontSize: "1.1rem", cursor: "pointer" }}
+                      style={{ background: "transparent", border: 0, color: "white", fontSize: "1.2rem", cursor: "pointer", padding: "2px 6px" }}
                     >✕</button>
                   </div>
 
-                  <div style={{ padding: "8px 12px", background: "var(--color-parchment)", display: "flex", justifyContent: "space-between", fontSize: "0.75rem", borderBottom: "1px solid var(--color-bone)" }}>
-                    <span style={{ color: "#6B7280" }}>{notifications.filter((n) => n.targetRole === "all" || n.targetRole === role).length} thông báo</span>
+                  {/* Thanh filter tabs */}
+                  <div style={{ display: "flex", background: "var(--color-cream)", borderBottom: "1px solid var(--color-bone)", padding: "4px 8px", gap: 4 }}>
+                    {[
+                      { key: "all" as const, label: "Tất cả" },
+                      { key: "unread" as const, label: "Chưa đọc" },
+                      { key: "order" as const, label: "Đơn thuê" },
+                      { key: "system" as const, label: "Hệ thống" },
+                    ].map((tab) => (
+                      <button
+                        key={tab.key}
+                        onClick={() => setNotifFilter(tab.key)}
+                        style={{
+                          flex: 1,
+                          padding: "6px 8px",
+                          border: "none",
+                          borderRadius: 6,
+                          fontSize: "0.72rem",
+                          fontWeight: notifFilter === tab.key ? 700 : 500,
+                          background: notifFilter === tab.key ? "white" : "transparent",
+                          color: notifFilter === tab.key ? "var(--color-forest)" : "#6B7280",
+                          boxShadow: notifFilter === tab.key ? "0 1px 3px rgba(0,0,0,0.08)" : "none",
+                          cursor: "pointer",
+                          transition: "all 0.15s ease"
+                        }}
+                      >
+                        {tab.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Sub-bar Đánh dấu đã đọc */}
+                  <div style={{ padding: "8px 12px", background: "var(--color-parchment)", display: "flex", justifyContent: "space-between", fontSize: "0.74rem", borderBottom: "1px solid var(--color-bone)" }}>
+                    <span style={{ color: "#6B7280" }}>
+                      {notifications.filter((n) => n.targetRole === "all" || n.targetRole === role).length} thông báo trong hộp thư
+                    </span>
                     <button
                       onClick={() => setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })))}
-                      style={{ background: "none", border: "none", color: "var(--color-forest)", fontWeight: 700, cursor: "pointer", fontSize: "0.75rem" }}
+                      style={{ background: "none", border: "none", color: "var(--color-forest)", fontWeight: 700, cursor: "pointer", fontSize: "0.74rem" }}
                     >
-                      Đánh dấu đã đọc tất cả
+                      ✓ Đánh dấu tất cả đã đọc
                     </button>
                   </div>
 
-                  <div style={{ overflowY: "auto", maxHeight: 340, padding: "8px" }}>
-                    {notifications.filter((n) => n.targetRole === "all" || n.targetRole === role).length === 0 ? (
-                      <div style={{ padding: 24, textAlign: "center", color: "#9CA3AF", fontSize: "0.82rem" }}>
-                        Không có thông báo mới nào.
-                      </div>
-                    ) : (
-                      notifications.filter((n) => n.targetRole === "all" || n.targetRole === role).map((n) => (
+                  {/* Danh sách thông báo */}
+                  <div style={{ overflowY: "auto", maxHeight: 360, padding: "8px" }}>
+                    {(() => {
+                      const userNotifs = notifications.filter((n) => n.targetRole === "all" || n.targetRole === role);
+                      const filteredNotifs = userNotifs.filter((n) => {
+                        if (notifFilter === "unread") return !n.isRead;
+                        if (notifFilter === "order") return n.category === "order" || n.category === "rental" || n.category === "finance";
+                        if (notifFilter === "system") return n.category === "system" || n.category === "promo" || !n.category;
+                        return true;
+                      });
+
+                      const handleNotifAction = (n: AppNotification) => {
+                        markNotificationRead(n.id);
+                        setNotifDropdownOpen(false);
+                        if (!n.actionLink) return;
+                        if (n.actionLink.type === "order") {
+                          if (role === "customer") setPage("my-orders");
+                          else if (role === "staff") setPage("staff");
+                          else if (role === "admin") setPage("admin");
+                        } else if (n.actionLink.type === "reviews") {
+                          sessionStorage.setItem("geargo_profile_section", "reviews");
+                          setPage("profile");
+                        } else if (n.actionLink.type === "page") {
+                          if (role === "admin") setPage("admin");
+                          else setPage((n.actionLink.targetId as any) || "products");
+                        }
+                      };
+
+                      if (filteredNotifs.length === 0) {
+                        return (
+                          <div style={{ padding: 28, textAlign: "center", color: "#9CA3AF", fontSize: "0.82rem" }}>
+                            Không có thông báo nào trong mục này.
+                          </div>
+                        );
+                      }
+
+                      return filteredNotifs.map((n) => (
                         <div
                           key={n.id}
                           style={{
                             padding: "10px 12px",
                             borderRadius: 10,
-                            marginBottom: 6,
+                            marginBottom: 8,
                             background: n.isRead ? "#F9FAFB" : "#EFF6FF",
                             border: n.isRead ? "1px solid #E5E7EB" : "1px solid #BFDBFE",
                             display: "flex",
                             flexDirection: "column",
-                            gap: 4
+                            gap: 6
                           }}
                         >
-                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                            <strong style={{ fontSize: "0.82rem", color: "var(--color-bark)" }}>{n.title}</strong>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span style={{
+                                fontSize: "0.68rem",
+                                fontWeight: 700,
+                                padding: "2px 6px",
+                                borderRadius: 4,
+                                background: n.type === "alert" ? "#FEE2E2" : n.type === "warning" ? "#FEF3C7" : n.type === "success" ? "#DCFCE7" : "#DBEAFE",
+                                color: n.type === "alert" ? "#DC2626" : n.type === "warning" ? "#B45309" : n.type === "success" ? "#15803D" : "#1D4ED8"
+                              }}>
+                                {n.category === "order" ? "📦 Đơn thuê" : n.category === "rental" ? "🏕️ Kho vận" : n.category === "promo" ? "🏷️ Ưu đãi" : "⚙️ Hệ thống"}
+                              </span>
+                              <strong style={{ fontSize: "0.82rem", color: "var(--color-bark)" }}>{n.title}</strong>
+                            </div>
                             {!n.isRead && (
                               <button
                                 onClick={() => markNotificationRead(n.id)}
-                                style={{ background: "none", border: "none", color: "#2563EB", fontSize: "0.7rem", cursor: "pointer", fontWeight: 600 }}
+                                style={{ background: "none", border: "none", color: "#2563EB", fontSize: "0.7rem", cursor: "pointer", fontWeight: 700, whiteSpace: "nowrap" }}
                               >
                                 Đã đọc
                               </button>
                             )}
                           </div>
-                          <p style={{ fontSize: "0.78rem", color: "#4B5563", lineHeight: 1.4, margin: 0 }}>{n.message}</p>
-                          <span style={{ fontSize: "0.68rem", color: "#9CA3AF", marginTop: 2 }}>{n.createdAt}</span>
+
+                          <p style={{ fontSize: "0.78rem", color: "#4B5563", lineHeight: 1.45, margin: 0 }}>{n.message}</p>
+
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 2 }}>
+                            <span style={{ fontSize: "0.68rem", color: "#9CA3AF" }}>{n.createdAt}</span>
+                            {n.actionLink && (
+                              <button
+                                onClick={() => handleNotifAction(n)}
+                                style={{
+                                  background: "var(--color-forest)",
+                                  color: "white",
+                                  border: "none",
+                                  borderRadius: 6,
+                                  padding: "3px 8px",
+                                  fontSize: "0.7rem",
+                                  fontWeight: 700,
+                                  cursor: "pointer",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: 4
+                                }}
+                              >
+                                <span>{n.actionLink.label || "Xem chi tiết"}</span>
+                                <span>→</span>
+                              </button>
+                            )}
+                          </div>
                         </div>
-                      ))
-                    )}
+                      ));
+                    })()}
                   </div>
                 </div>
               )}
