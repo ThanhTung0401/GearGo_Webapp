@@ -211,6 +211,9 @@ builder.Services.AddHostedService<ThongBaoJob>();
 builder.Services.AddScoped<IKhoService, KhoService>();
 builder.Services.AddScoped<IDieuChinhKhoService, DieuChinhKhoService>();
 
+// ── W6-T6 (Minh Tú): Báo cáo nhập hàng, kho và bảo trì ──
+builder.Services.AddScoped<IBaoCaoKhoService, BaoCaoKhoService>();
+
 // ── W5-T7 (Kim Xuyến): Tư vấn bộ đồ bằng AI và gợi ý dự phòng ──
 builder.Services.AddHttpClient();
 builder.Services.AddHttpContextAccessor();

@@ -170,5 +170,10 @@ public static class DomainConstants
         public const string LastActiveAdmin = "ADMIN_HOAT_DONG_CUOI_CUNG";
         public const string InvalidRole = "VAI_TRO_KHONG_HOP_LE";
         public const string PermissionChanged = "QUYEN_DA_THAY_DOI";
+
+        // W6-T6: báo cáo nhập hàng, kho và bảo trì (đều 400)
+        public const string UnsupportedWarehouseReportMoment = "MOC_BAO_CAO_KHO_KHONG_HO_TRO";
+        public const string UnsupportedExportType = "LOAI_XUAT_KHONG_HO_TRO";
+        public const string ExportRangeTooLarge = "KHOANG_XUAT_QUA_LON";
     }
 }
