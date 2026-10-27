@@ -1,0 +1,65 @@
+import type { RentalPolicyConfig, PolicyVersion } from "../types";
+
+export const INITIAL_POLICIES: RentalPolicyConfig = {
+  version: "v1.2",
+  effectiveDate: "01/12/2024",
+  changeReason: "Ban hành biểu phí đền bù phụ kiện và cập nhật ngưỡng duyệt phụ phí 1.000.000 đ",
+  holdMinutes: 15,
+  standardPickupTime: "08:00",
+  standardReturnTime: "20:00",
+  cancellationFreeHours: 48,
+  cancellationTier1Hours: 24,
+  cancellationTier1FeePercent: 30,
+  cancellationTier2FeePercent: 100,
+  overdueMultiplier: 1.5,
+  minDepositPercentage: 100,
+  damageCompensationPercent: 50,
+  accessoryLossFeeSchedule: [
+    { accessoryName: "Pin dự phòng chính hãng", defaultFee: 450000 },
+    { accessoryName: "Củ sạc nhanh & Cáp USB-C", defaultFee: 300000 },
+    { accessoryName: "Nắp ống kính (Lens Cap)", defaultFee: 150000 },
+    { accessoryName: "Thẻ nhớ tốc độ cao 128GB", defaultFee: 600000 },
+    { accessoryName: "Dây đeo cổ thao tác nhanh", defaultFee: 250000 },
+    { accessoryName: "Túi chống sốc cao cấp", defaultFee: 500000 },
+  ],
+  adminApprovalFeeThreshold: 1000000,
+  reminderPickupHoursBefore: 4,
+  reminderReturnHoursBefore: 2,
+  updatedAt: "01/12/2024 10:00",
+  updatedBy: "Nguyễn Văn Trưởng (Admin)",
+};
+
+export const INITIAL_POLICY_VERSIONS: PolicyVersion[] = [
+  {
+    version: "v1.0",
+    effectiveDate: "01/10/2024",
+    updatedAt: "01/10/2024 08:00",
+    updatedBy: "Hệ thống GearGo",
+    changeReason: "Khởi tạo chính sách thuê mượn và tỷ lệ cọc ban đầu",
+    configSnapshot: {
+      ...INITIAL_POLICIES,
+      version: "v1.0",
+      effectiveDate: "01/10/2024",
+      cancellationTier1FeePercent: 20,
+      adminApprovalFeeThreshold: 500000,
+      updatedAt: "01/10/2024 08:00",
+      updatedBy: "Hệ thống GearGo",
+    },
+  },
+  {
+    version: "v1.1",
+    effectiveDate: "15/11/2024",
+    updatedAt: "15/11/2024 14:30",
+    updatedBy: "Nguyễn Văn Trưởng (Admin)",
+    changeReason: "Nâng tỷ lệ phạt hủy 24-48h lên 30% để hạn chế giữ chỗ ảo mùa cao điểm",
+    configSnapshot: {
+      ...INITIAL_POLICIES,
+      version: "v1.1",
+      effectiveDate: "15/11/2024",
+      cancellationTier1FeePercent: 30,
+      adminApprovalFeeThreshold: 800000,
+      updatedAt: "15/11/2024 14:30",
+      updatedBy: "Nguyễn Văn Trưởng (Admin)",
+    },
+  },
+];

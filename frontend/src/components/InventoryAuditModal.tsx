@@ -427,7 +427,8 @@ export default function InventoryAuditModal({ app, onClose, onAuditSubmitted }: 
             justifyContent: "space-between",
             alignItems: "center",
             background: "var(--color-cream, #FAFAF9)",
-            flexWrap: "gap",
+            flexWrap: "wrap",
+            gap: 12,
           }}
         >
           <div className="flex items-center gap-2">

@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { useApp } from "../App";
+import { useApp } from "../context/AppContext";
 import {
   fmt, statusColors, type Category, type Product, type Supplier, type Promotion, type ImportReceipt,
   type StaffAccount, type StockAdjustmentReceipt, type StockAdjustmentLine, type EquipmentStatus, type Order,
-  type Equipment
+  type Equipment, type Surcharge
 } from "../store";
 import Icon, { type IconName } from "../components/Icon";
+import DashboardLayout from "../layouts/DashboardLayout";
 import { CustomersTab, ReviewsTab, PoliciesTab, NotificationsTab, AdjustmentsTab, AuditLogTab } from "./AdminExtendedTabs";
 import ReconciliationSheet from "./ReconciliationSheet";
 import EquipmentLifecycleModal from "../components/EquipmentLifecycleModal";
@@ -305,7 +306,6 @@ function EquipmentForm({ app, equipment, onClose }: { app: ReturnType<typeof use
 export default function AdminView() {
   const app = useApp();
   const [tab, setTab] = useState<AdminTab>("dashboard");
-  const [menuOpen, setMenuOpen] = useState(false);
 
   const tabs: { key: AdminTab; label: string; icon: IconName }[] = [
     { key: "dashboard", label: "Tổng quan", icon: "grid" },
@@ -326,46 +326,34 @@ export default function AdminView() {
     { key: "audit-log", label: "Audit Log", icon: "clipboard" },
   ];
 
-  return (
-    <div className="internal-shell">
-      <button className={`drawer-backdrop ${menuOpen ? "is-open" : ""}`} aria-label="Đóng menu quản trị" onClick={() => setMenuOpen(false)} />
-      <aside className={`internal-nav ${menuOpen ? "is-open" : ""}`} aria-label="Điều hướng quản trị">
-        {tabs.map((t) => (
-          <button key={t.key} onClick={() => { setTab(t.key); setMenuOpen(false); }}
-            style={{ minHeight: 44, padding: "11px 12px", border: "none", borderRadius: "9px", background: tab === t.key ? "var(--color-forest)" : "transparent", color: tab === t.key ? "white" : "var(--color-bark)", fontWeight: tab === t.key ? 700 : 500, cursor: "pointer", fontSize: "0.84rem", textAlign: "left", whiteSpace: "nowrap" }}
-          ><span className="icon-label"><Icon name={t.icon} size={18} /> {t.label}</span></button>
-        ))}
-      </aside>
+  const currentTab = tabs.find((item) => item.key === tab);
 
-      <div className="internal-content">
-        <div className="internal-topbar">
-          <div>
-            <div style={{ fontSize: "0.72rem", color: "#6B7280", marginBottom: 2 }}>Không gian quản trị</div>
-            <div style={{ fontFamily: "var(--font-display)", fontWeight: 700, color: "var(--color-bark)" }}>{tabs.find((item) => item.key === tab)?.label}</div>
-          </div>
-          <div className="flex items-center gap-2">
-            <button onClick={() => setTab("notifications")} aria-label="Thông báo" style={{ width: 42, height: 42, display: "grid", placeItems: "center", border: "1px solid var(--color-bone)", borderRadius: 9, background: "white", color: "var(--color-bark)", cursor: "pointer" }}><Icon name="bell" size={18} /></button>
-            <button className="internal-menu-toggle" onClick={() => setMenuOpen(true)} aria-label="Mở menu quản trị" style={{ width: 42, height: 42, placeItems: "center", border: "1px solid var(--color-bone)", borderRadius: 9, background: "white" }}><Icon name="menu" /></button>
-          </div>
-        </div>
-        {tab === "dashboard" && <DashboardTab app={app} />}
-        {tab === "categories" && <CategoriesTab app={app} />}
-        {tab === "products" && <ProductsTab app={app} />}
-        {tab === "equipment" && <EquipmentTab app={app} />}
-        {tab === "inventory" && <InventoryTab app={app} />}
-        {tab === "stock-adjust" && <StockAdjustTab app={app} />}
-        {tab === "staff" && <StaffAccountsTab app={app} />}
-        {tab === "customers" && <CustomersTab app={app} />}
-        {tab === "reviews" && <ReviewsTab app={app} />}
-        {tab === "suppliers" && <SuppliersTab app={app} />}
-        {tab === "promotions" && <PromotionsTab app={app} />}
-        {tab === "policies" && <PoliciesTab app={app} />}
-        {tab === "notifications" && <NotificationsTab app={app} />}
-        {tab === "adjustments" && <AdjustmentsTab app={app} />}
-        {tab === "reports" && <ReportsTab app={app} />}
-        {tab === "audit-log" && <AuditLogTab app={app} />}
-      </div>
-    </div>
+  return (
+    <DashboardLayout
+      title={currentTab?.label || "Tổng quan"}
+      subtitle="Không gian quản trị GearGo"
+      navItems={tabs}
+      activeKey={tab}
+      onSelectNav={(key) => setTab(key as AdminTab)}
+      brandSubtitle="Cổng quản trị viên"
+    >
+      {tab === "dashboard" && <DashboardTab app={app} />}
+      {tab === "categories" && <CategoriesTab app={app} />}
+      {tab === "products" && <ProductsTab app={app} />}
+      {tab === "equipment" && <EquipmentTab app={app} />}
+      {tab === "inventory" && <InventoryTab app={app} />}
+      {tab === "stock-adjust" && <StockAdjustTab app={app} />}
+      {tab === "staff" && <StaffAccountsTab app={app} />}
+      {tab === "customers" && <CustomersTab app={app} />}
+      {tab === "reviews" && <ReviewsTab app={app} />}
+      {tab === "suppliers" && <SuppliersTab app={app} />}
+      {tab === "promotions" && <PromotionsTab app={app} />}
+      {tab === "policies" && <PoliciesTab app={app} />}
+      {tab === "notifications" && <NotificationsTab app={app} />}
+      {tab === "adjustments" && <AdjustmentsTab app={app} />}
+      {tab === "reports" && <ReportsTab app={app} />}
+      {tab === "audit-log" && <AuditLogTab app={app} />}
+    </DashboardLayout>
   );
 }
 
@@ -1557,7 +1545,7 @@ function InventoryTab({ app }: { app: ReturnType<typeof useApp> }) {
                                 </button>
                                 <button
                                   onClick={() => {
-                                    const res = app.rejectImportAdjustment(selected.id, adj.id, "Không đủ căn cứ chứng từ", "Quản trị viên");
+                                    const res = app.rejectImportAdjustment(selected.id, adj.id, "Không đủ căn cứ chứng từ");
                                     setMessage(res.ok ? { type: "success", text: "Đã từ chối đề nghị điều chỉnh." } : { type: "error", text: res.message });
                                   }}
                                   style={{ background: "white", color: "#DC2626", border: "1px solid #FECACA", borderRadius: "5px", padding: "5px 12px", fontSize: "0.72rem", fontWeight: 700, cursor: "pointer" }}

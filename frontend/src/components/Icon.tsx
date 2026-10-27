@@ -2,9 +2,10 @@ import type { ReactNode, SVGProps } from "react";
 
 export type IconName =
   | "tent" | "home" | "calendar" | "cart" | "package" | "check"
-  | "search" | "user" | "menu" | "close" | "sparkles" | "clipboard"
+  | "search" | "user" | "users" | "menu" | "close" | "sparkles" | "clipboard"
   | "arrow-up" | "arrow-down" | "tool" | "grid" | "tag" | "chart"
-  | "truck" | "bell" | "settings" | "refresh" | "shield" | "wallet";
+  | "truck" | "bell" | "settings" | "refresh" | "shield" | "wallet"
+  | "alert-circle" | "clock";
 
 const paths: Record<IconName, ReactNode> = {
   tent: <><path d="M3 20 12 4l9 16"/><path d="M7 20h10l-5-9-5 9Z"/></>,
@@ -15,6 +16,7 @@ const paths: Record<IconName, ReactNode> = {
   check: <path d="m5 12 4 4L19 6"/>,
   search: <><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></>,
   user: <><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></>,
+  users: <><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></>,
   menu: <path d="M4 7h16M4 12h16M4 17h16"/>,
   close: <path d="m6 6 12 12M18 6 6 18"/>,
   sparkles: <><path d="m12 3 1.2 3.8L17 8l-3.8 1.2L12 13l-1.2-3.8L7 8l3.8-1.2L12 3Z"/><path d="m5 14 .8 2.2L8 17l-2.2.8L5 20l-.8-2.2L2 17l2.2-.8L5 14ZM19 12l.7 1.8 1.8.7-1.8.7L19 16l-.7-1.8-1.8-.7 1.8-.7L19 12Z"/></>,
@@ -31,6 +33,8 @@ const paths: Record<IconName, ReactNode> = {
   refresh: <><path d="M20 7h-6V1"/><path d="M20 7a9 9 0 1 0 1 8"/></>,
   shield: <><path d="M12 3 20 6v6c0 5-3.5 8-8 10-4.5-2-8-5-8-10V6l8-3Z"/><path d="m8 12 3 3 5-6"/></>,
   wallet: <><path d="M3 6h16v14H3z"/><path d="M3 8V5h13M15 11h6v5h-6z"/></>,
+  "alert-circle": <><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></>,
+  clock: <><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></>,
 };
 
 export default function Icon({ name, size = 20, ...props }: { name: IconName; size?: number } & SVGProps<SVGSVGElement>) {
