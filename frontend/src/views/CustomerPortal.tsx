@@ -1340,7 +1340,7 @@ function MyOrdersView() {
                   type="button"
                   onClick={() => {
                     sessionStorage.setItem("geargo_profile_section", "reviews");
-                    setViewingOrder(null);
+                    setSelected(null);
                     app.setPage("profile");
                   }}
                   style={{

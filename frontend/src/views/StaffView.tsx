@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useApp } from "../App";
+import { useApp } from "../context/AppContext";
 import {
   fmt,
   statusColors,
@@ -15,6 +15,7 @@ import {
   Supplier,
 } from "../store";
 import Icon, { type IconName } from "../components/Icon";
+import DashboardLayout from "../layouts/DashboardLayout";
 import ReconciliationSheet from "./ReconciliationSheet";
 import EquipmentLifecycleModal from "../components/EquipmentLifecycleModal";
 import InventoryAuditModal from "../components/InventoryAuditModal";
@@ -27,7 +28,6 @@ export default function StaffView() {
   const app = useApp();
   const [tab, setTab] = useState<StaffTab>("overview");
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
-  const [menuOpen, setMenuOpen] = useState(false);
 
   const tabs: { key: StaffTab; label: string; icon: IconName }[] = [
     { key: "overview", label: "Tổng quan", icon: "grid" },
@@ -45,52 +45,24 @@ export default function StaffView() {
     setTab(goTab);
   };
 
+  const currentTab = tabs.find((item) => item.key === tab);
+
   return (
-    <div className="internal-shell">
-      <button className={`drawer-backdrop ${menuOpen ? "is-open" : ""}`} aria-label="Đóng menu nhân viên" onClick={() => setMenuOpen(false)} />
-      {/* Tab bar */}
-      <aside className={`internal-nav ${menuOpen ? "is-open" : ""}`} aria-label="Điều hướng nhân viên">
-        {tabs.map((t) => (
-          <button key={t.key} onClick={() => { setTab(t.key); setMenuOpen(false); }}
-            style={{
-              minHeight: 44, padding: "11px 12px", border: "none", borderRadius: "9px",
-              background: tab === t.key ? "var(--color-forest)" : "transparent",
-              color: tab === t.key ? "white" : "var(--color-bark)",
-              fontWeight: tab === t.key ? 700 : 500, cursor: "pointer", fontSize: "0.85rem",
-              textAlign: "left", whiteSpace: "nowrap"
-            }}
-          >
-            <span className="icon-label"><Icon name={t.icon} size={18} /> {t.label}</span>
-          </button>
-        ))}
-      </aside>
-
-      <div className="internal-content">
-        <div className="internal-topbar">
-          <div>
-            <div style={{ fontSize: "0.72rem", color: "#6B7280", marginBottom: 2 }}>Cổng Vận Hành Kho & Khách Hàng</div>
-            <div style={{ fontFamily: "var(--font-display)", fontWeight: 700, color: "var(--color-bark)" }}>
-              {tabs.find((item) => item.key === tab)?.label}
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <span style={{ fontSize: "0.75rem", background: "var(--color-parchment)", padding: "5px 12px", borderRadius: 8, border: "1px solid var(--color-bone)", color: "var(--color-bark)", fontWeight: 600 }}>
-              👤 NV Kho Mai
-            </span>
-            <button className="internal-menu-toggle" onClick={() => setMenuOpen(true)} aria-label="Mở menu nhân viên" style={{ width: 42, height: 42, placeItems: "center", border: "1px solid var(--color-bone)", borderRadius: 9, background: "white" }}>
-              <Icon name="menu" />
-            </button>
-          </div>
-        </div>
-
-        {tab === "overview" && <OverviewTab app={app} openOrder={openOrder} />}
-        {tab === "orders" && <OrdersTab app={app} selectedOrderId={selectedOrderId} setSelectedOrderId={setSelectedOrderId} openOrder={openOrder} />}
-        {tab === "handover" && <HandoverTab app={app} selectedOrder={selectedOrder} setSelectedOrderId={setSelectedOrderId} />}
-        {tab === "return" && <ReturnTab app={app} selectedOrder={selectedOrder} setSelectedOrderId={setSelectedOrderId} />}
-        {tab === "equipment" && <EquipmentTab app={app} />}
-        {tab === "reports" && <StaffReportsTab app={app} openOrder={openOrder} />}
-      </div>
-    </div>
+    <DashboardLayout
+      title={currentTab?.label || "Tổng quan ca"}
+      subtitle="Cổng vận hành kho & khách hàng"
+      navItems={tabs}
+      activeKey={tab}
+      onSelectNav={(key) => setTab(key as StaffTab)}
+      brandSubtitle="Cổng nhân viên vận hành"
+    >
+      {tab === "overview" && <OverviewTab app={app} openOrder={openOrder} />}
+      {tab === "orders" && <OrdersTab app={app} selectedOrderId={selectedOrderId} setSelectedOrderId={setSelectedOrderId} openOrder={openOrder} />}
+      {tab === "handover" && <HandoverTab app={app} selectedOrder={selectedOrder} setSelectedOrderId={setSelectedOrderId} />}
+      {tab === "return" && <ReturnTab app={app} selectedOrder={selectedOrder} setSelectedOrderId={setSelectedOrderId} />}
+      {tab === "equipment" && <EquipmentTab app={app} />}
+      {tab === "reports" && <StaffReportsTab app={app} openOrder={openOrder} />}
+    </DashboardLayout>
   );
 }
 
@@ -1289,7 +1261,7 @@ function ReturnTab({ app, selectedOrder, setSelectedOrderId }: { app: ReturnType
     });
 
     if (res.ok) {
-      setViewingReceipt(res.data);
+      setViewingReceipt(res.data ?? null);
       setSelectedItemsToReturn({});
       setItemNotes({});
       setReturnStaffNote("");

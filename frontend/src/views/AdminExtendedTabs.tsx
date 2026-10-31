@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useApp } from "../App";
-import { fmt, statusColors, type CustomerAccount, type Review, type RentalPolicyConfig, type FinancialAdjustment, type AuditLogEntry, type AppNotification } from "../store";
+import { fmt, statusColors, type CustomerAccount, type Review, type RentalPolicyConfig, type PolicyVersion, type FinancialAdjustment, type AuditLogEntry, type AppNotification } from "../store";
 import Icon, { type IconName } from "../components/Icon";
 
 // ─── 1. Quản lý Khách Hàng (UC1.13) ──────────────────────────────────────────
@@ -545,7 +545,7 @@ export function ReviewsTab({ app }: { app: ReturnType<typeof useApp> }) {
                     {orderBasisDetail.items.map((it, idx) => (
                       <div key={idx} style={{ padding: "8px 12px", borderBottom: idx < orderBasisDetail.items.length - 1 ? "1px solid #E2E8F0" : "none", display: "flex", justifyContent: "space-between", fontSize: "0.78rem" }}>
                         <span>{it.productName} (x{it.qty})</span>
-                        <span style={{ color: "#64748B" }}>{it.days} ngày · {fmt(it.price * it.qty * it.days)}</span>
+                        <span style={{ color: "#64748B" }}>{it.days} ngày · {fmt((it.price ?? it.pricePerDay) * it.qty * it.days)}</span>
                       </div>
                     ))}
                   </div>
