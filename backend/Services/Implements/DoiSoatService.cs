@@ -864,4 +864,92 @@ public class DoiSoatService : IDoiSoatService
             GiaoDichHoan = giaoDichHoan
         };
     }
+
+    /// <summary>
+    /// Projection nghĩa vụ cọc dùng chung cho báo cáo tài chính (W6-T5 - Kim Xuyến)
+    /// </summary>
+    public async Task<NghiaVuCocDonThueDto?> LayNghiaVuCocDonThueAsync(long donId)
+    {
+        var don = await _context.DonThues
+            .AsNoTracking()
+            .FirstOrDefaultAsync(d => d.MaDonThue == donId);
+
+        if (don == null) return null;
+
+        var chiTietCoc = await _context.ChiTietThanhToans
+            .AsNoTracking()
+            .Include(ct => ct.ThanhToan)
+            .Where(ct => ct.ThanhToan.MaDonThue == donId
+                      && ct.MucDich == DomainConstants.TransactionPurposes.DepositFee
+                      && ct.ThanhToan.TrangThai == DomainConstants.Status.Success)
+            .ToListAsync();
+
+        var chiTietCocIds = chiTietCoc.Select(ct => ct.MaChiTietThanhToan).ToList();
+        decimal tongCocThucThu = chiTietCoc.Sum(ct => ct.SoTien);
+
+        var hoanTiens = await _context.HoanTiens
+            .AsNoTracking()
+            .Where(h => chiTietCocIds.Contains(h.MaChiTietThanhToanGoc))
+            .ToListAsync();
+
+        decimal tongCocDaHoan = hoanTiens
+            .Where(h => h.TrangThai == DomainConstants.Status.Success)
+            .Sum(h => h.SoTien);
+
+        decimal hoanChuaXuLy = hoanTiens
+            .Where(h => h.TrangThai == DomainConstants.Status.PendingProcessing || h.TrangThai == DomainConstants.Status.InProgress)
+            .Sum(h => h.SoTien);
+
+        var doiSoatGoc = await _context.DoiSoatTienCocs
+            .AsNoTracking()
+            .Where(d => d.MaDonThue == donId && d.MaDoiSoatGoc == null)
+            .OrderByDescending(d => d.MaDoiSoat)
+            .FirstOrDefaultAsync();
+
+        decimal tongCocDaBuPhuPhi = 0;
+        decimal thuThemChuaThu = 0;
+        string? trangThaiDoiSoat = doiSoatGoc?.TrangThai;
+
+        if (doiSoatGoc != null && doiSoatGoc.TrangThai == DomainConstants.Status.Finalized)
+        {
+            // Trong đối soát gốc đã chốt: phần cọc dùng bù trừ phụ phí
+            tongCocDaBuPhuPhi = Math.Max(0, doiSoatGoc.TienCocDuocDoiSoat - doiSoatGoc.SoTienCanHoan);
+
+            // Kiểm tra thu thêm nếu có
+            if (doiSoatGoc.SoTienCanThuThem > 0)
+            {
+                var daThuThem = await _context.ChiTietThanhToans
+                    .AsNoTracking()
+                    .Where(ct => ct.ThanhToan.MaDonThue == donId
+                              && ct.MucDich == DomainConstants.TransactionPurposes.SupplementaryFee
+                              && ct.ThanhToan.TrangThai == DomainConstants.Status.Success)
+                    .SumAsync(ct => ct.SoTien);
+                thuThemChuaThu = Math.Max(0, doiSoatGoc.SoTienCanThuThem - daThuThem);
+            }
+        }
+
+        var coDieuChinhDangXuLy = await _context.DoiSoatTienCocs
+            .AsNoTracking()
+            .AnyAsync(d => d.MaDonThue == donId
+                        && d.MaDoiSoatGoc != null
+                        && d.TrangThai == DomainConstants.Status.PendingProcessing);
+
+        decimal tongCocConGiu = Math.Max(0, tongCocThucThu - tongCocDaHoan - tongCocDaBuPhuPhi);
+
+        return new NghiaVuCocDonThueDto
+        {
+            MaDonThue = don.MaDonThue,
+            MaDonHienThi = don.MaDonHienThi,
+            TongCocThucThu = tongCocThucThu,
+            TongCocDaHoan = tongCocDaHoan,
+            TongCocDaBuPhuPhi = tongCocDaBuPhuPhi,
+            TongCocConGiu = tongCocConGiu,
+            SoTienCanHoanChuaXuLy = hoanChuaXuLy,
+            SoTienCanThuThemChuaThu = thuThemChuaThu,
+            TrangThaiDoiSoat = trangThaiDoiSoat,
+            MaDoiSoatGoc = doiSoatGoc?.MaDoiSoat,
+            CoDoiSoatDieuChinhDangXuLy = coDieuChinhDangXuLy
+        };
+    }
 }
+

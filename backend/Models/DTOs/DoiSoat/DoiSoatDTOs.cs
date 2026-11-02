@@ -164,3 +164,23 @@ public class DoiSoatResponse
     public List<GiaoDichThuDoiSoatDto> GiaoDichThuThem { get; set; } = new();
     public List<GiaoDichHoanDoiSoatDto> GiaoDichHoan { get; set; } = new();
 }
+
+/// <summary>
+/// Projection nghĩa vụ và số dư cọc của một đơn thuê (W6-T5 - Kim Xuyến)
+/// Tái sử dụng công thức đối soát chuẩn từ DoiSoatService.
+/// </summary>
+public class NghiaVuCocDonThueDto
+{
+    public long MaDonThue { get; set; }
+    public string MaDonHienThi { get; set; } = string.Empty;
+    public decimal TongCocThucThu { get; set; }
+    public decimal TongCocDaHoan { get; set; }
+    public decimal TongCocDaBuPhuPhi { get; set; }
+    public decimal TongCocConGiu { get; set; }
+    public decimal SoTienCanHoanChuaXuLy { get; set; }
+    public decimal SoTienCanThuThemChuaThu { get; set; }
+    public string? TrangThaiDoiSoat { get; set; }
+    public long? MaDoiSoatGoc { get; set; }
+    public bool CoDoiSoatDieuChinhDangXuLy { get; set; }
+}
+

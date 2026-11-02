@@ -214,6 +214,9 @@ builder.Services.AddScoped<IDieuChinhKhoService, DieuChinhKhoService>();
 // ── W6-T6 (Minh Tú): Báo cáo nhập hàng, kho và bảo trì ──
 builder.Services.AddScoped<IBaoCaoKhoService, BaoCaoKhoService>();
 
+// ── W6-T5 (Kim Xuyến): Báo cáo tài chính và số dư cần xử lý ──
+builder.Services.AddScoped<IBaoCaoTaiChinhService, BaoCaoTaiChinhService>();
+
 // ── W5-T7 (Kim Xuyến): Tư vấn bộ đồ bằng AI và gợi ý dự phòng ──
 builder.Services.AddHttpClient();
 builder.Services.AddHttpContextAccessor();

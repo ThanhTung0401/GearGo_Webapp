@@ -48,4 +48,10 @@ public interface IDoiSoatService
     /// Lấy thông tin đối soát theo mã đối soát
     /// </summary>
     Task<Result<DoiSoatResponse>> LayTheoIdAsync(long id, long actorId);
+
+    /// <summary>
+    /// Projection nghĩa vụ cọc dùng chung cho báo cáo tài chính (W6-T5 - Kim Xuyến)
+    /// </summary>
+    Task<NghiaVuCocDonThueDto?> LayNghiaVuCocDonThueAsync(long donId);
 }
+
