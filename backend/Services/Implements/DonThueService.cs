@@ -17,17 +17,20 @@ public class DonThueService : IDonThueService
     private readonly ApplicationDbContext _context;
     private readonly IKhaDungService _khaDungService;
     private readonly IKhuyenMaiService _khuyenMaiService;
+    private readonly IChinhSachService _chinhSachService;
     private readonly ILogger<DonThueService> _logger;
 
     public DonThueService(
         ApplicationDbContext context,
         IKhaDungService khaDungService,
         IKhuyenMaiService khuyenMaiService,
+        IChinhSachService chinhSachService,
         ILogger<DonThueService> logger)
     {
         _context = context;
         _khaDungService = khaDungService;
         _khuyenMaiService = khuyenMaiService;
+        _chinhSachService = chinhSachService;
         _logger = logger;
     }
 
@@ -66,10 +69,13 @@ public class DonThueService : IDonThueService
             var now = DateTime.UtcNow;
             var hanThanhToan = now.AddMinutes(DomainConstants.Policies.HoldTimeMinutes);
 
-            var chinhSach = await _context.ChinhSachs
-                .Where(c => c.ThoiDiemApDung <= now)
-                .OrderByDescending(c => c.ThoiDiemApDung)
-                .FirstOrDefaultAsync();
+            // W6-T1: dùng selector chung (LayDangHieuLucAsync); chặn tạo đơn nếu chưa có bản hiệu lực.
+            var kqChinhSach = await _chinhSachService.LayDangHieuLucAsync(now);
+            if (!kqChinhSach.ThanhCong || kqChinhSach.DuLieu is null)
+                return Result<DonThueResponse>.Loi(
+                    kqChinhSach.MaLoi ?? "CHUA_CO_CHINH_SACH_HIEU_LUC",
+                    kqChinhSach.ThongDiep ?? "Chưa có chính sách hiệu lực để tạo đơn.");
+            var chinhSachId = kqChinhSach.DuLieu.MaChinhSach;
 
             decimal tongTienThueTruocGiam = request.ChiTiet.Sum(item =>
                 sanPhams[item.MaSanPham].GiaThueMoiNgay * item.SoLuong * soNgayThue);
@@ -120,7 +126,7 @@ public class DonThueService : IDonThueService
             // 3. Khởi tạo Đơn thuê & Phân bổ Chi tiết + Giữ chỗ qua Rich Domain Model
             var donThueMoi = DonThue.KhoiTao(
                 request,
-                chinhSach?.MaChinhSach ?? DomainConstants.Policies.DefaultPolicyId,
+                chinhSachId,
                 now,
                 tongTienThueTruocGiam,
                 tongTienGiam,

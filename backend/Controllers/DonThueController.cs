@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Threading;
 using GearGo.Data;
 using GearGo.Helpers;
 using GearGo.Models.DTOs.DonThue;
@@ -20,18 +21,40 @@ public class DonThueController : BaseApiController
     private readonly IDonThueService _donThueService;
     private readonly ITruyVanDonThueService _truyVanService;
     private readonly IHuyDonService _huyDonService;
+    private readonly IChinhSachService _chinhSachService;
     private readonly ApplicationDbContext _context;
 
     public DonThueController(
         IDonThueService donThueService,
         ITruyVanDonThueService truyVanService,
         IHuyDonService huyDonService,
+        IChinhSachService chinhSachService,
         ApplicationDbContext context)
     {
         _donThueService = donThueService;
         _truyVanService = truyVanService;
         _huyDonService = huyDonService;
+        _chinhSachService = chinhSachService;
         _context = context;
+    }
+
+    // ── W6-T1 (UC26 - Thanh Tùng): chính sách gắn với đơn ──
+    [HttpGet("{id:long}/chinh-sach")]
+    public async Task<IActionResult> LayChinhSachCuaDon([FromRoute] long id, CancellationToken ct)
+    {
+        var actorId = User.LayMaTaiKhoan();
+        var kq = await _chinhSachService.LayChinhSachCuaDonAsync(id, actorId, ct);
+        if (!kq.ThanhCong)
+        {
+            var code = kq.MaLoi switch
+            {
+                "DON_THUE_NOT_FOUND" => 404,
+                "KHONG_CO_QUYEN" => 403,
+                _ => 400
+            };
+            return StatusCode(code, new { kq.MaLoi, kq.ThongDiep });
+        }
+        return Ok(kq.DuLieu);
     }
 
     // ── W3-T1: truy vấn đơn của khách (mã khách lấy từ JWT, không nhận từ request) ──

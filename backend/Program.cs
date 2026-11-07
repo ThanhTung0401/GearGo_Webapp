@@ -144,6 +144,8 @@ builder.Services.AddCors(opt =>
 // ── 6. Application Services (Dependency Injection) ────────────────────────────
 // Bỏ comment khi hoàn thành từng Task tương ứng theo Plan
 // builder.Services.AddScoped<IXacThucService, XacThucService>();
+// W6-T1 (Thanh Tùng): Quản lý chính sách theo phiên bản + selector dùng chung
+builder.Services.AddScoped<IChinhSachService, ChinhSachService>();
 builder.Services.AddScoped<IDanhMucService, DanhMucService>();
 builder.Services.AddScoped<ISanPhamService, SanPhamService>();
 builder.Services.AddScoped<IKhaDungService, KhaDungService>();
