@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   sqlserver:
     image: mcr.microsoft.com/mssql/server:2022-latest
@@ -9,7 +7,9 @@ services:
       - SA_PASSWORD=GearGo@123
       - MSSQL_PID=Developer
     ports:
-      - "1433:1433"
+      # Map host:container. Dùng 11433 phía host để tránh đụng SQL Server khác
+      # đang nghe 1433 trên máy (local install hoặc container khác).
+      - "11433:1433"
     volumes:
       - geargo_db_data:/var/opt/mssql
     restart: unless-stopped

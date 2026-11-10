@@ -12,8 +12,10 @@ Từ thư mục gốc dự án:
 ```bash
 docker compose up -d
 ```
-- Container tên `geargo-sql`, cổng `1433`, mật khẩu `sa`: `GearGo@123` (khớp sẵn với `backend/appsettings.json`).
+- Container tên `geargo-sql`, cổng phía host `11433` → container `1433`, mật khẩu `sa`: `GearGo@123` (khớp sẵn với `backend/appsettings.json`).
+- Dùng port lệ `11433` để tránh đụng SQL Server khác đang chạy trên máy ở `1433`. Nếu muốn dùng `1433`, sửa cả `docker-compose.yml` lẫn connection string trong `backend/appsettings.json`.
 - Dừng: `docker compose down` · Xóa cả dữ liệu: `docker compose down -v`.
+- Nếu `docker compose up -d` vẫn báo `port is already allocated`, kiểm tra tiến trình giữ cổng: `sudo ss -tlnp 'sport = :11433'` rồi dừng tiến trình đó hoặc đổi port mới.
 
 ### 3. Chạy backend (ASP.NET Core Web API)
 ```bash
