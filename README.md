@@ -1,5 +1,89 @@
 # GearGo Webapp
 
+## Cách chạy dự án
+
+### 1. Yêu cầu môi trường
+- **.NET SDK 10** (`dotnet --version` ≥ 10)
+- **Docker** + **Docker Compose** (dùng container cho SQL Server)
+- **Node.js** ≥ 20 và **pnpm** (cho frontend React 19 + Vite)
+
+### 2. Khởi tạo database (SQL Server 2022 qua Docker)
+Từ thư mục gốc dự án:
+```bash
+docker compose up -d
+```
+- Container tên `geargo-sql`, cổng `1433`, mật khẩu `sa`: `GearGo@123` (khớp sẵn với `backend/appsettings.json`).
+- Dừng: `docker compose down` · Xóa cả dữ liệu: `docker compose down -v`.
+
+### 3. Chạy backend (ASP.NET Core Web API)
+```bash
+cd backend
+dotnet restore
+dotnet run
+```
+- Lần đầu chạy, EF Core **tự apply toàn bộ migration** (gồm `AddPermissionIdentity` cho phân quyền động) và **tự seed** dữ liệu mẫu qua `DbSeeder.SeedAllAsync` (người dùng, sản phẩm, chính sách, 3 role + permission mặc định…).
+- Swagger UI: `http://localhost:<port>/swagger` (xem port thực tế trong console `Now listening on: http://localhost:xxxx`).
+- Mật khẩu chung cho tài khoản seed: **`GearGo@2026`**.
+
+| Email | Vai trò | Quyền mặc định |
+|---|---|---|
+| `admin@geargo.vn` | `QuanTriVien` | Bypass handler → có mọi quyền |
+| `staff@geargo.vn` | `NhanVien` | `DonThue.Xem/CapNhat`, `SanPham.Xem`, `DanhMuc.Xem`, `KhuyenMai.Xem`, `ChinhSach.Xem`, `BaoCao.Xem` |
+| `khach@geargo.vn` | `KhachHang` | Không nhận permission admin (dùng policy `CustomerOnly`) |
+
+Reset DB khi migration lỗi:
+```bash
+cd backend
+dotnet ef database drop -f
+dotnet run                   # chạy lại, EF tự migrate + seed
+```
+
+### 4. Chạy frontend (React 19 + Vite + Tailwind 4)
+```bash
+cd frontend
+pnpm install                 # lần đầu
+pnpm dev
+```
+- Mặc định: `http://localhost:5173` (CORS backend đã allow sẵn).
+- Để frontend gọi backend thật thay vì mock localStorage (áp dụng cho module phân quyền), tạo `frontend/.env.local`:
+  ```
+  VITE_API_URL=http://localhost:<port-backend>
+  ```
+  Không set → frontend chạy offline với mock giữ nguyên contract, vẫn demo được UI.
+
+### 5. Chạy test
+```bash
+# Toàn bộ solution (hiện có 117 test)
+dotnet test GearGo_Webapp.sln
+
+# Chỉ test phân quyền động
+dotnet test --filter "FullyQualifiedName~PermissionSyncTests"
+
+# Chỉ test chính sách phiên bản W6-T1
+dotnet test --filter "FullyQualifiedName~ChinhSach"
+```
+
+### 6. Kiểm thử module phân quyền động (feat/ROLE_Adjustment)
+1. Đăng nhập bằng `admin@geargo.vn` → vào Admin UI → tab **"Phân quyền"**.
+2. Chọn role `NhanVien` → tick/bỏ tick permission → **Lưu phân quyền**. Response trả `version` mới.
+3. Tab "Tổng quan" — nút **"Xuất báo cáo"** chỉ hiển thị khi role hiện tại có `BaoCao.Xuat` (demo `usePermissions`).
+4. Gọi API trực tiếp (JWT admin):
+   ```
+   GET  /api/admin/phan-quyen/vai-tro
+   GET  /api/admin/phan-quyen/quyen
+   GET  /api/admin/phan-quyen/vai-tro/NhanVien
+   PUT  /api/admin/phan-quyen/vai-tro/NhanVien   body: { "quyen": ["DonThue.Xem","DonThue.Xoa"] }
+   GET  /api/auth/quyen-cua-toi
+   ```
+5. Dùng attribute mới trên controller bất kỳ:
+   ```csharp
+   [RequirePermission("DonThue.Xoa")]
+   public async Task<IActionResult> Xoa(long id) => ...
+   ```
+   Handler đọc permission live (cache 30s + bump version) → cấp/thu quyền có hiệu lực ngay request kế mà không cần đăng nhập lại.
+
+---
+
 ## Thay đổi gần đây
 - Cấu hình lại `Program.cs` để hỗ trợ kiến trúc Web API phục vụ cho frontend React.
 - Thiết lập JWT Authentication và CORS (allow `localhost:5173` và `localhost:3000`).
