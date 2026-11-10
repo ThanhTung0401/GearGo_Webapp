@@ -146,6 +146,14 @@ builder.Services.AddCors(opt =>
 // builder.Services.AddScoped<IXacThucService, XacThucService>();
 // W6-T1 (Thanh Tùng): Quản lý chính sách theo phiên bản + selector dùng chung
 builder.Services.AddScoped<IChinhSachService, ChinhSachService>();
+
+// feat/ROLE_Adjustment: Identity (chỉ dùng AspNetRoles/AspNetRoleClaims) + phân quyền động
+builder.Services.AddIdentityCore<Microsoft.AspNetCore.Identity.IdentityUser<long>>()
+    .AddRoles<Microsoft.AspNetCore.Identity.IdentityRole<long>>()
+    .AddEntityFrameworkStores<ApplicationDbContext>();
+builder.Services.AddScoped<IPermissionService, PermissionService>();
+builder.Services.AddSingleton<Microsoft.AspNetCore.Authorization.IAuthorizationHandler, GearGo.Helpers.Authorization.PermissionAuthorizationHandler>();
+builder.Services.AddSingleton<Microsoft.AspNetCore.Authorization.IAuthorizationPolicyProvider, GearGo.Helpers.Authorization.PermissionPolicyProvider>();
 builder.Services.AddScoped<IDanhMucService, DanhMucService>();
 builder.Services.AddScoped<ISanPhamService, SanPhamService>();
 builder.Services.AddScoped<IKhaDungService, KhaDungService>();

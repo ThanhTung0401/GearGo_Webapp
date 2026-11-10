@@ -15,6 +15,7 @@ import SupplierProfileModal from "../components/SupplierProfileModal";
 import GoodsReceivingModal from "../components/GoodsReceivingModal";
 import ImportAdjustmentModal from "../components/ImportAdjustmentModal";
 import PromotionDetailModal from "../components/PromotionDetailModal";
+import { PermissionsTab, usePermissions } from "../features/permissions";
 
 type AdminTab =
   | "dashboard"
@@ -32,7 +33,8 @@ type AdminTab =
   | "notifications"
   | "adjustments"
   | "reports"
-  | "audit-log";
+  | "audit-log"
+  | "permissions";
 
 function FormModal({ title, description, onClose, children }: { title: string; description: string; onClose: () => void; children: React.ReactNode }) {
   return (
@@ -324,6 +326,7 @@ export default function AdminView() {
     { key: "adjustments", label: "Bù trừ tài chính", icon: "wallet" },
     { key: "reports", label: "Báo cáo", icon: "chart" },
     { key: "audit-log", label: "Audit Log", icon: "clipboard" },
+    { key: "permissions", label: "Phân quyền", icon: "shield" },
   ];
 
   const currentTab = tabs.find((item) => item.key === tab);
@@ -353,6 +356,7 @@ export default function AdminView() {
       {tab === "adjustments" && <AdjustmentsTab app={app} />}
       {tab === "reports" && <ReportsTab app={app} />}
       {tab === "audit-log" && <AuditLogTab app={app} />}
+      {tab === "permissions" && <PermissionsTab />}
     </DashboardLayout>
   );
 }
@@ -367,6 +371,9 @@ function DashboardTab({ app }: { app: ReturnType<typeof useApp> }) {
   const [adjustedAmount, setAdjustedAmount] = useState<number>(0);
   const [resolutionReason, setResolutionReason] = useState("");
 
+  // feat/ROLE_Adjustment: demo hasPermission — nút "Xuất báo cáo" chỉ hiện khi role đang có quyền.
+  const { has, data: myPerm } = usePermissions();
+
   const pendingSurcharges = app.orders.flatMap((order) =>
     order.surcharges
       .filter((surcharge) => surcharge.status === "Chờ duyệt" || surcharge.status === "Tranh chấp")
@@ -374,7 +381,17 @@ function DashboardTab({ app }: { app: ReturnType<typeof useApp> }) {
   );
   return (
     <div>
-      <h2 className="admin-title text-xl mb-4">Tổng quan hệ thống</h2>
+      <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+        <h2 className="admin-title text-xl">Tổng quan hệ thống</h2>
+        <div className="flex items-center gap-2 text-xs">
+          <span className="text-gray-500">
+            Role: <strong>{myPerm?.roleName ?? "..."}</strong> · {myPerm?.quyen.length ?? 0} quyền (v{myPerm?.version ?? 0})
+          </span>
+          {has("BaoCao.Xuat") && (
+            <button type="button" className="btn btn-sm btn-primary">Xuất báo cáo</button>
+          )}
+        </div>
+      </div>
       <div className="admin-stats-grid">
         {([
           { label: "Doanh thu tháng 12", value: "14.200.000đ", sub: "+18% tháng trước", icon: "wallet", color: "var(--color-forest)" },

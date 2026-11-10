@@ -11,7 +11,12 @@ using GearGo.Models.DTOs.Auth;
   public class AuthController : ControllerBase
   {
       private readonly IXacThucService _xacThuc;
-      public AuthController(IXacThucService xacThuc) { _xacThuc = xacThuc; }
+      private readonly IPermissionService _permissionService;
+      public AuthController(IXacThucService xacThuc, IPermissionService permissionService)
+      {
+          _xacThuc = xacThuc;
+          _permissionService = permissionService;
+      }
 
       [HttpPost("dang-ky")]
       public async Task<IActionResult> DangKy([FromBody] DangKyRequest req)
@@ -57,6 +62,18 @@ using GearGo.Models.DTOs.Auth;
           var maTaiKhoanStr = User.FindFirstValue("MaTaiKhoan");
           if (!long.TryParse(maTaiKhoanStr, out var maTaiKhoan)) return Unauthorized();
           var result = await _xacThuc.LayThongTinToiAsync(maTaiKhoan);
+          if (!result.ThanhCong) return NotFound(new { maLoi = result.MaLoi, thongDiep = result.ThongDiep });
+          return Ok(result.DuLieu);
+      }
+
+      // feat/ROLE_Adjustment: quyền của người đang đăng nhập (frontend dùng để ẩn/hiện UI)
+      [HttpGet("quyen-cua-toi")]
+      [Authorize]
+      public async Task<IActionResult> LayQuyenCuaToi(System.Threading.CancellationToken ct)
+      {
+          var maTaiKhoanStr = User.FindFirstValue("MaTaiKhoan");
+          if (!long.TryParse(maTaiKhoanStr, out var maTaiKhoan)) return Unauthorized();
+          var result = await _permissionService.LayQuyenCuaToiAsync(maTaiKhoan, ct);
           if (!result.ThanhCong) return NotFound(new { maLoi = result.MaLoi, thongDiep = result.ThongDiep });
           return Ok(result.DuLieu);
       }

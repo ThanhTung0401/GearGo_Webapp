@@ -175,5 +175,85 @@ public static class DomainConstants
         public const string UnsupportedWarehouseReportMoment = "MOC_BAO_CAO_KHO_KHONG_HO_TRO";
         public const string UnsupportedExportType = "LOAI_XUAT_KHONG_HO_TRO";
         public const string ExportRangeTooLarge = "KHOANG_XUAT_QUA_LON";
+
+        // feat/ROLE_Adjustment: phân quyền động
+        public const string RoleNotFound = "VAI_TRO_KHONG_TON_TAI";
+        public const string PermissionNotFound = "QUYEN_KHONG_TON_TAI";
+        public const string PermissionDenied = "KHONG_DU_QUYEN";
+    }
+
+    /// <summary>
+    /// Danh mục roles cố định (feat/ROLE_Adjustment). Không cho tạo mới từ UI.
+    /// Khớp 1-1 với giá trị TAI_KHOAN.vai_tro.
+    /// </summary>
+    public static class Roles
+    {
+        public const string Admin = "QuanTriVien";
+        public const string Staff = "NhanVien";
+        public const string Customer = "KhachHang";
+
+        public static readonly string[] All = { Admin, Staff, Customer };
+    }
+
+    /// <summary>
+    /// Catalog permission tĩnh (feat/ROLE_Adjustment). Mã là literal, group theo module.
+    /// Gắn với controller qua [RequirePermission("DonThue.Xoa")].
+    /// Thêm quyền mới: thêm string ở đây rồi update seeder nếu muốn gán sẵn.
+    /// </summary>
+    public static class Permissions
+    {
+        public const string Type = "permission";
+
+        public const string DonThue_Xem = "DonThue.Xem";
+        public const string DonThue_Tao = "DonThue.Tao";
+        public const string DonThue_CapNhat = "DonThue.CapNhat";
+        public const string DonThue_Xoa = "DonThue.Xoa";
+        public const string DonThue_Huy = "DonThue.Huy";
+
+        public const string SanPham_Xem = "SanPham.Xem";
+        public const string SanPham_Tao = "SanPham.Tao";
+        public const string SanPham_CapNhat = "SanPham.CapNhat";
+        public const string SanPham_Xoa = "SanPham.Xoa";
+
+        public const string DanhMuc_Xem = "DanhMuc.Xem";
+        public const string DanhMuc_Quan = "DanhMuc.Quan";
+
+        public const string KhuyenMai_Xem = "KhuyenMai.Xem";
+        public const string KhuyenMai_Quan = "KhuyenMai.Quan";
+
+        public const string ChinhSach_Xem = "ChinhSach.Xem";
+        public const string ChinhSach_Quan = "ChinhSach.Quan";
+
+        public const string BaoCao_Xem = "BaoCao.Xem";
+        public const string BaoCao_Xuat = "BaoCao.Xuat";
+
+        public const string TaiKhoan_Xem = "TaiKhoan.Xem";
+        public const string TaiKhoan_Quan = "TaiKhoan.Quan";
+        public const string NhanVien_Xem = "NhanVien.Xem";
+        public const string NhanVien_Quan = "NhanVien.Quan";
+
+        public const string PhanQuyen_Xem = "PhanQuyen.Xem";
+        public const string PhanQuyen_Quan = "PhanQuyen.Quan";
+
+        public static readonly string[] All =
+        {
+            DonThue_Xem, DonThue_Tao, DonThue_CapNhat, DonThue_Xoa, DonThue_Huy,
+            SanPham_Xem, SanPham_Tao, SanPham_CapNhat, SanPham_Xoa,
+            DanhMuc_Xem, DanhMuc_Quan,
+            KhuyenMai_Xem, KhuyenMai_Quan,
+            ChinhSach_Xem, ChinhSach_Quan,
+            BaoCao_Xem, BaoCao_Xuat,
+            TaiKhoan_Xem, TaiKhoan_Quan, NhanVien_Xem, NhanVien_Quan,
+            PhanQuyen_Xem, PhanQuyen_Quan,
+        };
+
+        public static readonly string[] DefaultStaff =
+        {
+            DonThue_Xem, DonThue_CapNhat,
+            SanPham_Xem, DanhMuc_Xem, KhuyenMai_Xem, ChinhSach_Xem,
+            BaoCao_Xem,
+        };
+
+        public static readonly string[] DefaultCustomer = System.Array.Empty<string>();
     }
 }

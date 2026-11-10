@@ -1,12 +1,19 @@
 using GearGo.Models.Entities;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
 namespace GearGo.Data;
 
-public class ApplicationDbContext : DbContext
+public class ApplicationDbContext : IdentityDbContext<IdentityUser<long>, IdentityRole<long>, long>
 {
     public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
         : base(options) { }
+
+    // ── Phân quyền động (feat/ROLE_Adjustment) ──
+    // AspNetRoles + AspNetRoleClaims (từ IdentityDbContext) lưu role + permission.
+    // AspNetUsers KHÔNG dùng; tài khoản vẫn ở TAI_KHOAN để không đụng BCrypt/JWT.
+    public DbSet<RolePermissionVersion> RolePermissionVersions { get; set; } = null!;
 
     // ── Tài khoản và hồ sơ ──────────────────────────────────────────────
     public DbSet<TaiKhoan> TaiKhoans { get; set; }

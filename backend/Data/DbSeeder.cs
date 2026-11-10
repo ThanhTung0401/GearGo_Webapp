@@ -3,8 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
+using GearGo.Helpers;
 using GearGo.Models.Entities;
 using GearGo.Models.Enums;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
 namespace GearGo.Data;
@@ -1588,5 +1590,59 @@ public static class DbSeeder
             context.DonThues.Add(donCancel);
             await context.SaveChangesAsync();
         }
+
+        // ─────────────────────────────────────────────────────────────────────────────
+        // feat/ROLE_Adjustment: Seed Identity roles + default permissions
+        // ─────────────────────────────────────────────────────────────────────────────
+        foreach (var roleName in DomainConstants.Roles.All)
+        {
+            var role = await context.Roles.FirstOrDefaultAsync(r => r.Name == roleName);
+            if (role == null)
+            {
+                role = new IdentityRole<long>
+                {
+                    Name = roleName,
+                    NormalizedName = roleName.ToUpperInvariant(),
+                    ConcurrencyStamp = Guid.NewGuid().ToString()
+                };
+                context.Roles.Add(role);
+            }
+        }
+        await context.SaveChangesAsync();
+
+        // Default permission grants: NhanVien nhận DefaultStaff; QuanTriVien tự được handler cho pass;
+        // KhachHang không gán permission admin (dùng CustomerOnly policy riêng).
+        var staffRole = await context.Roles.FirstAsync(r => r.Name == DomainConstants.Roles.Staff);
+        var staffExisting = await context.RoleClaims
+            .Where(c => c.RoleId == staffRole.Id && c.ClaimType == DomainConstants.Permissions.Type)
+            .Select(c => c.ClaimValue!)
+            .ToListAsync();
+        var missing = DomainConstants.Permissions.DefaultStaff.Except(staffExisting).ToList();
+        foreach (var ma in missing)
+        {
+            context.RoleClaims.Add(new IdentityRoleClaim<long>
+            {
+                RoleId = staffRole.Id,
+                ClaimType = DomainConstants.Permissions.Type,
+                ClaimValue = ma
+            });
+        }
+        if (missing.Count > 0) await context.SaveChangesAsync();
+
+        // Seed version row cho cả 3 role (idempotent; không bump nếu đã tồn tại).
+        foreach (var roleName in DomainConstants.Roles.All)
+        {
+            var existed = await context.RolePermissionVersions.AnyAsync(v => v.RoleName == roleName);
+            if (!existed)
+            {
+                context.RolePermissionVersions.Add(new RolePermissionVersion
+                {
+                    RoleName = roleName,
+                    Version = 1,
+                    CapNhatLuc = DateTime.UtcNow
+                });
+            }
+        }
+        await context.SaveChangesAsync();
     }
 }
