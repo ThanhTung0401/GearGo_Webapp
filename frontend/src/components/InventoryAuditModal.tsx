@@ -26,6 +26,10 @@ export default function InventoryAuditModal({ app, onClose, onAuditSubmitted }: 
   const [auditReason, setAuditReason] = useState(`Kiểm kê kho định kỳ ${new Date().toLocaleDateString("vi-VN")}`);
   const [auditStaff, setAuditStaff] = useState("NV Kho Mai");
 
+  // State inline phản hồi & loading
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
   // Tách biệt danh sách: Đang cho thuê (vắng mặt hợp lệ) vs Đồ tại kho (phải có mặt)
   const rentedEquipments = app.equipment.filter((e) => e.equipmentStatus === "Đang thuê");
   const warehouseEquipments = app.equipment.filter((e) => e.equipmentStatus !== "Đang thuê");
@@ -49,7 +53,7 @@ export default function InventoryAuditModal({ app, onClose, onAuditSubmitted }: 
   // Lọc thiết bị tại kho theo từ khóa
   const filteredWarehouse = warehouseEquipments.filter((e) => {
     const prod = app.products.find((p) => p.id === e.productId);
-    const text = `${e.id} ${prod?.name || ""}`.toLowerCase();
+    const text = `${e.displayCode || e.id} ${e.id} ${prod?.name || ""}`.toLowerCase();
     return text.includes(searchTerm.toLowerCase());
   });
 
@@ -62,18 +66,19 @@ export default function InventoryAuditModal({ app, onClose, onAuditSubmitted }: 
   // Xử lý gửi phiếu đề nghị điều chỉnh kho (UC55, UC56 / UC6.10, UC6.10.1)
   const handleSubmitAudit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSubmitError(null);
     if (discrepancies.length === 0) {
-      alert("Tất cả thiết bị tại kho đều khớp 100%! Không cần tạo phiếu điều chỉnh.");
       onClose();
       return;
     }
 
     // Đấu nối API Kiểm kê & Điều chỉnh kho Backend (DieuChinhKhoController)
-    if (isRealApiEnabled()) {
+    if (app.realApi || isRealApiEnabled()) {
+      setSubmitting(true);
       try {
         const dto = {
           loaiDieuChinh: "KiemKeSaiLech",
-          lyDo: auditReason.trim(),
+          lyDo: auditReason.trim() || "Kiểm kê kho định kỳ",
           chiTiet: discrepancies.map((eq) => {
             const st = auditStates[eq.id];
             const targetStatus = st?.checkResult === "Đang bảo trì"
@@ -84,8 +89,9 @@ export default function InventoryAuditModal({ app, onClose, onAuditSubmitted }: 
               ? "NgungSuDung"
               : "SanSang";
 
+            const maThietBi = Number(eq.id) || parseInt(eq.id.replace(/\D/g, ""), 10);
             return {
-              maThietBi: Number(eq.id) || parseInt(eq.id.replace(/\D/g, ""), 10) || 1,
+              maThietBi,
               giaTriDeNghiSau: {
                 trangThaiSuDung: targetStatus,
                 tinhTrang: st?.note || st?.checkResult,
@@ -96,12 +102,18 @@ export default function InventoryAuditModal({ app, onClose, onAuditSubmitted }: 
         };
 
         const createdPhieu = await inventoryApi.lapPhieu(dto);
-        // Chuyển sang trạng thái ChoDuyet để Quản trị viên duyệt áp dụng (UC57)
         await inventoryApi.guiDuyet(createdPhieu.maPhieuDieuChinh);
+        await app.refreshEquipment?.();
+        if (onAuditSubmitted) {
+          onAuditSubmitted(String(createdPhieu.maPhieuDieuChinh));
+        }
+        onClose();
       } catch (err) {
-        alert(err instanceof Error ? err.message : "Lỗi lưu phiếu kiểm kê lên máy chủ.");
-        return;
+        setSubmitError(err instanceof Error ? err.message : "Lỗi lưu phiếu kiểm kê lên máy chủ.");
+      } finally {
+        setSubmitting(false);
       }
+      return;
     }
 
     const lines: StockAdjustmentLine[] = discrepancies.map((e) => {
@@ -122,13 +134,12 @@ export default function InventoryAuditModal({ app, onClose, onAuditSubmitted }: 
     });
 
     if (res.ok) {
-      alert(`Đã lập Đề nghị điều chỉnh kho ${res.data.id} ở trạng thái "Chờ duyệt"! Quản trị viên sẽ kiểm tra xung đột lịch thuê trước khi phê duyệt.`);
       if (onAuditSubmitted) {
         onAuditSubmitted(res.data.id);
       }
       onClose();
     } else {
-      alert(res.message);
+      setSubmitError(res.message);
     }
   };
 
@@ -250,6 +261,11 @@ export default function InventoryAuditModal({ app, onClose, onAuditSubmitted }: 
 
         {/* Content Body */}
         <div style={{ padding: "16px 24px", overflowY: "auto", flex: 1 }}>
+          {submitError && (
+            <div style={{ background: "#FEF2F2", border: "1px solid #FECACA", color: "#B91C1C", borderRadius: 8, padding: "10px 14px", marginBottom: 12, fontSize: "0.82rem", fontWeight: 600 }}>
+              {submitError}
+            </div>
+          )}
           {activeTab === "rented" ? (
             /* TAB: THIẾT BỊ ĐANG CHO THUÊ (HỢP LỆ VẮNG KHO - DÒNG PHỤ 2.1) */
             <div className="grid gap-3">
@@ -301,11 +317,11 @@ export default function InventoryAuditModal({ app, onClose, onAuditSubmitted }: 
                         return (
                           <tr key={e.id} style={{ borderTop: "1px solid var(--color-bone, #E5E7EB)" }}>
                             <td style={{ padding: "8px 12px", fontFamily: "monospace", fontWeight: 700, color: "#1D4ED8" }}>
-                              {e.id}
+                              {e.displayCode || e.id}
                             </td>
                             <td style={{ padding: "8px 12px" }}>{prod?.name}</td>
                             <td style={{ padding: "8px 12px", fontFamily: "monospace" }}>
-                              {ord?.id || "Đang trong đơn"}
+                              {ord?.displayCode || ord?.id || "Đang trong đơn"}
                             </td>
                             <td style={{ padding: "8px 12px" }}>{ord?.customerName || "Khách hàng GearGo"}</td>
                             <td style={{ padding: "8px 12px" }}>{ord?.rentalEndDate || "—"}</td>
@@ -388,7 +404,7 @@ export default function InventoryAuditModal({ app, onClose, onAuditSubmitted }: 
                           }}
                         >
                           <td style={{ padding: "8px 10px", fontFamily: "monospace", fontWeight: 700, color: "var(--color-forest, #15803D)" }}>
-                            {e.id}
+                            {e.displayCode || e.id}
                           </td>
                           <td style={{ padding: "8px 10px" }}>{prod?.name}</td>
                           <td style={{ padding: "8px 10px", textAlign: "center" }}>

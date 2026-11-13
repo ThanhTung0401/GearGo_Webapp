@@ -3,7 +3,10 @@ import Icon from "../../components/Icon";
 import type { Role } from "../../types";
 
 export default function DemoRoleBanner() {
-  const { role, setRole, newOrderId, resetDemo } = useApp();
+  const { role, setRole, newOrderId, resetDemo, realApi } = useApp();
+
+  // Khi kết nối Backend thật, ẩn hoàn toàn thanh chuyển vai trò demo & reset dữ liệu giả
+  if (realApi) return null;
 
   return (
     <div className="bg-[var(--color-parchment)] border-b border-[var(--color-bone)] py-1.5 px-4 text-xs text-[var(--color-bark)]">

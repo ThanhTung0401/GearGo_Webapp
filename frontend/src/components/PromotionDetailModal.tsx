@@ -1,5 +1,6 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { type useApp } from "../App";
+import { promotionApi, type SuDungKhuyenMaiBackend } from "../services/api";
 import { fmt, type Promotion } from "../store";
 
 interface Props {
@@ -12,29 +13,75 @@ interface Props {
 
 /**
  * UC8.4: Modal Tra cứu Chi tiết Khuyến mãi & Thống kê đơn áp dụng
- * - Thống kê số lượt dùng, tỷ lệ lấp đầy, tổng tiền giảm và tổng doanh thu mang lại.
- * - Hiển thị danh sách các đơn hàng thực tế đã áp dụng mã ưu đãi này (bảo toàn lịch sử theo UC8.3.1).
  */
 export default function PromotionDetailModal({ promotion, app, onClose, onEdit, onToggleStatus }: Props) {
+  const [usageReport, setUsageReport] = useState<SuDungKhuyenMaiBackend | null>(null);
+  const [loadingUsage, setLoadingUsage] = useState(false);
+
+  useEffect(() => {
+    if (!app.realApi) return;
+    const kmId = Number(promotion.id);
+    if (!Number.isFinite(kmId)) return;
+    let cancelled = false;
+    setLoadingUsage(true);
+    void promotionApi
+      .layTinhHinhSuDung(kmId)
+      .then((res) => {
+        if (!cancelled) setUsageReport(res);
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setLoadingUsage(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [app.realApi, promotion.id]);
+
   // Lọc các bản ghi sử dụng mã khuyến mãi này
   const usages = app.promotionUsages.filter((u) => u.promotionId === promotion.id);
-  
-  // Lọc các đơn hàng có liên quan
-  const appliedOrders = app.orders.filter((order) => {
-    // Có thể gắn qua usage hoặc promoCode lưu trên order
-    const hasUsage = usages.some((u) => u.orderId === order.id && u.status === "used");
-    return hasUsage || (order as any).promoCode === promotion.code;
-  });
 
-  const totalDiscountGiven = usages
-    .filter((u) => u.status === "used")
-    .reduce((sum, u) => sum + (u.discountAmount || 0), 0);
+  // Dữ liệu hiển thị ưu tiên backend nếu có
+  const appliedRows = app.realApi && usageReport
+    ? usageReport.chiTietSuDung.map((ct) => ({
+        key: String(ct.maLuotSuDung),
+        displayId: ct.maDonHienThi || String(ct.maDonThue),
+        customerName: ct.tenKhachHang || `KH#${ct.maKhachHang}`,
+        date: ct.thoiDiemSuDung || ct.thoiDiemGiuLuot,
+        rental: 0,
+        discount: Number(ct.tienGiamDon ?? 0),
+        status: ct.trangThaiDonThue || ct.trangThaiLuot,
+      }))
+    : app.orders
+        .filter((order) => {
+          const hasUsage = usages.some((u) => u.orderId === order.id && u.status === "used");
+          return hasUsage || (order as any).promoCode === promotion.code;
+        })
+        .map((order) => {
+          const usage = usages.find((u) => u.orderId === order.id);
+          return {
+            key: order.id,
+            displayId: order.displayCode || order.id,
+            customerName: order.customerName,
+            date: order.createdAt,
+            rental: order.rental ?? (order as any).rentalFee ?? 0,
+            discount: usage?.discountAmount || order.discount || (order as any).discountAmount || 0,
+            status: order.status,
+          };
+        });
 
-  const totalOrderRevenue = appliedOrders.reduce((sum, o) => sum + (o.rental ?? (o as any).rentalFee ?? 0), 0);
+  const usedCountDisplay = app.realApi && usageReport ? usageReport.tongLuotDaDung : promotion.usedCount;
+  const totalDiscountGiven = app.realApi && usageReport
+    ? Number(usageReport.tongTienGiamDaDung ?? 0)
+    : usages
+        .filter((u) => u.status === "used")
+        .reduce((sum, u) => sum + (u.discountAmount || 0), 0);
+
+  const totalOrderRevenue = appliedRows.reduce((sum, r) => sum + r.rental, 0);
 
   const isExpired = new Date(promotion.endsAt).getTime() < Date.now();
   const usagePercent = promotion.totalUsageLimit
-    ? Math.min(100, Math.round((promotion.usedCount / promotion.totalUsageLimit) * 100))
+    ? Math.min(100, Math.round((usedCountDisplay / promotion.totalUsageLimit) * 100))
     : null;
 
   return (
@@ -83,7 +130,7 @@ export default function PromotionDetailModal({ promotion, app, onClose, onEdit, 
             <div style={{ background: "var(--color-cream)", padding: "12px 14px", borderRadius: 10, border: "1px solid var(--color-bone)" }}>
               <div style={{ fontSize: "0.72rem", color: "#6B7280", marginBottom: 2 }}>Lượt sử dụng</div>
               <div style={{ fontFamily: "var(--font-mono)", fontSize: "1.25rem", fontWeight: 800, color: "var(--color-forest)" }}>
-                {promotion.usedCount} <span style={{ fontSize: "0.82rem", fontWeight: 500, color: "#6B7280" }}>/ {promotion.totalUsageLimit ?? "Không giới hạn"}</span>
+                {usedCountDisplay} <span style={{ fontSize: "0.82rem", fontWeight: 500, color: "#6B7280" }}>/ {promotion.totalUsageLimit ?? "Không giới hạn"}</span>
               </div>
               {usagePercent !== null && (
                 <div style={{ marginTop: 6 }}>
@@ -101,17 +148,21 @@ export default function PromotionDetailModal({ promotion, app, onClose, onEdit, 
                 {fmt(totalDiscountGiven)}
               </div>
               <div style={{ fontSize: "0.68rem", color: "#166534", marginTop: 4 }}>
-                Từ {usages.filter((u) => u.status === "used").length} giao dịch thành công
+                {app.realApi && usageReport
+                  ? `Đã dùng ${usageReport.tongLuotDaDung} · Đang giữ ${usageReport.tongLuotDangGiuConHan}`
+                  : `Từ ${usages.filter((u) => u.status === "used").length} giao dịch thành công`}
               </div>
             </div>
 
             <div style={{ background: "#EFF6FF", padding: "12px 14px", borderRadius: 10, border: "1px solid #BFDBFE" }}>
-              <div style={{ fontSize: "0.72rem", color: "#1E40AF", marginBottom: 2 }}>Doanh thu mang lại</div>
+              <div style={{ fontSize: "0.72rem", color: "#1E40AF", marginBottom: 2 }}>
+                {app.realApi && usageReport ? "Lượt giải phóng / hoàn lại" : "Doanh thu mang lại"}
+              </div>
               <div style={{ fontFamily: "var(--font-mono)", fontSize: "1.25rem", fontWeight: 800, color: "#1D4ED8" }}>
-                {fmt(totalOrderRevenue)}
+                {app.realApi && usageReport ? usageReport.tongLuotDaGiaiPhong : fmt(totalOrderRevenue)}
               </div>
               <div style={{ fontSize: "0.68rem", color: "#1E40AF", marginTop: 4 }}>
-                Tổng giá trị thuê của các đơn
+                {app.realApi && usageReport ? "Lượt giữ chỗ hết hạn/đơn hủy" : "Tổng giá trị thuê của các đơn"}
               </div>
             </div>
           </div>
@@ -144,14 +195,14 @@ export default function PromotionDetailModal({ promotion, app, onClose, onEdit, 
           <div>
             <div className="flex justify-between items-center mb-2">
               <span style={{ fontSize: "0.85rem", fontWeight: 700, color: "var(--color-bark)" }}>
-                Danh sách đơn hàng áp dụng ({appliedOrders.length})
+                Danh sách đơn hàng áp dụng ({appliedRows.length})
               </span>
               <span style={{ fontSize: "0.72rem", color: "#6B7280" }}>
-                Bảo toàn mức giảm chốt ban đầu (UC8.3.1)
+                {loadingUsage ? "Đang tải thống kê..." : "Bảo toàn mức giảm chốt ban đầu (UC8.3.1)"}
               </span>
             </div>
 
-            {appliedOrders.length > 0 ? (
+            {appliedRows.length > 0 ? (
               <div style={{ border: "1px solid var(--color-bone)", borderRadius: 10, overflow: "hidden" }}>
                 <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.78rem" }}>
                   <thead>
@@ -162,28 +213,26 @@ export default function PromotionDetailModal({ promotion, app, onClose, onEdit, 
                     </tr>
                   </thead>
                   <tbody>
-                    {appliedOrders.map((order, idx) => {
-                      const usage = usages.find((u) => u.orderId === order.id);
-                      const discount = usage?.discountAmount || order.discount || (order as any).discountAmount || 0;
-                      return (
-                        <tr key={order.id} style={{ borderTop: "1px solid var(--color-bone)", background: idx % 2 === 0 ? "white" : "var(--color-cream)" }}>
-                          <td style={{ padding: "8px 10px", fontFamily: "var(--font-mono)", fontWeight: 700, color: "var(--color-forest)" }}>
-                            {order.id}
-                          </td>
-                          <td style={{ padding: "8px 10px", fontWeight: 600 }}>{order.customerName}</td>
-                          <td style={{ padding: "8px 10px", color: "#6B7280", fontSize: "0.72rem" }}>{order.createdAt}</td>
-                          <td style={{ padding: "8px 10px", fontFamily: "var(--font-mono)" }}>{fmt(order.rental ?? (order as any).rentalFee)}</td>
-                          <td style={{ padding: "8px 10px", fontFamily: "var(--font-mono)", fontWeight: 700, color: "#15803D" }}>
-                            -{fmt(discount)}
-                          </td>
-                          <td style={{ padding: "8px 10px" }}>
-                            <span style={{ padding: "2px 6px", borderRadius: 4, fontSize: "0.68rem", fontWeight: 600, background: "#F3F4F6", color: "#4B5563" }}>
-                              {order.status}
-                            </span>
-                          </td>
-                        </tr>
-                      );
-                    })}
+                    {appliedRows.map((row, idx) => (
+                      <tr key={row.key} style={{ borderTop: "1px solid var(--color-bone)", background: idx % 2 === 0 ? "white" : "var(--color-cream)" }}>
+                        <td style={{ padding: "8px 10px", fontFamily: "var(--font-mono)", fontWeight: 700, color: "var(--color-forest)" }}>
+                          {row.displayId}
+                        </td>
+                        <td style={{ padding: "8px 10px", fontWeight: 600 }}>{row.customerName}</td>
+                        <td style={{ padding: "8px 10px", color: "#6B7280", fontSize: "0.72rem" }}>{row.date}</td>
+                        <td style={{ padding: "8px 10px", fontFamily: "var(--font-mono)" }}>
+                          {row.rental > 0 ? fmt(row.rental) : "—"}
+                        </td>
+                        <td style={{ padding: "8px 10px", fontFamily: "var(--font-mono)", fontWeight: 700, color: "#15803D" }}>
+                          -{fmt(row.discount)}
+                        </td>
+                        <td style={{ padding: "8px 10px" }}>
+                          <span style={{ padding: "2px 6px", borderRadius: 4, fontSize: "0.68rem", fontWeight: 600, background: "#F3F4F6", color: "#4B5563" }}>
+                            {row.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
                   </tbody>
                 </table>
               </div>

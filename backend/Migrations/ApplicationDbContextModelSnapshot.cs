@@ -425,6 +425,10 @@ namespace GearGo.Migrations
                         .HasColumnType("bigint")
                         .HasColumnName("ma_nguoi_an");
 
+                    b.Property<long?>("MaNguoiPhanHoi")
+                        .HasColumnType("bigint")
+                        .HasColumnName("ma_nguoi_phan_hoi");
+
                     b.Property<DateTime?>("NgayCapNhat")
                         .HasColumnType("datetime2")
                         .HasColumnName("ngay_cap_nhat");
@@ -437,9 +441,17 @@ namespace GearGo.Migrations
                         .HasColumnType("nvarchar(max)")
                         .HasColumnName("noi_dung");
 
+                    b.Property<string>("PhanHoiCuaHang")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("phan_hoi_cua_hang");
+
                     b.Property<int>("SoSao")
                         .HasColumnType("int")
                         .HasColumnName("so_sao");
+
+                    b.Property<DateTime?>("ThoiDiemPhanHoi")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("thoi_diem_phan_hoi");
 
                     b.Property<string>("TrangThaiHienThi")
                         .IsRequired()
@@ -453,6 +465,8 @@ namespace GearGo.Migrations
                         .IsUnique();
 
                     b.HasIndex("MaNguoiAn");
+
+                    b.HasIndex("MaNguoiPhanHoi");
 
                     b.ToTable("DANH_GIA");
                 });
@@ -2641,9 +2655,16 @@ namespace GearGo.Migrations
                         .HasForeignKey("MaNguoiAn")
                         .OnDelete(DeleteBehavior.Restrict);
 
+                    b.HasOne("GearGo.Models.Entities.TaiKhoan", "NguoiPhanHoi")
+                        .WithMany()
+                        .HasForeignKey("MaNguoiPhanHoi")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.Navigation("ChiTietDonThue");
 
                     b.Navigation("NguoiAn");
+
+                    b.Navigation("NguoiPhanHoi");
                 });
 
             modelBuilder.Entity("GearGo.Models.Entities.DanhMucSanPham", b =>

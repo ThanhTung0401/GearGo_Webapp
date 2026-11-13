@@ -45,15 +45,13 @@ export function LoginView() {
 
     if (isRealApiEnabled()) {
       try {
-        const res = await fakeApi.auth.login({ identifier: accountInput.trim(), password: pass });
+        const res = await authApi.dangNhap({ taiKhoan: accountInput.trim(), matKhau: pass });
         app.login({
-          id: res.data.id,
-          username: res.data.username,
-          name: res.data.name,
-          email: res.data.email,
-          phone: res.data.phone,
-          role: res.data.role,
-          permissions: res.data.permissions,
+          id: String(res.maTaiKhoan),
+          name: res.hoTen ?? res.email ?? accountInput.trim(),
+          email: res.email ?? "",
+          phone: "",
+          role: res.vaiTro === "QuanTriVien" ? "admin" : res.vaiTro === "NhanVien" ? "staff" : "customer",
         });
       } catch (error) {
         if (error instanceof ApiError && (error.code === "TAI_KHOAN_BI_KHOA" || error.code === "TAM_KHOA")) {

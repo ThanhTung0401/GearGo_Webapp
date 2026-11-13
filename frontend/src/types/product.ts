@@ -28,6 +28,7 @@ export interface Product {
   status: "active" | "inactive";
   rating: number;
   reviews: number;
+  availableCount?: number;
 }
 
 export interface CartItem {

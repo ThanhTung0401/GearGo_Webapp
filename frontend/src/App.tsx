@@ -1,17 +1,53 @@
-import { useState, createContext, useContext, useEffect } from "react";
-import { isRealApiEnabled } from "./services/apiClient";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { getAuthToken, isRealApiEnabled, setAuthToken } from "./services/apiClient";
+import {
+  auditApi,
+  authApi,
+  catalogApi,
+  equipmentApi,
+  importReceiptApi,
+  inventoryApi,
+  notificationApi,
+  orderApi,
+  paymentApi,
+  policyApi,
+  profileApi,
+  promotionApi,
+  rentalCartApi,
+  reviewApi,
+  staffApi,
+  supplierApi,
+} from "./services/api";
+import {
+  flattenDanhMucTree,
+  mapBaoTriToReceipt,
+  mapChinhSachToPolicyVersion,
+  mapChinhSachToRentalConfig,
+  mapDanhGiaToReview,
+  mapDieuChinhKhoToReceipt,
+  mapDonChiTietToOrder,
+  mapDonTomTatToOrder,
+  mapDonVanHanhChiTietToOrder,
+  mapDonVanHanhTomTatToOrder,
+  mapKhuyenMaiToPromotion,
+  mapNhaCungCapToSupplier,
+  mapNhatKyToAuditLog,
+  mapPhieuNhapToImportReceipt,
+  mapSanPhamToProduct,
+  mapThietBiToEquipment,
+  mapThongBaoToNotification,
+} from "./services/mappers";
 import { fakeApi } from "./services/fakeApi";
-import { catalogApi } from "./services/api/catalogApi";
 import {
   Role, Order, Equipment, CartItem,
   INITIAL_PRODUCTS, INITIAL_EQUIPMENT, INITIAL_IMPORT_RECEIPTS, INITIAL_CATEGORIES,
-  INITIAL_SUPPLIERS, INITIAL_PROMOTIONS, INITIAL_REVIEWS, INITIAL_ORDERS, INITIAL_MAINTENANCE_RECEIPTS, INITIAL_STAFF_ACCOUNTS, INITIAL_STOCK_ADJUSTMENTS, DEMO_ORDER, DEMO_ORDER_COMPLETED,
+  INITIAL_SUPPLIERS, INITIAL_PROMOTIONS, INITIAL_REVIEWS, INITIAL_ORDERS, INITIAL_MAINTENANCE_RECEIPTS, INITIAL_STAFF_ACCOUNTS, INITIAL_STOCK_ADJUSTMENTS, DEMO_ORDER_COMPLETED,
   INITIAL_CUSTOMERS, INITIAL_NOTIFICATIONS, INITIAL_POLICIES, INITIAL_POLICY_VERSIONS, INITIAL_AUDIT_LOGS, INITIAL_FINANCIAL_ADJUSTMENTS,
   Product, Category, Supplier, Promotion, PromotionUsage, ActionResult, OrderStatus, AssignedEquipment, Surcharge, MoneyTransaction, ImportReceipt, Review,
   HandoverRecord, ReturnReceipt, ReturnReceiptItem, MaintenanceReceipt, StaffAccount, StockAdjustmentReceipt, StockAdjustmentLine,
   CustomerAccount, AppNotification, RentalPolicyConfig, PolicyVersion, AuditLogEntry, FinancialAdjustment, ReconciliationStatement, ContactLog,
   ImportReceiptAdjustment,
-  fmt, statusColors,
+  fmt,
 } from "./store";
 import LandingView from "./views/LandingView";
 import ProductsView from "./views/ProductsView";
@@ -28,6 +64,35 @@ export { AppContext, useApp, type Page, type AppState };
 
 const STORAGE_KEY = "geargo-demo-state-v2";
 const LEGACY_STORAGE_KEY = "geargo-demo-state-v1";
+const PREFS_STORAGE_KEY = "geargo-ui-prefs-v1";
+const REAL_MODE = isRealApiEnabled();
+
+const NEUTRAL_POLICY_CONFIG: RentalPolicyConfig = {
+  version: "v1.0",
+  effectiveDate: "",
+  holdMinutes: 15,
+  standardPickupTime: "08:00",
+  standardReturnTime: "20:00",
+  cancellationFreeHours: 48,
+  cancellationTier1Hours: 24,
+  cancellationTier1FeePercent: 30,
+  cancellationTier2FeePercent: 100,
+  overdueMultiplier: 1.5,
+  minDepositPercentage: 100,
+  damageCompensationPercent: 50,
+  accessoryLossFeeSchedule: [],
+  adminApprovalFeeThreshold: 1000000,
+  reminderPickupHoursBefore: 4,
+  reminderReturnHoursBefore: 2,
+  updatedAt: "",
+  updatedBy: "Hệ thống",
+};
+
+function mapBackendRoleToFrontend(vaiTro?: string | null): Role {
+  if (vaiTro === "QuanTriVien") return "admin";
+  if (vaiTro === "NhanVien") return "staff";
+  return "customer";
+}
 
 interface PersistedState {
   schemaVersion?: number;
@@ -61,6 +126,10 @@ interface PersistedState {
 
 function loadPersistedState(): PersistedState | null {
   try {
+    if (REAL_MODE) {
+      const prefsRaw = localStorage.getItem(PREFS_STORAGE_KEY);
+      return prefsRaw ? (JSON.parse(prefsRaw) as PersistedState) : null;
+    }
     const value = localStorage.getItem(STORAGE_KEY) ?? localStorage.getItem(LEGACY_STORAGE_KEY);
     return value ? JSON.parse(value) as PersistedState : null;
   } catch {
@@ -76,8 +145,11 @@ export default function App() {
   const [role, setRole] = useState<Role>("customer");
   const [page, setPage] = useState<Page>("landing");
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
-  const [categories, setCategories] = useState<Category[]>(persistedState?.categories ?? INITIAL_CATEGORIES);
+  const [categories, setCategories] = useState<Category[]>(
+    REAL_MODE ? [] : (persistedState?.categories ?? INITIAL_CATEGORIES)
+  );
   const [products, setProducts] = useState<Product[]>(() => {
+    if (REAL_MODE) return [];
     const source = persistedState?.products ?? INITIAL_PRODUCTS;
     const availableCategories = persistedState?.categories ?? INITIAL_CATEGORIES;
     return source.map((product) => ({
@@ -89,57 +161,99 @@ export default function App() {
       images: product.images ?? [product.image].filter(Boolean),
     }));
   });
-  const [suppliers, setSuppliers] = useState<Supplier[]>(persistedState?.suppliers ?? INITIAL_SUPPLIERS);
-  const [promotions, setPromotions] = useState<Promotion[]>(persistedState?.promotions ?? INITIAL_PROMOTIONS);
-  const [promotionUsages, setPromotionUsages] = useState<PromotionUsage[]>(persistedState?.promotionUsages ?? []);
-  const [equipment, setEquipment] = useState<Equipment[]>(() => (persistedState?.equipment ?? INITIAL_EQUIPMENT).map((item) => ({
-    ...item,
-    displayCode: item.displayCode ?? item.id,
-    importReceiptLineId: item.importReceiptLineId ?? (() => {
-      const receipt = (persistedState?.importReceipts ?? INITIAL_IMPORT_RECEIPTS).find((entry) => entry.id === item.importReceiptId);
-      const index = receipt?.lines.findIndex((line) => line.productId === item.originalProductId) ?? -1;
-      return index >= 0 ? (receipt?.lines[index].id ?? `${receipt?.id}-LINE-${index + 1}`) : undefined;
-    })(),
-    includedAccessories: item.includedAccessories ?? [],
-    note: item.note ?? "",
-  })));
+  const [suppliers, setSuppliers] = useState<Supplier[]>(
+    REAL_MODE ? [] : (persistedState?.suppliers ?? INITIAL_SUPPLIERS)
+  );
+  const [promotions, setPromotions] = useState<Promotion[]>(
+    REAL_MODE ? [] : (persistedState?.promotions ?? INITIAL_PROMOTIONS)
+  );
+  const [promotionUsages, setPromotionUsages] = useState<PromotionUsage[]>(
+    REAL_MODE ? [] : (persistedState?.promotionUsages ?? [])
+  );
+  const [equipment, setEquipment] = useState<Equipment[]>(() => {
+    if (REAL_MODE) return [];
+    return (persistedState?.equipment ?? INITIAL_EQUIPMENT).map((item) => ({
+      ...item,
+      displayCode: item.displayCode ?? item.id,
+      importReceiptLineId: item.importReceiptLineId ?? (() => {
+        const receipt = (persistedState?.importReceipts ?? INITIAL_IMPORT_RECEIPTS).find((entry) => entry.id === item.importReceiptId);
+        const index = receipt?.lines.findIndex((line) => line.productId === item.originalProductId) ?? -1;
+        return index >= 0 ? (receipt?.lines[index].id ?? `${receipt?.id}-LINE-${index + 1}`) : undefined;
+      })(),
+      includedAccessories: item.includedAccessories ?? [],
+      note: item.note ?? "",
+    }));
+  });
   const [orders, setOrders] = useState<Order[]>(() => {
+    if (REAL_MODE) return [];
     const list = persistedState?.orders ?? INITIAL_ORDERS;
     if (!list.some((o) => o.status === "Hoàn tất")) {
       return [...list, DEMO_ORDER_COMPLETED];
     }
     return list;
   });
-  const [cart, setCart] = useState<CartItem[]>(persistedState?.cart ?? []);
-  const [importReceipts, setImportReceipts] = useState<ImportReceipt[]>(() => (persistedState?.importReceipts ?? INITIAL_IMPORT_RECEIPTS).map((receipt) => {
-    const supplier = suppliers.find((item) => item.id === receipt.supplierId || item.displayCode === receipt.supplierId);
-    return {
-      ...receipt,
-      displayCode: receipt.displayCode ?? receipt.id,
-      supplierId: supplier?.id ?? receipt.supplierId,
-      supplierName: supplier?.name ?? receipt.supplierName,
-      lines: receipt.lines.map((line, index) => ({ ...line, id: line.id ?? `${receipt.id}-LINE-${index + 1}`, receivingCondition: line.receivingCondition ?? "Mới", note: line.note ?? "" })),
-    };
-  }));
-  const [reviews, setReviews] = useState<Review[]>(persistedState?.reviews ?? INITIAL_REVIEWS);
-  const [maintenanceReceipts, setMaintenanceReceipts] = useState<MaintenanceReceipt[]>(persistedState?.maintenanceReceipts ?? INITIAL_MAINTENANCE_RECEIPTS);
-  const [staffAccounts, setStaffAccounts] = useState<StaffAccount[]>(persistedState?.staffAccounts ?? INITIAL_STAFF_ACCOUNTS);
-  const [stockAdjustments, setStockAdjustments] = useState<StockAdjustmentReceipt[]>(persistedState?.stockAdjustments ?? INITIAL_STOCK_ADJUSTMENTS);
-  const [customers, setCustomers] = useState<CustomerAccount[]>(persistedState?.customers ?? INITIAL_CUSTOMERS);
-  const [notifications, setNotifications] = useState<AppNotification[]>(persistedState?.notifications ?? INITIAL_NOTIFICATIONS);
-  const [policies, setPolicies] = useState<RentalPolicyConfig>(persistedState?.policies ?? INITIAL_POLICIES);
-  const [policyVersions, setPolicyVersions] = useState<PolicyVersion[]>(persistedState?.policyVersions ?? INITIAL_POLICY_VERSIONS);
-  const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>(persistedState?.auditLogs ?? INITIAL_AUDIT_LOGS);
-  const [financialAdjustments, setFinancialAdjustments] = useState<FinancialAdjustment[]>(persistedState?.financialAdjustments ?? INITIAL_FINANCIAL_ADJUSTMENTS);
-  const [currentUser, setCurrentUser] = useState<{ id?: string; username?: string; name: string; email: string; phone: string; role: Role; permissions?: string[]; address?: string } | null>(
-    persistedState?.currentUser ?? { id: "KH001", name: "Nguyễn Văn An", email: "an.nguyen@gmail.com", phone: "0901 234 567", role: "customer" }
+  const [cart, setCart] = useState<CartItem[]>(REAL_MODE ? [] : (persistedState?.cart ?? []));
+  const [importReceipts, setImportReceipts] = useState<ImportReceipt[]>(() => {
+    if (REAL_MODE) return [];
+    return (persistedState?.importReceipts ?? INITIAL_IMPORT_RECEIPTS).map((receipt) => {
+      const supplier = suppliers.find((item) => item.id === receipt.supplierId || item.displayCode === receipt.supplierId);
+      return {
+        ...receipt,
+        displayCode: receipt.displayCode ?? receipt.id,
+        supplierId: supplier?.id ?? receipt.supplierId,
+        supplierName: supplier?.name ?? receipt.supplierName,
+        lines: receipt.lines.map((line, index) => ({ ...line, id: line.id ?? `${receipt.id}-LINE-${index + 1}`, receivingCondition: line.receivingCondition ?? "Mới", note: line.note ?? "" })),
+      };
+    });
+  });
+  const [reviews, setReviews] = useState<Review[]>(
+    REAL_MODE ? [] : (persistedState?.reviews ?? INITIAL_REVIEWS)
   );
+  const [maintenanceReceipts, setMaintenanceReceipts] = useState<MaintenanceReceipt[]>(
+    REAL_MODE ? [] : (persistedState?.maintenanceReceipts ?? INITIAL_MAINTENANCE_RECEIPTS)
+  );
+  const [staffAccounts, setStaffAccounts] = useState<StaffAccount[]>(
+    REAL_MODE ? [] : (persistedState?.staffAccounts ?? INITIAL_STAFF_ACCOUNTS)
+  );
+  const [stockAdjustments, setStockAdjustments] = useState<StockAdjustmentReceipt[]>(
+    REAL_MODE ? [] : (persistedState?.stockAdjustments ?? INITIAL_STOCK_ADJUSTMENTS)
+  );
+  const [customers, setCustomers] = useState<CustomerAccount[]>(
+    REAL_MODE ? [] : (persistedState?.customers ?? INITIAL_CUSTOMERS)
+  );
+  const [notifications, setNotifications] = useState<AppNotification[]>(
+    REAL_MODE ? [] : (persistedState?.notifications ?? INITIAL_NOTIFICATIONS)
+  );
+  const [unreadNotificationCount, setUnreadNotificationCount] = useState<number>(0);
+  const [policies, setPolicies] = useState<RentalPolicyConfig>(
+    REAL_MODE ? NEUTRAL_POLICY_CONFIG : (persistedState?.policies ?? INITIAL_POLICIES)
+  );
+  const [policyVersions, setPolicyVersions] = useState<PolicyVersion[]>(
+    REAL_MODE ? [] : (persistedState?.policyVersions ?? INITIAL_POLICY_VERSIONS)
+  );
+  const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>(
+    REAL_MODE ? [] : (persistedState?.auditLogs ?? INITIAL_AUDIT_LOGS)
+  );
+  const [financialAdjustments, setFinancialAdjustments] = useState<FinancialAdjustment[]>(
+    REAL_MODE ? [] : (persistedState?.financialAdjustments ?? INITIAL_FINANCIAL_ADJUSTMENTS)
+  );
+  const [currentUser, setCurrentUser] = useState<{ id?: string; username?: string; name: string; email: string; phone: string; role: Role; permissions?: string[]; address?: string } | null>(
+    REAL_MODE
+      ? null
+      : (persistedState?.currentUser ?? { id: "KH001", name: "Nguyễn Văn An", email: "an.nguyen@gmail.com", phone: "0901 234 567", role: "customer" })
+  );
+  const [authLoading, setAuthLoading] = useState<boolean>(() => REAL_MODE && Boolean(getAuthToken()));
+  const [permissionNotice, setPermissionNotice] = useState<string | null>(null);
   const [pickupDate, setPickupDate] = useState(persistedState?.pickupDate ?? "");
   const [returnDate, setReturnDate] = useState(persistedState?.returnDate ?? "");
   const [pickupHour, setPickupHour] = useState(persistedState?.pickupHour ?? "09:00");
   const [returnHour, setReturnHour] = useState(persistedState?.returnHour ?? "09:00");
-  const [newOrderId, setNewOrderId] = useState<string | null>(persistedState?.newOrderId ?? null);
-  const [appliedPromoCode, setAppliedPromoCode] = useState(persistedState?.appliedPromoCode ?? "");
+  const [newOrderId, setNewOrderId] = useState<string | null>(REAL_MODE ? null : (persistedState?.newOrderId ?? null));
+  const [appliedPromoCode, setAppliedPromoCode] = useState(REAL_MODE ? "" : (persistedState?.appliedPromoCode ?? ""));
+  const pageRef = useRef<Page>(page);
+  pageRef.current = page;
+  const categoriesRef = useRef<Category[]>(categories);
+  categoriesRef.current = categories;
 
   useEffect(() => {
     const expireReservations = () => {
@@ -169,59 +283,363 @@ export default function App() {
     return () => window.clearInterval(timer);
   }, []);
 
-  // WP-M06: Tải dữ liệu thật từ ASP.NET Core Backend khi cờ Real API được kích hoạt (UC47, UC52)
-  useEffect(() => {
-    if (!isRealApiEnabled()) return;
-
-    catalogApi.layCayDanhMuc().then((tree) => {
-      if (tree && tree.length > 0) {
-        const flat: Category[] = [];
-        const traverse = (items: typeof tree, parentId: string | null) => {
-          for (const item of items) {
-            flat.push({
-              id: String(item.maDanhMuc),
-              parentId,
-              name: item.tenDanhMuc,
-              description: item.moTa || "",
-              displayOrder: item.thuTuHienThi || 0,
-              status: item.trangThai === "HienThi" ? "active" : "inactive",
-            });
-            if (item.danhMucCon && item.danhMucCon.length > 0) {
-              traverse(item.danhMucCon, String(item.maDanhMuc));
-            }
-          }
-        };
-        traverse(tree, null);
-        setCategories(flat);
+  // ─── Các hàm đồng bộ dữ liệu thật từ ASP.NET Core Backend ───
+  const refreshCatalog = useCallback(async (range?: { gioNhan?: string; gioTra?: string; tuKhoa?: string; maDanhMuc?: number }) => {
+    if (!REAL_MODE) return;
+    try {
+      const [tree, adminCats, publicItems, adminItems] = await Promise.all([
+        catalogApi.layCayDanhMuc().catch(() => []),
+        role === "admin" ? catalogApi.adminLayDanhSachDanhMuc().catch(() => []) : Promise.resolve([]),
+        catalogApi.layDanhSachSanPham({
+          gioNhan: range?.gioNhan,
+          gioTra: range?.gioTra,
+          tuKhoa: range?.tuKhoa,
+          maDanhMuc: range?.maDanhMuc,
+          soMoiTrang: 100,
+        }).catch(() => []),
+        role === "admin" && !range?.gioNhan
+          ? catalogApi.adminLayDanhSachSanPham({ soMoiTrang: 100 }).then((r) => r.items).catch(() => [])
+          : Promise.resolve([]),
+      ]);
+      const catSource = adminCats.length > 0 ? adminCats : tree;
+      const flatCategories = flattenDanhMucTree(catSource);
+      if (flatCategories.length > 0) {
+        setCategories(flatCategories);
       }
-    }).catch(console.warn);
-
-    catalogApi.layDanhSachSanPham({ soMoiTrang: 100 }).then((items) => {
-      if (items && items.length > 0) {
-        const mapped: Product[] = items.map((p) => ({
-          id: String(p.maSanPham),
-          displayCode: p.maSanPhamHienThi || `SP-${p.maSanPham}`,
-          categoryId: String(p.maDanhMuc),
-          category: p.tenSanPham,
-          name: p.tenSanPham,
-          brand: p.thuongHieu || "",
-          description: p.moTa || "",
-          capacity: p.sucChua ? `${p.sucChua} người` : "",
-          dimensions: p.kichThuoc || "",
-          specifications: p.thongSo ? (typeof p.thongSo === "string" ? (() => { try { return JSON.parse(p.thongSo); } catch { return {}; } })() : p.thongSo) : {},
-          pricePerDay: Number(p.giaThueMoiNgay) || 0,
-          deposit: Number(p.mucCocMoiThietBi) || 0,
-          compensation: Number(p.giaTriBoiThuong) || 0,
-          image: p.hinhAnhChinh || p.hinhAnhs?.[0] || "",
-          images: p.hinhAnhs || (p.hinhAnhChinh ? [p.hinhAnhChinh] : []),
-          status: p.trangThaiKinhDoanh === "DangKinhDoanh" ? "active" : "inactive",
-          rating: p.diemTrungBinh || 5.0,
-          reviews: p.soLuongDanhGia || 0,
-        }));
-        setProducts(mapped);
+      const catsForLookup = flatCategories.length > 0 ? flatCategories : categoriesRef.current;
+      // Gộp danh sách sản phẩm công khai (có soLuongKhaDung) và danh sách quản trị nếu là admin
+      const mergedMap = new Map<number, (typeof publicItems)[number]>();
+      for (const item of adminItems) mergedMap.set(item.maSanPham, item);
+      for (const item of publicItems) {
+        const prev = mergedMap.get(item.maSanPham);
+        mergedMap.set(item.maSanPham, { ...prev, ...item });
       }
-    }).catch(console.warn);
+      const sourceItems = mergedMap.size > 0 ? Array.from(mergedMap.values()) : publicItems;
+      setProducts(sourceItems.map((sp) => mapSanPhamToProduct(sp, catsForLookup)));
+    } catch (err) {
+      console.warn("Không thể tải danh mục/sản phẩm:", err);
+    }
+  }, [role]);
+
+  const refreshCart = useCallback(async () => {
+    if (!REAL_MODE || !getAuthToken()) return;
+    try {
+      const gio = await rentalCartApi.layGio();
+      setCart(
+        (gio.chiTiet ?? []).map((ct) => ({
+          productId: String(ct.maSanPham),
+          qty: ct.soLuong,
+        }))
+      );
+      setAppliedPromoCode(gio.maKhuyenMaiApDung ?? "");
+      if (gio.gioNhanDuKien && gio.gioTraDuKien) {
+        const pDate = gio.gioNhanDuKien.slice(0, 10);
+        const rDate = gio.gioTraDuKien.slice(0, 10);
+        if (pDate && rDate) {
+          setPickupDate((prev) => prev || pDate);
+          setReturnDate((prev) => prev || rDate);
+        }
+      }
+    } catch {
+      // Giữ trạng thái hiện tại nếu chưa có giỏ thuê
+    }
   }, []);
+
+  const refreshOrders = useCallback(async () => {
+    if (!REAL_MODE || !getAuthToken()) return;
+    try {
+      if (role === "staff" || role === "admin") {
+        const paged = await orderApi.timDonVanHanh({ soMoiTrang: 50 });
+        const details = await Promise.allSettled(
+          paged.items.slice(0, 20).map((o) => orderApi.layChiTietVanHanh(o.maDonThue))
+        );
+        const detailMap = new Map<number, Order>();
+        details.forEach((r) => {
+          if (r.status === "fulfilled") {
+            detailMap.set(r.value.don.maDonThue, mapDonVanHanhChiTietToOrder(r.value));
+          }
+        });
+        setOrders(
+          paged.items.map((o) => detailMap.get(o.maDonThue) ?? mapDonVanHanhTomTatToOrder(o))
+        );
+      } else {
+        const paged = await orderApi.layDonCuaToi({ soMoiTrang: 50 });
+        const details = await Promise.allSettled(
+          paged.items.slice(0, 20).map((o) => orderApi.layChiTietDon(o.maDonThue))
+        );
+        const detailMap = new Map<number, Order>();
+        details.forEach((r) => {
+          if (r.status === "fulfilled") {
+            detailMap.set(
+              r.value.maDonThue,
+              mapDonChiTietToOrder(r.value, { customerId: currentUser?.id, customerName: currentUser?.name })
+            );
+          }
+        });
+        setOrders(
+          paged.items.map(
+            (o) =>
+              detailMap.get(o.maDonThue) ??
+              mapDonTomTatToOrder(o, currentUser?.name ?? "Khách hàng", currentUser?.id ?? "")
+          )
+        );
+      }
+    } catch (err) {
+      console.warn("Không thể tải danh sách đơn thuê:", err);
+    }
+  }, [role, currentUser?.id, currentUser?.name]);
+
+  const refreshEquipment = useCallback(async () => {
+    if (!REAL_MODE || !getAuthToken() || (role !== "staff" && role !== "admin")) return;
+    try {
+      const [eqRes, btRes, adjRes] = await Promise.all([
+        equipmentApi.timKiemThietBi({ soMoiTrang: 100 }).catch(() => ({ items: [] })),
+        equipmentApi.timBaoTri({ soMoiTrang: 50 }).catch(() => ({ items: [] })),
+        inventoryApi.timPhieu({ soMoiTrang: 50 }).catch(() => ({ items: [] })),
+      ]);
+      setEquipment((eqRes.items ?? []).map(mapThietBiToEquipment));
+      setMaintenanceReceipts((btRes.items ?? []).map(mapBaoTriToReceipt));
+      setStockAdjustments((adjRes.items ?? []).map(mapDieuChinhKhoToReceipt));
+    } catch (err) {
+      console.warn("Không thể tải dữ liệu thiết bị/kho:", err);
+    }
+  }, [role]);
+
+  const refreshSuppliers = useCallback(async () => {
+    if (!REAL_MODE || !getAuthToken() || (role !== "staff" && role !== "admin")) return;
+    try {
+      const res = await supplierApi.timKiem({ soMoiTrang: 50 });
+      setSuppliers((res.items ?? []).map(mapNhaCungCapToSupplier));
+    } catch (err) {
+      console.warn("Không thể tải nhà cung cấp:", err);
+    }
+  }, [role]);
+
+  const refreshImportReceipts = useCallback(async () => {
+    if (!REAL_MODE || !getAuthToken() || (role !== "staff" && role !== "admin")) return;
+    try {
+      const res = await importReceiptApi.timKiem({ soMoiTrang: 50 });
+      setImportReceipts((res.items ?? []).map(mapPhieuNhapToImportReceipt));
+    } catch (err) {
+      console.warn("Không thể tải phiếu nhập:", err);
+    }
+  }, [role]);
+
+  const refreshPromotions = useCallback(async () => {
+    if (!REAL_MODE || !getAuthToken() || role !== "admin") return;
+    try {
+      const res = await promotionApi.timKiem({ soMoiTrang: 50 });
+      setPromotions((res.items ?? []).map(mapKhuyenMaiToPromotion));
+    } catch (err) {
+      console.warn("Không thể tải khuyến mãi:", err);
+    }
+  }, [role]);
+
+  const refreshPolicies = useCallback(async () => {
+    if (!REAL_MODE || !getAuthToken() || role !== "admin") return;
+    try {
+      const res = await policyApi.layDanhSach({ kichThuoc: 20 });
+      const versions = (res.items ?? []).map((cs) => mapChinhSachToPolicyVersion(cs, NEUTRAL_POLICY_CONFIG));
+      setPolicyVersions(versions);
+      const active =
+        (res.items ?? []).find((cs) => cs.hieuLuc === "HienHanh") ?? (res.items ?? [])[0];
+      if (active) {
+        setPolicies(mapChinhSachToRentalConfig(active, NEUTRAL_POLICY_CONFIG));
+      }
+    } catch (err) {
+      console.warn("Không thể tải chính sách:", err);
+    }
+  }, [role]);
+
+  const refreshReviews = useCallback(async () => {
+    if (!REAL_MODE || !getAuthToken()) return;
+    try {
+      if (role === "admin" || role === "staff") {
+        const res = await reviewApi.adminTimKiem({ soMoiTrang: 50 });
+        setReviews((res.items ?? []).map(mapDanhGiaToReview));
+      } else {
+        const res = await reviewApi.layDanhGiaCuaToi({ soMoiTrang: 50 });
+        setReviews((res.items ?? []).map(mapDanhGiaToReview));
+      }
+    } catch {
+      // Bỏ qua nếu vai trò hiện tại chưa có đánh giá
+    }
+  }, [role]);
+
+  const refreshNotifications = useCallback(async () => {
+    if (!REAL_MODE || !getAuthToken()) return;
+    try {
+      const res = await notificationApi.layCuaToi({ soMoiTrang: 30 });
+      setNotifications((res.items ?? []).map((tb) => mapThongBaoToNotification(tb, role)));
+      setUnreadNotificationCount(Number(res.soChuaDoc ?? 0));
+    } catch {
+      // Không chặn giao diện nếu endpoint thông báo tạm lỗi
+    }
+  }, [role]);
+
+  const refreshAuditLogs = useCallback(async () => {
+    if (!REAL_MODE || !getAuthToken() || (role !== "staff" && role !== "admin")) return;
+    try {
+      const res = await auditApi.traCuu({ soMoiTrang: 50 });
+      setAuditLogs((res.items ?? []).map(mapNhatKyToAuditLog));
+    } catch (err) {
+      console.warn("Không thể tải nhật ký thao tác:", err);
+    }
+  }, [role]);
+
+  const upsertOrder = useCallback((updated: Order) => {
+    setOrders((prev) => {
+      const exists = prev.some((o) => o.id === updated.id);
+      return exists ? prev.map((o) => (o.id === updated.id ? updated : o)) : [updated, ...prev];
+    });
+  }, []);
+
+  // Tải danh mục/sản phẩm công khai và khôi phục phiên đăng nhập từ JWT khi khởi động
+  const hydrateSession = useCallback(async (fromPermissionChange = false) => {
+    if (!REAL_MODE) return;
+    const token = getAuthToken();
+    if (!token) {
+      setCurrentUser(null);
+      setRole("customer");
+      setAuthLoading(false);
+      return;
+    }
+    try {
+      const [meRes, profileRes, permsRes] = await Promise.allSettled([
+        authApi.layThongTinToi(),
+        profileApi.layHoSoToi(),
+        authApi.layQuyenCuaToi(),
+      ]);
+      if (meRes.status !== "fulfilled") {
+        setAuthToken(null);
+        setCurrentUser(null);
+        setRole("customer");
+        if (fromPermissionChange) {
+          setPermissionNotice("Phiên đăng nhập đã hết hiệu lực do thay đổi quyền hạn. Vui lòng đăng nhập lại.");
+          setPage("login");
+        }
+        return;
+      }
+      const me = meRes.value;
+      const profile = profileRes.status === "fulfilled" ? profileRes.value : null;
+      const perms = permsRes.status === "fulfilled" ? permsRes.value : null;
+      const nextRole = mapBackendRoleToFrontend(perms?.vaiTro ?? me.vaiTro);
+      setRole(nextRole);
+      setCurrentUser({
+        id: String(me.maTaiKhoan),
+        name: profile?.hoTen || me.hoTen || me.email || "Thành viên GearGo",
+        email: profile?.email || me.email || "",
+        phone: profile?.soDienThoai || "",
+        address: profile?.diaChi ?? undefined,
+        role: nextRole,
+        permissions: perms?.cacQuyen ?? [],
+      });
+      if (fromPermissionChange) {
+        setPermissionNotice("Quyền hoặc vai trò tài khoản vừa được quản trị viên cập nhật. Hệ thống đã đồng bộ lại quyền hiện tại.");
+        const currentPage = pageRef.current;
+        if (currentPage === "admin" && nextRole !== "admin") {
+          setPage(nextRole === "staff" ? "staff" : "landing");
+        } else if (currentPage === "staff" && nextRole === "customer") {
+          setPage("landing");
+        }
+      }
+    } finally {
+      setAuthLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!REAL_MODE) return;
+    void refreshCatalog();
+    void hydrateSession(false);
+
+    const onPermissionChanged = () => {
+      void hydrateSession(true);
+    };
+    window.addEventListener("geargo:permissions-changed", onPermissionChanged);
+    return () => window.removeEventListener("geargo:permissions-changed", onPermissionChanged);
+  }, [hydrateSession, refreshCatalog]);
+
+  // Đồng bộ dữ liệu theo vai trò sau khi đăng nhập thành công
+  useEffect(() => {
+    if (!REAL_MODE || !currentUser || !getAuthToken()) return;
+    void refreshNotifications();
+    void refreshCatalog();
+    void refreshOrders();
+    void refreshReviews();
+    if (role === "customer") {
+      void refreshCart();
+    }
+    if (role === "staff" || role === "admin") {
+      void refreshEquipment();
+      void refreshSuppliers();
+      void refreshImportReceipts();
+      void refreshAuditLogs();
+    }
+    if (role === "admin") {
+      void refreshPromotions();
+      void refreshPolicies();
+      void staffApi.timNhanVien({ soMoiTrang: 50 }).then((res) => {
+        setStaffAccounts(
+          (res.items ?? []).map((nv) => ({
+            id: String(nv.maNhanVien),
+            username: nv.email || `NV-${nv.maNhanVien}`,
+            name: nv.hoTen || nv.email || `Nhân viên #${nv.maNhanVien}`,
+            role: nv.vaiTro === "QuanTriVien" ? "Quản trị viên" : "Nhân viên kho",
+            phone: nv.soDienThoai ?? "",
+            email: nv.email ?? "",
+            status: nv.trangThaiTaiKhoan === "BiKhoa" ? "locked" : "active",
+            createdAt: nv.ngayVaoLam ?? "",
+          }))
+        );
+      }).catch(() => {});
+      void staffApi.timTaiKhoan({ vaiTro: "KhachHang", soMoiTrang: 50 }).then((res) => {
+        setCustomers(
+          (res.items ?? []).map((tk) => ({
+            id: String(tk.maKhachHang ?? tk.maTaiKhoan),
+            name: tk.hoTen || tk.email || `KH#${tk.maTaiKhoan}`,
+            phone: tk.soDienThoai ?? "",
+            email: tk.email ?? "",
+            address: "",
+            status: tk.trangThai === "BiKhoa" ? "locked" : "active",
+            lockedReason: tk.lyDoKhoa ?? undefined,
+            createdAt: tk.ngayTao,
+            totalOrders: 0,
+            totalSpent: 0,
+            currentDeposit: 0,
+          }))
+        );
+      }).catch(() => {});
+      void paymentApi.layDanhSachCanDoiChieu().then((items) => {
+        setFinancialAdjustments(
+          (items ?? []).map((g) => ({
+            id: String(g.maThanhToan),
+            orderId: String(g.maDonThue),
+            type: "Thu bù",
+            amount: Number(g.tongSoTien ?? 0),
+            reason: g.lyDoCanDoiChieu || `Mã GD ${g.maYeuCau} (${g.phuongThuc})`,
+            status: g.trangThaiDoiChieu === "DaDoiChieu" ? "Đã duyệt" : "Chờ duyệt",
+            createdBy: "Cổng thanh toán",
+            createdAt: g.thoiDiemTao,
+          }))
+        );
+      }).catch(() => {});
+    }
+  }, [
+    currentUser?.id,
+    role,
+    refreshCatalog,
+    refreshNotifications,
+    refreshOrders,
+    refreshReviews,
+    refreshCart,
+    refreshEquipment,
+    refreshSuppliers,
+    refreshImportReceipts,
+    refreshAuditLogs,
+    refreshPromotions,
+    refreshPolicies,
+  ]);
 
   useEffect(() => {
     const now = Date.now();
@@ -233,6 +651,13 @@ export default function App() {
   }, [orders]);
 
   useEffect(() => {
+    if (REAL_MODE) {
+      localStorage.setItem(
+        PREFS_STORAGE_KEY,
+        JSON.stringify({ pickupDate, returnDate, pickupHour, returnHour })
+      );
+      return;
+    }
     const state: PersistedState = {
       schemaVersion: 2, categories, products, suppliers, promotions, promotionUsages,
       equipment, orders, cart, importReceipts, reviews, maintenanceReceipts, staffAccounts, stockAdjustments, pickupDate, returnDate, pickupHour, returnHour, newOrderId, appliedPromoCode,
@@ -462,6 +887,10 @@ export default function App() {
   };
 
   const getAvailable = (productId: string) => {
+    const prod = products.find((p) => p.id === productId) as (Product & { availableCount?: number }) | undefined;
+    if (REAL_MODE && prod && prod.availableCount !== undefined) {
+      return Math.max(0, prod.availableCount);
+    }
     if (!hasValidRentalPeriod()) return 0;
     const requestedStart = new Date(`${pickupDate}T${pickupHour || "09:00"}:00`).getTime();
     const requestedEnd = new Date(`${returnDate}T${returnHour || "09:00"}:00`).getTime();
@@ -1962,7 +2391,18 @@ export default function App() {
   };
 
   const markNotificationRead = (id: string) => {
-    setNotifications((prev) => prev.map((n) => n.id === id ? { ...n, isRead: true } : n));
+    setNotifications((prev) =>
+      prev.map((n) => {
+        if (n.id === id && !n.isRead) {
+          setUnreadNotificationCount((c) => Math.max(0, c - 1));
+          return { ...n, isRead: true };
+        }
+        return n;
+      })
+    );
+    if (REAL_MODE && getAuthToken() && /^\d+$/.test(id)) {
+      void notificationApi.danhDauDaDoc(Number(id)).catch(() => {});
+    }
   };
 
   // UC8.1 & UC8.1.1: Cấu hình chính sách có phiên bản & lưu snapshot lịch sử
@@ -2129,14 +2569,19 @@ export default function App() {
   const login = (user: { id?: string; username?: string; name: string; email: string; phone: string; role: Role; permissions?: string[]; address?: string }) => {
     setCurrentUser(user);
     setRole(user.role);
-    addAuditLog({
-      actor: user.name,
-      role: user.role === "admin" ? "Quản trị viên" : user.role === "staff" ? "Nhân viên" : "Khách hàng",
-      action: "Đăng nhập (UC1.2)",
-      targetEntity: "Session",
-      targetId: user.email || user.username || user.id || "SESSION",
-      detail: `Đăng nhập thành công với vai trò ${user.role}`
-    });
+    setPermissionNotice(null);
+    if (REAL_MODE && getAuthToken()) {
+      void hydrateSession(false);
+    } else {
+      addAuditLog({
+        actor: user.name,
+        role: user.role === "admin" ? "Quản trị viên" : user.role === "staff" ? "Nhân viên" : "Khách hàng",
+        action: "Đăng nhập (UC1.2)",
+        targetEntity: "Session",
+        targetId: user.email || user.username || user.id || "SESSION",
+        detail: `Đăng nhập thành công với vai trò ${user.role}`
+      });
+    }
     if (user.role === "admin") setPage("admin");
     else if (user.role === "staff") setPage("staff");
     else setPage("landing");
@@ -2147,7 +2592,19 @@ export default function App() {
     if (!currentUser) return { ok: false, message: "Chưa đăng nhập hệ thống." };
     setCurrentUser((prev) => (prev ? { ...prev, ...info } : null));
 
-    // Cập nhật thông tin vào danh sách thực thể tương ứng (UC1.6)
+    if (REAL_MODE && getAuthToken()) {
+      void profileApi.capNhatHoSoToi({
+        hoTen: info.name,
+        email: info.email,
+        soDienThoai: info.phone,
+        diaChi: currentUser.address ?? null,
+      }).catch((err) => {
+        console.warn("Cập nhật hồ sơ thất bại:", err);
+      });
+      return { ok: true };
+    }
+
+    // Cập nhật thông tin vào danh sách thực thể tương ứng (UC1.6 - Mock)
     if (role === "admin" || role === "staff") {
       setStaffAccounts((prev) =>
         prev.map((s) => (s.id === currentUser.id || s.email === currentUser.email ? { ...s, ...info } : s))
@@ -2158,9 +2615,6 @@ export default function App() {
       );
     }
 
-    if (isRealApiEnabled()) {
-      void fakeApi.auth.updateProfile(info).catch(() => {});
-    }
     addAuditLog({
       actor: info.name,
       role: role === "admin" ? "Quản trị viên" : role === "staff" ? "Nhân viên" : "Khách hàng",
@@ -2175,9 +2629,13 @@ export default function App() {
   // Đổi mật khẩu tài khoản người dùng đang đăng nhập (UC1.12)
   const changeCurrentUserPassword = (oldPass: string, newPass: string): ActionResult => {
     if (!currentUser) return { ok: false, message: "Chưa đăng nhập hệ thống." };
-    if (isRealApiEnabled()) {
+    if (REAL_MODE) {
       if (newPass.length < 8) return { ok: false, message: "Mật khẩu mới tối thiểu 8 ký tự." };
-      void fakeApi.auth.changePassword(oldPass, newPass).catch(() => {});
+      void authApi.doiMatKhau({
+        matKhauHienTai: oldPass,
+        matKhauMoi: newPass,
+        xacNhanMatKhauMoi: newPass,
+      }).catch(() => {});
       return { ok: true };
     }
     let currentStoredPass = "123456";
@@ -2218,11 +2676,21 @@ export default function App() {
   };
 
   const logout = () => {
-    if (isRealApiEnabled()) {
-      void fakeApi.auth.logout().catch(() => {});
+    if (REAL_MODE) {
+      void authApi.dangXuat().catch(() => {});
+      setOrders([]);
+      setCart([]);
+      setNotifications([]);
+      setUnreadNotificationCount(0);
+      setAuditLogs([]);
+      setStaffAccounts([]);
+      setCustomers([]);
+      setFinancialAdjustments([]);
+    } else {
+      const actorName = currentUser?.name || "Người dùng";
+      addAuditLog({ actor: actorName, role: role === "admin" ? "Quản trị viên" : role === "staff" ? "Nhân viên" : "Khách hàng", action: "Đăng xuất (UC1.3)", targetEntity: "Session", targetId: currentUser?.email || "SESSION", detail: "Đăng xuất tài khoản khỏi phiên làm việc" });
     }
-    const actorName = currentUser?.name || "Người dùng";
-    addAuditLog({ actor: actorName, role: role === "admin" ? "Quản trị viên" : role === "staff" ? "Nhân viên" : "Khách hàng", action: "Đăng xuất (UC1.3)", targetEntity: "Session", targetId: currentUser?.email || "SESSION", detail: "Đăng xuất tài khoản khỏi phiên làm việc" });
+    setAuthToken(null);
     setCurrentUser(null);
     setRole("customer");
     setPage("landing");
@@ -2369,10 +2837,45 @@ export default function App() {
     getAvailable,
     getDays,
     hasValidRentalPeriod,
+    realApi: REAL_MODE,
+    authLoading,
+    permissionNotice,
+    dismissPermissionNotice: () => setPermissionNotice(null),
+    unreadNotificationCount,
+    setUnreadNotificationCount,
+    setCartItems: setCart,
+    upsertOrder,
+    refreshCatalog,
+    refreshOrders,
+    refreshCart,
+    refreshEquipment,
+    refreshSuppliers,
+    refreshImportReceipts,
+    refreshPromotions,
+    refreshPolicies,
+    refreshReviews,
+    refreshNotifications,
+    refreshAuditLogs,
   };
 
   return (
     <AppContext.Provider value={state}>
+      {permissionNotice && (
+        <div
+          role="status"
+          className="fixed bottom-4 right-4 z-[60] max-w-md rounded-2xl border border-amber-300 bg-[#FFFDF7] p-4 shadow-lg text-[#11231B] flex items-start gap-3"
+        >
+          <Icon name="alert" className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+          <div className="flex-1 text-sm leading-relaxed">{permissionNotice}</div>
+          <button
+            type="button"
+            onClick={() => setPermissionNotice(null)}
+            className="text-xs font-semibold px-2 py-1 rounded-lg hover:bg-stone-100 text-stone-600"
+          >
+            Đóng
+          </button>
+        </div>
+      )}
       {/* 1. Phân hệ Xác thực: Đăng nhập, Đăng ký, Quên mật khẩu */}
       {(page === "login" || page === "register" || page === "forgot-password") && (
         <AuthLayout>

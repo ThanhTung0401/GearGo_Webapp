@@ -1,16 +1,30 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useApp } from "../context/AppContext";
 import { isRealApiEnabled } from "../services/apiClient";
-import { equipmentApi } from "../services/api/equipmentApi";
+import {
+  equipmentApi,
+  orderApi,
+  handoverApi,
+  returnApi,
+  surchargeApi,
+  reportApi,
+  auditApi,
+  type ChuanBiResponseBackend,
+  type PhieuBanGiaoBackend,
+  type NhanTraBackend,
+  type ChiTietNhanTraBackend,
+  type ThietBiConNoBackend,
+  type QuaHanChiTietBackend,
+  type BaoCaoVanHanhBackend,
+} from "../services/api";
+import { mapDonVanHanhChiTietToOrder, mapPhuPhiToSurcharge, mapNhatKyToAuditLog, type AuditLogEntryWithRef } from "../services/mappers";
+import type { Surcharge } from "../types";
 import {
   fmt,
   statusColors,
   Order,
-  AssignedEquipment,
-  Surcharge,
   ReturnReceipt,
   ReturnReceiptItem,
-  HandoverRecord,
   MaintenanceReceipt,
   Equipment,
   ImportReceipt,
@@ -23,6 +37,42 @@ import EquipmentLifecycleModal from "../components/EquipmentLifecycleModal";
 import InventoryAuditModal from "../components/InventoryAuditModal";
 import SupplierProfileModal from "../components/SupplierProfileModal";
 import GoodsReceivingModal from "../components/GoodsReceivingModal";
+
+/** Ánh xạ tên tình trạng nhận trả UI sang enum backend `ketLuan`. */
+function mapReturnCondToBackend(cond: ReturnReceiptItem["condition"]): string {
+  switch (cond) {
+    case "Bình thường":
+      return "Dat";
+    case "Cần vệ sinh":
+      return "CanVeSinh";
+    case "Hỏng nhẹ":
+      return "HongNhe";
+    case "Hỏng nặng":
+      return "HongNang";
+    case "Thiếu phụ kiện":
+      return "ThieuPhuKien";
+    case "Mất thiết bị":
+      return "MatThietBi";
+    default:
+      return "Dat";
+  }
+}
+
+/** Ánh xạ tên tình trạng nhận trả sang loại phụ phí `loaiPhi`. */
+function mapReturnCondToSurchargeType(cond: ReturnReceiptItem["condition"]): string {
+  switch (cond) {
+    case "Cần vệ sinh":
+      return "VeSinhDacBiet";
+    case "Thiếu phụ kiện":
+      return "MatPhuKien";
+    case "Mất thiết bị":
+      return "MatThietBi";
+    case "Hỏng nhẹ":
+    case "Hỏng nặng":
+    default:
+      return "HuHong";
+  }
+}
 
 type StaffTab = "overview" | "orders" | "handover" | "return" | "equipment" | "reports";
 
@@ -42,9 +92,25 @@ export default function StaffView() {
 
   const selectedOrder = (selectedOrderId ? app.orders.find((o) => o.id === selectedOrderId) : null) ?? null;
 
+  const hydrateOperationalOrder = useCallback(
+    async (id: string) => {
+      if (!app.realApi) return;
+      const numId = Number(id);
+      if (!Number.isFinite(numId)) return;
+      try {
+        const dto = await orderApi.layChiTietVanHanh(numId);
+        app.upsertOrder?.(mapDonVanHanhChiTietToOrder(dto));
+      } catch {
+        // Giữ nguyên dữ liệu hiện có nếu không tải được chi tiết
+      }
+    },
+    [app.realApi]
+  );
+
   const openOrder = (id: string, goTab: StaffTab) => {
     setSelectedOrderId(id);
     setTab(goTab);
+    void hydrateOperationalOrder(id);
   };
 
   const currentTab = tabs.find((item) => item.key === tab);
@@ -59,9 +125,9 @@ export default function StaffView() {
       brandSubtitle="Cổng nhân viên vận hành"
     >
       {tab === "overview" && <OverviewTab app={app} openOrder={openOrder} />}
-      {tab === "orders" && <OrdersTab app={app} selectedOrderId={selectedOrderId} setSelectedOrderId={setSelectedOrderId} openOrder={openOrder} />}
-      {tab === "handover" && <HandoverTab app={app} selectedOrder={selectedOrder} setSelectedOrderId={setSelectedOrderId} />}
-      {tab === "return" && <ReturnTab app={app} selectedOrder={selectedOrder} setSelectedOrderId={setSelectedOrderId} />}
+      {tab === "orders" && <OrdersTab app={app} selectedOrderId={selectedOrderId} setSelectedOrderId={setSelectedOrderId} openOrder={openOrder} hydrateOperationalOrder={hydrateOperationalOrder} />}
+      {tab === "handover" && <HandoverTab app={app} selectedOrder={selectedOrder} setSelectedOrderId={setSelectedOrderId} hydrateOperationalOrder={hydrateOperationalOrder} />}
+      {tab === "return" && <ReturnTab app={app} selectedOrder={selectedOrder} setSelectedOrderId={setSelectedOrderId} hydrateOperationalOrder={hydrateOperationalOrder} />}
       {tab === "equipment" && <EquipmentTab app={app} />}
       {tab === "reports" && <StaffReportsTab app={app} openOrder={openOrder} />}
     </DashboardLayout>
@@ -119,7 +185,7 @@ function OverviewTab({ app, openOrder }: { app: ReturnType<typeof useApp>; openO
               return (
                 <div key={o.id} style={{ background: "white", borderRadius: 8, padding: "10px 14px", border: "1px solid #FCA5A5", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <div>
-                    <span style={{ fontFamily: "var(--font-mono)", fontWeight: 700, color: "#DC2626" }}>{o.id}</span> — <strong>{o.customerName}</strong> ({o.customerPhone})
+                    <span style={{ fontFamily: "var(--font-mono)", fontWeight: 700, color: "#DC2626" }}>{o.displayCode || o.id}</span> — <strong>{o.customerName}</strong> ({o.customerPhone})
                     <div style={{ fontSize: "0.75rem", color: "#6B7280" }}>
                       Hạn trả: {o.returnTime} · <strong style={{ color: "#B91C1C" }}>Trễ {od.overdueDays} ngày ({od.overdueHours} giờ)</strong>
                     </div>
@@ -158,28 +224,28 @@ function OverviewTab({ app, openOrder }: { app: ReturnType<typeof useApp>; openO
             >
               <div style={{ flex: 1 }}>
                 <div className="flex items-center gap-2 mb-1 flex-wrap">
-                  <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.82rem", color: "var(--color-forest)", fontWeight: 700 }}>{o.id}</span>
+                  <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.82rem", color: "var(--color-forest)", fontWeight: 700 }}>{o.displayCode || o.id}</span>
                   <span style={{ background: sc.bg, color: sc.text, padding: "2px 8px", borderRadius: "10px", fontSize: "0.7rem", fontWeight: 600 }}>{o.status}</span>
                   {isPartial && (
-                    <span style={{ background: "#FFF7ED", color: "#C2410C", padding: "2px 8px", borderRadius: "10px", fontSize: "0.7rem", fontWeight: 700 }}>
+                    <span style={{ background: "#FFF7ED", color: "#C2410C", padding: "2px 8px", borderRadius: 10, fontSize: "0.7rem", fontWeight: 700 }}>
                       Đã trả {returnedCnt}/{o.assignedEquipment.length} món
                     </span>
                   )}
                   {isOverdue && (
-                    <span style={{ background: "#FEE2E2", color: "#DC2626", padding: "2px 8px", borderRadius: "10px", fontSize: "0.7rem", fontWeight: 700 }}>
+                    <span style={{ background: "#FEE2E2", color: "#DC2626", padding: "2px 8px", borderRadius: 10, fontSize: "0.7rem", fontWeight: 700 }}>
                       Quá hạn
                     </span>
                   )}
                 </div>
                 <div style={{ fontWeight: 600, fontSize: "0.9rem", color: "var(--color-bark)" }}>{o.customerName} · {o.customerPhone}</div>
                 <div style={{ fontSize: "0.75rem", color: "#6B7280" }}>
-                  {o.items.map((i) => `${i.productName} ×${i.qty}`).join(", ")}
+                  {o.items.length > 0 ? o.items.map((i) => `${i.productName} ×${i.qty}`).join(", ") : `Đã gán ${o.assignedEquipment.length} thiết bị`}
                 </div>
               </div>
               <div style={{ textAlign: "right" }}>
                 <div style={{ fontSize: "0.75rem", color: "#6B7280" }}>Hẹn nhận: {o.pickupTime}</div>
                 <div style={{ fontSize: "0.75rem", color: "#6B7280" }}>Hẹn trả: {o.returnTime}</div>
-                <div style={{ fontFamily: "var(--font-mono)", fontWeight: 700, color: "var(--color-forest)", marginTop: 2 }}>{fmt(o.rental - o.discount + o.depositTotal)}</div>
+                {o.total !== undefined && <div style={{ fontFamily: "var(--font-mono)", fontWeight: 700, color: "var(--color-forest)", marginTop: 2 }}>{fmt(o.rental - o.discount + o.depositTotal)}</div>}
               </div>
               <span style={{ color: "var(--color-forest)", fontSize: "1.1rem" }}>→</span>
             </div>
@@ -191,12 +257,18 @@ function OverviewTab({ app, openOrder }: { app: ReturnType<typeof useApp>; openO
 }
 
 // ─── Orders Tab (UC4.5: Bộ lọc vận hành & Tra cứu hồ sơ đơn) ────────────────────────────────────
-function OrdersTab({ app, selectedOrderId, setSelectedOrderId, openOrder }: { app: ReturnType<typeof useApp>; selectedOrderId: string | null; setSelectedOrderId: (id: string | null) => void; openOrder: (id: string, tab: StaffTab) => void }) {
+function OrdersTab({ app, openOrder, hydrateOperationalOrder }: { app: ReturnType<typeof useApp>; selectedOrderId: string | null; setSelectedOrderId: (id: string | null) => void; openOrder: (id: string, tab: StaffTab) => void; hydrateOperationalOrder: (id: string) => Promise<void> }) {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("Tất cả");
   const [quickFilter, setQuickFilter] = useState<"all" | "delivery_today" | "pickup_today" | "overdue" | "partial">("all");
-  const [viewingDetailOrder, setViewingDetailOrder] = useState<Order | null>(null);
+  const [viewingDetailOrderId, setViewingDetailOrderId] = useState<string | null>(null);
+  const [noShowTarget, setNoShowTarget] = useState<Order | null>(null);
+  const [noShowNote, setNoShowNote] = useState("Đã gọi điện nhắc 2 lần nhưng không nghe máy / Khách không đến quầy");
+  const [noShowSubmitting, setNoShowSubmitting] = useState(false);
+  const [noShowError, setNoShowError] = useState("");
   const statuses = ["Tất cả", "Đã xác nhận", "Đang chuẩn bị", "Sẵn sàng nhận", "Đang thuê", "Trả một phần", "Quá hạn", "Chờ đối soát", "Hoàn tất"];
+
+  const viewingDetailOrder = viewingDetailOrderId ? app.orders.find((o) => o.id === viewingDetailOrderId) ?? null : null;
 
   // Đếm nhanh số lượng theo nghiệp vụ vận hành (UC4.5)
   const deliveryTodayCount = app.orders.filter((o) => ["Đã xác nhận", "Đang chuẩn bị", "Sẵn sàng nhận"].includes(o.status)).length;
@@ -208,14 +280,37 @@ function OrdersTab({ app, selectedOrderId, setSelectedOrderId, openOrder }: { ap
     return returnedCnt > 0 && returnedCnt < o.assignedEquipment.length;
   }).length;
 
-  const handleReportNoShow = (order: Order) => {
-    const note = prompt(`Nhập ghi chú liên hệ khách ${order.customerName} không đến nhận đồ đúng giờ cam kết:`, "Đã gọi điện nhắc 2 lần nhưng không nghe máy / Khách không đến quầy");
-    if (!note) return;
-    const res = app.reportCustomerNoShow(order.id, note, "NV Kho Mai");
+  const handleOpenDetail = (order: Order) => {
+    setViewingDetailOrderId(order.id);
+    void hydrateOperationalOrder(order.id);
+  };
+
+  const handleSubmitNoShow = async () => {
+    if (!noShowTarget || !noShowNote.trim()) return;
+    if (app.realApi) {
+      setNoShowSubmitting(true);
+      setNoShowError("");
+      try {
+        await orderApi.ghiNhanKhongDenNhan(Number(noShowTarget.backendId ?? noShowTarget.id), {
+          ghiChu: noShowNote.trim(),
+          xuLyHuy: false,
+        });
+        await hydrateOperationalOrder(noShowTarget.id);
+        await app.refreshOrders?.();
+        setNoShowTarget(null);
+      } catch (err) {
+        setNoShowError(err instanceof Error ? err.message : "Không thể ghi nhận khách vắng mặt.");
+      } finally {
+        setNoShowSubmitting(false);
+      }
+      return;
+    }
+
+    const res = app.reportCustomerNoShow(noShowTarget.id, noShowNote.trim(), app.currentUser?.name || "Nhân viên kho");
     if (res.ok) {
-      alert(`Đã ghi nhận khách không đến nhận cho đơn #${order.id}. Quản trị viên đã nhận cảnh báo để xử lý theo UC3.4.`);
+      setNoShowTarget(null);
     } else {
-      alert(res.message);
+      setNoShowError(res.message);
     }
   };
 
@@ -234,7 +329,12 @@ function OrdersTab({ app, selectedOrderId, setSelectedOrderId, openOrder }: { ap
     if (filter === "Quá hạn") matchStatus = isOverdue;
     if (filter === "Trả một phần") matchStatus = isPartial;
 
-    const matchSearch = o.id.includes(search) || o.customerName.toLowerCase().includes(search.toLowerCase()) || o.customerPhone.includes(search);
+    const q = search.toLowerCase();
+    const matchSearch =
+      (o.displayCode || o.id).toLowerCase().includes(q) ||
+      o.id.includes(search) ||
+      o.customerName.toLowerCase().includes(q) ||
+      o.customerPhone.includes(search);
     return matchQuick && matchStatus && matchSearch;
   });
 
@@ -308,8 +408,8 @@ function OrdersTab({ app, selectedOrderId, setSelectedOrderId, openOrder }: { ap
               return (
                 <tr key={o.id} style={{ borderTop: "1px solid var(--color-bone)", background: i % 2 === 0 ? "white" : "var(--color-cream)" }}>
                   <td style={{ padding: "11px 14px", fontFamily: "var(--font-mono)", fontSize: "0.78rem", color: "var(--color-forest)", fontWeight: 700 }}>
-                    <button onClick={() => setViewingDetailOrder(o)} style={{ background: "none", border: "none", padding: 0, color: "var(--color-forest)", fontWeight: 700, cursor: "pointer", textDecoration: "underline" }}>
-                      {o.id}
+                    <button onClick={() => handleOpenDetail(o)} style={{ background: "none", border: "none", padding: 0, color: "var(--color-forest)", fontWeight: 700, cursor: "pointer", textDecoration: "underline" }}>
+                      {o.displayCode || o.id}
                     </button>
                     {o.noShowReported && (
                       <div style={{ fontSize: "0.65rem", color: "#DC2626", fontWeight: 700, marginTop: 2 }}>
@@ -322,7 +422,7 @@ function OrdersTab({ app, selectedOrderId, setSelectedOrderId, openOrder }: { ap
                     <div style={{ fontSize: "0.72rem", color: "#9CA3AF" }}>{o.customerPhone}</div>
                   </td>
                   <td style={{ padding: "11px 14px", fontSize: "0.8rem", color: "#6B7280" }}>
-                    {o.items.map((it) => `${it.productName.split("–")[0].trim()} ×${it.qty}`).join(", ")}
+                    {o.items.length > 0 ? o.items.map((it) => `${it.productName.split("–")[0].trim()} ×${it.qty}`).join(", ") : `${o.assignedEquipment.length} thiết bị đã gán`}
                   </td>
                   <td style={{ padding: "11px 14px", fontSize: "0.75rem", color: "#6B7280" }}>
                     <div>📤 {o.pickupTime}</div>
@@ -349,7 +449,7 @@ function OrdersTab({ app, selectedOrderId, setSelectedOrderId, openOrder }: { ap
 
                       <button
                         type="button"
-                        onClick={() => setViewingDetailOrder(o)}
+                        onClick={() => handleOpenDetail(o)}
                         style={{ background: "#F3F4F6", border: "1px solid var(--color-bone)", borderRadius: 6, padding: "5px 8px", fontSize: "0.72rem", cursor: "pointer", fontWeight: 600 }}
                       >
                         Hồ sơ
@@ -358,7 +458,11 @@ function OrdersTab({ app, selectedOrderId, setSelectedOrderId, openOrder }: { ap
                       {canReportNoShow && !o.noShowReported && (
                         <button
                           type="button"
-                          onClick={() => handleReportNoShow(o)}
+                          onClick={() => {
+                            setNoShowTarget(o);
+                            setNoShowError("");
+                            setNoShowNote("Đã gọi điện nhắc 2 lần nhưng không nghe máy / Khách không đến quầy");
+                          }}
                           style={{ background: "#FEF2F2", color: "#DC2626", border: "1px solid #FECACA", borderRadius: 6, padding: "5px 6px", fontSize: "0.68rem", cursor: "pointer", fontWeight: 700 }}
                           title="Ghi nhận khách không đến nhận đồ theo UC4.5 Dòng 836"
                         >
@@ -384,13 +488,13 @@ function OrdersTab({ app, selectedOrderId, setSelectedOrderId, openOrder }: { ap
                   HỒ SƠ VẬN HÀNH ĐƠN HÀNG (UC4.5)
                 </span>
                 <h3 style={{ fontFamily: "var(--font-display)", fontSize: "1.3rem", color: "var(--color-bark)", marginTop: 4 }}>
-                  Chi tiết đơn #{viewingDetailOrder.id} — {viewingDetailOrder.customerName}
+                  Chi tiết đơn #{viewingDetailOrder.displayCode || viewingDetailOrder.id} — {viewingDetailOrder.customerName}
                 </h3>
                 <div style={{ fontSize: "0.82rem", color: "#6B7280" }}>
                   SĐT: <strong>{viewingDetailOrder.customerPhone}</strong> · Trạng thái: <strong>{viewingDetailOrder.status}</strong>
                 </div>
               </div>
-              <button onClick={() => setViewingDetailOrder(null)} style={{ border: "none", background: "none", fontSize: "1.3rem", cursor: "pointer" }}>✕</button>
+              <button onClick={() => setViewingDetailOrderId(null)} style={{ border: "none", background: "none", fontSize: "1.3rem", cursor: "pointer" }}>✕</button>
             </div>
 
             {/* Thông tin lịch trình & tài chính */}
@@ -433,7 +537,7 @@ function OrdersTab({ app, selectedOrderId, setSelectedOrderId, openOrder }: { ap
                   viewingDetailOrder.assignedEquipment.map((ae) => (
                     <div key={ae.equipmentId} className="flex justify-between items-center bg-gray-50 p-2 rounded text-xs border border-bone">
                       <div>
-                        <strong className="font-mono text-forest">{ae.equipmentId}</strong> (Gán lúc: {ae.assignedAt})
+                        <strong className="font-mono text-forest">{ae.equipmentDisplayCode || ae.equipmentId}</strong> {ae.assignedAt ? `(Gán lúc: ${ae.assignedAt})` : ""}
                       </div>
                       <span className={`px-2 py-0.5 rounded text-[11px] font-bold ${ae.returnedAt ? "bg-green-100 text-green-800" : "bg-blue-100 text-blue-800"}`}>
                         {ae.returnedAt ? `✓ Đã trả (${ae.returnCondition || "Tốt"})` : "Đang thuê"}
@@ -498,14 +602,53 @@ function OrdersTab({ app, selectedOrderId, setSelectedOrderId, openOrder }: { ap
                 onClick={() => {
                   const targetTab: StaffTab = viewingDetailOrder.status === "Đang thuê" || viewingDetailOrder.status === "Chờ đối soát" ? "return" : "handover";
                   openOrder(viewingDetailOrder.id, targetTab);
-                  setViewingDetailOrder(null);
+                  setViewingDetailOrderId(null);
                 }}
                 className="btn btn-primary btn-sm"
               >
                 Chuyển đến màn hình thao tác →
               </button>
-              <button onClick={() => setViewingDetailOrder(null)} className="btn btn-secondary btn-sm">
+              <button onClick={() => setViewingDetailOrderId(null)} className="btn btn-secondary btn-sm">
                 Đóng
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Ghi nhận khách không đến nhận đồ (UC4.5 No-Show) */}
+      {noShowTarget && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 9999, display: "grid", placeItems: "center", padding: 20 }}>
+          <div style={{ background: "white", borderRadius: 16, maxWidth: 460, width: "100%", padding: 22 }}>
+            <h3 style={{ fontFamily: "var(--font-display)", fontSize: "1.15rem", color: "#B91C1C", marginBottom: 8 }}>
+              Ghi nhận khách không đến nhận (No-Show)
+            </h3>
+            <p style={{ fontSize: "0.82rem", color: "#4B5563", marginBottom: 12 }}>
+              Đơn <strong>#{noShowTarget.displayCode || noShowTarget.id}</strong> — {noShowTarget.customerName} ({noShowTarget.customerPhone})
+            </p>
+            <textarea
+              rows={3}
+              value={noShowNote}
+              onChange={(e) => setNoShowNote(e.target.value)}
+              placeholder="Ghi chú số lần gọi nhắc / lý do khách không đến..."
+              style={{ width: "100%", border: "1px solid var(--color-bone)", borderRadius: 8, padding: 10, fontSize: "0.84rem", marginBottom: 10 }}
+            />
+            {noShowError && (
+              <div role="alert" style={{ fontSize: "0.78rem", color: "#B91C1C", background: "#FEF2F2", padding: "6px 10px", borderRadius: 6, marginBottom: 10 }}>
+                {noShowError}
+              </div>
+            )}
+            <div className="flex justify-end gap-2">
+              <button type="button" onClick={() => setNoShowTarget(null)} className="btn btn-secondary btn-sm">
+                Hủy
+              </button>
+              <button
+                type="button"
+                disabled={noShowSubmitting || !noShowNote.trim()}
+                onClick={() => void handleSubmitNoShow()}
+                className="btn btn-danger btn-sm"
+              >
+                {noShowSubmitting ? "Đang ghi nhận..." : "Xác nhận ghi nhận No-Show"}
               </button>
             </div>
           </div>
@@ -516,9 +659,14 @@ function OrdersTab({ app, selectedOrderId, setSelectedOrderId, openOrder }: { ap
 }
 
 // ─── Handover Tab (UC4.1 Chuẩn bị kho & Phân công serial | UC4.2 Tiếp khách & Bàn giao tại quầy) ──────
-function HandoverTab({ app, selectedOrder, setSelectedOrderId }: { app: ReturnType<typeof useApp>; selectedOrder: Order | null; setSelectedOrderId: (id: string | null) => void }) {
+function HandoverTab({ app, selectedOrder, setSelectedOrderId, hydrateOperationalOrder }: { app: ReturnType<typeof useApp>; selectedOrder: Order | null; setSelectedOrderId: (id: string | null) => void; hydrateOperationalOrder: (id: string) => Promise<void> }) {
   const [subTab, setSubTab] = useState<"prep" | "handover">("prep");
   const [assignments, setAssignments] = useState<Record<string, string[]>>({});
+  const [prepState, setPrepState] = useState<ChuanBiResponseBackend | null>(null);
+  const [draftBbbg, setDraftBbbg] = useState<PhieuBanGiaoBackend | null>(null);
+  const [handoverBusy, setHandoverBusy] = useState(false);
+  const [handoverError, setHandoverError] = useState("");
+  const [handoverSuccess, setHandoverSuccess] = useState("");
   const [checklist, setChecklist] = useState<Record<string, boolean>>({
     "Túi đựng & bao bọc bảo vệ": true,
     "Đầy đủ phụ kiện tiêu chuẩn (cọc, dây, cáp sạc...)": true,
@@ -549,33 +697,68 @@ function HandoverTab({ app, selectedOrder, setSelectedOrderId }: { app: ReturnTy
   const eligibleHandover = app.orders.filter((o) => o.status === "Sẵn sàng nhận");
   const order = selectedOrder;
 
-  // Đồng bộ trạng thái đơn và khôi phục serial đã phân công
-  useEffect(() => {
-    if (selectedOrder) {
-      if (selectedOrder.status === "Sẵn sàng nhận") {
-        setSubTab("handover");
-      } else if (["Đã xác nhận", "Đang chuẩn bị"].includes(selectedOrder.status)) {
-        setSubTab("prep");
+  const syncFromPrepResponse = (prep: ChuanBiResponseBackend) => {
+    setPrepState(prep);
+    const nextAssignments: Record<string, string[]> = {};
+    prep.danhSachDong.forEach((dong) => {
+      if (dong.danhSachPhanCong.length > 0) {
+        nextAssignments[String(dong.maSanPham)] = dong.danhSachPhanCong.map((pc) => String(pc.maThietBi));
       }
+    });
+    setAssignments(nextAssignments);
+  };
 
-      // Khôi phục serial đã lưu nếu có
-      const initialAssigned: Record<string, string[]> = {};
-      selectedOrder.items.forEach((item) => {
-        const found = selectedOrder.assignedEquipment
-          .filter((ae) => ae.productId === item.productId)
-          .map((ae) => ae.equipmentId);
-        if (found.length > 0) {
-          initialAssigned[item.productId] = found;
-        }
-      });
-      setAssignments(initialAssigned);
-
-      // Điền thông tin người nhận mặc định
-      setReceiverName(selectedOrder.customerName);
-      setReceiverPhone(selectedOrder.customerPhone);
-      setReceiverIdCard(`07920100${selectedOrder.id.replace(/\D/g, "").slice(-4)}`);
+  // Đồng bộ trạng thái đơn và khôi phục serial đã phân công (cùng tình trạng chuẩn bị backend)
+  useEffect(() => {
+    setHandoverError("");
+    setHandoverSuccess("");
+    if (!selectedOrder) {
+      setPrepState(null);
+      setDraftBbbg(null);
+      return;
     }
-  }, [selectedOrder?.id]);
+
+    if (selectedOrder.status === "Sẵn sàng nhận") {
+      setSubTab("handover");
+    } else if (["Đã xác nhận", "Đang chuẩn bị"].includes(selectedOrder.status)) {
+      setSubTab("prep");
+    }
+
+    // Khôi phục serial đã lưu từ order state nếu có
+    const initialAssigned: Record<string, string[]> = {};
+    selectedOrder.items.forEach((item) => {
+      const found = selectedOrder.assignedEquipment
+        .filter((ae) => ae.productId === item.productId)
+        .map((ae) => ae.equipmentId);
+      if (found.length > 0) {
+        initialAssigned[item.productId] = found;
+      }
+    });
+    setAssignments(initialAssigned);
+
+    setReceiverName(selectedOrder.customerName);
+    setReceiverPhone(selectedOrder.customerPhone);
+    setReceiverIdCard((selectedOrder.displayCode || selectedOrder.id).replace(/\D/g, "").slice(-4).padStart(12, "07920100"));
+
+    if (app.realApi) {
+      const donId = Number(selectedOrder.backendId ?? selectedOrder.id);
+      if (Number.isFinite(donId)) {
+        void hydrateOperationalOrder(selectedOrder.id);
+        void handoverApi
+          .layTinhTrangChuanBi(donId)
+          .then(syncFromPrepResponse)
+          .catch(() => {});
+        if (selectedOrder.status === "Sẵn sàng nhận") {
+          void handoverApi
+            .taoHoacLayNhap(donId)
+            .then(setDraftBbbg)
+            .catch(() => {});
+        } else {
+          setDraftBbbg(null);
+        }
+      }
+    }
+  }, [selectedOrder?.id, selectedOrder?.status, app.realApi]);
 
   const pickEquipment = (productId: string, idx: number, equipId: string) => {
     setAssignments((prev) => {
@@ -585,11 +768,54 @@ function HandoverTab({ app, selectedOrder, setSelectedOrderId }: { app: ReturnTy
     });
   };
 
-  const handleSwapEquipment = (productId: string, oldId: string, newId: string) => {
+  const handleStartPreparation = async () => {
     if (!order) return;
+    if (!app.realApi) {
+      app.advanceOrderStatus(order.id, "Đang chuẩn bị", app.currentUser?.name || "Nhân viên kho");
+      return;
+    }
+    setHandoverBusy(true);
+    setHandoverError("");
+    try {
+      const donId = Number(order.backendId ?? order.id);
+      const prep = await handoverApi.batDauChuanBi(donId);
+      syncFromPrepResponse(prep);
+      await hydrateOperationalOrder(order.id);
+    } catch (err) {
+      setHandoverError(err instanceof Error ? err.message : "Không thể chuyển sang trạng thái Đang chuẩn bị.");
+    } finally {
+      setHandoverBusy(false);
+    }
+  };
+
+  const handleSwapEquipment = async (productId: string, oldId: string, newId: string) => {
+    if (!order) return;
+    if (app.realApi && prepState) {
+      const donId = Number(order.backendId ?? order.id);
+      const dong = prepState.danhSachDong.find((d) => String(d.maSanPham) === productId);
+      const oldPc = dong?.danhSachPhanCong.find((pc) => String(pc.maThietBi) === oldId);
+      if (oldPc) {
+        setHandoverBusy(true);
+        setHandoverError("");
+        try {
+          const updatedPrep = await handoverApi.thayTheThietBi(donId, oldPc.maPhanCong, Number(newId), "Đổi mã thiết bị tại khâu chuẩn bị");
+          syncFromPrepResponse(updatedPrep);
+          await hydrateOperationalOrder(order.id);
+          void app.refreshEquipment?.();
+          setChangingEquip(null);
+          return;
+        } catch (err) {
+          setHandoverError(err instanceof Error ? err.message : "Không thể thay thế mã thiết bị.");
+          return;
+        } finally {
+          setHandoverBusy(false);
+        }
+      }
+    }
+
     const res = app.changeAssignedEquipment(order.id, oldId, newId);
     if (!res.ok) {
-      alert(res.message);
+      setHandoverError(res.message);
       return;
     }
     setAssignments((prev) => {
@@ -600,13 +826,16 @@ function HandoverTab({ app, selectedOrder, setSelectedOrderId }: { app: ReturnTy
   };
 
   // UC4.1: Hoàn tất chuẩn bị kho & Lưu vĩnh viễn phân công serial
-  const handleCompletePreparation = () => {
+  const handleCompletePreparation = async () => {
     if (!order) return;
+    setHandoverError("");
+    setHandoverSuccess("");
+
     const itemsArr: { productId: string; equipmentId: string }[] = [];
     for (const item of order.items) {
       const assignedIds = assignments[item.productId] || [];
       if (assignedIds.filter(Boolean).length < item.qty) {
-        alert(`Vui lòng chọn đủ ${item.qty} mã thiết bị cho "${item.productName}"!`);
+        setHandoverError(`Vui lòng chọn đủ ${item.qty} mã thiết bị cho "${item.productName}"!`);
         return;
       }
       assignedIds.forEach((eid) => {
@@ -614,36 +843,122 @@ function HandoverTab({ app, selectedOrder, setSelectedOrderId }: { app: ReturnTy
       });
     }
 
-    const res = app.completePreparation(order.id, itemsArr, "NV Kho Mai");
+    if (app.realApi) {
+      setHandoverBusy(true);
+      try {
+        const donId = Number(order.backendId ?? order.id);
+        let latestPrep = prepState;
+        if (order.status === "Đã xác nhận") {
+          latestPrep = await handoverApi.batDauChuanBi(donId);
+        } else if (!latestPrep) {
+          latestPrep = await handoverApi.layTinhTrangChuanBi(donId);
+        }
+
+        // Gửi gán / thay thế từng dòng chi tiết đơn cho backend
+        for (const dong of latestPrep.danhSachDong) {
+          const desiredIds = (assignments[String(dong.maSanPham)] || []).map((x) => Number(x)).filter(Boolean);
+          const existingIds = dong.danhSachPhanCong.map((pc) => pc.maThietBi);
+          const remainingToAssign = desiredIds.filter((id) => !existingIds.includes(id));
+
+          // Thay thế những slot đã gán cũ mà người dùng đổi lựa chọn
+          for (let i = 0; i < dong.danhSachPhanCong.length; i++) {
+            const pc = dong.danhSachPhanCong[i];
+            if (!desiredIds.includes(pc.maThietBi) && remainingToAssign.length > 0) {
+              const replacementId = remainingToAssign.shift()!;
+              latestPrep = await handoverApi.thayTheThietBi(donId, pc.maPhanCong, replacementId, "Cập nhật phân công thiết bị");
+            }
+          }
+
+          if (remainingToAssign.length > 0) {
+            latestPrep = await handoverApi.ganThietBi(donId, dong.maChiTietDon, remainingToAssign);
+          }
+        }
+
+        const readyPrep = await handoverApi.xacNhanSanSang(donId, handoverNote.trim() || undefined);
+        syncFromPrepResponse(readyPrep);
+        await hydrateOperationalOrder(order.id);
+        await app.refreshOrders?.();
+        void app.refreshEquipment?.();
+        setHandoverSuccess(`Đã hoàn tất chuẩn bị và chuyển đơn ${order.displayCode || order.id} sang "Sẵn sàng nhận"!`);
+        setSubTab("handover");
+      } catch (err) {
+        setHandoverError(err instanceof Error ? err.message : "Không thể hoàn tất chuẩn bị đơn hàng.");
+      } finally {
+        setHandoverBusy(false);
+      }
+      return;
+    }
+
+    const res = app.completePreparation(order.id, itemsArr, app.currentUser?.name || "Nhân viên kho");
     if (res.ok) {
-      alert(`Đã hoàn tất chuẩn bị và chuyển đơn ${order.id} sang "Sẵn sàng nhận"! Khách hàng đã được gửi thông báo nhận đồ.`);
+      setHandoverSuccess(`Đã hoàn tất chuẩn bị và chuyển đơn ${order.id} sang "Sẵn sàng nhận"!`);
       setSubTab("handover");
     } else {
-      alert(res.message);
+      setHandoverError(res.message);
     }
   };
 
   // UC4.1: Báo thiếu thiết bị
   const handleReportShortage = () => {
     if (!order || !shortageNote.trim()) {
-      alert("Vui lòng nhập lý do thiếu thiết bị để báo Quản trị viên!");
+      setHandoverError("Vui lòng nhập lý do thiếu thiết bị để báo Quản trị viên!");
       return;
     }
-    const res = app.reportEquipmentShortage(order.id, shortageNote, "NV Kho Mai");
+    const res = app.reportEquipmentShortage(order.id, shortageNote, app.currentUser?.name || "Nhân viên kho");
     if (res.ok) {
-      alert(`Đã gửi cảnh báo thiếu hàng cho Quản trị viên xử lý với khách đơn ${order.id}!`);
+      setHandoverSuccess(`Đã ghi nhận cảnh báo thiếu hàng cho đơn ${order.displayCode || order.id}.`);
       setShowShortageModal(false);
       setShortageNote("");
     } else {
-      alert(res.message);
+      setHandoverError(res.message);
     }
   };
 
   // UC4.2: Chốt Bàn giao tại quầy & Ký BBBG
-  const handleCompleteHandover = () => {
+  const handleCompleteHandover = async () => {
     if (!order) return;
     if (!receiverName.trim() || !receiverPhone.trim()) {
-      alert("Vui lòng nhập đầy đủ họ tên và số điện thoại người nhận thực tế tại quầy!");
+      setHandoverError("Vui lòng nhập đầy đủ họ tên và số điện thoại người nhận thực tế tại quầy!");
+      return;
+    }
+
+    if (app.realApi) {
+      setHandoverBusy(true);
+      setHandoverError("");
+      try {
+        const donId = Number(order.backendId ?? order.id);
+        const draft = draftBbbg ?? (await handoverApi.taoHoacLayNhap(donId));
+        const latestPrep = prepState ?? (await handoverApi.layTinhTrangChuanBi(donId));
+        const allPhanCongs = latestPrep.danhSachDong.flatMap((d) => d.danhSachPhanCong);
+
+        await handoverApi.capNhatNhap(draft.maPhieuBanGiao, {
+          tenNguoiNhanThucTe: receiverName.trim(),
+          thoiDiemKhachXacNhan: new Date().toISOString(),
+          bangChungXacNhan: JSON.stringify(evidencePhotos),
+          ghiChu: handoverNote || "Thiết bị và phụ kiện bàn giao đầy đủ, đúng hiện trạng cam kết.",
+          chiTiet: allPhanCongs.map((pc) => ({
+            maPhanCong: pc.maPhanCong,
+            tinhTrangTruocThue: "Tốt (Đã kiểm tại quầy)",
+            phuKienThucGiao: JSON.stringify(
+              Object.entries(checklist)
+                .filter(([, checked]) => checked)
+                .map(([name]) => name)
+            ),
+            danhSachAnh: JSON.stringify(evidencePhotos),
+            ghiChu: handoverNote || undefined,
+          })),
+        });
+
+        await handoverApi.chotBanGiao(draft.maPhieuBanGiao, receiverName.trim());
+        await hydrateOperationalOrder(order.id);
+        await app.refreshOrders?.();
+        void app.refreshEquipment?.();
+        setShowHandoverModal(true);
+      } catch (err) {
+        setHandoverError(err instanceof Error ? err.message : "Không thể chốt bàn giao thiết bị (BBBG).");
+      } finally {
+        setHandoverBusy(false);
+      }
       return;
     }
 
@@ -662,7 +977,7 @@ function HandoverTab({ app, selectedOrder, setSelectedOrderId }: { app: ReturnTy
 
     const res = app.createHandoverRecord(order.id, {
       orderId: order.id,
-      staffName: "NV Kho Mai",
+      staffName: app.currentUser?.name || "Nhân viên kho",
       customerName: order.customerName,
       receiverName,
       receiverPhone,
@@ -679,7 +994,7 @@ function HandoverTab({ app, selectedOrder, setSelectedOrderId }: { app: ReturnTy
     if (res.ok) {
       setShowHandoverModal(true);
     } else {
-      alert(res.message);
+      setHandoverError(res.message);
     }
   };
 
@@ -688,6 +1003,7 @@ function HandoverTab({ app, selectedOrder, setSelectedOrderId }: { app: ReturnTy
     if (!qrCodeSearch.trim()) return;
     const term = qrCodeSearch.trim().toLowerCase();
     const found = app.orders.find((o) =>
+      (o.displayCode || o.id).toLowerCase().includes(term) ||
       o.id.toLowerCase().includes(term) ||
       o.customerPhone.includes(term) ||
       o.customerName.toLowerCase().includes(term)
@@ -695,8 +1011,9 @@ function HandoverTab({ app, selectedOrder, setSelectedOrderId }: { app: ReturnTy
     if (found) {
       setSelectedOrderId(found.id);
       setQrCodeSearch("");
+      setHandoverError("");
     } else {
-      alert(`Không tìm thấy đơn hàng nào khớp với mã/QR "${qrCodeSearch}"!`);
+      setHandoverError(`Không tìm thấy đơn hàng nào khớp với mã/QR "${qrCodeSearch}"!`);
     }
   };
 
@@ -803,7 +1120,7 @@ function HandoverTab({ app, selectedOrder, setSelectedOrderId }: { app: ReturnTy
                 >
                   <div className="flex justify-between items-center mb-1">
                     <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.75rem", fontWeight: 700, opacity: isSelected ? 0.9 : 1, color: isSelected ? "white" : "var(--color-moss)" }}>
-                      {o.id}
+                      {o.displayCode || o.id}
                     </span>
                     <span style={{ background: isSelected ? "rgba(255,255,255,0.2)" : sc.bg, color: isSelected ? "white" : sc.text, padding: "2px 7px", borderRadius: "8px", fontSize: "0.68rem", fontWeight: 600 }}>
                       {o.status}
@@ -831,6 +1148,16 @@ function HandoverTab({ app, selectedOrder, setSelectedOrderId }: { app: ReturnTy
 
         {/* Right Column: Workflows */}
         <div>
+          {handoverError && (
+            <div role="alert" style={{ background: "#FEF2F2", color: "#B91C1C", border: "1px solid #FECACA", borderRadius: 10, padding: "10px 14px", fontSize: "0.82rem", marginBottom: 12 }}>
+              {handoverError}
+            </div>
+          )}
+          {handoverSuccess && (
+            <div style={{ background: "#DCFCE7", color: "#15803D", border: "1px solid #BBF7D0", borderRadius: 10, padding: "10px 14px", fontSize: "0.82rem", fontWeight: 600, marginBottom: 12 }}>
+              {handoverSuccess}
+            </div>
+          )}
           {!order ? (
             <div style={{ textAlign: "center", padding: "60px", color: "#9CA3AF", background: "white", borderRadius: 12, border: "1px solid var(--color-bone)" }}>
               <div style={{ fontSize: "3rem", marginBottom: "8px" }}>{subTab === "prep" ? "📦" : "🤝"}</div>
@@ -842,7 +1169,7 @@ function HandoverTab({ app, selectedOrder, setSelectedOrderId }: { app: ReturnTy
               <div style={{ background: "var(--color-parchment)", borderRadius: "10px", padding: "14px 18px", marginBottom: "16px", border: "1px solid var(--color-bone)" }}>
                 <div className="flex justify-between items-start flex-wrap gap-2">
                   <div>
-                    <div style={{ fontFamily: "var(--font-mono)", fontSize: "0.78rem", color: "var(--color-moss)", fontWeight: 700 }}>{order.id}</div>
+                    <div style={{ fontFamily: "var(--font-mono)", fontSize: "0.78rem", color: "var(--color-moss)", fontWeight: 700 }}>{order.displayCode || order.id}</div>
                     <div style={{ fontWeight: 700, fontSize: "1.1rem" }}>{order.customerName} · {order.customerPhone}</div>
                     <div style={{ fontSize: "0.82rem", color: "#6B7280" }}>📤 Hẹn nhận: <strong>{order.pickupTime}</strong> → 📥 Hẹn trả: <strong>{order.returnTime}</strong></div>
                   </div>
@@ -851,8 +1178,8 @@ function HandoverTab({ app, selectedOrder, setSelectedOrderId }: { app: ReturnTy
                       {order.status}
                     </span>
                     {order.status === "Đã xác nhận" && (
-                      <button onClick={() => app.advanceOrderStatus(order.id, "Đang chuẩn bị", "NV Kho Mai")} style={{ background: "var(--color-amber)", color: "white", border: "none", padding: "4px 10px", borderRadius: 6, fontSize: "0.75rem", fontWeight: 700, cursor: "pointer" }}>
-                        Nhận soạn hàng →
+                      <button disabled={handoverBusy} onClick={() => void handleStartPreparation()} style={{ background: "var(--color-amber)", color: "white", border: "none", padding: "4px 10px", borderRadius: 6, fontSize: "0.75rem", fontWeight: 700, cursor: handoverBusy ? "wait" : "pointer" }}>
+                        {handoverBusy ? "Đang xử lý..." : "Nhận soạn hàng →"}
                       </button>
                     )}
                   </div>
@@ -874,7 +1201,10 @@ function HandoverTab({ app, selectedOrder, setSelectedOrderId }: { app: ReturnTy
               </div>
 
               {order.items.map((item) => {
-                const avail = app.equipment.filter((e) => e.productId === item.productId && e.equipmentStatus === "Sẵn sàng");
+                const chosenForItem = assignments[item.productId] || [];
+                const avail = app.equipment.filter(
+                  (e) => e.productId === item.productId && (e.equipmentStatus === "Sẵn sàng" || chosenForItem.includes(e.id))
+                );
                 return (
                   <div key={item.productId} style={{ background: "white", borderRadius: "10px", border: "1px solid var(--color-bone)", padding: "14px 16px", marginBottom: "12px" }}>
                     <div className="flex justify-between items-center mb-2">
@@ -898,7 +1228,7 @@ function HandoverTab({ app, selectedOrder, setSelectedOrderId }: { app: ReturnTy
                           >
                             <option value="">-- Chọn mã thiết bị sẵn sàng --</option>
                             {avail.map((e) => (
-                              <option key={e.id} value={e.id}>{e.id} ({e.condition} · đã thuê {e.rentCount} lần)</option>
+                              <option key={e.id} value={e.id}>{e.displayCode || e.id} ({e.condition} · đã thuê {e.rentCount} lần)</option>
                             ))}
                           </select>
                           {currentChosen && (
@@ -926,18 +1256,18 @@ function HandoverTab({ app, selectedOrder, setSelectedOrderId }: { app: ReturnTy
               {/* Modal Đổi serial thay thế (Dòng phụ 3.1) */}
               {changingEquip && (
                 <div style={{ background: "#FEF3C7", border: "1px solid #FCD34D", borderRadius: 8, padding: 14, marginBottom: 14 }}>
-                  <strong style={{ color: "#92400E", fontSize: "0.85rem" }}>Đổi serial thiết bị {changingEquip.oldId} trước khi giao:</strong>
+                  <strong style={{ color: "#92400E", fontSize: "0.85rem" }}>Đổi serial thiết bị {app.equipment.find((x) => x.id === changingEquip.oldId)?.displayCode || changingEquip.oldId} trước khi giao:</strong>
                   <div className="flex gap-2 mt-2">
                     <select id="swapSelect" style={{ flex: 1, border: "1px solid #FCD34D", borderRadius: 6, padding: "6px 10px", background: "white", fontSize: "0.85rem" }}>
                       {app.equipment.filter((e) => e.productId === changingEquip.productId && e.equipmentStatus === "Sẵn sàng" && e.id !== changingEquip.oldId).map((e) => (
-                        <option key={e.id} value={e.id}>{e.id} ({e.condition})</option>
+                        <option key={e.id} value={e.id}>{e.displayCode || e.id} ({e.condition})</option>
                       ))}
                     </select>
-                    <button onClick={() => {
+                    <button disabled={handoverBusy} onClick={() => {
                       const sel = (document.getElementById("swapSelect") as HTMLSelectElement)?.value;
-                      if (sel) handleSwapEquipment(changingEquip.productId, changingEquip.oldId, sel);
+                      if (sel) void handleSwapEquipment(changingEquip.productId, changingEquip.oldId, sel);
                     }} style={{ background: "var(--color-forest)", color: "white", border: "none", borderRadius: 6, padding: "6px 14px", fontWeight: 700, cursor: "pointer" }}>
-                      Xác nhận đổi
+                      {handoverBusy ? "Đang đổi..." : "Xác nhận đổi"}
                     </button>
                     <button onClick={() => setChangingEquip(null)} style={{ background: "white", border: "1px solid var(--color-bone)", borderRadius: 6, padding: "6px 12px", cursor: "pointer" }}>
                       Hủy
@@ -948,15 +1278,15 @@ function HandoverTab({ app, selectedOrder, setSelectedOrderId }: { app: ReturnTy
 
               <div className="flex gap-3 mt-4">
                 <button
-                  disabled={!allAssigned}
-                  onClick={handleCompletePreparation}
+                  disabled={!allAssigned || handoverBusy}
+                  onClick={() => void handleCompletePreparation()}
                   style={{
-                    background: allAssigned ? "var(--color-forest)" : "#9CA3AF",
+                    background: allAssigned && !handoverBusy ? "var(--color-forest)" : "#9CA3AF",
                     color: "white", padding: "10px 24px", borderRadius: 8, border: "none",
-                    cursor: allAssigned ? "pointer" : "not-allowed", fontWeight: 700, fontSize: "0.95rem"
+                    cursor: allAssigned && !handoverBusy ? "pointer" : "not-allowed", fontWeight: 700, fontSize: "0.95rem"
                   }}
                 >
-                  ✓ Hoàn tất chuẩn bị & Chuyển "Sẵn sàng nhận" (UC4.1)
+                  {handoverBusy ? "Đang lưu & xác nhận..." : "✓ Hoàn tất chuẩn bị & Chuyển \"Sẵn sàng nhận\" (UC4.1)"}
                 </button>
               </div>
 
@@ -995,7 +1325,7 @@ function HandoverTab({ app, selectedOrder, setSelectedOrderId }: { app: ReturnTy
                       SẴN SÀNG BÀN GIAO
                     </span>
                     <h3 style={{ fontFamily: "var(--font-display)", fontSize: "1.2rem", color: "var(--color-bark)", marginTop: 4 }}>
-                      Đơn #{order.id} — {order.customerName}
+                      Đơn #{order.displayCode || order.id} — {order.customerName}
                     </h3>
                     <div style={{ fontSize: "0.82rem", color: "#6B7280" }}>
                       📤 Hẹn nhận: <strong>{order.pickupTime}</strong> · 📥 Hẹn trả: <strong>{order.returnTime}</strong>
@@ -1050,7 +1380,10 @@ function HandoverTab({ app, selectedOrder, setSelectedOrderId }: { app: ReturnTy
               <div style={{ background: "white", borderRadius: 10, border: "1px solid var(--color-bone)", padding: 16, marginBottom: 16 }}>
                 <h4 style={{ fontWeight: 700, color: "var(--color-bark)", marginBottom: 10 }}>2. Kiểm tra cùng khách từng thiết bị & phụ kiện</h4>
                 <div className="flex flex-col gap-2">
-                  {order.items.flatMap((i) => (assignments[i.productId] || []).map((code) => ({ code, item: i }))).map(({ code, item }) => (
+                  {order.items.flatMap((i) => (assignments[i.productId] || []).map((code) => ({
+                    code: app.equipment.find((e) => e.id === code)?.displayCode || code,
+                    item: i,
+                  }))).map(({ code, item }) => (
                     <div key={code} style={{ background: "#F9FAFB", border: "1px solid var(--color-bone)", borderRadius: 8, padding: "8px 12px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                       <div>
                         <span style={{ fontFamily: "var(--font-mono)", fontWeight: 700, color: "var(--color-forest)", fontSize: "0.88rem" }}>{code}</span>
@@ -1099,14 +1432,15 @@ function HandoverTab({ app, selectedOrder, setSelectedOrderId }: { app: ReturnTy
               </div>
 
               <button
-                onClick={handleCompleteHandover}
+                disabled={handoverBusy}
+                onClick={() => void handleCompleteHandover()}
                 style={{
-                  background: "var(--color-forest)",
+                  background: handoverBusy ? "#9CA3AF" : "var(--color-forest)",
                   color: "white", padding: "12px 28px", borderRadius: 8, border: "none",
-                  cursor: "pointer", fontWeight: 700, fontSize: "0.95rem", width: "100%"
+                  cursor: handoverBusy ? "wait" : "pointer", fontWeight: 700, fontSize: "0.95rem", width: "100%"
                 }}
               >
-                ✓ Bàn giao thiết bị cho khách & Lập Biên bản (BBBG)
+                {handoverBusy ? "Đang lập & chốt BBBG..." : "✓ Bàn giao thiết bị cho khách & Lập Biên bản (BBBG)"}
               </button>
             </div>
           )}
@@ -1119,7 +1453,7 @@ function HandoverTab({ app, selectedOrder, setSelectedOrderId }: { app: ReturnTy
                   <div>
                     <span style={{ fontSize: "0.72rem", background: "#DCFCE7", color: "#15803D", padding: "3px 8px", borderRadius: 6, fontWeight: 700 }}>ĐÃ BÀN GIAO THÀNH CÔNG</span>
                     <h3 style={{ fontFamily: "var(--font-display)", fontSize: "1.3rem", color: "var(--color-bark)", marginTop: 4 }}>
-                      Biên bản Bàn giao BBBG-{order.id}
+                      Biên bản Bàn giao BBBG-{order.displayCode || order.id}
                     </h3>
                   </div>
                   <button onClick={() => setShowHandoverModal(false)} style={{ border: "none", background: "none", fontSize: "1.2rem", cursor: "pointer" }}>✕</button>
@@ -1132,7 +1466,7 @@ function HandoverTab({ app, selectedOrder, setSelectedOrderId }: { app: ReturnTy
                     <div><strong>SĐT người nhận:</strong> {receiverPhone}</div>
                     <div><strong>CCCD / Định danh:</strong> {receiverIdCard || "Đã kiểm tra đối chiếu"}</div>
                     <div><strong>Thời gian bàn giao:</strong> {new Date().toLocaleString("vi-VN")}</div>
-                    <div><strong>Nhân viên bàn giao:</strong> NV Kho Mai</div>
+                    <div><strong>Nhân viên bàn giao:</strong> {app.currentUser?.name || "Nhân viên kho"}</div>
                   </div>
                 </div>
 
@@ -1141,7 +1475,7 @@ function HandoverTab({ app, selectedOrder, setSelectedOrderId }: { app: ReturnTy
                   <div className="flex flex-col gap-1 mt-1">
                     {order.items.flatMap((i) => assignments[i.productId] || []).map((code) => (
                       <div key={code} style={{ fontSize: "0.8rem", color: "#374151", background: "#F3F4F6", padding: "4px 8px", borderRadius: 6 }}>
-                        • Mã thiết bị: <strong style={{ color: "var(--color-forest)" }}>{code}</strong> (Tình trạng: Tốt, hoạt động chuẩn)
+                        • Mã thiết bị: <strong style={{ color: "var(--color-forest)" }}>{app.equipment.find((e) => e.id === code)?.displayCode || code}</strong> (Tình trạng: Tốt, hoạt động chuẩn)
                       </div>
                     ))}
                   </div>
@@ -1169,23 +1503,52 @@ function HandoverTab({ app, selectedOrder, setSelectedOrderId }: { app: ReturnTy
 }
 
 // ─── Return Tab (UC4.3 Nhận trả nhiều đợt & Trả 1 phần, UC4.4 Xử lý quá hạn & Nhật ký gọi khách) ───
-function ReturnTab({ app, selectedOrder, setSelectedOrderId }: { app: ReturnType<typeof useApp>; selectedOrder: Order | null; setSelectedOrderId: (id: string | null) => void }) {
+function ReturnTab({
+  app,
+  selectedOrder,
+  setSelectedOrderId,
+  hydrateOperationalOrder,
+}: {
+  app: ReturnType<typeof useApp>;
+  selectedOrder: Order | null;
+  setSelectedOrderId: (id: string | null) => void;
+  hydrateOperationalOrder: (id: string) => Promise<void>;
+}) {
   const [selectedItemsToReturn, setSelectedItemsToReturn] = useState<Record<string, boolean>>({});
   const [itemConditions, setItemConditions] = useState<Record<string, ReturnReceiptItem["condition"]>>({});
   const [itemNotes, setItemNotes] = useState<Record<string, string>>({});
   const [itemSurcharges, setItemSurcharges] = useState<Record<string, number>>({});
   const [returnStaffNote, setReturnStaffNote] = useState("");
   const [viewingReceipt, setViewingReceipt] = useState<ReturnReceipt | null>(null);
+  const [viewingBackendReceipt, setViewingBackendReceipt] = useState<NhanTraBackend | null>(null);
   const [statusFilter, setStatusFilter] = useState<"active" | "completed" | "all">("active");
+
+  // State kết nối API thật nhận trả, phụ phí, quá hạn & duyệt mất
+  const [debtItemsBackend, setDebtItemsBackend] = useState<ThietBiConNoBackend[]>([]);
+  const [returnReceiptsBackend, setReturnReceiptsBackend] = useState<NhanTraBackend[]>([]);
+  const [surchargesBackend, setSurchargesBackend] = useState<Surcharge[]>([]);
+  const [overdueDetailBackend, setOverdueDetailBackend] = useState<QuaHanChiTietBackend | null>(null);
+  const [affectedOrdersBackend, setAffectedOrdersBackend] = useState<Array<Record<string, unknown>>>([]);
+  const [returnLoading, setReturnLoading] = useState(false);
+  const [returnBusy, setReturnBusy] = useState(false);
+  const [returnError, setReturnError] = useState<string | null>(null);
+  const [returnSuccess, setReturnSuccess] = useState<string | null>(null);
+  const [rejectingSurchargeId, setRejectingSurchargeId] = useState<string | null>(null);
+  const [rejectReason, setRejectReason] = useState("");
+  const [approveLostTarget, setApproveLostTarget] = useState<{ phieuId: number; chiTiet: ChiTietNhanTraBackend } | null>(null);
+  const [lostApproveReason, setLostApproveReason] = useState("Xác nhận mất thiết bị sau đối chiếu kho và khách hàng");
+  const [lostBienBan, setLostBienBan] = useState("");
+  const [lostCompAmount, setLostCompAmount] = useState<number>(1000000);
 
   // State UC4.4: Nhật ký liên hệ quá hạn & Xung đột lịch
   const [showContactModal, setShowContactModal] = useState(false);
   const [contactOutcome, setContactOutcome] = useState<"Hẹn giờ trả mới" | "Xin gia hạn thêm" | "Không nghe máy" | "Khách báo mất">("Hẹn giờ trả mới");
   const [contactNote, setContactNote] = useState("");
   const [newExpectedTime, setNewExpectedTime] = useState("");
+  const [contactNotice, setContactNotice] = useState<string | null>(null);
 
   // State UC4.3: Ảnh bằng chứng hư hại
-  const [damagePhotos, setDamagePhotos] = useState<string[]>([
+  const [damagePhotos] = useState<string[]>([
     "https://images.unsplash.com/photo-1510312305653-8ed496efae75?w=200&auto=format&fit=crop&q=60"
   ]);
 
@@ -1197,14 +1560,84 @@ function ReturnTab({ app, selectedOrder, setSelectedOrderId }: { app: ReturnType
   });
   const order = selectedOrder;
 
-  // Tính toán quá hạn
-  const overdueInfo = order ? app.checkOrderOverdue(order) : { isOverdue: false, overdueHours: 0, overdueDays: 0, surcharge: 0 };
-  const overdueConflicts = order ? app.getOverdueConflicts(order.id) : [];
+  const loadReturnData = useCallback(async () => {
+    if (!app.realApi || !order) return;
+    const donId = order.backendId ?? Number(order.id);
+    if (!Number.isFinite(donId)) return;
+    setReturnLoading(true);
+    setReturnError(null);
+    try {
+      const [debt, receipts, surcharges, overdue, affected] = await Promise.all([
+        returnApi.layThietBiConNo(donId).catch(() => [] as ThietBiConNoBackend[]),
+        returnApi.layDanhSachTheoDon(donId).catch(() => [] as NhanTraBackend[]),
+        surchargeApi.layTheoDon(donId).catch(() => []),
+        returnApi.layChiTietQuaHan(donId).catch(() => null),
+        returnApi.layDonBiAnhHuong(donId).catch(() => []),
+      ]);
+      setDebtItemsBackend(debt);
+      setReturnReceiptsBackend(receipts);
+      setSurchargesBackend(surcharges.map(mapPhuPhiToSurcharge));
+      setOverdueDetailBackend(overdue);
+      setAffectedOrdersBackend(Array.isArray(affected) ? (affected as Array<Record<string, unknown>>) : []);
+    } catch (err) {
+      setReturnError(err instanceof Error ? err.message : "Không thể tải dữ liệu nhận trả của đơn.");
+    } finally {
+      setReturnLoading(false);
+    }
+  }, [app.realApi, order?.id, order?.backendId]);
 
-  // Danh sách thiết bị còn nợ (chưa có returnedAt)
+  useEffect(() => {
+    setReturnSuccess(null);
+    setReturnError(null);
+    void loadReturnData();
+  }, [loadReturnData]);
+
+  // Tính toán quá hạn (ưu tiên backend khi realApi bật)
+  const mockOverdueInfo = order ? app.checkOrderOverdue(order) : { isOverdue: false, overdueHours: 0, overdueDays: 0, surcharge: 0 };
+  const realMaxDays = overdueDetailBackend
+    ? Math.max(0, ...overdueDetailBackend.danhSachThietBi.map((x) => x.soNgayTre))
+    : 0;
+  const overdueInfo = app.realApi && overdueDetailBackend
+    ? {
+        isOverdue: realMaxDays > 0 || Number(overdueDetailBackend.tongPhiTreDuKien ?? 0) > 0,
+        overdueDays: realMaxDays,
+        overdueHours: realMaxDays * 24,
+        surcharge: Number(overdueDetailBackend.tongPhiTreDuKien ?? 0),
+      }
+    : mockOverdueInfo;
+  const overdueConflicts = order && !app.realApi ? app.getOverdueConflicts(order.id) : [];
+
+  // Danh sách thiết bị còn nợ (hợp nhất từ API thật hoặc mock)
   const debtEquipment = order?.assignedEquipment.filter((ae) => !ae.returnedAt) || [];
   const returnedEquipment = order?.assignedEquipment.filter((ae) => ae.returnedAt) || [];
-  const currentReturnRound = (order?.returnReceipts?.length || 0) + 1;
+  const debtRows = app.realApi
+    ? debtItemsBackend.map((d) => {
+        const prod = app.products.find((p) => p.name === d.tenSanPham);
+        return {
+          key: String(d.maChiTietBanGiao),
+          maChiTietBanGiao: d.maChiTietBanGiao,
+          equipmentId: String(d.maThietBi),
+          displayCode: d.maThietBiHienThi,
+          productName: d.tenSanPham,
+          compensation: prod?.compensation || 1000000,
+        };
+      })
+    : debtEquipment.map((ae) => {
+        const prod = app.products.find((p) => p.id === ae.productId);
+        return {
+          key: ae.equipmentId,
+          maChiTietBanGiao: undefined as number | undefined,
+          equipmentId: ae.equipmentId,
+          displayCode: ae.equipmentDisplayCode || ae.equipmentId,
+          productName: prod?.name || "Thiết bị thuê",
+          compensation: prod?.compensation || 1000000,
+        };
+      });
+
+  const currentReturnRound = app.realApi
+    ? returnReceiptsBackend.length + 1
+    : (order?.returnReceipts?.length || 0) + 1;
+  const displaySurcharges = app.realApi ? surchargesBackend : order?.surcharges || [];
 
   const defaultFee = (cond: ReturnReceiptItem["condition"], compensation: number) => {
     if (cond === "Cần vệ sinh") return 50000;
@@ -1215,49 +1648,144 @@ function ReturnTab({ app, selectedOrder, setSelectedOrderId }: { app: ReturnType
     return 0;
   };
 
-  const handleToggleSelect = (equipId: string, compensation: number) => {
+  const handleToggleSelect = (rowKey: string, _compensation: number, maChiTietBanGiao?: number) => {
     setSelectedItemsToReturn((prev) => {
-      const next = !prev[equipId];
-      if (next && !itemConditions[equipId]) {
-        setItemConditions((c) => ({ ...c, [equipId]: "Bình thường" }));
-        setItemSurcharges((s) => ({ ...s, [equipId]: 0 }));
+      const next = !prev[rowKey];
+      if (next && !itemConditions[rowKey]) {
+        setItemConditions((c) => ({ ...c, [rowKey]: "Bình thường" }));
+        setItemSurcharges((s) => ({ ...s, [rowKey]: 0 }));
       }
-      return { ...prev, [equipId]: next };
+      if (next && app.realApi && maChiTietBanGiao) {
+        // Lấy gợi ý phí quá hạn / hư hỏng nếu có từ backend
+        void surchargeApi.goiYPhi(maChiTietBanGiao).then((hints) => {
+          const overdueHint = hints.find((h) => h.loaiPhi === "TreHan");
+          if (overdueHint && overdueHint.soTienGoiY > 0 && !(itemSurcharges[rowKey] > 0)) {
+            setItemSurcharges((s) => ({ ...s, [rowKey]: s[rowKey] || overdueHint.soTienGoiY }));
+          }
+        }).catch(() => {});
+      }
+      return { ...prev, [rowKey]: next };
     });
   };
 
-  const handleConditionChange = (equipId: string, cond: ReturnReceiptItem["condition"], compensation: number) => {
-    setItemConditions((prev) => ({ ...prev, [equipId]: cond }));
+  const handleConditionChange = (rowKey: string, cond: ReturnReceiptItem["condition"], compensation: number) => {
+    setItemConditions((prev) => ({ ...prev, [rowKey]: cond }));
     const fee = defaultFee(cond, compensation);
-    setItemSurcharges((prev) => ({ ...prev, [equipId]: fee }));
+    setItemSurcharges((prev) => ({ ...prev, [rowKey]: fee }));
   };
 
-  const handleCreateReceipt = () => {
+  const handleCreateReceipt = async () => {
     if (!order) return;
-    const selectedIds = Object.keys(selectedItemsToReturn).filter((id) => selectedItemsToReturn[id]);
-    if (selectedIds.length === 0) {
-      alert("Vui lòng tick chọn ít nhất 1 thiết bị khách mang đến trả đợt này!");
+    setReturnError(null);
+    setReturnSuccess(null);
+
+    const selectedRows = debtRows.filter((r) => selectedItemsToReturn[r.key]);
+    if (selectedRows.length === 0) {
+      setReturnError("Vui lòng tick chọn ít nhất 1 thiết bị khách mang đến trả đợt này.");
       return;
     }
 
-    const returnItems: ReturnReceiptItem[] = selectedIds.map((eid) => {
-      const ae = order.assignedEquipment.find((a) => a.equipmentId === eid)!;
-      const cond = itemConditions[eid] || "Bình thường";
-      const surcharge = itemSurcharges[eid] || 0;
-      const note = itemNotes[eid] || "";
+    if (app.realApi) {
+      const donId = order.backendId ?? Number(order.id);
+      if (!Number.isFinite(donId)) return;
+      setReturnBusy(true);
+      try {
+        const bgIds = selectedRows
+          .map((r) => r.maChiTietBanGiao)
+          .filter((x): x is number => typeof x === "number" && x > 0);
+        if (bgIds.length === 0) {
+          throw new Error("Không tìm thấy mã chi tiết bàn giao hợp lệ để lập phiếu nhận trả.");
+        }
+        const noteText =
+          returnStaffNote.trim() || `Nhận trả đợt ${currentReturnRound} (${selectedRows.length} thiết bị)`;
+        const draft = await returnApi.taoPhieuNhap(donId, bgIds, noteText);
+        const nowIso = new Date().toISOString();
+
+        const updatedDraft = await returnApi.capNhatPhieuNhap(
+          draft.maPhieu,
+          selectedRows.map((row) => {
+            const cond = itemConditions[row.key] || "Bình thường";
+            return {
+              maChiTietBanGiao: row.maChiTietBanGiao!,
+              thoiDiemTraThucTe: nowIso,
+              ketLuan: mapReturnCondToBackend(cond),
+              tinhTrangSauThue: cond,
+              danhSachAnh: cond === "Bình thường" ? undefined : damagePhotos,
+              bienBanMat:
+                cond === "Mất thiết bị"
+                  ? itemNotes[row.key]?.trim() || "Khách báo mất thiết bị khi nhận trả"
+                  : undefined,
+              ghiChu: itemNotes[row.key]?.trim() || undefined,
+            };
+          }),
+          noteText
+        );
+
+        // Lập phụ phí phát sinh kèm theo nếu có số tiền > 0 hoặc báo mất
+        for (const row of selectedRows) {
+          const cond = itemConditions[row.key] || "Bình thường";
+          const fee = itemSurcharges[row.key] || 0;
+          if (fee > 0 || cond === "Mất thiết bị") {
+            await surchargeApi.lapPhi({
+              maDonThue: donId,
+              maChiTietBanGiao: row.maChiTietBanGiao,
+              loaiPhi: mapReturnCondToSurchargeType(cond),
+              soTienDeNghi: fee > 0 ? fee : row.compensation,
+              lyDo: itemNotes[row.key]?.trim() || `Phụ phí ${cond} (${row.displayCode})`,
+              danhSachAnh: cond === "Bình thường" ? undefined : damagePhotos,
+            });
+          }
+        }
+
+        const hasLostItem = selectedRows.some(
+          (row) => (itemConditions[row.key] || "Bình thường") === "Mất thiết bị"
+        );
+        let finalReceipt = updatedDraft;
+        if (!hasLostItem) {
+          finalReceipt = await returnApi.chotNhanTra(draft.maPhieu);
+          setReturnSuccess(`Đã lập và chốt phiếu nhận trả ${finalReceipt.maPhieuHienThi}.`);
+        } else {
+          setReturnSuccess(
+            `Đã tạo phiếu nháp ${updatedDraft.maPhieuHienThi}. Do có thiết bị báo mất, vui lòng duyệt kết luận mất hoặc tách dòng chờ xử lý trước khi chốt.`
+          );
+        }
+
+        setViewingBackendReceipt(finalReceipt);
+        setSelectedItemsToReturn({});
+        setItemNotes({});
+        setReturnStaffNote("");
+        await Promise.all([
+          loadReturnData(),
+          hydrateOperationalOrder(order.id),
+          app.refreshOrders?.(),
+          app.refreshEquipment?.(),
+        ]);
+      } catch (err) {
+        setReturnError(err instanceof Error ? err.message : "Không thể lập phiếu nhận trả trên máy chủ.");
+      } finally {
+        setReturnBusy(false);
+      }
+      return;
+    }
+
+    const returnItems: ReturnReceiptItem[] = selectedRows.map((row) => {
+      const ae = order.assignedEquipment.find((a) => a.equipmentId === row.equipmentId)!;
+      const cond = itemConditions[row.key] || "Bình thường";
+      const surcharge = itemSurcharges[row.key] || 0;
+      const note = itemNotes[row.key] || "";
       return {
-        equipmentId: eid,
+        equipmentId: row.equipmentId,
         productId: ae.productId,
         condition: cond,
         surchargeAmount: surcharge,
         note,
-        lostApproved: false, // Mặc định chờ quản trị viên duyệt nếu là mất đồ
+        lostApproved: false,
       };
     });
 
     const res = app.createReturnReceipt(order.id, {
       returnItems,
-      staffName: "NV Kho Mai",
+      staffName: app.currentUser?.name || "NV Kho",
       note: returnStaffNote || `Nhận trả đợt ${currentReturnRound} (${returnItems.length} thiết bị)`,
       photoUrls: damagePhotos,
     });
@@ -1267,13 +1795,177 @@ function ReturnTab({ app, selectedOrder, setSelectedOrderId }: { app: ReturnType
       setSelectedItemsToReturn({});
       setItemNotes({});
       setReturnStaffNote("");
+      setReturnSuccess(`Đã lập phiếu nhận trả ${res.data?.id || ""}.`);
     } else {
-      alert(res.message);
+      setReturnError(res.message);
     }
   };
 
-  const handleApplyOverdueFee = () => {
+  const handleCloseBackendReceipt = async (phieuId: number) => {
+    if (!order) return;
+    setReturnBusy(true);
+    setReturnError(null);
+    setReturnSuccess(null);
+    try {
+      const closed = await returnApi.chotNhanTra(phieuId);
+      setViewingBackendReceipt(closed);
+      setReturnSuccess(`Đã chốt phiếu ${closed.maPhieuHienThi}.`);
+      await Promise.all([
+        loadReturnData(),
+        hydrateOperationalOrder(order.id),
+        app.refreshOrders?.(),
+        app.refreshEquipment?.(),
+      ]);
+    } catch (err) {
+      setReturnError(err instanceof Error ? err.message : "Không thể chốt phiếu nhận trả.");
+    } finally {
+      setReturnBusy(false);
+    }
+  };
+
+  const handleSplitPendingLine = async (phieuId: number, chiTietId: number) => {
+    if (!order) return;
+    setReturnBusy(true);
+    setReturnError(null);
+    try {
+      const { phieuGoc, phieuMoi } = await returnApi.tachDongChoXuLy(
+        phieuId,
+        [chiTietId],
+        "Tách dòng thiết bị mất/cần xác minh thêm sang phiếu xử lý riêng"
+      );
+      setViewingBackendReceipt(phieuGoc);
+      setReturnSuccess(`Đã tách dòng chờ xử lý sang phiếu ${phieuMoi.maPhieuHienThi}.`);
+      await loadReturnData();
+    } catch (err) {
+      setReturnError(err instanceof Error ? err.message : "Không thể tách dòng chờ xử lý.");
+    } finally {
+      setReturnBusy(false);
+    }
+  };
+
+  const handleConfirmApproveLost = async () => {
+    if (!order || !approveLostTarget) return;
+    const donId = order.backendId ?? Number(order.id);
+    if (!Number.isFinite(donId)) return;
+    setReturnBusy(true);
+    setReturnError(null);
+    try {
+      const { phieuId, chiTiet } = approveLostTarget;
+      // Tìm phụ phí bồi thường hiện có của thiết bị này, nếu chưa có thì lập mới
+      let matchedSurcharge = surchargesBackend.find(
+        (s) => s.handoverItemId === chiTiet.maChiTietBanGiao && s.type === "Mất đồ" && s.backendId
+      );
+      let surchargeId = matchedSurcharge?.backendId;
+      if (!surchargeId) {
+        const created = await surchargeApi.lapPhi({
+          maDonThue: donId,
+          maChiTietBanGiao: chiTiet.maChiTietBanGiao,
+          loaiPhi: "MatThietBi",
+          soTienDeNghi: lostCompAmount,
+          lyDo: lostApproveReason.trim() || `Bồi thường mất thiết bị ${chiTiet.maThietBiHienThi}`,
+        });
+        surchargeId = created.maPhuPhi;
+      }
+      await returnApi.duyetKetLuanMat(phieuId, chiTiet.maChiTietNhanTra, {
+        lyDo: lostApproveReason.trim() || "Duyệt kết luận mất thiết bị",
+        bienBanMat: lostBienBan.trim() || chiTiet.bienBanMat || `Biên bản mất ${chiTiet.maThietBiHienThi}`,
+        maPhuPhiBoiThuong: surchargeId,
+      });
+      setApproveLostTarget(null);
+      setReturnSuccess(`Đã duyệt kết luận mất cho thiết bị ${chiTiet.maThietBiHienThi}.`);
+      const refreshedReceipts = await returnApi.layDanhSachTheoDon(donId).catch(() => [] as NhanTraBackend[]);
+      const updatedModalReceipt = refreshedReceipts.find((r) => r.maPhieu === phieuId) || null;
+      if (viewingBackendReceipt?.maPhieu === phieuId) {
+        setViewingBackendReceipt(updatedModalReceipt);
+      }
+      await Promise.all([loadReturnData(), hydrateOperationalOrder(order.id)]);
+    } catch (err) {
+      setReturnError(err instanceof Error ? err.message : "Không thể duyệt kết luận mất (yêu cầu quyền Quản trị viên).");
+    } finally {
+      setReturnBusy(false);
+    }
+  };
+
+  const handleApproveSurcharge = async (surcharge: Surcharge) => {
+    if (!order) return;
+    if (app.realApi) {
+      if (!surcharge.backendId) return;
+      setReturnBusy(true);
+      setReturnError(null);
+      try {
+        await surchargeApi.duyetPhi(surcharge.backendId);
+        setReturnSuccess("Đã duyệt phụ phí thành công.");
+        await Promise.all([loadReturnData(), hydrateOperationalOrder(order.id)]);
+      } catch (err) {
+        setReturnError(err instanceof Error ? err.message : "Không thể duyệt phụ phí (cần quyền Quản trị viên).");
+      } finally {
+        setReturnBusy(false);
+      }
+      return;
+    }
+    app.approveSurcharge(order.id, surcharge.id);
+  };
+
+  const handleRejectSurcharge = async (surcharge: Surcharge) => {
+    if (!order || !surcharge.backendId) return;
+    if (!rejectReason.trim()) {
+      setReturnError("Vui lòng nhập lý do từ chối phụ phí.");
+      return;
+    }
+    setReturnBusy(true);
+    setReturnError(null);
+    try {
+      await surchargeApi.tuChoiPhi(surcharge.backendId, rejectReason.trim());
+      setRejectingSurchargeId(null);
+      setRejectReason("");
+      setReturnSuccess("Đã từ chối phụ phí.");
+      await Promise.all([loadReturnData(), hydrateOperationalOrder(order.id)]);
+    } catch (err) {
+      setReturnError(err instanceof Error ? err.message : "Không thể từ chối phụ phí.");
+    } finally {
+      setReturnBusy(false);
+    }
+  };
+
+  const handleApplyOverdueFee = async () => {
     if (!order || !overdueInfo.isOverdue) return;
+    setReturnError(null);
+    setReturnSuccess(null);
+
+    if (app.realApi) {
+      const donId = order.backendId ?? Number(order.id);
+      if (!Number.isFinite(donId)) return;
+      setReturnBusy(true);
+      try {
+        const overdueItems = overdueDetailBackend?.danhSachThietBi.filter((x) => x.soNgayTre > 0 && x.phiTreDuKien > 0) || [];
+        if (overdueItems.length > 0) {
+          for (const item of overdueItems) {
+            await surchargeApi.lapPhi({
+              maDonThue: donId,
+              maChiTietBanGiao: item.maChiTietBanGiao,
+              loaiPhi: "TreHan",
+              soTienDeNghi: item.phiTreDuKien,
+              lyDo: `Quá hạn trả ${item.soNgayTre} ngày (${item.maThietBiHienThi}) × 150% giá thuê ngày`,
+            });
+          }
+        } else {
+          await surchargeApi.lapPhi({
+            maDonThue: donId,
+            loaiPhi: "TreHan",
+            soTienDeNghi: overdueInfo.surcharge,
+            lyDo: `Quá hạn trả ${overdueInfo.overdueDays} ngày × 150% đơn giá thuê ngày`,
+          });
+        }
+        setReturnSuccess(`Đã lập phụ phí quá hạn ${fmt(overdueInfo.surcharge)} lên máy chủ.`);
+        await Promise.all([loadReturnData(), hydrateOperationalOrder(order.id)]);
+      } catch (err) {
+        setReturnError(err instanceof Error ? err.message : "Không thể lập phụ phí quá hạn.");
+      } finally {
+        setReturnBusy(false);
+      }
+      return;
+    }
+
     app.addSurcharge(order.id, {
       id: `PC-OVERDUE-${order.id}-${Date.now()}`,
       type: "Quá hạn",
@@ -1283,26 +1975,26 @@ function ReturnTab({ app, selectedOrder, setSelectedOrderId }: { app: ReturnType
       status: "Chờ duyệt",
       createdBy: "Hệ thống tự động",
     });
-    alert(`Đã thêm phụ phí quá hạn ${fmt(overdueInfo.surcharge)} vào đơn!`);
+    setReturnSuccess(`Đã thêm phụ phí quá hạn ${fmt(overdueInfo.surcharge)} vào đơn.`);
   };
 
   const handleSaveContactLog = () => {
     if (!order || !contactNote.trim()) {
-      alert("Vui lòng nhập ghi chú nội dung cuộc gọi nhắc khách!");
+      setContactNotice("Vui lòng nhập ghi chú nội dung cuộc gọi nhắc khách.");
       return;
     }
     const res = app.addContactLog(order.id, {
-      staffName: "NV Kho Mai",
+      staffName: app.currentUser?.name || "NV Kho",
       outcome: contactOutcome,
       note: contactNote,
       newExpectedTime: newExpectedTime || undefined,
     });
     if (res.ok) {
-      alert("Đã lưu nhật ký liên hệ khách hàng thành công!");
+      setContactNotice("Đã lưu nhật ký liên hệ vào phiên làm việc.");
       setContactNote("");
-      setShowContactModal(false);
+      setNewExpectedTime("");
     } else {
-      alert(res.message);
+      setContactNotice(res.message);
     }
   };
 
@@ -1344,114 +2036,189 @@ function ReturnTab({ app, selectedOrder, setSelectedOrderId }: { app: ReturnType
         </div>
 
         <div className="flex flex-col gap-2">
-          {eligibleOrders.map((o) => {
-            const sc = statusColors[o.status] || { bg: "#F3F4F6", text: "#374151" };
-            const isOd = app.checkOrderOverdue(o).isOverdue;
-            const retCnt = o.assignedEquipment.filter((ae) => ae.returnedAt).length;
-            const isPart = o.status === "Đang thuê" && retCnt > 0 && retCnt < o.assignedEquipment.length;
+          {eligibleOrders.length === 0 ? (
+            <div style={{ background: "white", borderRadius: 10, padding: "20px 14px", border: "1px solid var(--color-bone)", fontSize: "0.82rem", color: "#6B7280", textAlign: "center" }}>
+              Không có đơn nào trong nhóm lọc này.
+            </div>
+          ) : (
+            eligibleOrders.map((o) => {
+              const sc = statusColors[o.status] || { bg: "#F3F4F6", text: "#374151" };
+              const isOd = app.checkOrderOverdue(o).isOverdue;
+              const retCnt = o.assignedEquipment.filter((ae) => ae.returnedAt).length;
+              const isPart = o.status === "Đang thuê" && retCnt > 0 && retCnt < o.assignedEquipment.length;
 
-            return (
-              <button key={o.id} onClick={() => { setSelectedOrderId(o.id); setSelectedItemsToReturn({}); }}
-                style={{ background: selectedOrder?.id === o.id ? "var(--color-forest)" : "white", color: selectedOrder?.id === o.id ? "white" : "var(--color-bark)", borderRadius: "10px", padding: "12px 14px", border: `1px solid ${selectedOrder?.id === o.id ? "var(--color-forest)" : "var(--color-bone)"}`, cursor: "pointer", textAlign: "left" }}
-              >
-                <div style={{ fontFamily: "var(--font-mono)", fontSize: "0.75rem", opacity: 0.8 }}>{o.id}</div>
-                <div style={{ fontWeight: 700, fontSize: "0.88rem" }}>{o.customerName}</div>
-                <div className="flex gap-1 mt-1 flex-wrap">
-                  <span style={{ background: selectedOrder?.id === o.id ? "rgba(255,255,255,0.2)" : sc.bg, color: selectedOrder?.id === o.id ? "white" : sc.text, padding: "2px 7px", borderRadius: "8px", fontSize: "0.68rem", fontWeight: 600 }}>{o.status}</span>
-                  {isPart && <span style={{ background: "#FFF7ED", color: "#C2410C", padding: "2px 6px", borderRadius: 6, fontSize: "0.65rem", fontWeight: 700 }}>Trả 1 phần</span>}
-                  {isOd && <span style={{ background: "#FEE2E2", color: "#DC2626", padding: "2px 6px", borderRadius: 6, fontSize: "0.65rem", fontWeight: 700 }}>Quá hạn</span>}
-                </div>
-              </button>
-            );
-          })}
+              return (
+                <button
+                  key={o.id}
+                  onClick={() => {
+                    setSelectedOrderId(o.id);
+                    setSelectedItemsToReturn({});
+                    void hydrateOperationalOrder(o.id);
+                  }}
+                  style={{
+                    background: selectedOrder?.id === o.id ? "var(--color-forest)" : "white",
+                    color: selectedOrder?.id === o.id ? "white" : "var(--color-bark)",
+                    borderRadius: "10px",
+                    padding: "12px 14px",
+                    border: `1px solid ${selectedOrder?.id === o.id ? "var(--color-forest)" : "var(--color-bone)"}`,
+                    cursor: "pointer",
+                    textAlign: "left",
+                  }}
+                >
+                  <div style={{ fontFamily: "var(--font-mono)", fontSize: "0.75rem", opacity: 0.85 }}>{o.displayCode || o.id}</div>
+                  <div style={{ fontWeight: 700, fontSize: "0.88rem" }}>{o.customerName}</div>
+                  <div className="flex gap-1 mt-1 flex-wrap">
+                    <span style={{ background: selectedOrder?.id === o.id ? "rgba(255,255,255,0.2)" : sc.bg, color: selectedOrder?.id === o.id ? "white" : sc.text, padding: "2px 7px", borderRadius: "8px", fontSize: "0.68rem", fontWeight: 600 }}>
+                      {o.status}
+                    </span>
+                    {isPart && <span style={{ background: "#FFF7ED", color: "#C2410C", padding: "2px 6px", borderRadius: 6, fontSize: "0.65rem", fontWeight: 700 }}>Trả 1 phần</span>}
+                    {isOd && <span style={{ background: "#FEE2E2", color: "#DC2626", padding: "2px 6px", borderRadius: 6, fontSize: "0.65rem", fontWeight: 700 }}>Quá hạn</span>}
+                  </div>
+                </button>
+              );
+            })
+          )}
         </div>
       </div>
 
       {/* Cột phải: Xử lý nhận trả từng đợt & Đối soát */}
       <div>
+        {returnError && (
+          <div style={{ background: "#FEF2F2", border: "1px solid #FECACA", color: "#B91C1C", borderRadius: 8, padding: "10px 14px", marginBottom: 14, fontSize: "0.82rem", fontWeight: 600 }}>
+            {returnError}
+          </div>
+        )}
+        {returnSuccess && (
+          <div style={{ background: "#F0FDF4", border: "1px solid #BBF7D0", color: "#15803D", borderRadius: 8, padding: "10px 14px", marginBottom: 14, fontSize: "0.82rem", fontWeight: 600 }}>
+            {returnSuccess}
+          </div>
+        )}
+
         {!order ? (
           <div style={{ textAlign: "center", padding: "60px", color: "#9CA3AF", background: "white", borderRadius: 12, border: "1px solid var(--color-bone)" }}>
-            <div style={{ fontSize: "3rem", marginBottom: "8px" }}>📥</div>
-            <p>Chọn một đơn thuê ở bên trái để lập phiếu nhận trả hoặc đối soát cọc</p>
+            <div style={{ display: "flex", justifyContent: "center", marginBottom: 10, color: "var(--color-moss)" }}>
+              <Icon name="arrow-down" size={36} />
+            </div>
+            <p>Chọn một đơn thuê ở bên trái để lập phiếu nhận trả hoặc đối soát cọc.</p>
           </div>
         ) : order.status === "Hoàn tất" ? (
           <div>
-            {/* UC5.4 Dòng 7: Xem kết quả chốt & Khóa đối soát */}
-            <ReconciliationSheet order={order} app={app} userRole="staff" />
+            <ReconciliationSheet
+              order={order}
+              app={app}
+              userRole={app.currentUser?.role === "Quản trị viên" ? "admin" : "staff"}
+              onAfterMutation={async () => {
+                await Promise.all([loadReturnData(), hydrateOperationalOrder(order.id)]);
+              }}
+            />
           </div>
         ) : (
           <div>
             {/* Header info đơn */}
             <div style={{ background: "var(--color-parchment)", borderRadius: "10px", padding: "14px 18px", marginBottom: "16px", border: "1px solid var(--color-bone)" }}>
-              <div className="flex justify-between items-start">
+              <div className="flex justify-between items-start gap-3 flex-wrap">
                 <div>
-                  <div style={{ fontFamily: "var(--font-mono)", fontSize: "0.78rem", color: "var(--color-moss)", fontWeight: 700 }}>{order.id}</div>
-                  <div style={{ fontWeight: 700, fontSize: "1.1rem" }}>{order.customerName} · {order.customerPhone}</div>
-                  <div style={{ fontSize: "0.82rem", color: "#6B7280" }}>Hẹn trả dự kiến: <strong style={{ color: overdueInfo.isOverdue ? "#DC2626" : "inherit" }}>{order.returnTime}</strong></div>
+                  <div style={{ fontFamily: "var(--font-mono)", fontSize: "0.78rem", color: "var(--color-moss)", fontWeight: 700 }}>
+                    {order.displayCode || order.id}
+                  </div>
+                  <div style={{ fontWeight: 700, fontSize: "1.1rem" }}>
+                    {order.customerName} {order.customerPhone ? `· ${order.customerPhone}` : ""}
+                  </div>
+                  <div style={{ fontSize: "0.82rem", color: "#6B7280" }}>
+                    Hẹn trả dự kiến: <strong style={{ color: overdueInfo.isOverdue ? "#DC2626" : "inherit" }}>{order.returnTime}</strong>
+                  </div>
                 </div>
                 <div style={{ textAlign: "right" }}>
-                  <div style={{ fontSize: "0.78rem", color: "#6B7280" }}>Tổng thiết bị đã giao: <strong>{order.assignedEquipment.length}</strong></div>
-                  <div style={{ fontSize: "0.78rem", color: "#15803D" }}>Đã trả: <strong>{returnedEquipment.length}</strong></div>
-                  <div style={{ fontSize: "0.85rem", color: debtEquipment.length > 0 ? "#DC2626" : "#15803D", fontWeight: 700 }}>
-                    Còn nợ: {debtEquipment.length} chiếc
+                  <div style={{ fontSize: "0.78rem", color: "#6B7280" }}>
+                    Tổng thiết bị đã giao: <strong>{order.assignedEquipment.length}</strong>
+                  </div>
+                  <div style={{ fontSize: "0.78rem", color: "#15803D" }}>
+                    Đã trả / xử lý: <strong>{app.realApi ? Math.max(0, order.assignedEquipment.length - debtRows.length) : returnedEquipment.length}</strong>
+                  </div>
+                  <div style={{ fontSize: "0.85rem", color: debtRows.length > 0 ? "#DC2626" : "#15803D", fontWeight: 700 }}>
+                    Còn nợ: {debtRows.length} chiếc
                   </div>
                 </div>
               </div>
+              {returnLoading && (
+                <div style={{ marginTop: 8, fontSize: "0.76rem", color: "#6B7280" }}>
+                  Đang đồng bộ danh sách thiết bị còn nợ và phiếu nhận trả từ máy chủ...
+                </div>
+              )}
             </div>
 
-            {/* UC13 & UC4.4: Banner Cảnh báo quá hạn & Quản trị rủi ro xoay vòng */}
+            {/* Banner Cảnh báo quá hạn & Đơn kế tiếp bị ảnh hưởng */}
             {overdueInfo.isOverdue && (
               <div style={{ background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: 10, padding: "14px 18px", marginBottom: 16 }}>
                 <div className="flex justify-between items-start flex-wrap gap-2 mb-2">
                   <div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <span style={{ fontWeight: 700, color: "#DC2626", fontSize: "0.95rem" }}>
-                        ⚠️ ĐƠN THUÊ QUÁ HẠN: Trễ {overdueInfo.overdueDays} ngày ({overdueInfo.overdueHours} giờ)
+                        <span className="icon-label">
+                          <Icon name="alert-circle" size={16} />
+                          ĐƠN THUÊ QUÁ HẠN: Trễ {overdueInfo.overdueDays} ngày
+                        </span>
                       </span>
-                      {overdueConflicts.length > 0 && (
+                      {(overdueConflicts.length > 0 || affectedOrdersBackend.length > 0) && (
                         <span style={{ background: "#DC2626", color: "white", padding: "1px 6px", borderRadius: 4, fontSize: "0.68rem", fontWeight: 700 }}>
-                          ẢNH HƯỞNG {overdueConflicts.length} ĐƠN SAU
+                          ẢNH HƯỞNG {app.realApi ? affectedOrdersBackend.length : overdueConflicts.length} ĐƠN SAU
                         </span>
                       )}
                     </div>
                     <div style={{ fontSize: "0.78rem", color: "#991B1B", marginTop: 2 }}>
-                      Phạt trễ 150% đơn giá ngày theo block 24h = <strong>+{fmt(overdueInfo.surcharge)}</strong>.
+                      Phạt trễ 150% đơn giá ngày = <strong>+{fmt(overdueInfo.surcharge)}</strong>.
                     </div>
                   </div>
                   <div className="flex gap-2 items-center flex-wrap">
                     <button
-                      onClick={() => setShowContactModal(true)}
-                      style={{ background: "#1E40AF", color: "white", border: "none", borderRadius: 6, padding: "6px 12px", fontWeight: 700, fontSize: "0.8rem", cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}
+                      onClick={() => {
+                        setContactNotice(null);
+                        setShowContactModal(true);
+                      }}
+                      style={{ background: "#1E40AF", color: "white", border: "none", borderRadius: 6, padding: "6px 12px", fontWeight: 700, fontSize: "0.8rem", cursor: "pointer" }}
                     >
-                      📞 Nhật ký gọi & Xung đột lịch ({order.contactLogs?.length || 0})
+                      Nhật ký gọi ({order.contactLogs?.length || 0})
                     </button>
                     <button
+                      disabled={returnBusy}
                       onClick={handleApplyOverdueFee}
-                      style={{ background: "#DC2626", color: "white", border: "none", borderRadius: 6, padding: "6px 14px", fontWeight: 700, fontSize: "0.8rem", cursor: "pointer" }}
+                      style={{ background: "#DC2626", color: "white", border: "none", borderRadius: 6, padding: "6px 14px", fontWeight: 700, fontSize: "0.8rem", cursor: returnBusy ? "not-allowed" : "pointer" }}
                     >
                       + Lập phụ phí trễ
                     </button>
                   </div>
                 </div>
 
-                {/* Xung đột lịch kế tiếp nếu có */}
                 {overdueConflicts.length > 0 && (
                   <div style={{ background: "white", border: "1px solid #FCA5A5", borderRadius: 8, padding: "8px 12px", marginTop: 8 }}>
                     <div style={{ fontSize: "0.75rem", fontWeight: 700, color: "#B91C1C", marginBottom: 4 }}>
-                      ⚠️ CẢNH BÁO KẸT THIẾT BỊ ĐƠN TIẾP THEO (UC4.4 Dòng 802):
+                      CẢNH BÁO KẸT THIẾT BỊ ĐƠN TIẾP THEO:
                     </div>
                     {overdueConflicts.map((c, idx) => (
                       <div key={idx} style={{ fontSize: "0.75rem", color: "#374151", marginBottom: 2 }}>
-                        • Thiết bị <strong style={{ color: "var(--color-forest)" }}>{c.equipmentId}</strong> đang bị trễ cho đơn kế tiếp: <strong>#{c.nextOrderId}</strong> ({c.nextCustomerName} - Hẹn nhận: {c.nextPickupTime}).
+                        • Thiết bị <strong style={{ color: "var(--color-forest)" }}>{c.equipmentId}</strong> đang bị trễ cho đơn kế tiếp: <strong>{c.nextOrderId}</strong> ({c.nextCustomerName} - Hẹn nhận: {c.nextPickupTime}).
                         {c.availableSubstitutes.length > 0 ? (
                           <span style={{ color: "#15803D", marginLeft: 6 }}>
                             Gợi ý mã thay thế: <strong>{c.availableSubstitutes.slice(0, 3).join(", ")}</strong>
                           </span>
                         ) : (
                           <span style={{ color: "#DC2626", marginLeft: 6, fontWeight: 700 }}>
-                            (Kho không còn mã thay thế! Báo Quản trị viên xử lý)
+                            (Kho không còn mã thay thế)
                           </span>
                         )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {app.realApi && affectedOrdersBackend.length > 0 && (
+                  <div style={{ background: "white", border: "1px solid #FCA5A5", borderRadius: 8, padding: "8px 12px", marginTop: 8 }}>
+                    <div style={{ fontSize: "0.75rem", fontWeight: 700, color: "#B91C1C", marginBottom: 4 }}>
+                      ĐƠN ĐẶT KẾ TIẾP BỊ ẢNH HƯỞNG BỞI THIẾT BỊ TRỄ HẠN:
+                    </div>
+                    {affectedOrdersBackend.map((item, idx) => (
+                      <div key={idx} style={{ fontSize: "0.75rem", color: "#374151", marginBottom: 2 }}>
+                        • {String(item.maDonHienThi || item.maDonThue || `Đơn #${idx + 1}`)} — {String(item.tenSanPham || item.tenKhachHang || "Cần điều phối thiết bị dự phòng")}
                       </div>
                     ))}
                   </div>
@@ -1459,48 +2226,61 @@ function ReturnTab({ app, selectedOrder, setSelectedOrderId }: { app: ReturnType
               </div>
             )}
 
-            {/* UC12: Form Lập Phiếu Nhận Trả Từng Đợt (Chỉ khi còn thiết bị nợ) */}
-            {debtEquipment.length > 0 && (
-              <div style={{ background: "white", borderRadius: 12, border: "2px solid var(--color-forest)", padding: "18px", marginBottom: 20 }}>
-                <div className="flex justify-between items-center mb-3">
+            {/* Form Lập Phiếu Nhận Trả Từng Đợt (khi còn thiết bị nợ) */}
+            {debtRows.length > 0 && (
+              <div style={{ background: "white", borderRadius: 12, border: "1px solid var(--color-forest)", padding: "18px", marginBottom: 20 }}>
+                <div className="flex justify-between items-center mb-3 flex-wrap gap-2">
                   <div>
                     <span style={{ background: "var(--color-forest)", color: "white", padding: "2px 8px", borderRadius: 6, fontSize: "0.72rem", fontWeight: 700 }}>
                       ĐỢT TRẢ SỐ {currentReturnRound}
                     </span>
                     <h4 style={{ fontFamily: "var(--font-display)", fontSize: "1.15rem", color: "var(--color-bark)", margin: "4px 0 0" }}>
-                      Lập Phiếu Nhận Trả: PNT-{order.id}-{currentReturnRound}
+                      Lập Phiếu Nhận Trả ({order.displayCode || order.id})
                     </h4>
                   </div>
-                  <button onClick={() => {
-                    const allSel: Record<string, boolean> = {};
-                    debtEquipment.forEach((ae) => { allSel[ae.equipmentId] = true; });
-                    setSelectedItemsToReturn(allSel);
-                  }} style={{ background: "var(--color-parchment)", border: "1px solid var(--color-bone)", borderRadius: 6, padding: "4px 10px", fontSize: "0.75rem", cursor: "pointer", fontWeight: 600 }}>
-                    Chọn tất cả {debtEquipment.length} món nợ
+                  <button
+                    onClick={() => {
+                      const allSel: Record<string, boolean> = {};
+                      debtRows.forEach((row) => {
+                        allSel[row.key] = true;
+                      });
+                      setSelectedItemsToReturn(allSel);
+                    }}
+                    style={{ background: "var(--color-parchment)", border: "1px solid var(--color-bone)", borderRadius: 6, padding: "4px 10px", fontSize: "0.75rem", cursor: "pointer", fontWeight: 600 }}
+                  >
+                    Chọn tất cả {debtRows.length} món nợ
                   </button>
                 </div>
 
                 <p style={{ fontSize: "0.8rem", color: "#6B7280", marginBottom: 12 }}>
-                  Tick chọn những thiết bị khách mang đến trả lần này. Những món khách giữ lại sẽ tiếp tục ghi nhận nợ.
+                  Tick chọn những thiết bị khách mang đến trả lần này. Những món chưa chọn sẽ giữ nguyên trạng thái nợ thiết bị.
                 </p>
 
                 <div className="flex flex-col gap-3">
-                  {debtEquipment.map((ae) => {
-                    const p = app.products.find((prod) => prod.id === ae.productId);
-                    const isSelected = !!selectedItemsToReturn[ae.equipmentId];
-                    const cond = itemConditions[ae.equipmentId] || "Bình thường";
-                    const fee = itemSurcharges[ae.equipmentId] || 0;
+                  {debtRows.map((row) => {
+                    const isSelected = !!selectedItemsToReturn[row.key];
+                    const cond = itemConditions[row.key] || "Bình thường";
+                    const fee = itemSurcharges[row.key] || 0;
 
                     return (
-                      <div key={ae.equipmentId} style={{ background: isSelected ? "#F0FDF4" : "#F9FAFB", border: `1px solid ${isSelected ? "#86EFAC" : "var(--color-bone)"}`, borderRadius: 10, padding: "12px 14px" }}>
+                      <div key={row.key} style={{ background: isSelected ? "#F0FDF4" : "#F9FAFB", border: `1px solid ${isSelected ? "#86EFAC" : "var(--color-bone)"}`, borderRadius: 10, padding: "12px 14px" }}>
                         <div className="flex items-center gap-3">
-                          <input type="checkbox" checked={isSelected} onChange={() => handleToggleSelect(ae.equipmentId, p?.compensation || 1000000)} style={{ width: 18, height: 18, accentColor: "var(--color-forest)", cursor: "pointer" }} />
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => handleToggleSelect(row.key, row.compensation, row.maChiTietBanGiao)}
+                            style={{ width: 18, height: 18, accentColor: "var(--color-forest)", cursor: "pointer" }}
+                          />
                           <div style={{ flex: 1 }}>
-                            <div className="flex items-center gap-2">
-                              <span style={{ fontFamily: "var(--font-mono)", fontWeight: 700, color: "var(--color-forest)", fontSize: "0.85rem" }}>{ae.equipmentId}</span>
-                              <span style={{ fontWeight: 600, fontSize: "0.9rem" }}>{p?.name}</span>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span style={{ fontFamily: "var(--font-mono)", fontWeight: 700, color: "var(--color-forest)", fontSize: "0.85rem" }}>
+                                {row.displayCode}
+                              </span>
+                              <span style={{ fontWeight: 600, fontSize: "0.9rem" }}>{row.productName}</span>
                             </div>
-                            <div style={{ fontSize: "0.72rem", color: "#9CA3AF" }}>Giá trị bồi thường tối đa: {fmt(p?.compensation || 0)}</div>
+                            <div style={{ fontSize: "0.72rem", color: "#9CA3AF" }}>
+                              Giá trị bồi thường tham chiếu: {fmt(row.compensation)}
+                            </div>
                           </div>
                         </div>
 
@@ -1509,27 +2289,41 @@ function ReturnTab({ app, selectedOrder, setSelectedOrderId }: { app: ReturnType
                             <div className="flex flex-wrap gap-2 items-center mb-2">
                               <span style={{ fontSize: "0.78rem", fontWeight: 600, color: "var(--color-bark)" }}>Tình trạng nhận lại:</span>
                               {(["Bình thường", "Cần vệ sinh", "Hỏng nhẹ", "Hỏng nặng", "Thiếu phụ kiện", "Mất thiết bị"] as ReturnReceiptItem["condition"][]).map((c) => (
-                                <button key={c} onClick={() => handleConditionChange(ae.equipmentId, c, p?.compensation || 1000000)}
+                                <button
+                                  key={c}
+                                  type="button"
+                                  onClick={() => handleConditionChange(row.key, c, row.compensation)}
                                   style={{
                                     border: "1px solid",
                                     borderColor: cond === c ? "var(--color-forest)" : "var(--color-bone)",
                                     background: cond === c ? "var(--color-forest)" : "white",
                                     color: cond === c ? "white" : "var(--color-bark)",
-                                    borderRadius: 6, padding: "3px 8px", fontSize: "0.72rem", cursor: "pointer", fontWeight: cond === c ? 700 : 500
-                                  }}>
+                                    borderRadius: 6,
+                                    padding: "3px 8px",
+                                    fontSize: "0.72rem",
+                                    cursor: "pointer",
+                                    fontWeight: cond === c ? 700 : 500,
+                                  }}
+                                >
                                   {c}
                                 </button>
                               ))}
                             </div>
 
                             <div className="flex gap-2 items-center flex-wrap">
-                              <input placeholder="Ghi chú chi tiết lỗi/hư hỏng..." value={itemNotes[ae.equipmentId] || ""} onChange={(e) => setItemNotes((prev) => ({ ...prev, [ae.equipmentId]: e.target.value }))}
+                              <input
+                                placeholder="Ghi chú chi tiết lỗi/hư hỏng hoặc tình trạng..."
+                                value={itemNotes[row.key] || ""}
+                                onChange={(e) => setItemNotes((prev) => ({ ...prev, [row.key]: e.target.value }))}
                                 style={{ flex: 1, minWidth: 200, border: "1px solid var(--color-bone)", borderRadius: 6, padding: "5px 8px", fontSize: "0.8rem", background: "white" }}
                               />
                               <div className="flex items-center gap-1">
                                 <span style={{ fontSize: "0.75rem", color: "#6B7280" }}>Phụ phí:</span>
-                                <input type="number" value={fee} onChange={(e) => setItemSurcharges((prev) => ({ ...prev, [ae.equipmentId]: Number(e.target.value) }))}
-                                  style={{ width: 100, border: "1px solid var(--color-bone)", borderRadius: 6, padding: "5px 8px", fontSize: "0.8rem", fontFamily: "var(--font-mono)", fontWeight: 700, color: fee > 0 ? "#DC2626" : "inherit" }}
+                                <input
+                                  type="number"
+                                  value={fee}
+                                  onChange={(e) => setItemSurcharges((prev) => ({ ...prev, [row.key]: Number(e.target.value) }))}
+                                  style={{ width: 110, border: "1px solid var(--color-bone)", borderRadius: 6, padding: "5px 8px", fontSize: "0.8rem", fontFamily: "var(--font-mono)", fontWeight: 700, color: fee > 0 ? "#DC2626" : "inherit" }}
                                 />
                                 <span style={{ fontSize: "0.75rem" }}>đ</span>
                               </div>
@@ -1541,34 +2335,96 @@ function ReturnTab({ app, selectedOrder, setSelectedOrderId }: { app: ReturnType
                   })}
                 </div>
 
-                {/* Dự báo nghiệp vụ (Partial hay Final) */}
+                <div style={{ marginTop: 12 }}>
+                  <input
+                    placeholder="Ghi chú chung của nhân viên nhận trả đợt này (tùy chọn)..."
+                    value={returnStaffNote}
+                    onChange={(e) => setReturnStaffNote(e.target.value)}
+                    style={{ width: "100%", border: "1px solid var(--color-bone)", borderRadius: 8, padding: "7px 10px", fontSize: "0.82rem", background: "white" }}
+                  />
+                </div>
+
                 {(() => {
-                  const selCount = Object.values(selectedItemsToReturn).filter(Boolean).length;
-                  const remainAfter = debtEquipment.length - selCount;
+                  const selCount = debtRows.filter((r) => selectedItemsToReturn[r.key]).length;
+                  const remainAfter = debtRows.length - selCount;
                   return (
-                    <div style={{ marginTop: 14, background: remainAfter > 0 ? "#FFF7ED" : "#DCFCE7", border: `1px solid ${remainAfter > 0 ? "#FFEDD5" : "#BBF7D0"}`, borderRadius: 8, padding: "10px 14px", fontSize: "0.82rem", color: remainAfter > 0 ? "#C2410C" : "#15803D" }}>
+                    <div style={{ marginTop: 12, background: remainAfter > 0 ? "#FFF7ED" : "#DCFCE7", border: `1px solid ${remainAfter > 0 ? "#FFEDD5" : "#BBF7D0"}`, borderRadius: 8, padding: "10px 14px", fontSize: "0.82rem", color: remainAfter > 0 ? "#C2410C" : "#15803D" }}>
                       {remainAfter > 0 ? (
                         <>
-                          <strong>📌 Nhận trả một phần:</strong> Khách trả {selCount} món, còn nợ lại <strong>{remainAfter} món</strong>. Sau khi tạo phiếu, đơn hàng vẫn tiếp tục ở trạng thái <strong>Đang thuê (Trả một phần)</strong>.
+                          <strong>Nhận trả một phần:</strong> Khách trả {selCount} món, còn nợ lại <strong>{remainAfter} món</strong>. Đơn vẫn giữ trạng thái <strong>Đang thuê</strong> cho đến khi thu hồi đủ.
                         </>
                       ) : (
                         <>
-                          <strong>✓ Hoàn tất nhận trả (Lần trả cuối):</strong> Tất cả {debtEquipment.length} thiết bị còn lại sẽ được thu hồi / ghi nhận mất. Đơn hàng sẽ tự động chuyển sang <strong>Đã nhận trả → Chờ đối soát</strong>.
+                          <strong>Hoàn tất nhận trả (Lần trả cuối):</strong> Toàn bộ {debtRows.length} thiết bị còn lại sẽ được thu hồi / xử lý, sẵn sàng bước <strong>Đối soát cọc</strong>.
                         </>
                       )}
                     </div>
                   );
                 })()}
 
-                <button onClick={handleCreateReceipt}
-                  style={{ marginTop: 14, background: "var(--color-forest)", color: "white", padding: "10px 22px", borderRadius: 8, border: "none", cursor: "pointer", fontWeight: 700, fontSize: "0.9rem" }}>
-                  ✓ Xác nhận lập Phiếu Nhận Trả PNT-{order.id}-{currentReturnRound}
+                <button
+                  disabled={returnBusy}
+                  onClick={handleCreateReceipt}
+                  style={{ marginTop: 14, background: "var(--color-forest)", color: "white", padding: "10px 22px", borderRadius: 8, border: "none", cursor: returnBusy ? "not-allowed" : "pointer", fontWeight: 700, fontSize: "0.9rem" }}
+                >
+                  {returnBusy ? "Đang xử lý..." : `✓ Xác nhận lập Phiếu Nhận Trả Đợt ${currentReturnRound}`}
                 </button>
               </div>
             )}
 
-            {/* Lịch sử các đợt nhận trả đã lập (Phiếu PNT) */}
-            {(order.returnReceipts?.length || 0) > 0 && (
+            {/* Lịch sử các đợt nhận trả đã lập (Backend realApi) */}
+            {app.realApi && returnReceiptsBackend.length > 0 && (
+              <div style={{ background: "white", borderRadius: 10, border: "1px solid var(--color-bone)", padding: 16, marginBottom: 20 }}>
+                <h4 style={{ fontWeight: 700, color: "var(--color-bark)", marginBottom: 12 }}>
+                  Lịch sử các đợt nhận trả ({returnReceiptsBackend.length} phiếu)
+                </h4>
+                <div className="flex flex-col gap-2">
+                  {returnReceiptsBackend.map((rc) => {
+                    const isClosed = rc.trangThai === "DaChot";
+                    return (
+                      <div key={rc.maPhieu} style={{ background: "var(--color-parchment)", borderRadius: 8, padding: "10px 14px", border: "1px solid var(--color-bone)", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                        <div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <strong style={{ fontFamily: "var(--font-mono)", color: "var(--color-forest)", fontSize: "0.85rem" }}>
+                              {rc.maPhieuHienThi}
+                            </strong>
+                            <span style={{ fontSize: "0.72rem", background: rc.laLanTraCuoi ? "#DCFCE7" : "#FFF7ED", color: rc.laLanTraCuoi ? "#15803D" : "#C2410C", padding: "2px 6px", borderRadius: 6, fontWeight: 700 }}>
+                              {rc.laLanTraCuoi ? "Lần trả cuối" : `Đợt ${rc.lanTra}`}
+                            </span>
+                            <span style={{ fontSize: "0.7rem", background: isClosed ? "#DCFCE7" : "#FEF3C7", color: isClosed ? "#15803D" : "#B45309", padding: "2px 6px", borderRadius: 6, fontWeight: 700 }}>
+                              {isClosed ? "Đã chốt" : rc.trangThai}
+                            </span>
+                          </div>
+                          <div style={{ fontSize: "0.75rem", color: "#6B7280", marginTop: 2 }}>
+                            {rc.thoiDiemChot || rc.thoiDiemLap} · {rc.tenNhanVienLucNhan || "Nhân viên kho"} · {rc.chiTiet.length} thiết bị
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {!isClosed && (
+                            <button
+                              disabled={returnBusy}
+                              onClick={() => handleCloseBackendReceipt(rc.maPhieu)}
+                              style={{ background: "var(--color-forest)", color: "white", border: "none", borderRadius: 6, padding: "4px 10px", fontSize: "0.74rem", cursor: "pointer", fontWeight: 700 }}
+                            >
+                              Chốt phiếu
+                            </button>
+                          )}
+                          <button
+                            onClick={() => setViewingBackendReceipt(rc)}
+                            style={{ background: "white", border: "1px solid var(--color-bone)", borderRadius: 6, padding: "4px 10px", fontSize: "0.75rem", cursor: "pointer", fontWeight: 600 }}
+                          >
+                            Xem phiếu
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Lịch sử các đợt nhận trả (Mock mode) */}
+            {!app.realApi && (order.returnReceipts?.length || 0) > 0 && (
               <div style={{ background: "white", borderRadius: 10, border: "1px solid var(--color-bone)", padding: 16, marginBottom: 20 }}>
                 <h4 style={{ fontWeight: 700, color: "var(--color-bark)", marginBottom: 12 }}>
                   Lịch sử các đợt nhận trả ({order.returnReceipts?.length} phiếu)
@@ -1597,53 +2453,248 @@ function ReturnTab({ app, selectedOrder, setSelectedOrderId }: { app: ReturnType
             )}
 
             {/* Danh sách phụ phí đã đề xuất */}
-            {order.surcharges.length > 0 && (
+            {displaySurcharges.length > 0 && (
               <div style={{ background: "white", borderRadius: 10, border: "1px solid var(--color-bone)", padding: 16, marginBottom: 20 }}>
                 <h4 style={{ fontWeight: 700, color: "var(--color-bark)", marginBottom: 10 }}>Phụ phí bồi thường & trễ hạn</h4>
-                {order.surcharges.map((s) => (
-                  <div key={s.id} style={{ background: "#FFF7ED", borderRadius: 8, padding: "10px 14px", border: "1px solid #FED7AA", marginBottom: 6, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <div>
-                      <div style={{ fontWeight: 600, fontSize: "0.85rem" }}>{s.type} — {s.equipmentId}</div>
-                      <div style={{ fontSize: "0.75rem", color: "#9CA3AF" }}>{s.reason}</div>
+                {displaySurcharges.map((s) => (
+                  <div key={s.id} style={{ background: "#FFF7ED", borderRadius: 8, padding: "10px 14px", border: "1px solid #FED7AA", marginBottom: 8 }}>
+                    <div className="flex justify-between items-center gap-3 flex-wrap">
+                      <div>
+                        <div style={{ fontWeight: 600, fontSize: "0.85rem" }}>{s.type} — {s.equipmentId}</div>
+                        <div style={{ fontSize: "0.75rem", color: "#6B7280" }}>{s.reason}</div>
+                      </div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span style={{ fontFamily: "var(--font-mono)", fontWeight: 700, color: "#DC2626" }}>+{fmt(s.amount)}</span>
+                        <span style={{ background: s.status === "Đã duyệt" ? "#DCFCE7" : s.status === "Từ chối" ? "#FEE2E2" : "#FEF3C7", color: s.status === "Đã duyệt" ? "#15803D" : s.status === "Từ chối" ? "#B91C1C" : "#B45309", padding: "3px 8px", borderRadius: 8, fontSize: "0.7rem", fontWeight: 600 }}>
+                          {s.status}
+                        </span>
+                        {s.status === "Chờ duyệt" && (
+                          <>
+                            <button
+                              disabled={returnBusy}
+                              onClick={() => handleApproveSurcharge(s)}
+                              style={{ background: "#15803D", color: "white", border: "none", borderRadius: 6, padding: "3px 8px", fontSize: "0.7rem", cursor: "pointer", fontWeight: 700 }}
+                            >
+                              Duyệt
+                            </button>
+                            {app.realApi && s.backendId && (
+                              <button
+                                disabled={returnBusy}
+                                onClick={() => {
+                                  setRejectingSurchargeId(s.id);
+                                  setRejectReason("");
+                                }}
+                                style={{ background: "white", color: "#B91C1C", border: "1px solid #FCA5A5", borderRadius: 6, padding: "3px 8px", fontSize: "0.7rem", cursor: "pointer", fontWeight: 700 }}
+                              >
+                                Từ chối
+                              </button>
+                            )}
+                          </>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <span style={{ fontFamily: "var(--font-mono)", fontWeight: 700, color: "#DC2626" }}>+{fmt(s.amount)}</span>
-                      <span style={{ background: s.status === "Đã duyệt" ? "#DCFCE7" : s.status === "Từ chối" ? "#FEE2E2" : "#FEF3C7", color: s.status === "Đã duyệt" ? "#15803D" : s.status === "Từ chối" ? "#B91C1C" : "#B45309", padding: "3px 8px", borderRadius: 8, fontSize: "0.7rem", fontWeight: 600 }}>
-                        {s.status}
-                      </span>
-                      {s.status === "Chờ duyệt" && (
-                        <button onClick={() => app.approveSurcharge(order.id, s.id)} style={{ background: "#15803D", color: "white", border: "none", borderRadius: 6, padding: "3px 8px", fontSize: "0.7rem", cursor: "pointer", fontWeight: 700 }}>
-                          Duyệt
+                    {rejectingSurchargeId === s.id && (
+                      <div className="flex gap-2 items-center mt-2 pt-2" style={{ borderTop: "1px dashed #FDBA74" }}>
+                        <input
+                          placeholder="Nhập lý do từ chối phụ phí..."
+                          value={rejectReason}
+                          onChange={(e) => setRejectReason(e.target.value)}
+                          style={{ flex: 1, border: "1px solid var(--color-bone)", borderRadius: 6, padding: "4px 8px", fontSize: "0.78rem", background: "white" }}
+                        />
+                        <button
+                          disabled={returnBusy}
+                          onClick={() => handleRejectSurcharge(s)}
+                          style={{ background: "#DC2626", color: "white", border: "none", borderRadius: 6, padding: "4px 10px", fontSize: "0.74rem", cursor: "pointer", fontWeight: 700 }}
+                        >
+                          Xác nhận từ chối
                         </button>
-                      )}
-                    </div>
+                        <button
+                          onClick={() => setRejectingSurchargeId(null)}
+                          style={{ background: "white", border: "1px solid var(--color-bone)", borderRadius: 6, padding: "4px 8px", fontSize: "0.74rem", cursor: "pointer" }}
+                        >
+                          Hủy
+                        </button>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
             )}
 
-            {/* Nút chuyển sang Chờ đối soát khi tất cả đã trả */}
-            {order.status === "Đã nhận trả" && (
+            {/* Chuyển sang Chờ đối soát (mock) hoặc mở bảng đối soát trực tiếp (realApi / Chờ đối soát) */}
+            {!app.realApi && order.status === "Đã nhận trả" && (
               <div style={{ background: "#EFF6FF", borderRadius: "10px", padding: "14px 18px", marginBottom: "16px", border: "1px solid #BFDBFE" }}>
                 <div style={{ fontWeight: 700, color: "#1D4ED8", marginBottom: "4px" }}>✓ Toàn bộ thiết bị đã nhận trả xong</div>
                 <div style={{ fontSize: "0.82rem", color: "#1E40AF", marginBottom: "10px" }}>Chuyển đơn sang Chờ đối soát để lập lệnh hoàn cọc hoặc thu thêm.</div>
-                <button onClick={() => app.advanceOrderStatus(order.id, "Chờ đối soát")}
-                  style={{ background: "#1D4ED8", color: "white", padding: "8px 18px", borderRadius: 8, border: "none", cursor: "pointer", fontWeight: 700 }}>
+                <button
+                  onClick={() => app.advanceOrderStatus(order.id, "Chờ đối soát")}
+                  style={{ background: "#1D4ED8", color: "white", padding: "8px 18px", borderRadius: 8, border: "none", cursor: "pointer", fontWeight: 700 }}
+                >
                   Chuyển sang Chờ đối soát →
                 </button>
               </div>
             )}
 
-            {/* UC5.4: Bảng Đối Soát Cọc & Hoàn Tất Đơn */}
-            {order.status === "Chờ đối soát" && (
+            {(order.status === "Chờ đối soát" || (app.realApi && order.status === "Đã nhận trả")) && (
               <div style={{ marginTop: 20 }}>
-                <ReconciliationSheet order={order} app={app} userRole="staff" />
+                <ReconciliationSheet
+                  order={order}
+                  app={app}
+                  userRole={app.currentUser?.role === "Quản trị viên" ? "admin" : "staff"}
+                  onAfterMutation={async () => {
+                    await Promise.all([loadReturnData(), hydrateOperationalOrder(order.id)]);
+                  }}
+                />
               </div>
             )}
           </div>
         )}
 
-        {/* Modal xem chi tiết Phiếu Nhận Trả PNT-... */}
+        {/* Modal xem chi tiết Phiếu Nhận Trả Backend */}
+        {viewingBackendReceipt && (
+          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 9999, display: "grid", placeItems: "center", padding: 20 }}>
+            <div style={{ background: "white", borderRadius: 16, maxWidth: 640, width: "100%", padding: 24, maxHeight: "90vh", overflowY: "auto" }}>
+              <div className="flex justify-between items-start mb-4">
+                <div>
+                  <span style={{ fontSize: "0.72rem", background: viewingBackendReceipt.laLanTraCuoi ? "#DCFCE7" : "#FFF7ED", color: viewingBackendReceipt.laLanTraCuoi ? "#15803D" : "#C2410C", padding: "3px 8px", borderRadius: 6, fontWeight: 700 }}>
+                    {viewingBackendReceipt.laLanTraCuoi ? "LẦN NHẬN TRẢ CUỐI CÙNG" : `PHIẾU NHẬN TRẢ ĐỢT ${viewingBackendReceipt.lanTra}`}
+                  </span>
+                  <h3 style={{ fontFamily: "var(--font-display)", fontSize: "1.3rem", color: "var(--color-bark)", marginTop: 4 }}>
+                    Phiếu Nhận Trả: {viewingBackendReceipt.maPhieuHienThi}
+                  </h3>
+                </div>
+                <button onClick={() => setViewingBackendReceipt(null)} style={{ border: "none", background: "none", fontSize: "1.2rem", cursor: "pointer" }}>✕</button>
+              </div>
+
+              <div style={{ background: "var(--color-parchment)", borderRadius: 10, padding: 12, fontSize: "0.82rem", marginBottom: 14 }}>
+                <div><strong>Đơn thuê:</strong> {order?.displayCode || viewingBackendReceipt.maDonThue}</div>
+                <div><strong>Thời điểm lập / chốt:</strong> {viewingBackendReceipt.thoiDiemChot || viewingBackendReceipt.thoiDiemLap}</div>
+                <div><strong>Nhân viên nhận:</strong> {viewingBackendReceipt.tenNhanVienLucNhan || "Nhân viên kho"}</div>
+                <div><strong>Trạng thái:</strong> {viewingBackendReceipt.trangThai} · Còn nợ sau phiếu: {viewingBackendReceipt.soThietBiConNo} chiếc</div>
+                <div><strong>Ghi chú:</strong> {viewingBackendReceipt.ghiChu || "Không có"}</div>
+              </div>
+
+              <strong style={{ fontSize: "0.85rem", color: "var(--color-bark)" }}>Chi tiết thiết bị trong phiếu:</strong>
+              <div className="flex flex-col gap-2 mt-2 mb-4">
+                {viewingBackendReceipt.chiTiet.map((ct) => {
+                  const isLost = ct.ketLuan === "MatThietBi";
+                  const lostApproved = Boolean(ct.thoiDiemDuyetMat);
+                  const canSplit = viewingBackendReceipt.trangThai !== "DaChot" && viewingBackendReceipt.chiTiet.length > 1;
+                  return (
+                    <div key={ct.maChiTietNhanTra} style={{ background: "#F9FAFB", border: "1px solid var(--color-bone)", borderRadius: 8, padding: "10px 12px", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                      <div>
+                        <strong style={{ fontFamily: "var(--font-mono)", color: "var(--color-forest)" }}>
+                          {ct.maThietBiHienThi}
+                        </strong>{" "}
+                        <span style={{ fontSize: "0.85rem", fontWeight: 600 }}>{ct.tenSanPham}</span>
+                        <div style={{ fontSize: "0.75rem", color: "#6B7280" }}>
+                          Kết luận: <strong>{ct.tinhTrangSauThue || ct.ketLuan || "Chưa kết luận"}</strong>
+                          {ct.ghiChu ? ` · ${ct.ghiChu}` : ""}
+                        </div>
+                        {lostApproved && (
+                          <div style={{ fontSize: "0.72rem", color: "#15803D", fontWeight: 600 }}>
+                            ✓ Đã duyệt mất bởi {ct.tenNguoiDuyetMat || "Quản trị viên"}
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {isLost && !lostApproved && (
+                          <button
+                            disabled={returnBusy}
+                            onClick={() => {
+                              setApproveLostTarget({ phieuId: viewingBackendReceipt.maPhieu, chiTiet: ct });
+                              setLostBienBan(ct.bienBanMat || `Biên bản mất thiết bị ${ct.maThietBiHienThi}`);
+                              const prod = app.products.find((p) => p.name === ct.tenSanPham);
+                              setLostCompAmount(prod?.compensation || 1000000);
+                            }}
+                            style={{ background: "#DC2626", color: "white", border: "none", borderRadius: 6, padding: "4px 10px", fontSize: "0.72rem", fontWeight: 700, cursor: "pointer" }}
+                          >
+                            Duyệt mất
+                          </button>
+                        )}
+                        {canSplit && (
+                          <button
+                            disabled={returnBusy}
+                            onClick={() => handleSplitPendingLine(viewingBackendReceipt.maPhieu, ct.maChiTietNhanTra)}
+                            style={{ background: "white", color: "var(--color-bark)", border: "1px solid var(--color-bone)", borderRadius: 6, padding: "4px 10px", fontSize: "0.72rem", fontWeight: 600, cursor: "pointer" }}
+                          >
+                            Tách chờ xử lý
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="flex justify-end gap-2">
+                {viewingBackendReceipt.trangThai !== "DaChot" && (
+                  <button
+                    disabled={returnBusy}
+                    onClick={() => handleCloseBackendReceipt(viewingBackendReceipt.maPhieu)}
+                    style={{ background: "var(--color-forest)", color: "white", border: "none", borderRadius: 8, padding: "8px 18px", cursor: "pointer", fontWeight: 700, fontSize: "0.82rem" }}
+                  >
+                    ✓ Chốt phiếu nhận trả
+                  </button>
+                )}
+                <button onClick={() => window.print()} style={{ background: "white", border: "1px solid var(--color-bone)", borderRadius: 8, padding: "8px 16px", cursor: "pointer", fontWeight: 600, fontSize: "0.82rem" }}>
+                  In phiếu
+                </button>
+                <button onClick={() => setViewingBackendReceipt(null)} style={{ background: "white", border: "1px solid var(--color-bone)", borderRadius: 8, padding: "8px 18px", cursor: "pointer", fontWeight: 700, fontSize: "0.82rem" }}>
+                  Đóng
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal Duyệt kết luận mất thiết bị */}
+        {approveLostTarget && (
+          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 10000, display: "grid", placeItems: "center", padding: 20 }}>
+            <div style={{ background: "white", borderRadius: 14, maxWidth: 460, width: "100%", padding: 22 }}>
+              <h3 style={{ fontFamily: "var(--font-display)", fontSize: "1.15rem", color: "var(--color-bark)", marginBottom: 8 }}>
+                Duyệt kết luận mất: {approveLostTarget.chiTiet.maThietBiHienThi}
+              </h3>
+              <p style={{ fontSize: "0.8rem", color: "#6B7280", marginBottom: 12 }}>
+                Thao tác này ghi nhận thiết bị thất lạc vĩnh viễn và liên kết phụ phí bồi thường vào phiếu nhận trả.
+              </p>
+              <label style={{ fontSize: "0.76rem", fontWeight: 600, display: "block", marginBottom: 4 }}>Biên bản xác nhận mất</label>
+              <input
+                value={lostBienBan}
+                onChange={(e) => setLostBienBan(e.target.value)}
+                style={{ width: "100%", border: "1px solid var(--color-bone)", borderRadius: 8, padding: "7px 10px", fontSize: "0.82rem", marginBottom: 10 }}
+              />
+              <label style={{ fontSize: "0.76rem", fontWeight: 600, display: "block", marginBottom: 4 }}>Số tiền bồi thường đề nghị (đ)</label>
+              <input
+                type="number"
+                value={lostCompAmount}
+                onChange={(e) => setLostCompAmount(Number(e.target.value))}
+                style={{ width: "100%", border: "1px solid var(--color-bone)", borderRadius: 8, padding: "7px 10px", fontSize: "0.85rem", fontFamily: "var(--font-mono)", marginBottom: 10 }}
+              />
+              <label style={{ fontSize: "0.76rem", fontWeight: 600, display: "block", marginBottom: 4 }}>Lý do duyệt</label>
+              <textarea
+                rows={2}
+                value={lostApproveReason}
+                onChange={(e) => setLostApproveReason(e.target.value)}
+                style={{ width: "100%", border: "1px solid var(--color-bone)", borderRadius: 8, padding: "7px 10px", fontSize: "0.82rem", marginBottom: 14 }}
+              />
+              <div className="flex justify-end gap-2">
+                <button onClick={() => setApproveLostTarget(null)} style={{ background: "white", border: "1px solid var(--color-bone)", borderRadius: 8, padding: "7px 14px", cursor: "pointer", fontSize: "0.82rem" }}>
+                  Hủy
+                </button>
+                <button
+                  disabled={returnBusy}
+                  onClick={handleConfirmApproveLost}
+                  style={{ background: "#DC2626", color: "white", border: "none", borderRadius: 8, padding: "7px 16px", fontWeight: 700, cursor: "pointer", fontSize: "0.82rem" }}
+                >
+                  {returnBusy ? "Đang duyệt..." : "Xác nhận duyệt mất"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal xem chi tiết Phiếu Nhận Trả PNT-... (Mock mode) */}
         {viewingReceipt && (
           <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 9999, display: "grid", placeItems: "center", padding: 20 }}>
             <div style={{ background: "white", borderRadius: 16, maxWidth: 580, width: "100%", padding: 24 }}>
@@ -1680,16 +2731,22 @@ function ReturnTab({ app, selectedOrder, setSelectedOrderId }: { app: ReturnType
                           onClick={() => {
                             const res = app.approveLostEquipment(viewingReceipt.orderId, it.equipmentId, "Quản trị viên");
                             if (res.ok) {
-                              alert(`Đã duyệt kết luận mất cho thiết bị ${it.equipmentId}!`);
-                              setViewingReceipt((prev) => prev ? {
-                                ...prev,
-                                items: prev.items.map((x) => x.equipmentId === it.equipmentId ? { ...x, lostApproved: true } : x)
-                              } : null);
+                              setReturnSuccess(`Đã duyệt kết luận mất cho thiết bị ${it.equipmentId}.`);
+                              setViewingReceipt((prev) =>
+                                prev
+                                  ? {
+                                      ...prev,
+                                      items: prev.items.map((x) =>
+                                        x.equipmentId === it.equipmentId ? { ...x, lostApproved: true } : x
+                                      ),
+                                    }
+                                  : null
+                              );
                             }
                           }}
                           style={{ background: "#DC2626", color: "white", border: "none", borderRadius: 4, padding: "2px 8px", fontSize: "0.7rem", fontWeight: 700, cursor: "pointer" }}
                         >
-                          Duyệt mất (UC4.3 Dòng 814)
+                          Duyệt mất
                         </button>
                       )}
                       {it.surchargeAmount > 0 && (
@@ -1704,7 +2761,7 @@ function ReturnTab({ app, selectedOrder, setSelectedOrderId }: { app: ReturnType
 
               <div className="flex justify-end gap-2">
                 <button onClick={() => window.print()} style={{ background: "white", border: "1px solid var(--color-bone)", borderRadius: 8, padding: "8px 16px", cursor: "pointer", fontWeight: 600, fontSize: "0.82rem" }}>
-                  🖨 In phiếu
+                  In phiếu
                 </button>
                 <button onClick={() => setViewingReceipt(null)} style={{ background: "var(--color-forest)", color: "white", border: "none", borderRadius: 8, padding: "8px 20px", cursor: "pointer", fontWeight: 700, fontSize: "0.82rem" }}>
                   Đóng
@@ -1724,14 +2781,20 @@ function ReturnTab({ app, selectedOrder, setSelectedOrderId }: { app: ReturnType
                     XỬ LÝ ĐƠN QUÁ HẠN (UC4.4)
                   </span>
                   <h3 style={{ fontFamily: "var(--font-display)", fontSize: "1.2rem", color: "var(--color-bark)", marginTop: 4 }}>
-                    Nhật ký liên hệ đơn #{order.id}
+                    Nhật ký liên hệ đơn {order.displayCode || order.id}
                   </h3>
                   <div style={{ fontSize: "0.82rem", color: "#4B5563" }}>
-                    Khách hàng: <strong>{order.customerName}</strong> ({order.customerPhone})
+                    Khách hàng: <strong>{order.customerName}</strong> {order.customerPhone ? `(${order.customerPhone})` : ""}
                   </div>
                 </div>
                 <button onClick={() => setShowContactModal(false)} style={{ border: "none", background: "none", fontSize: "1.2rem", cursor: "pointer" }}>✕</button>
               </div>
+
+              {contactNotice && (
+                <div style={{ background: "#F0FDF4", border: "1px solid #BBF7D0", color: "#15803D", borderRadius: 8, padding: "8px 12px", marginBottom: 12, fontSize: "0.8rem" }}>
+                  {contactNotice}
+                </div>
+              )}
 
               {/* Lịch sử các cuộc gọi trước */}
               <div style={{ marginBottom: 16 }}>
@@ -1741,7 +2804,7 @@ function ReturnTab({ app, selectedOrder, setSelectedOrderId }: { app: ReturnType
                 <div className="flex flex-col gap-2 mt-2" style={{ maxHeight: 180, overflowY: "auto" }}>
                   {(order.contactLogs?.length || 0) === 0 ? (
                     <div style={{ fontSize: "0.8rem", color: "#9CA3AF", fontStyle: "italic", background: "#F9FAFB", padding: "8px 12px", borderRadius: 6 }}>
-                      Chưa có lịch sử liên hệ nào. Vui lòng ghi lại kết quả cuộc gọi đầu tiên bên dưới.
+                      Chưa có lịch sử liên hệ nào. Vui lòng ghi lại kết quả cuộc gọi bên dưới.
                     </div>
                   ) : (
                     order.contactLogs?.map((log) => (
@@ -1757,7 +2820,7 @@ function ReturnTab({ app, selectedOrder, setSelectedOrderId }: { app: ReturnType
                         <div style={{ fontSize: "0.82rem", color: "#374151" }}>{log.note}</div>
                         {log.newExpectedTime && (
                           <div style={{ fontSize: "0.72rem", color: "#1D4ED8", marginTop: 2 }}>
-                            🕒 Khách hẹn trả mới: <strong>{log.newExpectedTime}</strong>
+                            Khách hẹn trả mới: <strong>{log.newExpectedTime}</strong>
                           </div>
                         )}
                       </div>
@@ -1854,6 +2917,9 @@ function EquipmentTab({ app }: { app: ReturnType<typeof useApp> }) {
   const [actualRepairCost, setActualRepairCost] = useState(0);
   const [repairOutcome, setRepairOutcome] = useState<"Hoàn tất" | "Không thể sửa">("Hoàn tất");
   const [repairOutcomeNote, setRepairOutcomeNote] = useState("");
+  const [equipBusy, setEquipBusy] = useState(false);
+  const [equipError, setEquipError] = useState<string | null>(null);
+  const [equipSuccess, setEquipSuccess] = useState<string | null>(null);
 
   const products = ["Tất cả", ...Array.from(new Set(app.products.map((p) => p.name)))];
   const statuses = ["Tất cả", "Sẵn sàng", "Đang thuê", "Đang bảo trì", "Thất lạc", "Ngừng sử dụng"];
@@ -1875,43 +2941,62 @@ function EquipmentTab({ app }: { app: ReturnType<typeof useApp> }) {
 
   const handleTransfer = async () => {
     if (!transferModal || !targetProductId) return;
+    setEquipError(null);
+    setEquipSuccess(null);
 
-    // UC63 / UC6.15: Giáng cấp & Điều chuyển sản phẩm khác (Kiểm tra cam kết đơn tương lai)
-    if (isRealApiEnabled()) {
+    if (app.realApi || isRealApiEnabled()) {
+      setEquipBusy(true);
       try {
-        const equipIdNum = Number(transferModal.id) || parseInt(transferModal.id.replace(/\D/g, ""), 10);
-        const targetSpIdNum = Number(targetProductId) || parseInt(targetProductId.replace(/\D/g, ""), 10);
-        if (equipIdNum && targetSpIdNum) {
-          const checkImpact = await equipmentApi.xemAnhHuongThayDoi(equipIdNum, {
-            loaiThayDoi: "GiangCap",
-            maSanPhamDich: targetSpIdNum,
-          });
-          if (!checkImpact.coTheApDungHienTai) {
-            alert(`Cảnh báo cam kết: Không thể điều chuyển do vướng đơn thuê: ${checkImpact.vuongMac.join("; ")}`);
-            return;
-          }
-          await equipmentApi.deNghiDieuChuyenSanPham(equipIdNum, {
-            maSanPhamDich: targetSpIdNum,
-            lyDo: "Giáng cấp / điều chuyển thiết bị cũ sang phân khúc tiết kiệm",
-          });
+        const targetProduct = app.products.find((p) => p.id === targetProductId);
+        const equipIdNum = transferModal.backendId ?? (Number(transferModal.id) || parseInt(transferModal.id.replace(/\D/g, ""), 10));
+        const targetSpIdNum = targetProduct?.backendId ?? (Number(targetProductId) || parseInt(targetProductId.replace(/\D/g, ""), 10));
+        if (!equipIdNum || !targetSpIdNum) {
+          throw new Error("Không xác định được mã thiết bị hoặc sản phẩm đích hợp lệ.");
         }
+        const checkImpact = await equipmentApi.xemAnhHuongThayDoi(equipIdNum, {
+          loaiThayDoi: "GiangCap",
+          maSanPhamDich: targetSpIdNum,
+        });
+        if (!checkImpact.coTheApDungHienTai) {
+          setEquipError(`Cảnh báo cam kết: Không thể điều chuyển do vướng đơn thuê: ${checkImpact.vuongMac.join("; ")}`);
+          return;
+        }
+        await equipmentApi.deNghiDieuChuyenSanPham(equipIdNum, {
+          maSanPhamDich: targetSpIdNum,
+          lyDo: "Giáng cấp / điều chuyển thiết bị sang phân khúc sản phẩm đích",
+        });
+        await Promise.all([app.refreshEquipment?.(), app.refreshCatalog?.()]);
+        setEquipSuccess(`Đã chuyển thiết bị ${transferModal.displayCode || transferModal.id} sang sản phẩm đích.`);
+        setTransferModal(null);
       } catch (err) {
-        alert(err instanceof Error ? err.message : "Lỗi gửi đề nghị điều chuyển thiết bị.");
-        return;
+        setEquipError(err instanceof Error ? err.message : "Lỗi gửi đề nghị điều chuyển thiết bị.");
+      } finally {
+        setEquipBusy(false);
       }
+      return;
     }
 
     const res = app.transferEquipment(transferModal.id, targetProductId);
     if (res.ok) {
-      alert(`Đã chuyển thiết bị ${transferModal.id} sang sản phẩm đích thành công!`);
+      setEquipSuccess(`Đã chuyển thiết bị ${transferModal.displayCode || transferModal.id} sang sản phẩm đích.`);
       setTransferModal(null);
     } else {
-      alert(res.message);
+      setEquipError(res.message);
     }
   };
 
   return (
     <div>
+      {equipError && (
+        <div style={{ background: "#FEF2F2", border: "1px solid #FECACA", color: "#B91C1C", borderRadius: 8, padding: "10px 14px", marginBottom: 12, fontSize: "0.82rem", fontWeight: 600 }}>
+          {equipError}
+        </div>
+      )}
+      {equipSuccess && (
+        <div style={{ background: "#F0FDF4", border: "1px solid #BBF7D0", color: "#15803D", borderRadius: 8, padding: "10px 14px", marginBottom: 12, fontSize: "0.82rem", fontWeight: 600 }}>
+          {equipSuccess}
+        </div>
+      )}
       {/* Sub tabs: Kho / Phiếu bảo trì / Nhập hàng */}
       <div className="flex gap-2 mb-4 border-b border-bone pb-2 flex-wrap">
         <button onClick={() => setSubTab("inventory")}
@@ -1973,7 +3058,7 @@ function EquipmentTab({ app }: { app: ReturnType<typeof useApp> }) {
                   const st = statusStyle[e.equipmentStatus] || { bg: "#F3F4F6", text: "#374151" };
                   return (
                     <tr key={e.id} style={{ borderTop: "1px solid var(--color-bone)", background: i % 2 === 0 ? "white" : "var(--color-cream)" }}>
-                      <td style={{ padding: "9px 12px", fontFamily: "var(--font-mono)", fontSize: "0.8rem", fontWeight: 700, color: "var(--color-forest)" }}>{e.id}</td>
+                      <td style={{ padding: "9px 12px", fontFamily: "var(--font-mono)", fontSize: "0.8rem", fontWeight: 700, color: "var(--color-forest)" }}>{e.displayCode || e.id}</td>
                       <td style={{ padding: "9px 12px", fontSize: "0.82rem" }}>
                         <div style={{ fontWeight: 600 }}>{p?.name}</div>
                         {moved && <div style={{ fontSize: "0.68rem", color: "var(--color-amber)", fontWeight: 700 }}>↳ Giáng cấp/chuyển từ {origP?.name}</div>}
@@ -2011,7 +3096,7 @@ function EquipmentTab({ app }: { app: ReturnType<typeof useApp> }) {
             <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 9999, display: "grid", placeItems: "center", padding: 20 }}>
               <div style={{ background: "white", borderRadius: 14, maxWidth: 460, width: "100%", padding: 20 }}>
                 <h3 style={{ fontFamily: "var(--font-display)", fontSize: "1.2rem", color: "var(--color-bark)", marginBottom: 8 }}>
-                  Chuyển loại thiết bị: {transferModal.id}
+                  Chuyển loại thiết bị: {transferModal.displayCode || transferModal.id}
                 </h3>
                 <p style={{ fontSize: "0.82rem", color: "#6B7280", marginBottom: 12 }}>
                   Dùng khi thiết bị cũ khấu hao (ví dụ từ Tiêu chuẩn sang Tiết kiệm).
@@ -2072,10 +3157,15 @@ function EquipmentTab({ app }: { app: ReturnType<typeof useApp> }) {
                 </tr>
               </thead>
               <tbody>
-                {app.maintenanceReceipts.map((m, i) => (
+                {app.maintenanceReceipts.map((m, i) => {
+                  const matchedEquip = app.equipment.find(
+                    (eq) => eq.id === m.equipmentId || eq.displayCode === m.equipmentId
+                  );
+                  const equipDisplay = matchedEquip?.displayCode || m.equipmentId;
+                  return (
                   <tr key={m.id} style={{ borderTop: "1px solid var(--color-bone)", background: i % 2 === 0 ? "white" : "var(--color-cream)" }}>
-                    <td style={{ padding: "9px 12px", fontFamily: "var(--font-mono)", fontSize: "0.8rem", fontWeight: 700, color: "var(--color-forest)" }}>{m.id}</td>
-                    <td style={{ padding: "9px 12px", fontFamily: "var(--font-mono)", fontWeight: 600 }}>{m.equipmentId}</td>
+                    <td style={{ padding: "9px 12px", fontFamily: "var(--font-mono)", fontSize: "0.8rem", fontWeight: 700, color: "var(--color-forest)" }}>{m.displayCode || m.id}</td>
+                    <td style={{ padding: "9px 12px", fontFamily: "var(--font-mono)", fontWeight: 600 }}>{equipDisplay}</td>
                     <td style={{ padding: "9px 12px", fontSize: "0.82rem" }}>
                       <div>{m.issueDescription}</div>
                       {m.note && <div style={{ fontSize: "0.7rem", color: "#6B7280" }}>{m.note}</div>}
@@ -2107,14 +3197,15 @@ function EquipmentTab({ app }: { app: ReturnType<typeof useApp> }) {
                           }}
                           style={{ background: "var(--color-forest)", color: "white", border: "none", borderRadius: 6, padding: "5px 10px", fontSize: "0.75rem", cursor: "pointer", fontWeight: 700 }}
                         >
-                          Nghiệm thu (UC6.13) →
+                          Nghiệm thu →
                         </button>
                       ) : (
                         <span style={{ fontSize: "0.75rem", color: "#9CA3AF" }}>Đã chốt</span>
                       )}
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -2274,7 +3365,7 @@ function EquipmentTab({ app }: { app: ReturnType<typeof useApp> }) {
                   const p = app.products.find((prod) => prod.id === e.productId);
                   return (
                     <option key={e.id} value={e.id}>
-                      {e.id} - {p?.name} (Hiện tại: {e.equipmentStatus})
+                      {e.displayCode || e.id} - {p?.name} (Hiện tại: {e.equipmentStatus})
                     </option>
                   );
                 })}
@@ -2331,14 +3422,19 @@ function EquipmentTab({ app }: { app: ReturnType<typeof useApp> }) {
                 type="button"
                 disabled={!createMaintEquipId || !createMaintIssue.trim()}
                 onClick={async () => {
-                  let newId = `BT-${Date.now().toString().slice(-6)}`;
+                  const selectedEquip = app.equipment.find((eq) => eq.id === createMaintEquipId);
                   const now = new Date().toLocaleString("vi-VN");
+                  setEquipError(null);
+                  setEquipSuccess(null);
 
-                  // UC59 / UC6.12: Lập phiếu bảo dưỡng / sửa chữa backend (Loại thiết bị khỏi tồn khả dụng)
-                  if (isRealApiEnabled()) {
+                  if (app.realApi || isRealApiEnabled()) {
+                    setEquipBusy(true);
                     try {
-                      const equipIdNum = Number(createMaintEquipId) || parseInt(createMaintEquipId.replace(/\D/g, ""), 10) || 1;
+                      const equipIdNum = selectedEquip?.backendId ?? (Number(createMaintEquipId) || parseInt(createMaintEquipId.replace(/\D/g, ""), 10));
                       const orderIdNum = createMaintOrderId && !isNaN(Number(createMaintOrderId)) ? Number(createMaintOrderId) : undefined;
+                      if (!equipIdNum) {
+                        throw new Error("Không xác định được mã thiết bị hợp lệ.");
+                      }
                       const res = await equipmentApi.lapPhieuBaoTri({
                         maThietBi: equipIdNum,
                         maDonThue: orderIdNum,
@@ -2348,17 +3444,21 @@ function EquipmentTab({ app }: { app: ReturnType<typeof useApp> }) {
                         chiPhi: createMaintCost,
                         ghiChu: createMaintNote.trim(),
                       });
-                      if (res && res.maPhieuBaoTri) {
-                        newId = `BT-${res.maPhieuBaoTri}`;
-                      }
+                      await Promise.all([app.refreshEquipment?.(), app.refreshMaintenanceReceipts?.()]);
+                      setEquipSuccess(`Đã tạo phiếu bảo trì ${res?.maPhieuBaoTri ? `BT-${res.maPhieuBaoTri}` : ""} trên máy chủ.`);
+                      setCreateMaintIssue("");
+                      setCreateMaintNote("");
+                      setShowCreateMaintenanceModal(false);
                     } catch (err) {
-                      alert(err instanceof Error ? err.message : "Lỗi lập phiếu bảo trì trên máy chủ.");
-                      return;
+                      setEquipError(err instanceof Error ? err.message : "Lỗi lập phiếu bảo trì trên máy chủ.");
+                    } finally {
+                      setEquipBusy(false);
                     }
+                    return;
                   }
 
                   app.saveMaintenanceReceipt({
-                    id: newId,
+                    id: `BT-${Date.now().toString().slice(-6)}`,
                     equipmentId: createMaintEquipId,
                     issueDescription: createMaintIssue.trim(),
                     estimatedCost: createMaintCost,
@@ -2367,6 +3467,7 @@ function EquipmentTab({ app }: { app: ReturnType<typeof useApp> }) {
                     status: "Đang bảo dưỡng",
                     note: createMaintNote.trim(),
                   });
+                  setEquipSuccess("Đã tạo phiếu bảo trì.");
                   setCreateMaintIssue("");
                   setCreateMaintNote("");
                   setShowCreateMaintenanceModal(false);
@@ -2463,29 +3564,38 @@ function EquipmentTab({ app }: { app: ReturnType<typeof useApp> }) {
               <button
                 type="button"
                 onClick={async () => {
-                  // UC61 / UC6.13: Nghiệm thu bảo trì & Hoàn tất (Sẵn sàng hoặc Kết thúc không đạt)
-                  if (isRealApiEnabled()) {
+                  setEquipError(null);
+                  setEquipSuccess(null);
+
+                  if (app.realApi || isRealApiEnabled()) {
+                    setEquipBusy(true);
                     try {
-                      const maintIdNum = Number(acceptingMaintenance.id) || parseInt(acceptingMaintenance.id.replace(/\D/g, ""), 10);
-                      if (maintIdNum) {
-                        if (repairOutcome === "Hoàn tất") {
-                          await equipmentApi.xacNhanHoanThanh(maintIdNum, {
-                            ketQuaKiemTra: repairOutcomeNote || "Đạt chuẩn kỹ thuật",
-                            chiPhi: actualRepairCost,
-                            lyDo: repairOutcomeNote || "Nghiệm thu đạt chuẩn, đưa về kho Sẵn sàng",
-                          });
-                        } else {
-                          await equipmentApi.ketThucKhongDat(maintIdNum, {
-                            ketQuaKiemTra: repairOutcomeNote || "Không thể sửa",
-                            chiPhi: actualRepairCost,
-                            lyDo: repairOutcomeNote || "Hư hỏng nặng không thể phục hồi",
-                          });
-                        }
+                      const maintIdNum = acceptingMaintenance.backendId ?? (Number(acceptingMaintenance.id) || parseInt(acceptingMaintenance.id.replace(/\D/g, ""), 10));
+                      if (!maintIdNum) {
+                        throw new Error("Không tìm thấy mã phiếu bảo trì hợp lệ.");
                       }
+                      if (repairOutcome === "Hoàn tất") {
+                        await equipmentApi.xacNhanHoanThanh(maintIdNum, {
+                          ketQuaKiemTra: repairOutcomeNote || "Đạt chuẩn kỹ thuật",
+                          chiPhi: actualRepairCost,
+                          lyDo: repairOutcomeNote || "Nghiệm thu đạt chuẩn, đưa về kho Sẵn sàng",
+                        });
+                      } else {
+                        await equipmentApi.ketThucKhongDat(maintIdNum, {
+                          ketQuaKiemTra: repairOutcomeNote || "Không thể sửa",
+                          chiPhi: actualRepairCost,
+                          lyDo: repairOutcomeNote || "Hư hỏng nặng không thể phục hồi",
+                        });
+                      }
+                      await Promise.all([app.refreshEquipment?.(), app.refreshMaintenanceReceipts?.()]);
+                      setEquipSuccess(`Đã nghiệm thu phiếu bảo trì ${acceptingMaintenance.displayCode || acceptingMaintenance.id}.`);
+                      setAcceptingMaintenance(null);
                     } catch (err) {
-                      alert(err instanceof Error ? err.message : "Lỗi nghiệm thu phiếu bảo trì trên máy chủ.");
-                      return;
+                      setEquipError(err instanceof Error ? err.message : "Lỗi nghiệm thu phiếu bảo trì trên máy chủ.");
+                    } finally {
+                      setEquipBusy(false);
                     }
+                    return;
                   }
 
                   app.updateMaintenanceStatus(
@@ -2494,6 +3604,7 @@ function EquipmentTab({ app }: { app: ReturnType<typeof useApp> }) {
                     actualRepairCost,
                     repairOutcomeNote
                   );
+                  setEquipSuccess(`Đã nghiệm thu phiếu bảo trì ${acceptingMaintenance.displayCode || acceptingMaintenance.id}.`);
                   setAcceptingMaintenance(null);
                 }}
                 style={{ background: repairOutcome === "Hoàn tất" ? "var(--color-forest)" : "#DC2626", color: "white", border: "none", borderRadius: 8, padding: "8px 20px", fontWeight: 700, fontSize: "0.85rem", cursor: "pointer" }}
@@ -2531,9 +3642,69 @@ function EquipmentTab({ app }: { app: ReturnType<typeof useApp> }) {
 function StaffReportsTab({ app, openOrder }: { app: ReturnType<typeof useApp>; openOrder: (id: string, tab: StaffTab) => void }) {
   const [subTab, setSubTab] = useState<"shift" | "audit">("shift");
   const [searchAudit, setSearchAudit] = useState("");
+  const [opsReport, setOpsReport] = useState<BaoCaoVanHanhBackend | null>(null);
+  const [stockReport, setStockReport] = useState<Record<string, unknown> | null>(null);
+  const [maintReport, setMaintReport] = useState<Record<string, unknown> | null>(null);
+  const [auditLogsBackend, setAuditLogsBackend] = useState<AuditLogEntryWithRef[]>([]);
+  const [reportLoading, setReportLoading] = useState(false);
+  const [reportError, setReportError] = useState<string | null>(null);
   const now = new Date();
 
-  // 1. Chỉ tiêu Vận hành ca trực (UC10.1 - Giới hạn phạm vi quyền của Nhân viên)
+  // Tải báo cáo vận hành, hiện trạng kho & thống kê bảo trì (StaffOrAdmin)
+  useEffect(() => {
+    if (!app.realApi) return;
+    let cancelled = false;
+    setReportLoading(true);
+    setReportError(null);
+    void Promise.all([
+      reportApi.layBaoCaoVanHanh(),
+      reportApi.layHienTrangKho().catch(() => null),
+      reportApi.layThongKeBaoTri().catch(() => null),
+    ])
+      .then(([ops, stock, maint]) => {
+        if (cancelled) return;
+        setOpsReport(ops);
+        setStockReport(stock as Record<string, unknown> | null);
+        setMaintReport(maint as Record<string, unknown> | null);
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setReportError(err instanceof Error ? err.message : "Không thể tải báo cáo vận hành ca trực.");
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setReportLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [app.realApi]);
+
+  // Tải nhật ký thao tác hệ thống theo từ khóa tìm kiếm (StaffOrAdmin - UC100/UC102)
+  useEffect(() => {
+    if (!app.realApi || subTab !== "audit") return;
+    let cancelled = false;
+    const timer = window.setTimeout(() => {
+      void auditApi
+        .traCuu({ tuKhoa: searchAudit.trim() || undefined, trang: 1, soMoiTrang: 50 })
+        .then((paged) => {
+          if (!cancelled) {
+            setAuditLogsBackend((paged.items || []).map(mapNhatKyToAuditLog));
+          }
+        })
+        .catch((err) => {
+          if (!cancelled) {
+            setReportError(err instanceof Error ? err.message : "Không thể tải nhật ký thao tác.");
+          }
+        });
+    }, 250);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [app.realApi, subTab, searchAudit]);
+
+  // 1. Chỉ tiêu Vận hành ca trực
   const pickupInShift = app.orders.filter((o) => ["Đã xác nhận", "Đang chuẩn bị", "Sẵn sàng nhận"].includes(o.status));
   const returnInShift = app.orders.filter((o) => o.status === "Đang thuê");
   const overdueOrders = app.orders.filter((o) => {
@@ -2544,22 +3715,32 @@ function StaffReportsTab({ app, openOrder }: { app: ReturnType<typeof useApp>; o
   const pendingReconcile = app.orders.filter((o) => o.status === "Chờ đối soát");
   const handedOverToday = app.orders.filter((o) => o.handedOverAt);
 
-  // Thiết bị trong kho
-  const readyEquip = app.equipment.filter((e) => e.equipmentStatus === "Sẵn sàng").length;
-  const rentingEquip = app.equipment.filter((e) => e.equipmentStatus === "Đang thuê").length;
-  const maintEquip = app.equipment.filter((e) => e.equipmentStatus === "Đang bảo trì").length;
-  const lostEquip = app.equipment.filter((e) => e.equipmentStatus === "Thất lạc" || e.equipmentStatus === "Ngừng sử dụng").length;
+  // Thiết bị trong kho (ưu tiên tổng quan từ báo cáo kho/vận hành nếu đã tải)
+  const tongQuan = opsReport?.tongQuan;
+  const readyEquip =
+    typeof stockReport?.sanSang === "number"
+      ? (stockReport.sanSang as number)
+      : app.equipment.filter((e) => e.equipmentStatus === "Sẵn sàng").length;
+  const rentingEquip =
+    tongQuan?.soThietBiDangChoThue ?? app.equipment.filter((e) => e.equipmentStatus === "Đang thuê").length;
+  const maintEquip =
+    tongQuan?.soThietBiDangBaoTri ?? app.equipment.filter((e) => e.equipmentStatus === "Đang bảo trì").length;
+  const lostEquip =
+    tongQuan?.soThietBiThatLac ?? app.equipment.filter((e) => e.equipmentStatus === "Thất lạc" || e.equipmentStatus === "Ngừng sử dụng").length;
 
-  // 2. Nhật ký thao tác nhân viên (UC10.4 & UC10.4.1: Nhân viên chỉ xem lịch sử phục vụ công việc)
-  const staffLogs = app.auditLogs.filter((l) => {
-    const isStaffRole = l.role === "Nhân viên" || l.actor.includes("Mai") || l.actor.includes("Kho");
-    const matchSearch =
-      l.actor.toLowerCase().includes(searchAudit.toLowerCase()) ||
-      l.action.toLowerCase().includes(searchAudit.toLowerCase()) ||
-      l.targetId.toLowerCase().includes(searchAudit.toLowerCase()) ||
-      l.detail.toLowerCase().includes(searchAudit.toLowerCase());
-    return isStaffRole && matchSearch;
-  });
+  // 2. Nhật ký thao tác (realApi lấy trực tiếp từ backend theo quyền StaffOrAdmin)
+  const staffLogs: AuditLogEntryWithRef[] = app.realApi
+    ? auditLogsBackend
+    : app.auditLogs.filter((l) => {
+        const isStaffRole = l.role === "Nhân viên" || l.actor.includes("Mai") || l.actor.includes("Kho");
+        const q = searchAudit.toLowerCase();
+        const matchSearch =
+          l.actor.toLowerCase().includes(q) ||
+          l.action.toLowerCase().includes(q) ||
+          l.targetId.toLowerCase().includes(q) ||
+          l.detail.toLowerCase().includes(q);
+        return isStaffRole && matchSearch;
+      });
 
   return (
     <div>
@@ -2599,8 +3780,20 @@ function StaffReportsTab({ app, openOrder }: { app: ReturnType<typeof useApp>; o
         </div>
       </div>
 
+      {reportError && (
+        <div style={{ background: "#FEF2F2", border: "1px solid #FECACA", color: "#B91C1C", borderRadius: 8, padding: "10px 14px", marginBottom: 14, fontSize: "0.82rem", fontWeight: 600 }}>
+          {reportError}
+        </div>
+      )}
+
       {subTab === "shift" && (
         <div>
+          {reportLoading && (
+            <div style={{ fontSize: "0.8rem", color: "#6B7280", marginBottom: 10 }}>
+              Đang tải số liệu báo cáo vận hành từ máy chủ...
+            </div>
+          )}
+
           {/* Lưới chỉ tiêu vận hành ca trực */}
           <div className="grid gap-3 mb-6" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))" }}>
             <div style={{ background: "white", borderRadius: 10, padding: 14, border: "1px solid var(--color-bone)" }}>
@@ -2636,11 +3829,15 @@ function StaffReportsTab({ app, openOrder }: { app: ReturnType<typeof useApp>; o
             </div>
 
             <div style={{ background: "white", borderRadius: 10, padding: 14, border: "1px solid var(--color-bone)" }}>
-              <div style={{ fontSize: "0.75rem", color: "#6B7280", fontWeight: 600 }}>Lượt đã giao thành công</div>
-              <div style={{ fontFamily: "var(--font-mono)", fontSize: "1.7rem", fontWeight: 800, color: "var(--color-forest)", marginTop: 2 }}>
-                {handedOverToday.length}
+              <div style={{ fontSize: "0.75rem", color: "#6B7280", fontWeight: 600 }}>
+                {tongQuan ? "Tổng đơn thành công (Hệ thống)" : "Lượt đã giao thành công"}
               </div>
-              <div style={{ fontSize: "0.7rem", color: "#6B7280", marginTop: 4 }}>Biên bản bàn giao đã ký</div>
+              <div style={{ fontFamily: "var(--font-mono)", fontSize: "1.7rem", fontWeight: 800, color: "var(--color-forest)", marginTop: 2 }}>
+                {tongQuan ? tongQuan.tongDonThanhCong : handedOverToday.length}
+              </div>
+              <div style={{ fontSize: "0.7rem", color: "#6B7280", marginTop: 4 }}>
+                {tongQuan ? `Tỷ lệ hủy: ${tongQuan.tyLeHuyDonPhanTram}% · Quay vòng: ${tongQuan.tyLeQuayVongThietBi}x` : "Biên bản bàn giao đã ký"}
+              </div>
             </div>
           </div>
 
@@ -2664,12 +3861,18 @@ function StaffReportsTab({ app, openOrder }: { app: ReturnType<typeof useApp>; o
                 <div style={{ background: "#FFFBEB", border: "1px solid #FDE68A", borderRadius: 8, padding: 12 }}>
                   <div style={{ fontSize: "0.75rem", color: "#92400E" }}>Đang bảo trì / Sửa chữa</div>
                   <strong style={{ fontFamily: "var(--font-mono)", fontSize: "1.6rem", color: "#D97706" }}>{maintEquip}</strong>
-                  <div style={{ fontSize: "0.7rem", color: "#92400E" }}>Cần kỹ thuật kiểm tra</div>
+                  <div style={{ fontSize: "0.7rem", color: "#92400E" }}>
+                    {typeof maintReport?.soPhieuDangMo === "number"
+                      ? `${maintReport.soPhieuDangMo} phiếu bảo trì đang mở`
+                      : "Cần kỹ thuật kiểm tra"}
+                  </div>
                 </div>
                 <div style={{ background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: 8, padding: 12 }}>
                   <div style={{ fontSize: "0.75rem", color: "#991B1B" }}>Thất lạc / Mất mát</div>
                   <strong style={{ fontFamily: "var(--font-mono)", fontSize: "1.6rem", color: "#DC2626" }}>{lostEquip}</strong>
-                  <div style={{ fontSize: "0.7rem", color: "#991B1B" }}>Đã lập biên bản bồi thường</div>
+                  <div style={{ fontSize: "0.7rem", color: "#991B1B" }}>
+                    {tongQuan ? `Tỷ lệ hao mòn: ${tongQuan.tyLeHaoMonPhanTram}%` : "Đã lập biên bản bồi thường"}
+                  </div>
                 </div>
               </div>
             </div>
@@ -2683,7 +3886,7 @@ function StaffReportsTab({ app, openOrder }: { app: ReturnType<typeof useApp>; o
                   • <strong>Phạm vi dữ liệu:</strong> Nhân viên kho và CSKH được phân quyền theo dõi tình trạng đơn thuê, điều phối giao nhận và kiểm soát thiết bị tại kho.
                 </p>
                 <p style={{ marginBottom: 8 }}>
-                  • <strong>Bảo mật tài chính:</strong> Các số liệu doanh thu, dòng tiền ròng và báo cáo nhập hàng giá vốn được bảo vệ thuộc thẩm quyền Quản trị viên (UC10.1 Dòng phụ 4.1).
+                  • <strong>Bảo mật tài chính:</strong> Các số liệu dòng tiền ròng và giá vốn nhập kho được bảo vệ thuộc thẩm quyền Quản trị viên.
                 </p>
                 <p>
                   • <strong>Thao tác nhanh:</strong> Chuyển sang tab "Chuẩn bị & Bàn giao" hoặc "Nhận trả & Phụ phí" để xử lý trực tiếp đơn hàng tương ứng.
@@ -2691,6 +3894,35 @@ function StaffReportsTab({ app, openOrder }: { app: ReturnType<typeof useApp>; o
               </div>
             </div>
           </div>
+
+          {opsReport && opsReport.chiSoTheoSanPham.length > 0 && (
+            <div style={{ background: "white", borderRadius: 12, border: "1px solid var(--color-bone)", overflow: "auto" }}>
+              <div style={{ padding: "12px 16px", borderBottom: "1px solid var(--color-bone)", fontWeight: 700, fontSize: "0.9rem", color: "var(--color-bark)" }}>
+                Hiệu suất xoay vòng thiết bị theo sản phẩm
+              </div>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.82rem" }}>
+                <thead>
+                  <tr style={{ background: "var(--color-parchment)", textAlign: "left" }}>
+                    {["Sản phẩm", "Danh mục", "Tổng TB", "Lượt thuê", "Hỏng hóc", "Thất lạc"].map((h) => (
+                      <th key={h} style={{ padding: "9px 12px" }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {opsReport.chiSoTheoSanPham.slice(0, 10).map((sp) => (
+                    <tr key={sp.maSanPham} style={{ borderTop: "1px solid var(--color-bone)" }}>
+                      <td style={{ padding: "9px 12px", fontWeight: 600 }}>{sp.tenSanPham}</td>
+                      <td style={{ padding: "9px 12px", color: "#6B7280" }}>{sp.tenDanhMuc}</td>
+                      <td style={{ padding: "9px 12px", fontFamily: "var(--font-mono)" }}>{sp.tongSoThietBi}</td>
+                      <td style={{ padding: "9px 12px", fontFamily: "var(--font-mono)", fontWeight: 700, color: "var(--color-forest)" }}>{sp.soLuotThue}</td>
+                      <td style={{ padding: "9px 12px", fontFamily: "var(--font-mono)", color: sp.soLuotHongHoc > 0 ? "#D97706" : "#6B7280" }}>{sp.soLuotHongHoc}</td>
+                      <td style={{ padding: "9px 12px", fontFamily: "var(--font-mono)", color: sp.soLuotMat > 0 ? "#DC2626" : "#6B7280" }}>{sp.soLuotMat}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
 
@@ -2710,11 +3942,11 @@ function StaffReportsTab({ app, openOrder }: { app: ReturnType<typeof useApp>; o
             </div>
           </div>
 
-          <div style={{ background: "white", borderRadius: 12, border: "1px solid var(--color-bone)", overflow: "hidden" }}>
+          <div style={{ background: "white", borderRadius: 12, border: "1px solid var(--color-bone)", overflow: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.82rem" }}>
               <thead>
                 <tr style={{ background: "var(--color-parchment)", textAlign: "left" }}>
-                  {["Thời gian", "Người thực hiện", "Hành động", "Đối tượng tác động (UC10.4.2)", "Chi tiết nội dung", "Thao tác"].map((h) => (
+                  {["Thời gian", "Người thực hiện", "Hành động", "Đối tượng tác động", "Chi tiết nội dung", "Thao tác"].map((h) => (
                     <th key={h} style={{ padding: "10px 12px" }}>{h}</th>
                   ))}
                 </tr>
@@ -2723,34 +3955,42 @@ function StaffReportsTab({ app, openOrder }: { app: ReturnType<typeof useApp>; o
                 {staffLogs.length === 0 ? (
                   <tr>
                     <td colSpan={6} style={{ padding: "30px 0", textAlign: "center", color: "#6B7280" }}>
-                      Chưa có nhật ký thao tác nào của nhân viên kho.
+                      Chưa có nhật ký thao tác phù hợp.
                     </td>
                   </tr>
                 ) : (
-                  staffLogs.map((log) => (
-                    <tr key={log.id} style={{ borderTop: "1px solid var(--color-bone)" }}>
-                      <td style={{ padding: "10px 12px", fontFamily: "var(--font-mono)", fontSize: "0.75rem", color: "#6B7280" }}>
-                        {log.timestamp}
-                      </td>
-                      <td style={{ padding: "10px 12px", fontWeight: 700 }}>{log.actor}</td>
-                      <td style={{ padding: "10px 12px", fontWeight: 600, color: "var(--color-forest)" }}>{log.action}</td>
-                      <td style={{ padding: "10px 12px", fontFamily: "var(--font-mono)" }}>
-                        <span style={{ color: "#6B7280" }}>{log.targetEntity}:</span> <strong>{log.targetId}</strong>
-                      </td>
-                      <td style={{ padding: "10px 12px", color: "#374151" }}>{log.detail}</td>
-                      <td style={{ padding: "10px 12px" }}>
-                        {log.targetId.startsWith("DT-") && (
-                          <button
-                            onClick={() => openOrder(log.targetId, "orders")}
-                            className="btn btn-secondary btn-sm"
-                            style={{ padding: "2px 8px", fontSize: "0.72rem" }}
-                          >
-                            Xem đơn
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  ))
+                  staffLogs.map((log) => {
+                    const orderMatch =
+                      log.targetEntity === "DonThue" ||
+                      log.targetId.startsWith("DT-") ||
+                      Boolean(log.thamChieuUrl?.includes("/don-thue/"));
+                    const orderIdToOpen =
+                      log.thamChieuUrl?.match(/\/don-thue\/(\d+)/)?.[1] || log.targetId;
+                    return (
+                      <tr key={log.id} style={{ borderTop: "1px solid var(--color-bone)" }}>
+                        <td style={{ padding: "10px 12px", fontFamily: "var(--font-mono)", fontSize: "0.75rem", color: "#6B7280" }}>
+                          {log.timestamp}
+                        </td>
+                        <td style={{ padding: "10px 12px", fontWeight: 700 }}>{log.actor}</td>
+                        <td style={{ padding: "10px 12px", fontWeight: 600, color: "var(--color-forest)" }}>{log.action}</td>
+                        <td style={{ padding: "10px 12px", fontFamily: "var(--font-mono)" }}>
+                          <span style={{ color: "#6B7280" }}>{log.targetEntity}:</span> <strong>{log.targetId}</strong>
+                        </td>
+                        <td style={{ padding: "10px 12px", color: "#374151" }}>{log.detail}</td>
+                        <td style={{ padding: "10px 12px" }}>
+                          {orderMatch && orderIdToOpen && (
+                            <button
+                              onClick={() => openOrder(orderIdToOpen, "orders")}
+                              className="btn btn-secondary btn-sm"
+                              style={{ padding: "2px 8px", fontSize: "0.72rem" }}
+                            >
+                              Xem đơn
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })
                 )}
               </tbody>
             </table>

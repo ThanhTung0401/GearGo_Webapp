@@ -510,6 +510,11 @@ public class ApplicationDbContext : IdentityDbContext<IdentityUser<long>, Identi
                 .WithMany()
                 .HasForeignKey(d => d.MaNguoiAn)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            e.HasOne(d => d.NguoiPhanHoi)
+                .WithMany()
+                .HasForeignKey(d => d.MaNguoiPhanHoi)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         // ── THÔNG BÁO ──

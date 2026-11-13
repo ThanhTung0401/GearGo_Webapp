@@ -227,4 +227,55 @@ public class DanhGiaThongBaoTests : IDisposable
         Assert.NotNull(tb.ThoiDiemGui);
         Assert.Single(mockEmail.DaGui);
     }
+
+    [Fact]
+    public async Task PhanHoiDanhGia_NhanVienVaQuanTriThanhCong_KhachBiChan_RongBaoLoi()
+    {
+        long maDanhGia;
+        using (var ctx = _db.NewContext())
+        {
+            var don = Seed.Don(ctx, _du, _db.Clock.Utc.AddDays(-3), TrangThaiDonThue.HoanTat, 150_000, 300_000);
+            var dg = new DanhGia
+            {
+                MaChiTietDon = don.MaChiTietDon,
+                SoSao = 4,
+                NoiDung = "Đèn sáng tốt",
+                TrangThaiHienThi = "HienThi",
+                NgayTao = _db.Clock.Utc.AddHours(-2)
+            };
+            ctx.DanhGias.Add(dg);
+            ctx.SaveChanges();
+            maDanhGia = dg.MaDanhGia;
+        }
+
+        using var s = _db.Mo();
+        var service = new DanhGiaService(s.Ctx);
+
+        // Khách hàng không được phản hồi đánh giá cửa hàng
+        await Assert.ThrowsAsync<GearGo.Exceptions.KhongCoQuyenException>(() =>
+            service.PhanHoiDanhGiaAsync(maDanhGia, new PhanHoiDanhGiaRequest { NoiDung = "Trả lời giả" }, _du.TkKhachA));
+
+        // Nội dung rỗng / chỉ khoảng trắng bị chặn
+        var rong = await service.PhanHoiDanhGiaAsync(maDanhGia, new PhanHoiDanhGiaRequest { NoiDung = "   " }, _du.TkNhanVien);
+        Assert.False(rong.ThanhCong);
+        Assert.Equal("NOI_DUNG_PHAN_HOI_TRONG", rong.MaLoi);
+
+        // Không tồn tại -> DANH_GIA_NOT_FOUND
+        var notFound = await service.PhanHoiDanhGiaAsync(999999, new PhanHoiDanhGiaRequest { NoiDung = "Cảm ơn bạn" }, _du.TkNhanVien);
+        Assert.False(notFound.ThanhCong);
+        Assert.Equal("DANH_GIA_NOT_FOUND", notFound.MaLoi);
+
+        // Nhân viên CSKH phản hồi thành công
+        var ok = await service.PhanHoiDanhGiaAsync(maDanhGia, new PhanHoiDanhGiaRequest { NoiDung = "  Cảm ơn bạn đã tin dùng GearGo!  " }, _du.TkNhanVien);
+        Assert.True(ok.ThanhCong);
+        Assert.Equal("Cảm ơn bạn đã tin dùng GearGo!", ok.DuLieu!.PhanHoiCuaHang);
+        Assert.NotNull(ok.DuLieu.ThoiDiemPhanHoi);
+        Assert.False(string.IsNullOrWhiteSpace(ok.DuLieu.NguoiPhanHoi));
+
+        // Đọc qua danh sách công khai phải kèm phản hồi của cửa hàng và nhật ký thao tác được ghi
+        var congKhai = await service.LayDanhGiaSanPhamAsync(new LocDanhGiaRequest { SanPhamId = _du.SanPham });
+        Assert.True(congKhai.ThanhCong);
+        Assert.Contains(congKhai.DuLieu!.Items, x => x.MaDanhGia == maDanhGia && x.PhanHoiCuaHang == "Cảm ơn bạn đã tin dùng GearGo!");
+        Assert.Contains(s.Ctx.NhatKyThaoTacs, n => n.HanhDong == "PHAN_HOI_DANH_GIA" && n.MaDoiTuong == maDanhGia.ToString());
+    }
 }

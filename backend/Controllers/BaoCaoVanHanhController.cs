@@ -7,8 +7,9 @@ using Microsoft.AspNetCore.Mvc;
 namespace GearGo.Controllers;
 
 [ApiController]
+[Route("api/admin/bao-cao-van-hanh")]
 [Route("api/v1/admin/bao-cao-van-hanh")]
-[Authorize(Policy = "AdminOnly")]
+[Authorize(Policy = "StaffOrAdmin")]
 public class BaoCaoVanHanhController : BaseApiController
 {
     private readonly IBaoCaoVanHanhService _baoCaoService;

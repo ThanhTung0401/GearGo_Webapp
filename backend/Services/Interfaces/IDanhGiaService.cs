@@ -49,4 +49,9 @@ public interface IDanhGiaService
     /// Quản trị viên khôi phục hiển thị đánh giá đã ẩn
     /// </summary>
     Task<Result<DanhGiaResponse>> KhoiPhucDanhGiaAsync(long maDanhGia, KhoiPhucDanhGiaRequest request, long maNhanVienAdmin);
+
+    /// <summary>
+    /// Quản trị viên hoặc nhân viên CSKH phản hồi đánh giá từ phía cửa hàng (UC92/UC94)
+    /// </summary>
+    Task<Result<DanhGiaResponse>> PhanHoiDanhGiaAsync(long maDanhGia, PhanHoiDanhGiaRequest request, long maTaiKhoan);
 }

@@ -134,22 +134,43 @@ export const catalogApi = {
   async layDanhSachSanPham(params?: {
     tuKhoa?: string;
     maDanhMuc?: number;
+    gioNhan?: string;
+    gioTra?: string;
     trang?: number;
     soMoiTrang?: number;
   }): Promise<SanPhamBackend[]> {
     const qs = new URLSearchParams();
     if (params?.tuKhoa) qs.set("tuKhoa", params.tuKhoa);
     if (params?.maDanhMuc) qs.set("maDanhMuc", String(params.maDanhMuc));
+    if (params?.gioNhan) qs.set("gioNhan", params.gioNhan);
+    if (params?.gioTra) qs.set("gioTra", params.gioTra);
     if (params?.trang) qs.set("trang", String(params.trang));
     if (params?.soMoiTrang) qs.set("soMoiTrang", String(params.soMoiTrang));
     const suffix = qs.toString() ? `?${qs.toString()}` : "";
-    const res = await apiClient.get<SanPhamBackend[]>(`/api/san-pham${suffix}`);
-    return Array.isArray(res.data) ? res.data : [];
+    const res = await apiClient.get<unknown>(`/api/san-pham${suffix}`);
+    const data = res.data as Record<string, unknown> | SanPhamBackend[];
+    // SanPhamController trả Result<PagedResult<SanPhamResponse>>: { thanhCong, duLieu: { items } }
+    if (Array.isArray(data)) return data;
+    if (data && typeof data === "object") {
+      const inner = ("duLieu" in data && data.duLieu ? data.duLieu : data) as Record<string, unknown> | SanPhamBackend[];
+      if (Array.isArray(inner)) return inner;
+      if (inner && typeof inner === "object" && "items" in inner && Array.isArray(inner.items)) {
+        return inner.items as SanPhamBackend[];
+      }
+    }
+    return [];
   },
 
-  async layChiTietSanPham(id: number): Promise<SanPhamBackend> {
-    const res = await apiClient.get<SanPhamBackend>(`/api/san-pham/${id}`);
-    return res.data;
+  async layChiTietSanPham(id: number, params?: { gioNhan?: string; gioTra?: string }): Promise<SanPhamBackend> {
+    const qs = new URLSearchParams();
+    if (params?.gioNhan) qs.set("gioNhan", params.gioNhan);
+    if (params?.gioTra) qs.set("gioTra", params.gioTra);
+    const suffix = qs.toString() ? `?${qs.toString()}` : "";
+    const res = await apiClient.get<{ duLieu?: SanPhamBackend } | SanPhamBackend>(`/api/san-pham/${id}${suffix}`);
+    if (res.data && typeof res.data === "object" && "duLieu" in res.data && res.data.duLieu) {
+      return res.data.duLieu;
+    }
+    return res.data as SanPhamBackend;
   },
 
   // ─── Quản trị Sản phẩm (Admin - UC49, UC50, UC51, UC52, UC53) ───

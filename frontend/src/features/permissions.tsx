@@ -227,7 +227,11 @@ export function usePermissions() {
     void refresh();
     const handler = () => void refresh();
     window.addEventListener("geargo-permissions-changed", handler);
-    return () => window.removeEventListener("geargo-permissions-changed", handler);
+    window.addEventListener("geargo:permissions-changed", handler);
+    return () => {
+      window.removeEventListener("geargo-permissions-changed", handler);
+      window.removeEventListener("geargo:permissions-changed", handler);
+    };
   }, [refresh]);
 
   const set = useMemo(() => new Set(data?.quyen ?? []), [data]);

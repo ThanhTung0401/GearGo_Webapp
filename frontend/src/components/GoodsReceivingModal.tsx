@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { type useApp } from "../App";
+import { importReceiptApi } from "../services/api";
 import { fmt, type ImportReceipt } from "../store";
 
 interface Props {
@@ -21,16 +22,12 @@ interface LineInspectionState {
 
 /**
  * UC7.7 & UC7.7.2: Biên bản kiểm nhận hàng thực tế & Xử lý hàng lỗi
- * - Nhân viên kiểm đếm số lượng, chất lượng thực nhận tại kho.
- * - Phân loại 3 luồng:
- *   1. Hàng đạt chuẩn -> Tạo mã serial -> Vào kho "Sẵn sàng"
- *   2. Hàng lỗi nhận xử lý (UC7.7.2) -> Tạo mã serial -> Vào kho "Đang bảo trì"
- *   3. Hàng từ chối / sai quy cách -> Trả lại NCC, KHÔNG tạo mã, KHÔNG tăng kho, giảm trừ thanh toán
- * - Quản trị viên chốt xác nhận nhập kho một lần duy nhất (Idempotent - UC7.7.1).
  */
 export default function GoodsReceivingModal({ receipt, app, onClose, onSuccess }: Props) {
-  const [inspectedBy, setInspectedBy] = useState("NV Kho Mai");
+  const [inspectedBy, setInspectedBy] = useState(app.currentUser?.name || "NV Kho Mai");
   const [receivingCondition, setReceivingCondition] = useState("Nguyên thùng, bao bì đầy đủ");
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   // State kiểm nhận cho từng dòng sản phẩm
   const [lineStates, setLineStates] = useState<Record<number, LineInspectionState>>(() => {
@@ -93,8 +90,9 @@ export default function GoodsReceivingModal({ receipt, app, onClose, onSuccess }
     return sum + acceptedCount * line.unitPrice;
   }, 0);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSubmitError(null);
 
     // 1. Kiểm tra tổng số lượng từng dòng có khớp số lượng dự kiến
     for (let i = 0; i < receipt.lines.length; i++) {
@@ -104,53 +102,98 @@ export default function GoodsReceivingModal({ receipt, app, onClose, onSuccess }
       const sum = st.acceptedQty + st.damagedQty + st.rejectedQty;
 
       if (sum !== line.quantity) {
-        alert(
-          `Dòng "${prod?.name || line.productId}": Tổng lượng kiểm nhận (${st.acceptedQty} đạt + ${st.damagedQty} lỗi + ${st.rejectedQty} từ chối = ${sum}) không khớp số lượng dự kiến (${line.quantity})!`
+        setSubmitError(
+          `Dòng "${prod?.name || line.productId}": Tổng lượng kiểm nhận (${st.acceptedQty} đạt + ${st.damagedQty} lỗi + ${st.rejectedQty} từ chối = ${sum}) không khớp số lượng dự kiến (${line.quantity}).`
         );
         return;
       }
 
-      // Kiểm tra mã hàng đạt
-      if (st.acceptedQty > 0) {
-        if (st.acceptedCodes.length !== st.acceptedQty || st.acceptedCodes.some((c) => !c.trim())) {
-          alert(`Dòng "${prod?.name}": Vui lòng nhập đủ ${st.acceptedQty} mã thiết bị đạt chuẩn.`);
-          return;
+      if (!app.realApi) {
+        if (st.acceptedQty > 0) {
+          if (st.acceptedCodes.length !== st.acceptedQty || st.acceptedCodes.some((c) => !c.trim())) {
+            setSubmitError(`Dòng "${prod?.name || line.productId}": Vui lòng nhập đủ ${st.acceptedQty} mã thiết bị đạt chuẩn.`);
+            return;
+          }
+        }
+        if (st.damagedQty > 0) {
+          if (st.damagedCodes.length !== st.damagedQty || st.damagedCodes.some((c) => !c.trim())) {
+            setSubmitError(`Dòng "${prod?.name || line.productId}": Vui lòng nhập đủ ${st.damagedQty} mã thiết bị lỗi nhận bảo hành.`);
+            return;
+          }
         }
       }
 
-      // Kiểm tra mã hàng lỗi (UC7.7.2)
-      if (st.damagedQty > 0) {
-        if (st.damagedCodes.length !== st.damagedQty || st.damagedCodes.some((c) => !c.trim())) {
-          alert(`Dòng "${prod?.name}": Vui lòng nhập đủ ${st.damagedQty} mã thiết bị lỗi nhận bảo hành.`);
-          return;
-        }
-        if (!st.damageNotes.trim()) {
-          alert(`Dòng "${prod?.name}": Vui lòng ghi rõ mô tả lỗi hư hỏng theo quy định UC7.7.2.`);
-          return;
-        }
+      if (st.damagedQty > 0 && !st.damageNotes.trim()) {
+        setSubmitError(`Dòng "${prod?.name || line.productId}": Vui lòng ghi rõ mô tả lỗi hư hỏng theo quy định UC7.7.2.`);
+        return;
       }
 
-      // Kiểm tra lý do từ chối
       if (st.rejectedQty > 0 && !st.rejectionReason.trim()) {
-        alert(`Dòng "${prod?.name}": Vui lòng ghi rõ lý do từ chối trả lại NCC cho ${st.rejectedQty} món.`);
+        setSubmitError(`Dòng "${prod?.name || line.productId}": Vui lòng ghi rõ lý do từ chối trả lại NCC cho ${st.rejectedQty} món.`);
         return;
       }
     }
 
-    // 2. Kiểm tra trùng lặp mã thiết bị
+    if (app.realApi) {
+      const phieuId = Number(receipt.id);
+      if (!Number.isFinite(phieuId)) return;
+      setSubmitting(true);
+      try {
+        await importReceiptApi.xacNhanNhapKho(phieuId, {
+          ngayNhapThucTe: new Date().toISOString(),
+          soChungTuNhaCungCap: receipt.supplierDocumentNumber,
+          ghiChuXacNhan: `${receivingCondition} (Kiểm nhận: ${inspectedBy.trim()})`,
+          tinhTrangDong: receipt.lines
+            .map((line, index) => {
+              const chiTietId = Number(line.id);
+              if (!Number.isFinite(chiTietId)) return null;
+              const st = lineStates[index];
+              const tinhTrangThucTe =
+                st.damagedQty > 0 && st.acceptedQty === 0
+                  ? "CanBaoTri"
+                  : st.damagedQty > 0
+                    ? "CoLoiNho"
+                    : "Moi";
+              const noteParts = [
+                st.damageNotes.trim() ? `Lỗi: ${st.damageNotes.trim()}` : "",
+                st.rejectedQty > 0 ? `Từ chối ${st.rejectedQty}: ${st.rejectionReason.trim()}` : "",
+              ].filter(Boolean);
+              return {
+                maChiTietPhieuNhap: chiTietId,
+                tinhTrangThucTe,
+                ghiChu: noteParts.join(" · ") || line.note || "Đạt chuẩn kiểm nhận",
+              };
+            })
+            .filter((x): x is { maChiTietPhieuNhap: number; tinhTrangThucTe: string; ghiChu: string } => x !== null),
+        });
+        await Promise.all([
+          app.refreshImportReceipts?.(),
+          app.refreshEquipment?.(),
+          app.refreshCatalog?.(),
+        ]);
+        if (onSuccess) onSuccess();
+        onClose();
+      } catch (err) {
+        setSubmitError(err instanceof Error ? err.message : "Không thể chốt kiểm nhận nhập kho trên máy chủ.");
+      } finally {
+        setSubmitting(false);
+      }
+      return;
+    }
+
+    // 2. Kiểm tra trùng lặp mã thiết bị (Mock mode)
     const allCodes = Object.values(lineStates).flatMap((ls) => [...ls.acceptedCodes, ...ls.damagedCodes].map((c) => c.trim().toUpperCase()));
     if (new Set(allCodes).size !== allCodes.length) {
-      alert("Phát hiện mã thiết bị bị trùng lặp trong biên bản kiểm nhận!");
+      setSubmitError("Phát hiện mã thiết bị bị trùng lặp trong biên bản kiểm nhận.");
       return;
     }
 
     const duplicateWithWarehouse = allCodes.find((c) => app.equipment.some((e) => e.id.toUpperCase() === c));
     if (duplicateWithWarehouse) {
-      alert(`Mã thiết bị "${duplicateWithWarehouse}" đã tồn tại trong kho GearGo!`);
+      setSubmitError(`Mã thiết bị "${duplicateWithWarehouse}" đã tồn tại trong kho GearGo.`);
       return;
     }
 
-    // 3. Tiến hành xác nhận nhập kho với dữ liệu kiểm định
     const inspectionLines = receipt.lines.map((line, index) => {
       const st = lineStates[index];
       return {
@@ -169,11 +212,8 @@ export default function GoodsReceivingModal({ receipt, app, onClose, onSuccess }
     });
 
     if (err) {
-      alert(err);
+      setSubmitError(err);
     } else {
-      alert(
-        `Đã chốt phiếu nhập kho ${receipt.displayCode || receipt.id}! Các thiết bị đạt chuẩn đã sẵn sàng cho thuê, các thiết bị lỗi đã được đưa vào bảo trì theo UC7.7.2.`
-      );
       if (onSuccess) onSuccess();
       onClose();
     }
@@ -250,6 +290,11 @@ export default function GoodsReceivingModal({ receipt, app, onClose, onSuccess }
 
         {/* Modal Body */}
         <div style={{ padding: "16px 24px", overflowY: "auto", flex: 1, display: "grid", gap: 16 }}>
+          {submitError && (
+            <div style={{ background: "#FEF2F2", border: "1px solid #FECACA", color: "#B91C1C", borderRadius: 8, padding: "10px 14px", fontSize: "0.82rem", fontWeight: 600 }}>
+              {submitError}
+            </div>
+          )}
           {/* Thông tin biên bản */}
           <div
             style={{

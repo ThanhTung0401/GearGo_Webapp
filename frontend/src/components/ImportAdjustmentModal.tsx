@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { type useApp } from "../App";
+import { inventoryApi } from "../services/api";
 import { type ImportReceipt, type ImportReceiptAdjustment } from "../store";
 
 interface Props {
@@ -11,26 +12,70 @@ interface Props {
 
 /**
  * UC7.10 & UC7.10.1: Lập đề nghị xử lý sai lệch phiếu nhập sau chốt
- * - Áp dụng khi phát hiện sai lệch trên phiếu đã ở trạng thái "Đã nhập kho".
- * - Không sửa âm thầm phiếu gốc, lập bản ghi điều chỉnh ở trạng thái "Chờ duyệt".
- * - Quản trị viên duyệt sẽ kiểm tra an toàn xung đột lịch thuê tương lai (Dòng phụ 4.1).
  */
 export default function ImportAdjustmentModal({ receipt, app, onClose, onSuccess }: Props) {
   const [type, setType] = useState<ImportReceiptAdjustment["type"]>("Giá vốn");
+  const [selectedLineId, setSelectedLineId] = useState<string>(receipt.lines[0]?.id || "");
   const [previousValue, setPreviousValue] = useState("");
   const [newValue, setNewValue] = useState("");
   const [reason, setReason] = useState("");
   const [evidence, setEvidence] = useState("");
-  const [createdBy, setCreatedBy] = useState("NV Kho Mai");
+  const [createdBy, setCreatedBy] = useState(app.currentUser?.name || "NV Kho Mai");
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSubmitError(null);
     if (!previousValue.trim() || !newValue.trim()) {
-      alert("Vui lòng nhập đầy đủ giá trị trước và sau khi điều chỉnh.");
+      setSubmitError("Vui lòng nhập đầy đủ giá trị trước và sau khi điều chỉnh.");
       return;
     }
     if (!reason.trim()) {
-      alert("Vui lòng ghi rõ lý do và căn cứ điều chỉnh (theo quy tắc UC7.10).");
+      setSubmitError("Vui lòng ghi rõ lý do và căn cứ điều chỉnh.");
+      return;
+    }
+
+    if (app.realApi) {
+      const phieuNhapId = Number(receipt.id);
+      if (!Number.isFinite(phieuNhapId)) return;
+      setSubmitting(true);
+      try {
+        const loaiDieuChinh =
+          type === "Giá vốn"
+            ? "SaiGiaNhap"
+            : type === "Số lượng"
+              ? "KhaiBaoThieuThietBi"
+              : "SaiGiaNhap";
+        const maChiTietPhieuNhap = selectedLineId && Number.isFinite(Number(selectedLineId))
+          ? Number(selectedLineId)
+          : undefined;
+        const created = await inventoryApi.lapPhieu({
+          loaiDieuChinh,
+          maPhieuNhapLienQuan: phieuNhapId,
+          lyDo: reason.trim(),
+          bangChung: evidence.trim() ? [evidence.trim()] : undefined,
+          chiTiet: [
+            {
+              maChiTietPhieuNhap,
+              giaTriDeNghiSau: {
+                loai: type,
+                truoc: previousValue.trim(),
+                sau: newValue.trim(),
+              },
+              ghiChu: `${type}: ${previousValue.trim()} -> ${newValue.trim()}`,
+            },
+          ],
+        });
+        await inventoryApi.guiDuyet(created.maPhieuDieuChinh);
+        await app.refreshImportReceipts?.();
+        if (onSuccess) onSuccess();
+        onClose();
+      } catch (err) {
+        setSubmitError(err instanceof Error ? err.message : "Không thể gửi đề nghị điều chỉnh phiếu nhập.");
+      } finally {
+        setSubmitting(false);
+      }
       return;
     }
 
@@ -45,13 +90,10 @@ export default function ImportAdjustmentModal({ receipt, app, onClose, onSuccess
     });
 
     if (res.ok) {
-      alert(
-        `Đã lập đề nghị điều chỉnh ${res.data.id} ở trạng thái "Chờ duyệt"! Quản trị viên sẽ kiểm tra tính hợp lệ và cam kết đơn thuê trước khi phê duyệt.`
-      );
       if (onSuccess) onSuccess();
       onClose();
     } else {
-      alert(res.message);
+      setSubmitError(res.message);
     }
   };
 
@@ -122,6 +164,27 @@ export default function ImportAdjustmentModal({ receipt, app, onClose, onSuccess
 
         {/* Modal Body */}
         <form onSubmit={handleSubmit} style={{ padding: "18px 20px", overflowY: "auto", display: "grid", gap: 14 }}>
+          {submitError && (
+            <div style={{ background: "#FEF2F2", border: "1px solid #FECACA", color: "#B91C1C", borderRadius: 8, padding: "8px 12px", fontSize: "0.8rem", fontWeight: 600 }}>
+              {submitError}
+            </div>
+          )}
+          {receipt.lines.length > 0 && (
+            <label style={{ fontSize: "0.8rem", fontWeight: 600 }}>
+              Dòng sản phẩm liên quan:
+              <select
+                value={selectedLineId}
+                onChange={(e) => setSelectedLineId(e.target.value)}
+                style={{ width: "100%", padding: "8px", borderRadius: 6, border: "1px solid #D1D5DB", marginTop: 4, background: "white" }}
+              >
+                {receipt.lines.map((l, idx) => (
+                  <option key={l.id || idx} value={l.id || ""}>
+                    {l.productNameSnapshot || l.productId} (SL: {l.quantity})
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
           <div
             style={{
               background: "#FFFBEB",

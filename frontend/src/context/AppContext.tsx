@@ -146,6 +146,26 @@ export interface AppState {
   getAvailable: (productId: string) => number;
   getDays: () => number;
   hasValidRentalPeriod: () => boolean;
+  // Cờ và hàm đồng bộ dữ liệu thật từ Backend ASP.NET Core
+  realApi?: boolean;
+  authLoading?: boolean;
+  permissionNotice?: string | null;
+  dismissPermissionNotice?: () => void;
+  unreadNotificationCount?: number;
+  setUnreadNotificationCount?: (count: number) => void;
+  setCartItems?: (items: CartItem[]) => void;
+  upsertOrder?: (order: Order) => void;
+  refreshCatalog?: (range?: { gioNhan?: string; gioTra?: string; tuKhoa?: string; maDanhMuc?: number }) => Promise<void>;
+  refreshOrders?: () => Promise<void>;
+  refreshCart?: () => Promise<void>;
+  refreshEquipment?: () => Promise<void>;
+  refreshSuppliers?: () => Promise<void>;
+  refreshImportReceipts?: () => Promise<void>;
+  refreshPromotions?: () => Promise<void>;
+  refreshPolicies?: () => Promise<void>;
+  refreshReviews?: () => Promise<void>;
+  refreshNotifications?: () => Promise<void>;
+  refreshAuditLogs?: () => Promise<void>;
 }
 
 export const AppContext = createContext<AppState>({} as AppState);

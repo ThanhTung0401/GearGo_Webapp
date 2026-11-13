@@ -16,6 +16,9 @@ export interface OrderItem {
 
 export interface AssignedEquipment {
   equipmentId: string;
+  equipmentDisplayCode?: string;
+  allocationId?: number;
+  orderItemId?: number;
   productId: string;
   assignedAt?: string;
   returnedAt?: string;
@@ -25,6 +28,9 @@ export interface AssignedEquipment {
 
 export interface Surcharge {
   id: string;
+  backendId?: number;
+  handoverItemId?: number;
+  reconciliationId?: number | null;
   type: string;
   equipmentId: string;
   amount: number;
@@ -36,6 +42,9 @@ export interface Surcharge {
   customerResponse?: string;
   resolutionNote?: string;
   originalAmount?: number;
+  isDisputed?: boolean;
+  disputeStatus?: string | null;
+  lockedByReconciliation?: boolean;
 }
 
 export interface HandoverItemCheck {
@@ -117,9 +126,16 @@ export interface ReconciliationStatement {
 
 export interface Order {
   id: string;
+  backendId?: number;
+  displayCode?: string;
   customerId: string;
   customerName: string;
   customerPhone: string;
+  email?: string;
+  notes?: string;
+  allowedActions?: string[];
+  reconciliationId?: number;
+  reconciliationFingerprint?: string;
   items: OrderItem[];
   pickupTime: string;
   returnTime: string;

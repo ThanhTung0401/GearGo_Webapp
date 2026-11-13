@@ -42,10 +42,22 @@ public class DanhGia
     [Column("ly_do_an")]
     public string? LyDoAn { get; set; }
 
+    [Column("phan_hoi_cua_hang")]
+    public string? PhanHoiCuaHang { get; set; }
+
+    [Column("thoi_diem_phan_hoi")]
+    public DateTime? ThoiDiemPhanHoi { get; set; }
+
+    [Column("ma_nguoi_phan_hoi")]
+    public long? MaNguoiPhanHoi { get; set; }
+
     // Navigation properties
     [ForeignKey(nameof(MaChiTietDon))]
     public ChiTietDonThue ChiTietDonThue { get; set; } = null!;
 
     [ForeignKey(nameof(MaNguoiAn))]
     public NhanVien? NguoiAn { get; set; }
+
+    [ForeignKey(nameof(MaNguoiPhanHoi))]
+    public TaiKhoan? NguoiPhanHoi { get; set; }
 }

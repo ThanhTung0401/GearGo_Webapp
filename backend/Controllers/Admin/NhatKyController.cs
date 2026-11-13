@@ -1,4 +1,5 @@
 using GearGo.Data;
+using GearGo.Helpers;
 using GearGo.Models.Common;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -7,14 +8,18 @@ using Microsoft.EntityFrameworkCore;
 namespace GearGo.Controllers.Admin;
 
 /// <summary>
-/// UC10.4: Tra cứu nhật ký thao tác và liên kết chứng từ nguồn (Chỉ Quản trị viên).
+/// UC10.4: Tra cứu nhật ký thao tác và liên kết chứng từ nguồn (Quản trị viên và Nhân viên vận hành).
 /// </summary>
 [ApiController]
-[Authorize(Policy = "AdminOnly")]
+[Authorize(Policy = "StaffOrAdmin")]
 [Route("api/admin/nhat-ky")]
 [Route("api/v1/admin/nhat-ky")]
 public class NhatKyController : ControllerBase
 {
+    private static readonly string[] DoiTuongChiQuanTri =
+    {
+        "TAI_KHOAN", "NHAN_VIEN", "CHINH_SACH", "QUYEN_VAI_TRO", "ROLE_PERMISSION"
+    };
     private readonly ApplicationDbContext _context;
 
     public NhatKyController(ApplicationDbContext context)
@@ -38,10 +43,28 @@ public class NhatKyController : ControllerBase
         trang = Math.Max(1, trang);
         soMoiTrang = Math.Clamp(soMoiTrang, 1, 100);
 
+        // Kiểm tra lại vai trò/trạng thái hiện tại trong DB để bảo đảm nhân viên nghỉ việc/bị hạ quyền không truy cập được nhật ký
+        var currentTaiKhoanId = User.LayMaTaiKhoan();
+        await ActorGuard.EnsureVanHanhAsync(_context, currentTaiKhoanId, ct);
+        var vaiTroHienTai = await _context.TaiKhoans.AsNoTracking()
+            .Where(t => t.MaTaiKhoan == currentTaiKhoanId)
+            .Select(t => t.VaiTro)
+            .FirstOrDefaultAsync(ct);
+        var laQuanTriVien = string.Equals(vaiTroHienTai, "QuanTriVien", StringComparison.OrdinalIgnoreCase);
+
         var query = _context.NhatKyThaoTacs
             .AsNoTracking()
             .Include(n => n.TaiKhoan)
             .AsQueryable();
+
+        // Nhân viên chỉ xem được thao tác của chính mình hoặc nhật ký nghiệp vụ vận hành, không xem nhật ký tài khoản/chính sách/phân quyền
+        if (!laQuanTriVien)
+        {
+            query = query.Where(n =>
+                n.MaTaiKhoan == currentTaiKhoanId ||
+                n.LoaiDoiTuong == null ||
+                !DoiTuongChiQuanTri.Contains(n.LoaiDoiTuong.ToUpper()));
+        }
 
         if (maTaiKhoan.HasValue)
             query = query.Where(n => n.MaTaiKhoan == maTaiKhoan.Value);
@@ -101,7 +124,7 @@ public class NhatKyController : ControllerBase
             n.ThoiDiem,
             n.LyDo,
             // UC10.4.2: Gợi ý đường dẫn API chứng từ nguồn để frontend mở trực tiếp.
-            ThamChieuUrl = XayDungUrlChungTu(n.LoaiDoiTuong, n.MaDoiTuong)
+            ThamChieuUrl = XayDungUrlChungTu(n.LoaiDoiTuong, n.MaDoiTuong, laQuanTriVien)
         }).ToList();
 
         return Ok(new PagedResult<object>
@@ -113,7 +136,7 @@ public class NhatKyController : ControllerBase
         });
     }
 
-    private static string? XayDungUrlChungTu(string? loaiDoiTuong, string? maDoiTuong)
+    private static string? XayDungUrlChungTu(string? loaiDoiTuong, string? maDoiTuong, bool laQuanTriVien)
     {
         if (string.IsNullOrWhiteSpace(loaiDoiTuong) || string.IsNullOrWhiteSpace(maDoiTuong))
             return null;
@@ -126,8 +149,8 @@ public class NhatKyController : ControllerBase
             "PHIEU_DIEU_CHINH_KHO" => $"/api/v1/dieu-chinh-kho/{maDoiTuong}",
             "DOI_SOAT" => $"/api/v1/doi-soat/{maDoiTuong}",
             "THIET_BI" => $"/api/thiet-bi/{maDoiTuong}",
-            "TAI_KHOAN" => $"/api/v1/admin/tai-khoan/{maDoiTuong}",
-            "NHAN_VIEN" => $"/api/v1/admin/nhan-vien/{maDoiTuong}",
+            "TAI_KHOAN" => laQuanTriVien ? $"/api/v1/admin/tai-khoan/{maDoiTuong}" : null,
+            "NHAN_VIEN" => laQuanTriVien ? $"/api/v1/admin/nhan-vien/{maDoiTuong}" : null,
             _ => null
         };
     }

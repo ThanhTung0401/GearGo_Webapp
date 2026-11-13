@@ -63,6 +63,16 @@ public class KhoiPhucDanhGiaRequest
 }
 
 /// <summary>
+/// Yêu cầu phản hồi đánh giá từ phía cửa hàng (UC92/UC94)
+/// </summary>
+public class PhanHoiDanhGiaRequest
+{
+    [Required(ErrorMessage = "Nội dung phản hồi không được để trống.")]
+    [MaxLength(1000, ErrorMessage = "Nội dung phản hồi tối đa 1000 ký tự.")]
+    public string NoiDung { get; set; } = null!;
+}
+
+/// <summary>
 /// DTO phản hồi chi tiết của một đánh giá
 /// </summary>
 public class DanhGiaResponse
@@ -91,6 +101,12 @@ public class DanhGiaResponse
     public string TrangThaiHienThi { get; set; } = "HienThi";
 
     public string? LyDoAn { get; set; }
+
+    public string? PhanHoiCuaHang { get; set; }
+
+    public DateTime? ThoiDiemPhanHoi { get; set; }
+
+    public string? NguoiPhanHoi { get; set; }
 }
 
 /// <summary>

@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useApp, type Page } from "../../context/AppContext";
 import Icon from "../../components/Icon";
+import { notificationApi } from "../../services/api";
 import type { AppNotification } from "../../types";
 
 export interface PublicHeaderProps {
@@ -41,10 +42,12 @@ export default function PublicHeader({
 
   const totalCartQty = cart.reduce((sum, item) => sum + item.qty, 0);
 
-  const userNotifs = notifications.filter(
-    (n) => n.targetRole === "all" || n.targetRole === role
-  );
-  const unreadNotifsCount = userNotifs.filter((n) => !n.isRead).length;
+  const userNotifs = app.realApi
+    ? notifications
+    : notifications.filter((n) => n.targetRole === "all" || n.targetRole === role);
+  const unreadNotifsCount = app.realApi
+    ? (app.unreadNotificationCount ?? userNotifs.filter((n) => !n.isRead).length)
+    : userNotifs.filter((n) => !n.isRead).length;
 
   const filteredNotifs = userNotifs.filter((n) => {
     if (notifFilter === "unread") return !n.isRead;
@@ -119,7 +122,13 @@ export default function PublicHeader({
           {/* Notification Bell */}
           <div className="relative">
             <button
-              onClick={() => setNotifDropdownOpen(!notifDropdownOpen)}
+              onClick={() => {
+                const next = !notifDropdownOpen;
+                setNotifDropdownOpen(next);
+                if (next && app.realApi && currentUser) {
+                  void app.refreshNotifications?.();
+                }
+              }}
               className="relative w-9 h-9 rounded-xl border border-white/15 bg-white/5 hover:bg-white/10 flex items-center justify-center text-white transition-colors cursor-pointer"
               aria-label="Thông báo"
             >
@@ -139,7 +148,13 @@ export default function PublicHeader({
                     Thông báo ({userNotifs.length})
                   </span>
                   <button
-                    onClick={() => setNotifications(notifications.map((n) => ({ ...n, isRead: true })))}
+                    onClick={() => {
+                      setNotifications(notifications.map((n) => ({ ...n, isRead: true })));
+                      app.setUnreadNotificationCount?.(0);
+                      if (app.realApi && currentUser) {
+                        void notificationApi.danhDauTatCaDaDoc().catch(() => {});
+                      }
+                    }}
                     className="text-[0.7rem] font-bold text-[var(--color-forest)] hover:underline cursor-pointer"
                   >
                     Đã đọc tất cả

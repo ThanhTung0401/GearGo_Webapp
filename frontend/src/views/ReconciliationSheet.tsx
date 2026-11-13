@@ -1,5 +1,16 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useApp } from "../App";
+import {
+  reconciliationApi,
+  paymentApi,
+  refundApi,
+  surchargeApi,
+  type DoiSoatBackend,
+  type XemTruocDoiSoatBackend,
+  type HoanTienTheoDonBackend,
+  type YeuCauThuBackend,
+} from "../services/api";
+import { mapPhuPhiToSurcharge } from "../services/mappers";
 import {
   fmt,
   statusColors,
@@ -14,6 +25,7 @@ interface ReconciliationSheetProps {
   app: ReturnType<typeof useApp>;
   userRole?: "staff" | "admin";
   onClose?: () => void;
+  onAfterMutation?: () => Promise<void> | void;
 }
 
 /**
@@ -21,12 +33,23 @@ interface ReconciliationSheetProps {
  * Tác nhân: Nhân viên, Quản trị viên
  * Đầy đủ 7 bước chính + Dòng sự kiện phụ 1.1, 5.1, 5.2
  */
-export default function ReconciliationSheet({ order, app, userRole = "staff", onClose }: ReconciliationSheetProps) {
+export default function ReconciliationSheet({ order, app, userRole = "staff", onClose, onAfterMutation }: ReconciliationSheetProps) {
   // Trạng thái cho các modal truy vết chứng từ gốc (Dòng 3)
   const [viewingTx, setViewingTx] = useState<MoneyTransaction | null>(null);
   const [viewingSurcharge, setViewingSurcharge] = useState<Surcharge | null>(null);
   const [viewingReturnReceipt, setViewingReturnReceipt] = useState<ReturnReceipt | null>(null);
   const [showPrintModal, setShowPrintModal] = useState(false);
+
+  // State đồng bộ API thật đối soát 7 bước, thu bổ sung, hoàn cọc
+  const [previewBackend, setPreviewBackend] = useState<XemTruocDoiSoatBackend | null>(null);
+  const [doiSoatBackend, setDoiSoatBackend] = useState<DoiSoatBackend | null>(null);
+  const [refundsBackend, setRefundsBackend] = useState<HoanTienTheoDonBackend | null>(null);
+  const [surchargesBackend, setSurchargesBackend] = useState<Surcharge[] | null>(null);
+  const [pendingCollectReq, setPendingCollectReq] = useState<YeuCauThuBackend | null>(null);
+  const [reconLoading, setReconLoading] = useState(false);
+  const [reconBusy, setReconBusy] = useState(false);
+  const [reconError, setReconError] = useState<string | null>(null);
+  const [reconSuccess, setReconSuccess] = useState<string | null>(null);
 
   // Trạng thái modal UC5.5: Thu tiền bổ sung tại quầy
   const [showCollectModal, setShowCollectModal] = useState(false);
@@ -50,26 +73,59 @@ export default function ReconciliationSheet({ order, app, userRole = "staff", on
   const [adjAmount, setAdjAmount] = useState<number>(50000);
   const [adjReason, setAdjReason] = useState("");
   const [adjMessage, setAdjMessage] = useState("");
+  const [adjSurchargeId, setAdjSurchargeId] = useState<string>("");
+
+  const donId = order.backendId ?? Number(order.id);
+
+  const loadReconcileState = useCallback(async () => {
+    if (!app.realApi || !Number.isFinite(donId)) return;
+    setReconLoading(true);
+    setReconError(null);
+    try {
+      const [preview, ds, refunds, surcharges] = await Promise.all([
+        reconciliationApi.xemTruoc(donId).catch(() => null),
+        reconciliationApi.layTheoDon(donId).catch(() => null),
+        refundApi.layTheoDon(donId).catch(() => null),
+        surchargeApi.layTheoDon(donId).catch(() => null),
+      ]);
+      setPreviewBackend(preview);
+      setDoiSoatBackend(ds);
+      setRefundsBackend(refunds);
+      setSurchargesBackend(surcharges ? surcharges.map(mapPhuPhiToSurcharge) : null);
+    } catch (err) {
+      setReconError(err instanceof Error ? err.message : "Không thể tải dữ liệu đối soát đơn.");
+    } finally {
+      setReconLoading(false);
+    }
+  }, [app.realApi, donId]);
+
+  useEffect(() => {
+    setReconSuccess(null);
+    setReconError(null);
+    setPendingCollectReq(null);
+    void loadReconcileState();
+  }, [loadReconcileState]);
+
+  const effectiveSurcharges = app.realApi && surchargesBackend ? surchargesBackend : order.surcharges;
 
   // ─── 1. KIỂM TRA TIỀN ĐIỀU KIỆN & DÒNG SỰ KIỆN PHỤ 1.1 ──────────────────────
-  // Thiết bị còn nợ (chưa có kết luận trả hoặc mất)
   const debtEquipment = order.assignedEquipment.filter((ae) => !ae.returnedAt);
-  // Phụ phí chưa duyệt
-  const pendingSurcharges = order.surcharges.filter((s) => s.status === "Chờ duyệt");
-  // Phụ phí đang khiếu nại tranh chấp
-  const disputedSurcharges = order.surcharges.filter((s) => s.status === "Tranh chấp");
-  // Cờ chặn theo Dòng 1.1
-  const isBlocked = debtEquipment.length > 0 || pendingSurcharges.length > 0 || disputedSurcharges.length > 0;
+  const pendingSurcharges = effectiveSurcharges.filter((s) => s.status === "Chờ duyệt");
+  const disputedSurcharges = effectiveSurcharges.filter((s) => s.status === "Tranh chấp");
+  const isBlocked = app.realApi && previewBackend
+    ? !previewBackend.duDieuKien || pendingSurcharges.length > 0 || disputedSurcharges.length > 0
+    : debtEquipment.length > 0 || pendingSurcharges.length > 0 || disputedSurcharges.length > 0;
 
   // ─── 2. TÍNH TOÁN CĂN CỨ BẢNG ĐỐI SOÁT (DÒNG 2 & LƯU Ý) ─────────────────────
-  // A. Tiền cọc thực thu ban đầu
-  const depositCollected = order.depositTotal;
+  const depositCollected = app.realApi
+    ? Number(doiSoatBackend?.tienCocDuocDoiSoat ?? previewBackend?.tienCocDuocDoiSoat ?? order.depositTotal)
+    : order.depositTotal;
 
-  // B. Các khoản phụ phí bồi thường & quá hạn đã duyệt
-  const approvedSurcharges = order.surcharges.filter((s) => s.status === "Đã duyệt");
-  const totalApprovedSurcharges = approvedSurcharges.reduce((sum, s) => sum + s.amount, 0);
+  const approvedSurcharges = effectiveSurcharges.filter((s) => s.status === "Đã duyệt");
+  const totalApprovedSurcharges = app.realApi
+    ? Number(doiSoatBackend?.tongPhuPhiDuocDuyet ?? previewBackend?.tongPhuPhiDuocDuyet ?? approvedSurcharges.reduce((sum, s) => sum + s.amount, 0))
+    : approvedSurcharges.reduce((sum, s) => sum + s.amount, 0);
 
-  // C. Các khoản thu thêm hoặc hoàn cọc đã xử lý trước đó
   const priorRefund = (order.transactions || [])
     .filter((t) => (t.type === "Hoàn cọc" || t.type === "Hoàn tiền hủy") && t.status === "Thành công")
     .reduce((s, t) => s + t.amount, 0);
@@ -78,17 +134,126 @@ export default function ReconciliationSheet({ order, app, userRole = "staff", on
     .reduce((s, t) => s + t.amount, 0);
   const priorSettled = priorCollect - priorRefund;
 
-  // D. Số dư chênh lệch còn lại
-  const netDifference = depositCollected - totalApprovedSurcharges - priorSettled;
-  const isBalanced = netDifference === 0; // Dòng 5.1: chênh lệch = 0
-  const refundAmount = Math.max(0, netDifference); // EP5.4-HOAN: số tiền hoàn
-  const extraAmount = Math.max(0, -netDifference); // EP5.4-THU: số tiền thu thêm
+  const mockNetDifference = depositCollected - totalApprovedSurcharges - priorSettled;
+  const refundAmount = app.realApi
+    ? Number(doiSoatBackend?.soTienCanHoan ?? previewBackend?.soTienCanHoan ?? Math.max(0, mockNetDifference))
+    : Math.max(0, mockNetDifference);
+  const extraAmount = app.realApi
+    ? Number(doiSoatBackend?.soTienCanThuThem ?? previewBackend?.soTienCanThuThem ?? Math.max(0, -mockNetDifference))
+    : Math.max(0, -mockNetDifference);
+  const netDifference = refundAmount > 0 ? refundAmount : -extraAmount;
+  const isBalanced = refundAmount === 0 && extraAmount === 0;
 
-  const isOrderCompleted = order.status === "Hoàn tất";
-  const isConfirmed = order.reconciliation?.status === "confirmed" || isOrderCompleted;
+  const isOrderCompleted = order.status === "Hoàn tất" || doiSoatBackend?.trangThai === "DaChot";
+  const isConfirmed =
+    Boolean(order.reconciliation?.confirmedAt) ||
+    doiSoatBackend?.trangThai === "DaXacNhan" ||
+    doiSoatBackend?.trangThai === "DangXuLyTien" ||
+    isOrderCompleted;
 
-  // Giao dịch thanh toán ban đầu (để truy vết)
   const initialTransaction = (order.transactions || []).find((t) => t.type === "Thanh toán ban đầu");
+
+  /** Đảm bảo bảng đối soát tồn tại và đã xác nhận ở backend trước khi thao tác tiền/chốt. */
+  const ensureConfirmedDoiSoat = async (): Promise<DoiSoatBackend> => {
+    let ds = doiSoatBackend;
+    if (!ds) {
+      ds = await reconciliationApi.lapDoiSoat(donId, "Lập bảng đối soát từ cổng vận hành");
+    }
+    if (ds.trangThai === "ChoChot") {
+      const fingerprint = previewBackend?.dauVanTayBangTinh || ds.dauVanTayBangTinh || "";
+      ds = await reconciliationApi.xacNhanBangTinh(ds.maDoiSoat, fingerprint, "Xác nhận bảng tính đối soát");
+    }
+    setDoiSoatBackend(ds);
+    return ds;
+  };
+
+  const syncAfterMutation = async () => {
+    await Promise.all([
+      loadReconcileState(),
+      app.refreshOrders?.(),
+      onAfterMutation ? Promise.resolve(onAfterMutation()) : Promise.resolve(),
+    ]);
+  };
+
+  const handleConfirmStep4 = async () => {
+    setReconError(null);
+    setReconSuccess(null);
+    if (app.realApi) {
+      setReconBusy(true);
+      try {
+        await ensureConfirmedDoiSoat();
+        setReconSuccess("Đã lập và xác nhận bảng tính đối soát.");
+        await syncAfterMutation();
+      } catch (err) {
+        setReconError(err instanceof Error ? err.message : "Không thể xác nhận bảng đối soát.");
+      } finally {
+        setReconBusy(false);
+      }
+      return;
+    }
+    const res = app.confirmReconciliation(order.id);
+    if (!res.ok) setReconError(res.message);
+  };
+
+  const handleFinalizeBalanced = async () => {
+    setReconError(null);
+    setReconSuccess(null);
+    if (app.realApi) {
+      setReconBusy(true);
+      try {
+        let ds = await ensureConfirmedDoiSoat();
+        ds = await reconciliationApi.chotDoiSoat(ds.maDoiSoat);
+        setDoiSoatBackend(ds);
+        setReconSuccess("Đã chốt đối soát cân bằng 0 đ và hoàn tất đơn.");
+        await syncAfterMutation();
+      } catch (err) {
+        setReconError(err instanceof Error ? err.message : "Không thể chốt đối soát đơn.");
+      } finally {
+        setReconBusy(false);
+      }
+      return;
+    }
+    const res = app.finalizeOrderWithoutPayment(order.id, "Chốt đối soát cân bằng không phát sinh chênh lệch tiền (Dòng 5.1)");
+    if (!res.ok) setReconError(res.message);
+  };
+
+  const handleApproveSurchargeInline = async (ps: Surcharge) => {
+    setReconError(null);
+    if (app.realApi) {
+      if (!ps.backendId) return;
+      setReconBusy(true);
+      try {
+        await surchargeApi.duyetPhi(ps.backendId);
+        setReconSuccess("Đã duyệt phụ phí.");
+        await syncAfterMutation();
+      } catch (err) {
+        setReconError(err instanceof Error ? err.message : "Không thể duyệt phụ phí (cần quyền Quản trị viên).");
+      } finally {
+        setReconBusy(false);
+      }
+      return;
+    }
+    app.approveSurcharge(order.id, ps.id);
+  };
+
+  const handleRejectSurchargeInline = async (ps: Surcharge) => {
+    setReconError(null);
+    if (app.realApi) {
+      if (!ps.backendId) return;
+      setReconBusy(true);
+      try {
+        await surchargeApi.tuChoiPhi(ps.backendId, "Từ chối khi rà soát điều kiện đối soát");
+        setReconSuccess("Đã từ chối phụ phí.");
+        await syncAfterMutation();
+      } catch (err) {
+        setReconError(err instanceof Error ? err.message : "Không thể từ chối phụ phí.");
+      } finally {
+        setReconBusy(false);
+      }
+      return;
+    }
+    app.rejectSurcharge(order.id, ps.id);
+  };
 
   return (
     <div style={{ background: "white", borderRadius: 16, border: "1px solid var(--color-bone)", overflow: "hidden", boxShadow: "0 2px 12px rgba(17,35,27,0.04)" }}>
@@ -102,10 +267,10 @@ export default function ReconciliationSheet({ order, app, userRole = "staff", on
             <span style={{ fontSize: "0.75rem", color: "#6B7280" }}>Tác nhân: {userRole === "admin" ? "Quản trị viên" : "Nhân viên kho"}</span>
           </div>
           <h3 style={{ fontFamily: "var(--font-display)", fontSize: "1.35rem", color: "var(--color-bark)", margin: "4px 0 2px" }}>
-            Bảng Đối Soát Cọc & Quyết Toán: Đơn {order.id}
+            Bảng Đối Soát Cọc & Quyết Toán: Đơn {order.displayCode || order.id}
           </h3>
           <div style={{ fontSize: "0.82rem", color: "#4B5563" }}>
-            Khách hàng: <strong>{order.customerName}</strong> ({order.customerPhone}) · Nhận: {order.pickupTime} · Hẹn trả: {order.returnTime}
+            Khách hàng: <strong>{order.customerName}</strong> {order.customerPhone ? `(${order.customerPhone})` : ""} · Nhận: {order.pickupTime} · Hẹn trả: {order.returnTime}
           </div>
         </div>
 
@@ -128,6 +293,21 @@ export default function ReconciliationSheet({ order, app, userRole = "staff", on
       </div>
 
       <div style={{ padding: 24 }}>
+        {reconError && (
+          <div style={{ background: "#FEF2F2", border: "1px solid #FECACA", color: "#B91C1C", borderRadius: 8, padding: "10px 14px", marginBottom: 14, fontSize: "0.82rem", fontWeight: 600 }}>
+            {reconError}
+          </div>
+        )}
+        {reconSuccess && (
+          <div style={{ background: "#F0FDF4", border: "1px solid #BBF7D0", color: "#15803D", borderRadius: 8, padding: "10px 14px", marginBottom: 14, fontSize: "0.82rem", fontWeight: 600 }}>
+            {reconSuccess}
+          </div>
+        )}
+        {reconLoading && (
+          <div style={{ fontSize: "0.78rem", color: "#6B7280", marginBottom: 10 }}>
+            Đang tải dữ liệu đối soát & hoàn tiền từ máy chủ...
+          </div>
+        )}
         {/* ─── Thanh tiến trình 3 bước UC5.4 ─────────────────────────────────── */}
         <div className="reconcile-step-flow">
           <div className={`reconcile-step-item ${isBlocked ? "active" : "completed"}`}>
@@ -160,6 +340,17 @@ export default function ReconciliationSheet({ order, app, userRole = "staff", on
             </p>
 
             <div className="flex flex-col gap-2">
+              {app.realApi && previewBackend && previewBackend.vuongMac.length > 0 && (
+                <div style={{ background: "white", border: "1px solid #FCA5A5", borderRadius: 8, padding: "10px 14px" }}>
+                  <strong style={{ color: "#B91C1C", fontSize: "0.84rem" }}>Kiểm tra điều kiện từ máy chủ:</strong>
+                  <ul style={{ margin: "4px 0 0", paddingLeft: 18, fontSize: "0.78rem", color: "#7F1D1D" }}>
+                    {previewBackend.vuongMac.map((msg, i) => (
+                      <li key={i}>{msg}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
               {debtEquipment.length > 0 && (
                 <div style={{ background: "white", border: "1px solid #FCA5A5", borderRadius: 8, padding: "10px 14px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <div>
@@ -167,7 +358,7 @@ export default function ReconciliationSheet({ order, app, userRole = "staff", on
                       Thiết bị chưa nhận trả / chưa có kết luận: {debtEquipment.length} thiết bị
                     </strong>
                     <div style={{ fontSize: "0.75rem", color: "#6B7280" }}>
-                      Mã: {debtEquipment.map((d) => d.equipmentId).join(", ")}
+                      Mã: {debtEquipment.map((d) => d.equipmentDisplayCode || d.equipmentId).join(", ")}
                     </div>
                   </div>
                   <span style={{ fontSize: "0.75rem", background: "#FEE2E2", color: "#991B1B", padding: "3px 8px", borderRadius: 6, fontWeight: 700 }}>
@@ -189,14 +380,16 @@ export default function ReconciliationSheet({ order, app, userRole = "staff", on
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
-                      onClick={() => app.approveSurcharge(order.id, ps.id)}
+                      disabled={reconBusy}
+                      onClick={() => handleApproveSurchargeInline(ps)}
                       style={{ background: "var(--color-forest)", color: "white", border: "none", borderRadius: 6, padding: "5px 12px", fontSize: "0.78rem", fontWeight: 700, cursor: "pointer" }}
                     >
                       ✓ Duyệt phụ phí
                     </button>
                     <button
                       type="button"
-                      onClick={() => app.rejectSurcharge(order.id, ps.id)}
+                      disabled={reconBusy}
+                      onClick={() => handleRejectSurchargeInline(ps)}
                       style={{ background: "white", color: "#DC2626", border: "1px solid #FCA5A5", borderRadius: 6, padding: "5px 12px", fontSize: "0.78rem", fontWeight: 600, cursor: "pointer" }}
                     >
                       ✕ Từ chối
@@ -388,9 +581,16 @@ export default function ReconciliationSheet({ order, app, userRole = "staff", on
                 <strong style={{ fontSize: "0.9rem", color: "var(--color-bark)" }}>
                   Quy trình chốt đối soát & tất toán đơn:
                 </strong>
-                {order.reconciliation?.confirmedAt ? (
+                {isConfirmed ? (
                   <div style={{ fontSize: "0.78rem", color: "#15803D", marginTop: 2 }}>
-                    ✓ Đã xác nhận bảng đối soát lúc <strong>{order.reconciliation.confirmedAt}</strong> bởi <strong>{order.reconciliation.confirmedBy}</strong>. (Đang giữ Chờ đối soát để thực hiện tiền)
+                    ✓ Đã xác nhận bảng đối soát{" "}
+                    {doiSoatBackend?.thoiDiemLap || order.reconciliation?.confirmedAt
+                      ? `lúc ${doiSoatBackend?.thoiDiemLap || order.reconciliation?.confirmedAt}`
+                      : ""}{" "}
+                    {doiSoatBackend?.nguoiLap || order.reconciliation?.confirmedBy
+                      ? `bởi ${doiSoatBackend?.nguoiLap || order.reconciliation?.confirmedBy}`
+                      : ""}
+                    . (Sẵn sàng bước quyết toán tiền / khóa đối soát)
                   </div>
                 ) : (
                   <div style={{ fontSize: "0.78rem", color: "#6B7280", marginTop: 2 }}>
@@ -399,14 +599,11 @@ export default function ReconciliationSheet({ order, app, userRole = "staff", on
                 )}
               </div>
 
-              {!order.reconciliation?.confirmedAt && (
+              {!isConfirmed && (
                 <button
                   type="button"
-                  disabled={isBlocked}
-                  onClick={() => {
-                    const res = app.confirmReconciliation(order.id);
-                    if (!res.ok) alert(res.message);
-                  }}
+                  disabled={isBlocked || reconBusy}
+                  onClick={handleConfirmStep4}
                   style={{
                     background: isBlocked ? "#E5E7EB" : "var(--color-moss)",
                     color: isBlocked ? "#9CA3AF" : "white",
@@ -415,25 +612,90 @@ export default function ReconciliationSheet({ order, app, userRole = "staff", on
                     padding: "8px 16px",
                     fontWeight: 700,
                     fontSize: "0.82rem",
-                    cursor: isBlocked ? "not-allowed" : "pointer",
+                    cursor: isBlocked || reconBusy ? "not-allowed" : "pointer",
                   }}
                 >
-                  📝 Xác nhận bảng đối soát (Bước 4)
+                  {reconBusy ? "Đang xác nhận..." : "Xác nhận bảng đối soát (Bước 4)"}
                 </button>
               )}
             </div>
 
-            {/* Các nút hành động nghiệp vụ theo Bước 5 */}
+            {/* Chi tiết các lệnh hoàn tiền & thu bổ sung backend đang mở */}
+            {app.realApi && refundsBackend && refundsBackend.items.length > 0 && (
+              <div style={{ background: "white", border: "1px solid var(--color-bone)", borderRadius: 10, padding: "12px 14px", marginBottom: 12 }}>
+                <div style={{ fontSize: "0.8rem", fontWeight: 700, color: "var(--color-bark)", marginBottom: 8 }}>
+                  Lệnh hoàn tiền trên máy chủ ({refundsBackend.items.length} lệnh · Đã hoàn: {fmt(refundsBackend.tongDaHoan)})
+                </div>
+                <div className="flex flex-col gap-2">
+                  {refundsBackend.items.map((ht) => (
+                    <div key={ht.maHoanTien} style={{ background: "#F9FAFB", border: "1px solid var(--color-bone)", borderRadius: 8, padding: "8px 12px", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, flexWrap: "wrap", fontSize: "0.78rem" }}>
+                      <div>
+                        <strong style={{ fontFamily: "var(--font-mono)", color: "var(--color-forest)" }}>{ht.maYeuCau || `HT-${ht.maHoanTien}`}</strong>
+                        <span style={{ marginLeft: 8 }}>{ht.nhanHienThi}</span>
+                        <span style={{ marginLeft: 8, fontFamily: "var(--font-mono)", fontWeight: 700 }}>{fmt(ht.soTien)}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span style={{ background: ht.trangThai === "ThanhCong" ? "#DCFCE7" : ht.trangThai === "ThatBai" ? "#FEE2E2" : "#FEF3C7", color: ht.trangThai === "ThanhCong" ? "#15803D" : ht.trangThai === "ThatBai" ? "#DC2626" : "#B45309", padding: "2px 8px", borderRadius: 6, fontWeight: 700, fontSize: "0.7rem" }}>
+                          {ht.trangThai}
+                        </span>
+                        {ht.trangThai !== "ThanhCong" && (
+                          <>
+                            <button
+                              type="button"
+                              disabled={reconBusy}
+                              onClick={async () => {
+                                setReconBusy(true);
+                                setReconError(null);
+                                try {
+                                  await refundApi.xuLyHoan(ht.maHoanTien, refundNote || "Thực hiện hoàn tiền cọc từ bảng đối soát");
+                                  setReconSuccess(`Đã xử lý hoàn tiền ${ht.maYeuCau || ht.maHoanTien}.`);
+                                  await syncAfterMutation();
+                                } catch (err) {
+                                  setReconError(err instanceof Error ? err.message : "Không thể xử lý hoàn tiền.");
+                                } finally {
+                                  setReconBusy(false);
+                                }
+                              }}
+                              style={{ background: "var(--color-forest)", color: "white", border: "none", borderRadius: 6, padding: "4px 10px", fontSize: "0.72rem", fontWeight: 700, cursor: "pointer" }}
+                            >
+                              Xử lý hoàn
+                            </button>
+                            <button
+                              type="button"
+                              disabled={reconBusy}
+                              onClick={async () => {
+                                setReconBusy(true);
+                                setReconError(null);
+                                try {
+                                  await refundApi.doiChieuHoan(ht.maHoanTien);
+                                  setReconSuccess(`Đã đối chiếu trạng thái hoàn tiền ${ht.maYeuCau || ht.maHoanTien}.`);
+                                  await syncAfterMutation();
+                                } catch (err) {
+                                  setReconError(err instanceof Error ? err.message : "Không thể đối chiếu hoàn tiền.");
+                                } finally {
+                                  setReconBusy(false);
+                                }
+                              }}
+                              style={{ background: "white", color: "var(--color-bark)", border: "1px solid var(--color-bone)", borderRadius: 6, padding: "4px 10px", fontSize: "0.72rem", fontWeight: 600, cursor: "pointer" }}
+                            >
+                              Đối chiếu
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Các nút hành động nghiệp vụ theo Bước 5–7 */}
             <div className="flex gap-2 flex-wrap items-center pt-2 border-t border-dashed border-gray-300">
-              {/* DÒNG SỰ KIỆN PHỤ 5.1: Số tiền chênh lệch bằng 0 -> Chốt hoàn tất trực tiếp */}
               {isBalanced ? (
                 <button
                   type="button"
-                  disabled={isBlocked}
-                  onClick={() => {
-                    const res = app.finalizeOrderWithoutPayment(order.id, "Chốt đối soát cân bằng không phát sinh chênh lệch tiền (Dòng 5.1)");
-                    if (!res.ok) alert(res.message);
-                  }}
+                  disabled={isBlocked || reconBusy}
+                  onClick={handleFinalizeBalanced}
                   style={{
                     background: isBlocked ? "#9CA3AF" : "var(--color-forest)",
                     color: "white",
@@ -442,16 +704,15 @@ export default function ReconciliationSheet({ order, app, userRole = "staff", on
                     padding: "10px 24px",
                     fontWeight: 700,
                     fontSize: "0.88rem",
-                    cursor: isBlocked ? "not-allowed" : "pointer",
+                    cursor: isBlocked || reconBusy ? "not-allowed" : "pointer",
                   }}
                 >
-                  ✓ Chốt đối soát & Chuyển Hoàn tất đơn (Dòng 5.1: Chênh lệch 0 đ) →
+                  ✓ Chốt đối soát & Chuyển Hoàn tất đơn (Chênh lệch 0 đ) →
                 </button>
               ) : extraAmount > 0 ? (
-                /* EP5.4-THU: Gọi UC5.5 Thu thêm tiền */
                 <button
                   type="button"
-                  disabled={isBlocked}
+                  disabled={isBlocked || reconBusy}
                   onClick={() => {
                     setCashTendered(extraAmount);
                     setShowCollectModal(true);
@@ -464,16 +725,15 @@ export default function ReconciliationSheet({ order, app, userRole = "staff", on
                     padding: "10px 22px",
                     fontWeight: 700,
                     fontSize: "0.88rem",
-                    cursor: isBlocked ? "not-allowed" : "pointer",
+                    cursor: isBlocked || reconBusy ? "not-allowed" : "pointer",
                   }}
                 >
-                  💳 Thu thêm tại quầy: {fmt(extraAmount)} (Gọi UC5.5) →
+                  Thu thêm bổ sung: {fmt(extraAmount)} (UC5.5) →
                 </button>
               ) : (
-                /* EP5.4-HOAN: Gọi UC5.6 Hoàn tiền cọc */
                 <button
                   type="button"
-                  disabled={isBlocked}
+                  disabled={isBlocked || reconBusy}
                   onClick={() => {
                     setBankHolder(order.customerName.toUpperCase());
                     setShowRefundModal(true);
@@ -486,33 +746,66 @@ export default function ReconciliationSheet({ order, app, userRole = "staff", on
                     padding: "10px 22px",
                     fontWeight: 700,
                     fontSize: "0.88rem",
-                    cursor: isBlocked ? "not-allowed" : "pointer",
+                    cursor: isBlocked || reconBusy ? "not-allowed" : "pointer",
                   }}
                 >
-                  🏦 Lập lệnh hoàn tiền cọc: {fmt(refundAmount)} (Gọi UC5.6) →
+                  Lập & xử lý hoàn tiền cọc: {fmt(refundAmount)} (UC5.6) →
                 </button>
               )}
 
-              {/* Dòng sự kiện phụ 5.2: Mô phỏng giao dịch thất bại / chưa hoàn thành */}
-              <button
-                type="button"
-                onClick={() => {
-                  app.settleOrder(order.id, false, { note: "Khách chưa đủ tiền / Ngân hàng báo lỗi giao dịch" });
-                }}
-                style={{
-                  background: "white",
-                  color: "#B91C1C",
-                  border: "1px solid #FECACA",
-                  borderRadius: 8,
-                  padding: "10px 16px",
-                  fontWeight: 600,
-                  fontSize: "0.82rem",
-                  cursor: "pointer",
-                }}
-                title="Mô phỏng khoản thu bổ sung chưa đủ hoặc giao dịch hoàn tiền thất bại (Dòng 5.2)"
-              >
-                ⚠️ Mô phỏng GD thất bại (Dòng 5.2)
-              </button>
+              {app.realApi && doiSoatBackend && doiSoatBackend.trangThai !== "ChoChot" && doiSoatBackend.trangThai !== "DaChot" && (
+                <button
+                  type="button"
+                  disabled={reconBusy}
+                  onClick={async () => {
+                    setReconBusy(true);
+                    setReconError(null);
+                    try {
+                      await reconciliationApi.chotDoiSoat(doiSoatBackend.maDoiSoat);
+                      setReconSuccess("Đã chốt khóa đối soát & hoàn tất đơn hàng.");
+                      await syncAfterMutation();
+                    } catch (err) {
+                      setReconError(err instanceof Error ? err.message : "Chưa đủ điều kiện chốt đối soát (kiểm tra giao dịch tiền còn chờ).");
+                    } finally {
+                      setReconBusy(false);
+                    }
+                  }}
+                  style={{
+                    background: "var(--color-bark)",
+                    color: "white",
+                    border: "none",
+                    borderRadius: 8,
+                    padding: "10px 18px",
+                    fontWeight: 700,
+                    fontSize: "0.84rem",
+                    cursor: reconBusy ? "not-allowed" : "pointer",
+                  }}
+                >
+                  Khóa đối soát & Hoàn tất đơn
+                </button>
+              )}
+
+              {!app.realApi && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    app.settleOrder(order.id, false, { note: "Khách chưa đủ tiền / Ngân hàng báo lỗi giao dịch" });
+                  }}
+                  style={{
+                    background: "white",
+                    color: "#B91C1C",
+                    border: "1px solid #FECACA",
+                    borderRadius: 8,
+                    padding: "10px 16px",
+                    fontWeight: 600,
+                    fontSize: "0.82rem",
+                    cursor: "pointer",
+                  }}
+                  title="Mô phỏng khoản thu bổ sung chưa đủ hoặc giao dịch hoàn tiền thất bại (Dòng 5.2)"
+                >
+                  Mô phỏng GD thất bại (Dòng 5.2)
+                </button>
+              )}
             </div>
           </div>
         )}
@@ -706,15 +999,90 @@ export default function ReconciliationSheet({ order, app, userRole = "staff", on
               />
             </div>
 
+            {pendingCollectReq && (
+              <div style={{ background: "#EFF6FF", border: "1px solid #BFDBFE", borderRadius: 8, padding: 12, marginBottom: 14, fontSize: "0.8rem" }}>
+                <div className="flex justify-between items-center mb-1">
+                  <strong>Mã yêu cầu thu bổ sung: {pendingCollectReq.maYeuCau}</strong>
+                  <span style={{ fontWeight: 700, color: pendingCollectReq.trangThai === "ThanhCong" ? "#15803D" : "#B45309" }}>
+                    {pendingCollectReq.trangThai}
+                  </span>
+                </div>
+                {pendingCollectReq.paymentUrl && (
+                  <div style={{ marginTop: 6 }}>
+                    <a href={pendingCollectReq.paymentUrl} target="_blank" rel="noreferrer" style={{ color: "#1D4ED8", textDecoration: "underline", fontWeight: 600 }}>
+                      Mở cổng thanh toán VNPAY →
+                    </a>
+                  </div>
+                )}
+                <div className="flex gap-2 mt-2">
+                  <button
+                    type="button"
+                    disabled={reconBusy}
+                    onClick={async () => {
+                      setReconBusy(true);
+                      setReconError(null);
+                      try {
+                        const updated = await paymentApi.layTrangThaiGiaoDich(pendingCollectReq.maYeuCau);
+                        setPendingCollectReq(updated);
+                        if (updated.trangThai === "ThanhCong" && doiSoatBackend) {
+                          await reconciliationApi.chotDoiSoat(doiSoatBackend.maDoiSoat);
+                          setReconSuccess("Giao dịch thu bổ sung thành công và đã chốt đối soát.");
+                          setShowCollectModal(false);
+                          await syncAfterMutation();
+                        }
+                      } catch (err) {
+                        setReconError(err instanceof Error ? err.message : "Không kiểm tra được trạng thái giao dịch.");
+                      } finally {
+                        setReconBusy(false);
+                      }
+                    }}
+                    style={{ background: "var(--color-forest)", color: "white", border: "none", borderRadius: 6, padding: "5px 10px", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer" }}
+                  >
+                    Kiểm tra trạng thái GD
+                  </button>
+                </div>
+              </div>
+            )}
+
             <div className="flex justify-end gap-2">
               <button type="button" onClick={() => setShowCollectModal(false)} style={{ background: "white", border: "1px solid var(--color-bone)", borderRadius: 8, padding: "8px 16px", cursor: "pointer", fontSize: "0.85rem" }}>
                 Hủy
               </button>
               <button
                 type="button"
-                disabled={collectMethod === "cash" && cashTendered < extraAmount}
-                onClick={() => {
+                disabled={(collectMethod === "cash" && cashTendered < extraAmount) || reconBusy}
+                onClick={async () => {
                   const methodStr = collectMethod === "cash" ? "Tiền mặt tại quầy" : collectMethod === "pos" ? `Thẻ POS (${posTerminalCode}/${posAuthCode})` : "Quét VietQR";
+                  if (app.realApi) {
+                    setReconBusy(true);
+                    setReconError(null);
+                    try {
+                      let ds = await ensureConfirmedDoiSoat();
+                      if (ds.trangThai === "DaXacNhan") {
+                        ds = await reconciliationApi.yeuCauXuLyTien(ds.maDoiSoat);
+                      }
+                      const reqThu = await paymentApi.taoThuBoSung(
+                        ds.maDoiSoat,
+                        collectMethod === "cash" ? "TienMat" : collectMethod === "qr" ? "VietQR" : "VNPAY"
+                      );
+                      setPendingCollectReq(reqThu);
+                      if (reqThu.trangThai === "ThanhCong") {
+                        await reconciliationApi.chotDoiSoat(ds.maDoiSoat);
+                        setReconSuccess(`Đã thu bổ sung ${fmt(extraAmount)} và chốt đối soát đơn ${order.displayCode || order.id}.`);
+                        setShowCollectModal(false);
+                        await syncAfterMutation();
+                      } else {
+                        setReconSuccess(`Đã tạo yêu cầu thu bổ sung ${reqThu.maYeuCau} (${reqThu.trangThai}).`);
+                        await syncAfterMutation();
+                      }
+                    } catch (err) {
+                      setReconError(err instanceof Error ? err.message : "Không thể lập yêu cầu thu bổ sung.");
+                    } finally {
+                      setReconBusy(false);
+                    }
+                    return;
+                  }
+
                   app.settleOrder(order.id, true, {
                     method: methodStr,
                     amount: extraAmount,
@@ -723,17 +1091,17 @@ export default function ReconciliationSheet({ order, app, userRole = "staff", on
                   setShowCollectModal(false);
                 }}
                 style={{
-                  background: collectMethod === "cash" && cashTendered < extraAmount ? "#9CA3AF" : "var(--color-forest)",
+                  background: (collectMethod === "cash" && cashTendered < extraAmount) || reconBusy ? "#9CA3AF" : "var(--color-forest)",
                   color: "white",
                   border: "none",
                   borderRadius: 8,
                   padding: "8px 20px",
                   fontWeight: 700,
                   fontSize: "0.85rem",
-                  cursor: collectMethod === "cash" && cashTendered < extraAmount ? "not-allowed" : "pointer",
+                  cursor: (collectMethod === "cash" && cashTendered < extraAmount) || reconBusy ? "not-allowed" : "pointer",
                 }}
               >
-                ✓ Xác nhận đã thu đủ tiền → Khóa & Hoàn tất
+                {reconBusy ? "Đang xử lý..." : "✓ Xác nhận thu bổ sung → Khóa & Hoàn tất"}
               </button>
             </div>
           </div>
@@ -851,8 +1219,38 @@ export default function ReconciliationSheet({ order, app, userRole = "staff", on
               </button>
               <button
                 type="button"
-                onClick={() => {
+                disabled={reconBusy}
+                onClick={async () => {
                   const methodStr = refundMethod === "bank" ? `Chuyển khoản ${bankName} (${bankAccount} - ${bankHolder})` : "Tiền mặt tại quầy";
+                  if (app.realApi) {
+                    setReconBusy(true);
+                    setReconError(null);
+                    try {
+                      let ds = await ensureConfirmedDoiSoat();
+                      if (ds.trangThai === "DaXacNhan") {
+                        ds = await reconciliationApi.yeuCauXuLyTien(ds.maDoiSoat);
+                      }
+                      const hoanData = await refundApi.layTheoDon(donId);
+                      for (const ht of hoanData.items.filter((x) => x.trangThai !== "ThanhCong")) {
+                        await refundApi.xuLyHoan(ht.maHoanTien, refundNote || methodStr);
+                      }
+                      // Thử chốt đối soát nếu toàn bộ nghĩa vụ hoàn tiền đã thành công
+                      try {
+                        await reconciliationApi.chotDoiSoat(ds.maDoiSoat);
+                        setReconSuccess(`Đã hoàn cọc ${fmt(refundAmount)} và khóa đối soát đơn ${order.displayCode || order.id}.`);
+                      } catch {
+                        setReconSuccess(`Đã gửi lệnh xử lý hoàn tiền cọc ${fmt(refundAmount)}. Kiểm tra trạng thái lệnh hoàn ở bảng trên để chốt đối soát.`);
+                      }
+                      setShowRefundModal(false);
+                      await syncAfterMutation();
+                    } catch (err) {
+                      setReconError(err instanceof Error ? err.message : "Không thể thực hiện lệnh hoàn tiền cọc.");
+                    } finally {
+                      setReconBusy(false);
+                    }
+                    return;
+                  }
+
                   app.settleOrder(order.id, true, {
                     method: methodStr,
                     amount: refundAmount,
@@ -861,17 +1259,17 @@ export default function ReconciliationSheet({ order, app, userRole = "staff", on
                   setShowRefundModal(false);
                 }}
                 style={{
-                  background: "var(--color-forest)",
+                  background: reconBusy ? "#9CA3AF" : "var(--color-forest)",
                   color: "white",
                   border: "none",
                   borderRadius: 8,
                   padding: "8px 20px",
                   fontWeight: 700,
                   fontSize: "0.85rem",
-                  cursor: "pointer",
+                  cursor: reconBusy ? "not-allowed" : "pointer",
                 }}
               >
-                ✓ Xác nhận hoàn cọc → Khóa & Hoàn tất
+                {reconBusy ? "Đang xử lý..." : "✓ Xác nhận hoàn cọc → Khóa & Hoàn tất"}
               </button>
             </div>
           </div>
@@ -1144,9 +1542,47 @@ export default function ReconciliationSheet({ order, app, userRole = "staff", on
               </div>
             ) : (
               <form
-                onSubmit={(e) => {
+                onSubmit={async (e) => {
                   e.preventDefault();
                   if (!adjReason.trim() || adjAmount <= 0) return;
+                  if (app.realApi) {
+                    setReconBusy(true);
+                    setReconError(null);
+                    try {
+                      let createdAdjSurchargeId: number | undefined;
+                      if (adjSurchargeId) {
+                        const origId = Number(adjSurchargeId);
+                        if (Number.isFinite(origId)) {
+                          const signedAmount =
+                            adjType === "Hoàn trả" || adjType === "Bù trừ chiết khấu"
+                              ? -Math.abs(adjAmount)
+                              : Math.abs(adjAmount);
+                          const resFee = await surchargeApi.lapDieuChinhPhi(origId, {
+                            soTienDieuChinhCoDau: signedAmount,
+                            lyDo: adjReason.trim(),
+                          });
+                          createdAdjSurchargeId = resFee.maPhuPhi;
+                        }
+                      }
+                      if (doiSoatBackend?.maDoiSoat) {
+                        await reconciliationApi.lapDieuChinh(doiSoatBackend.maDoiSoat, {
+                          lyDoDieuChinh: adjReason.trim(),
+                          danhSachMaPhuPhiDieuChinh: createdAdjSurchargeId ? [createdAdjSurchargeId] : undefined,
+                          ghiChu: `${adjType}: ${fmt(adjAmount)}`,
+                        });
+                      }
+                      setAdjMessage(
+                        `Đã lập chứng từ điều chỉnh bù trừ ${fmt(adjAmount)} cho đơn ${order.displayCode || order.id} trên máy chủ.`
+                      );
+                      await syncAfterMutation();
+                    } catch (err) {
+                      setReconError(err instanceof Error ? err.message : "Không thể lập chứng từ điều chỉnh sau chốt.");
+                    } finally {
+                      setReconBusy(false);
+                    }
+                    return;
+                  }
+
                   app.saveFinancialAdjustment({
                     orderId: order.id,
                     type: adjType,
@@ -1156,10 +1592,32 @@ export default function ReconciliationSheet({ order, app, userRole = "staff", on
                     createdBy: "Quản trị viên",
                     approvedBy: "Quản trị viên",
                   });
-                  setAdjMessage(`Đã lập thành công chứng từ điều chỉnh bù trừ ${fmt(adjAmount)} cho đơn ${order.id}.`);
+                  setAdjMessage(`Đã lập thành công chứng từ điều chỉnh bù trừ ${fmt(adjAmount)} cho đơn ${order.displayCode || order.id}.`);
                 }}
                 className="flex flex-col gap-3"
               >
+                {app.realApi && approvedSurcharges.some((s) => s.backendId) && (
+                  <div>
+                    <label style={{ fontSize: "0.8rem", fontWeight: 700, display: "block", marginBottom: 4 }}>
+                      Phụ phí gốc cần điều chỉnh (tùy chọn):
+                    </label>
+                    <select
+                      value={adjSurchargeId}
+                      onChange={(e) => setAdjSurchargeId(e.target.value)}
+                      className="form-select"
+                      style={{ width: "100%", padding: 8, borderRadius: 6, border: "1px solid var(--color-bone)", fontSize: "0.82rem" }}
+                    >
+                      <option value="">-- Lập đối soát điều chỉnh tổng hợp --</option>
+                      {approvedSurcharges
+                        .filter((s) => s.backendId)
+                        .map((s) => (
+                          <option key={s.id} value={String(s.backendId)}>
+                            {s.type} ({fmt(s.amount)}) - {s.reason}
+                          </option>
+                        ))}
+                    </select>
+                  </div>
+                )}
                 <div>
                   <label style={{ fontSize: "0.8rem", fontWeight: 700, display: "block", marginBottom: 4 }}>
                     Nghiệp vụ điều chỉnh bù trừ:

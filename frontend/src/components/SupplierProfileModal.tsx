@@ -1,5 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { type useApp } from "../App";
+import { supplierApi, type LichSuNhapBackend } from "../services/api";
 import { fmt, type Supplier } from "../store";
 
 interface Props {
@@ -11,11 +12,6 @@ interface Props {
 
 /**
  * UC7.3 & UC7.4: Hồ sơ chi tiết nhà cung cấp & Thay đổi tình trạng hợp tác
- * - Hiển thị thông tin liên hệ, thuế, địa chỉ.
- * - Thống kê lũy kế: Tổng giá trị hàng thực nhận (chỉ phiếu "Đã nhập kho", loại trừ nháp/hủy), tổng thiết bị chấp nhận, số phiếu.
- * - Danh mục các mặt hàng từng nhập từ NCC này.
- * - Lịch sử chứng từ các phiếu nhập (có thể click để mở xem chi tiết).
- * - Chuyển đổi nhanh tình trạng hợp tác kèm lý do (UC7.4).
  */
 export default function SupplierProfileModal({ supplier, app, onClose, onOpenReceipt }: Props) {
   const [activeTab, setActiveTab] = useState<"products" | "receipts">("products");
@@ -24,26 +20,53 @@ export default function SupplierProfileModal({ supplier, app, onClose, onOpenRec
     supplier.cooperationStatus === "active" ? "inactive" : "active"
   );
   const [statusReason, setStatusReason] = useState("");
+  const [statusBusy, setStatusBusy] = useState(false);
+  const [statusError, setStatusError] = useState<string | null>(null);
+  const [statusSuccess, setStatusSuccess] = useState<string | null>(null);
+  const [historyBackend, setHistoryBackend] = useState<LichSuNhapBackend | null>(null);
+  const [loadingHistory, setLoadingHistory] = useState(false);
 
-  // Lọc tất cả phiếu nhập của NCC này
+  useEffect(() => {
+    if (!app.realApi) return;
+    const nccId = Number(supplier.id);
+    if (!Number.isFinite(nccId)) return;
+    let cancelled = false;
+    setLoadingHistory(true);
+    void supplierApi
+      .layLichSuNhap(nccId, { trang: 1, soMoiTrang: 50 })
+      .then((res) => {
+        if (!cancelled) setHistoryBackend(res);
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setLoadingHistory(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [app.realApi, supplier.id]);
+
+  // Lọc tất cả phiếu nhập của NCC này (cho hiển thị danh sách chứng từ)
   const supplierReceipts = app.importReceipts.filter(
     (r) => r.supplierId === supplier.id || r.supplierId === supplier.displayCode
   );
-
-  // Chỉ tính thống kê với phiếu ĐÃ NHẬP KHO (phiếu nháp/hủy không cộng dồn theo quy tắc UC7.3)
   const confirmedReceipts = supplierReceipts.filter((r) => r.status === "Đã nhập kho");
 
-  const totalImportValue = confirmedReceipts.reduce(
-    (sum, r) => sum + r.lines.reduce((ls, l) => ls + l.quantity * l.unitPrice, 0),
-    0
-  );
+  const totalImportValue = app.realApi && historyBackend
+    ? Number(historyBackend.tongGiaTriNhap ?? 0)
+    : confirmedReceipts.reduce(
+        (sum, r) => sum + r.lines.reduce((ls, l) => ls + l.quantity * l.unitPrice, 0),
+        0
+      );
 
-  const totalEquipmentAccepted = confirmedReceipts.reduce(
-    (sum, r) =>
-      sum +
-      r.lines.reduce((ls, l) => ls + (l.acceptedQty !== undefined ? l.acceptedQty : l.quantity), 0),
-    0
-  );
+  const totalEquipmentAccepted = app.realApi && historyBackend
+    ? Number(historyBackend.tongSoLuongThietBi ?? 0)
+    : confirmedReceipts.reduce(
+        (sum, r) =>
+          sum +
+          r.lines.reduce((ls, l) => ls + (l.acceptedQty !== undefined ? l.acceptedQty : l.quantity), 0),
+        0
+      );
 
   // Tổng hợp các sản phẩm từng nhập từ NCC này
   const importedProductMap = new Map<
@@ -51,44 +74,93 @@ export default function SupplierProfileModal({ supplier, app, onClose, onOpenRec
     { productId: string; name: string; totalQty: number; lastUnitPrice: number; lastDate: string }
   >();
 
-  confirmedReceipts.forEach((r) => {
-    r.lines.forEach((l) => {
-      const prod = app.products.find((p) => p.id === l.productId);
-      const existing = importedProductMap.get(l.productId);
-      if (existing) {
-        existing.totalQty += l.acceptedQty !== undefined ? l.acceptedQty : l.quantity;
-        existing.lastUnitPrice = l.unitPrice;
-        existing.lastDate = r.confirmedAt || r.createdAt;
-      } else {
-        importedProductMap.set(l.productId, {
-          productId: l.productId,
-          name: prod?.name || l.productNameSnapshot || l.productId,
-          totalQty: l.acceptedQty !== undefined ? l.acceptedQty : l.quantity,
-          lastUnitPrice: l.unitPrice,
-          lastDate: r.confirmedAt || r.createdAt,
-        });
-      }
+  if (app.realApi && historyBackend) {
+    (historyBackend.phieuNhaps?.duLieu ?? []).forEach((pn) => {
+      pn.chiTietSanPham.forEach((ct) => {
+        const key = String(ct.maSanPham);
+        const existing = importedProductMap.get(key);
+        const dateStr = pn.ngayXacNhan || pn.ngayNhapThucTe || pn.ngayLap;
+        if (existing) {
+          existing.totalQty += Number(ct.soLuong ?? 0);
+          existing.lastUnitPrice = Number(ct.donGiaNhap ?? 0);
+          existing.lastDate = dateStr;
+        } else {
+          importedProductMap.set(key, {
+            productId: key,
+            name: ct.tenSanPham,
+            totalQty: Number(ct.soLuong ?? 0),
+            lastUnitPrice: Number(ct.donGiaNhap ?? 0),
+            lastDate: dateStr,
+          });
+        }
+      });
     });
-  });
+  } else {
+    confirmedReceipts.forEach((r) => {
+      r.lines.forEach((l) => {
+        const prod = app.products.find((p) => p.id === l.productId);
+        const existing = importedProductMap.get(l.productId);
+        if (existing) {
+          existing.totalQty += l.acceptedQty !== undefined ? l.acceptedQty : l.quantity;
+          existing.lastUnitPrice = l.unitPrice;
+          existing.lastDate = r.confirmedAt || r.createdAt;
+        } else {
+          importedProductMap.set(l.productId, {
+            productId: l.productId,
+            name: prod?.name || l.productNameSnapshot || l.productId,
+            totalQty: l.acceptedQty !== undefined ? l.acceptedQty : l.quantity,
+            lastUnitPrice: l.unitPrice,
+            lastDate: r.confirmedAt || r.createdAt,
+          });
+        }
+      });
+    });
+  }
 
   const importedProducts = Array.from(importedProductMap.values());
 
-  const handleStatusChange = (e: React.FormEvent) => {
+  const handleStatusChange = async (e: React.FormEvent) => {
     e.preventDefault();
+    setStatusError(null);
+    setStatusSuccess(null);
     if (!statusReason.trim()) {
-      alert("Vui lòng nhập lý do thay đổi trạng thái hợp tác (theo quy tắc UC7.4).");
+      setStatusError("Vui lòng nhập lý do thay đổi trạng thái hợp tác.");
+      return;
+    }
+
+    if (app.realApi) {
+      const nccId = Number(supplier.id);
+      if (!Number.isFinite(nccId)) return;
+      setStatusBusy(true);
+      try {
+        await supplierApi.doiTrangThaiHopTac(
+          nccId,
+          newStatus === "active" ? "DangHopTac" : "NgungHopTac",
+          statusReason.trim()
+        );
+        await app.refreshSuppliers?.();
+        setStatusSuccess(
+          `Đã chuyển trạng thái nhà cung cấp thành: ${newStatus === "active" ? "Đang hợp tác" : "Ngừng hợp tác"}.`
+        );
+        setShowStatusModal(false);
+        setStatusReason("");
+      } catch (err) {
+        setStatusError(err instanceof Error ? err.message : "Không thể cập nhật trạng thái hợp tác.");
+      } finally {
+        setStatusBusy(false);
+      }
       return;
     }
 
     const res = app.toggleSupplierStatus(supplier.id, newStatus, statusReason.trim());
     if (res.ok) {
-      alert(
-        `Đã chuyển trạng thái nhà cung cấp thành: ${newStatus === "active" ? "Đang hợp tác" : "Ngừng hợp tác"}!`
+      setStatusSuccess(
+        `Đã chuyển trạng thái nhà cung cấp thành: ${newStatus === "active" ? "Đang hợp tác" : "Ngừng hợp tác"}.`
       );
       setShowStatusModal(false);
       setStatusReason("");
     } else {
-      alert(res.message);
+      setStatusError(res.message);
     }
   };
 
@@ -179,6 +251,21 @@ export default function SupplierProfileModal({ supplier, app, onClose, onOpenRec
 
         {/* Modal Body */}
         <div style={{ padding: "20px 24px", overflowY: "auto", display: "grid", gap: "18px" }}>
+          {statusError && (
+            <div style={{ background: "#FEF2F2", border: "1px solid #FECACA", color: "#B91C1C", borderRadius: 8, padding: "8px 12px", fontSize: "0.8rem", fontWeight: 600 }}>
+              {statusError}
+            </div>
+          )}
+          {statusSuccess && (
+            <div style={{ background: "#F0FDF4", border: "1px solid #BBF7D0", color: "#15803D", borderRadius: 8, padding: "8px 12px", fontSize: "0.8rem", fontWeight: 600 }}>
+              {statusSuccess}
+            </div>
+          )}
+          {loadingHistory && (
+            <div style={{ fontSize: "0.78rem", color: "#6B7280" }}>
+              Đang tải lịch sử nhập kho thực tế của nhà cung cấp...
+            </div>
+          )}
           {/* Card Thông tin đối tác & Thao tác trạng thái */}
           <div
             style={{

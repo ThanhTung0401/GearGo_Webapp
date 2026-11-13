@@ -1,9 +1,22 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useApp } from "../App";
 import { isRealApiEnabled } from "../services/apiClient";
 import { staffApi } from "../services/api/staffApi";
-import { fmt, statusColors, type CustomerAccount, type Review, type RentalPolicyConfig, type PolicyVersion, type FinancialAdjustment, type AuditLogEntry, type AppNotification } from "../store";
-import Icon, { type IconName } from "../components/Icon";
+import { reviewApi } from "../services/api/reviewApi";
+import { policyApi, type KiemTraChinhSachBackend } from "../services/api/policyApi";
+import { notificationApi, type ThongBaoGuiLoiBackend } from "../services/api/notificationApi";
+import { paymentApi, type GiaoDichCanDoiChieuBackend } from "../services/api/paymentApi";
+import { reconciliationApi, type DoiSoatBackend } from "../services/api/reconciliationApi";
+import { surchargeApi } from "../services/api/surchargeApi";
+import { auditApi } from "../services/api/auditApi";
+import {
+  mapDanhGiaToReview,
+  mapNhatKyToAuditLog,
+  type AuditLogEntryWithRef,
+} from "../services/mappers/reviewNotifAuditMapper";
+import { buildTaoChinhSachRequestFromConfig } from "../services/mappers/policyPromoMapper";
+import { fmt, statusColors, type CustomerAccount, type Review, type RentalPolicyConfig, type PolicyVersion, type FinancialAdjustment, type AppNotification } from "../store";
+import Icon from "../components/Icon";
 
 // ─── 1. Quản lý Khách Hàng (UC1.13) ──────────────────────────────────────────
 export function CustomersTab({ app }: { app: ReturnType<typeof useApp> }) {
@@ -14,13 +27,16 @@ export function CustomersTab({ app }: { app: ReturnType<typeof useApp> }) {
   const [lockReason, setLockReason] = useState("");
 
   // State kết nối API thật /api/v1/admin/tai-khoan?vaiTro=KhachHang (UC13 / UC1.13, UC11)
+  const realApi = app.realApi || isRealApiEnabled();
   const [apiCustomers, setApiCustomers] = useState<CustomerAccount[]>([]);
   const [customerIdToTaiKhoanId, setCustomerIdToTaiKhoanId] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
   const [apiError, setApiError] = useState("");
+  const [lockError, setLockError] = useState("");
 
   const loadCustomerList = async () => {
-    if (!isRealApiEnabled()) return;
+    if (!realApi) return;
     setLoading(true);
     setApiError("");
     try {
@@ -28,16 +44,21 @@ export function CustomersTab({ app }: { app: ReturnType<typeof useApp> }) {
         vaiTro: "KhachHang",
         tuKhoa: searchQuery.trim() || undefined,
         trangThai: statusFilter === "all" ? undefined : statusFilter === "active" ? "HoatDong" : "BiKhoa",
+        soMoiTrang: 50,
       });
 
       const idMap: Record<string, number> = {};
       const mapped: CustomerAccount[] = res.items.map((tk) => {
-        const custId = `KH${String(tk.maKhachHang ?? tk.maTaiKhoan).padStart(3, "0")}`;
+        const rawCustomerId = String(tk.maKhachHang ?? tk.maTaiKhoan);
+        const custId = `KH${rawCustomerId.padStart(3, "0")}`;
         idMap[custId] = tk.maTaiKhoan;
 
-        // Tính lịch sử đơn thuê và tiền cọc từ đơn hàng của hệ thống
+        // Tính lịch sử đơn thuê và tiền cọc từ đơn hàng đã đồng bộ của hệ thống
         const matchingOrders = app.orders.filter(
-          (o) => o.customerId === custId || (tk.soDienThoai && o.customerPhone === tk.soDienThoai)
+          (o) =>
+            o.customerId === custId ||
+            o.customerId === rawCustomerId ||
+            (tk.soDienThoai && o.customerPhone === tk.soDienThoai)
         );
         const totalOrders = matchingOrders.length;
         const totalSpent = matchingOrders.reduce((sum, o) => sum + (o.rental - o.discount), 0);
@@ -70,10 +91,10 @@ export function CustomersTab({ app }: { app: ReturnType<typeof useApp> }) {
   };
 
   useEffect(() => {
-    loadCustomerList();
-  }, [searchQuery, statusFilter]);
+    void loadCustomerList();
+  }, [realApi, searchQuery, statusFilter]);
 
-  const filtered = isRealApiEnabled()
+  const filtered = realApi
     ? apiCustomers
     : app.customers.filter((c) => {
         const matchQuery =
@@ -87,15 +108,25 @@ export function CustomersTab({ app }: { app: ReturnType<typeof useApp> }) {
 
   const handleConfirmLock = async () => {
     if (!lockModalCustomer) return;
-    if (isRealApiEnabled()) {
-      try {
-        const maTaiKhoan = customerIdToTaiKhoanId[lockModalCustomer.id] || parseInt(lockModalCustomer.id.replace(/\D/g, ""), 10);
-        await staffApi.khoaTaiKhoan(maTaiKhoan, lockReason || "Khóa tài khoản khách hàng vi phạm quy chế");
-        await loadCustomerList();
-      } catch (err) {
-        alert(err instanceof Error ? err.message : "Không thể khóa tài khoản khách hàng.");
+    if (realApi) {
+      const maTaiKhoan = customerIdToTaiKhoanId[lockModalCustomer.id] || parseInt(lockModalCustomer.id.replace(/\D/g, ""), 10);
+      if (!Number.isFinite(maTaiKhoan) || maTaiKhoan <= 0) {
+        setLockError("Không xác định được mã tài khoản để khóa.");
         return;
       }
+      setActionLoading(true);
+      setLockError("");
+      try {
+        await staffApi.khoaTaiKhoan(maTaiKhoan, lockReason.trim() || "Khóa tài khoản khách hàng vi phạm quy chế");
+        await loadCustomerList();
+        setLockModalCustomer(null);
+        setLockReason("");
+      } catch (err) {
+        setLockError(err instanceof Error ? err.message : "Không thể khóa tài khoản khách hàng.");
+      } finally {
+        setActionLoading(false);
+      }
+      return;
     }
     app.toggleCustomerLock(lockModalCustomer.id, lockReason);
     setLockModalCustomer(null);
@@ -103,15 +134,23 @@ export function CustomersTab({ app }: { app: ReturnType<typeof useApp> }) {
   };
 
   const handleUnlockCustomer = async (cust: CustomerAccount) => {
-    if (isRealApiEnabled()) {
+    if (realApi) {
+      const maTaiKhoan = customerIdToTaiKhoanId[cust.id] || parseInt(cust.id.replace(/\D/g, ""), 10);
+      if (!Number.isFinite(maTaiKhoan) || maTaiKhoan <= 0) {
+        setApiError("Không xác định được mã tài khoản để mở khóa.");
+        return;
+      }
+      setActionLoading(true);
+      setApiError("");
       try {
-        const maTaiKhoan = customerIdToTaiKhoanId[cust.id] || parseInt(cust.id.replace(/\D/g, ""), 10);
         await staffApi.moKhoaTaiKhoan(maTaiKhoan, "Mở khóa tài khoản khách hàng");
         await loadCustomerList();
       } catch (err) {
-        alert(err instanceof Error ? err.message : "Không thể mở khóa tài khoản khách hàng.");
-        return;
+        setApiError(err instanceof Error ? err.message : "Không thể mở khóa tài khoản khách hàng.");
+      } finally {
+        setActionLoading(false);
       }
+      return;
     }
     app.toggleCustomerLock(cust.id);
   };
@@ -133,10 +172,31 @@ export function CustomersTab({ app }: { app: ReturnType<typeof useApp> }) {
         </div>
         <div className="flex items-center gap-2">
           <span className="badge badge-success" style={{ fontSize: "0.8rem", padding: "6px 12px" }}>
-            Tổng {app.customers.length} khách hàng
+            Tổng {realApi ? apiCustomers.length : app.customers.length} khách hàng
           </span>
         </div>
       </div>
+
+      {apiError && (
+        <div
+          role="alert"
+          style={{
+            background: "#FEF2F2",
+            border: "1px solid #FECACA",
+            color: "#B91C1C",
+            borderRadius: 8,
+            padding: "10px 14px",
+            marginBottom: 14,
+            fontSize: "0.82rem",
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+          }}
+        >
+          <Icon name="alert-circle" size={16} />
+          <span>{apiError}</span>
+        </div>
+      )}
 
       {/* Bộ lọc & Tìm kiếm */}
       <div className="flex gap-3 mb-4 flex-wrap">
@@ -172,7 +232,13 @@ export function CustomersTab({ app }: { app: ReturnType<typeof useApp> }) {
             </tr>
           </thead>
           <tbody>
-            {filtered.length === 0 ? (
+            {loading ? (
+              <tr>
+                <td colSpan={9} style={{ padding: 24, textAlign: "center", color: "#6B7280", fontSize: "0.85rem" }}>
+                  Đang tải danh sách tài khoản khách hàng...
+                </td>
+              </tr>
+            ) : filtered.length === 0 ? (
               <tr>
                 <td colSpan={9} style={{ padding: 24, textAlign: "center", color: "#9CA3AF", fontSize: "0.85rem" }}>
                   Không tìm thấy khách hàng nào phù hợp với bộ lọc.
@@ -307,6 +373,26 @@ export function CustomersTab({ app }: { app: ReturnType<typeof useApp> }) {
               <button onClick={() => setLockModalCustomer(null)} className="btn btn-ghost btn-sm text-lg">×</button>
             </div>
             <div className="modal-body">
+              {lockError && (
+                <div
+                  role="alert"
+                  style={{
+                    background: "#FEF2F2",
+                    border: "1px solid #FECACA",
+                    color: "#B91C1C",
+                    borderRadius: 8,
+                    padding: "8px 10px",
+                    fontSize: "0.78rem",
+                    marginBottom: 10,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6,
+                  }}
+                >
+                  <Icon name="alert-circle" size={15} />
+                  <span>{lockError}</span>
+                </div>
+              )}
               <p style={{ fontSize: "0.85rem", color: "#4B5563", marginBottom: 12 }}>
                 Khi bị khóa, khách hàng sẽ không thể đặt thuê thiết bị mới. Vui lòng nhập lý do khóa tài khoản:
               </p>
@@ -318,8 +404,27 @@ export function CustomersTab({ app }: { app: ReturnType<typeof useApp> }) {
                 style={{ width: "100%", border: "1px solid var(--color-bone)", borderRadius: 8, padding: 10, fontSize: "0.85rem", marginBottom: 14 }}
               />
               <div className="flex gap-2">
-                <button onClick={() => setLockModalCustomer(null)} className="btn btn-secondary btn-md" style={{ flex: 1 }}>Hủy</button>
-                <button onClick={handleConfirmLock} className="btn btn-md" style={{ flex: 1, background: "#DC2626", color: "white", border: 0 }}>Xác nhận khóa</button>
+                <button
+                  type="button"
+                  disabled={actionLoading}
+                  onClick={() => {
+                    setLockModalCustomer(null);
+                    setLockError("");
+                  }}
+                  className="btn btn-secondary btn-md"
+                  style={{ flex: 1 }}
+                >
+                  Hủy
+                </button>
+                <button
+                  type="button"
+                  disabled={actionLoading}
+                  onClick={() => void handleConfirmLock()}
+                  className="btn btn-md"
+                  style={{ flex: 1, background: "#DC2626", color: "white", border: 0 }}
+                >
+                  {actionLoading ? "Đang xử lý..." : "Xác nhận khóa"}
+                </button>
               </div>
             </div>
           </div>
@@ -331,16 +436,49 @@ export function CustomersTab({ app }: { app: ReturnType<typeof useApp> }) {
 
 // ─── 2. Kiểm Duyệt Đánh Giá (UC9.2) ──────────────────────────────────────────
 export function ReviewsTab({ app }: { app: ReturnType<typeof useApp> }) {
+  const realApi = app.realApi || isRealApiEnabled();
   const [ratingFilter, setRatingFilter] = useState<number>(0);
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "hidden">("all");
   const [search, setSearch] = useState("");
   const [hideModalReview, setHideModalReview] = useState<Review | null>(null);
-  const [hideReason, setHideReason] = useState("Vi phạm ngôn từ / Spammer");
+  const [hideReason, setHideReason] = useState("Vi phạm ngôn từ / Thô tục");
   const [orderBasisReview, setOrderBasisReview] = useState<Review | null>(null);
   const [replyModalReview, setReplyModalReview] = useState<Review | null>(null);
   const [replyText, setReplyText] = useState("");
 
-  const filtered = app.reviews.filter((r) => {
+  // State đồng bộ API đánh giá thật (/api/v1/admin/danh-gia)
+  const [apiReviews, setApiReviews] = useState<Review[]>([]);
+  const [reviewLoading, setReviewLoading] = useState(false);
+  const [actionBusy, setActionBusy] = useState(false);
+  const [reviewError, setReviewError] = useState("");
+  const [reviewSuccess, setReviewSuccess] = useState("");
+  const [hideError, setHideError] = useState("");
+  const [replyError, setReplyError] = useState("");
+
+  const loadReviews = useCallback(async () => {
+    if (!realApi) return;
+    setReviewLoading(true);
+    setReviewError("");
+    try {
+      const res = await reviewApi.adminTimKiem({
+        trangThai: statusFilter === "active" ? "HienThi" : statusFilter === "hidden" ? "BiAn" : undefined,
+        soMoiTrang: 50,
+      });
+      setApiReviews((res.items ?? []).map(mapDanhGiaToReview));
+    } catch (err) {
+      setReviewError(err instanceof Error ? err.message : "Không thể tải danh sách đánh giá từ máy chủ.");
+    } finally {
+      setReviewLoading(false);
+    }
+  }, [realApi, statusFilter]);
+
+  useEffect(() => {
+    void loadReviews();
+  }, [loadReviews]);
+
+  const sourceReviews = realApi ? apiReviews : app.reviews;
+
+  const filtered = sourceReviews.filter((r) => {
     const matchRating = ratingFilter === 0 || r.rating === ratingFilter;
     const matchStatus = statusFilter === "all" || r.status === statusFilter;
     const matchSearch =
@@ -350,21 +488,99 @@ export function ReviewsTab({ app }: { app: ReturnType<typeof useApp> }) {
     return matchRating && matchStatus && matchSearch;
   });
 
-  const handleConfirmHide = () => {
+  const handleConfirmHide = async () => {
     if (!hideModalReview) return;
+    if (realApi) {
+      const reviewId = Number(hideModalReview.id);
+      if (!Number.isFinite(reviewId) || reviewId <= 0) {
+        setHideError("Mã đánh giá không hợp lệ để kiểm duyệt.");
+        return;
+      }
+      setActionBusy(true);
+      setHideError("");
+      setReviewSuccess("");
+      try {
+        await reviewApi.adminAn(reviewId, hideReason);
+        await Promise.all([loadReviews(), app.refreshReviews?.()]);
+        setReviewSuccess(`Đã ẩn đánh giá #${hideModalReview.id} với lý do vi phạm.`);
+        setHideModalReview(null);
+      } catch (err) {
+        setHideError(err instanceof Error ? err.message : "Không thể ẩn đánh giá trên máy chủ.");
+      } finally {
+        setActionBusy(false);
+      }
+      return;
+    }
     app.hideReview(hideModalReview.id, hideReason);
     setHideModalReview(null);
   };
 
-  const handleConfirmReply = () => {
+  const handleConfirmReply = async () => {
     if (!replyModalReview || !replyText.trim()) return;
+    if (realApi) {
+      const reviewId = Number(replyModalReview.id);
+      if (!Number.isFinite(reviewId) || reviewId <= 0) {
+        setReplyError("Mã đánh giá không hợp lệ để gửi phản hồi.");
+        return;
+      }
+      setActionBusy(true);
+      setReplyError("");
+      setReviewSuccess("");
+      try {
+        await reviewApi.phanHoi(reviewId, replyText.trim());
+        await Promise.all([loadReviews(), app.refreshReviews?.()]);
+        setReviewSuccess(`Đã phát hành phản hồi chính thức cho đánh giá #${replyModalReview.id}.`);
+        setReplyModalReview(null);
+        setReplyText("");
+      } catch (err) {
+        setReplyError(err instanceof Error ? err.message : "Không thể lưu phản hồi đánh giá.");
+      } finally {
+        setActionBusy(false);
+      }
+      return;
+    }
     app.replyReview(replyModalReview.id, replyText.trim());
     setReplyModalReview(null);
     setReplyText("");
   };
 
+  const handleRestoreReview = async (rev: Review) => {
+    if (realApi) {
+      const reviewId = Number(rev.id);
+      if (!Number.isFinite(reviewId) || reviewId <= 0) {
+        setReviewError("Mã đánh giá không hợp lệ để khôi phục.");
+        return;
+      }
+      setActionBusy(true);
+      setReviewError("");
+      setReviewSuccess("");
+      try {
+        await reviewApi.adminKhoiPhuc(reviewId, "Mở hiển thị lại đánh giá đã kiểm duyệt");
+        await Promise.all([loadReviews(), app.refreshReviews?.()]);
+        setReviewSuccess(`Đã khôi phục hiển thị đánh giá #${rev.id}.`);
+      } catch (err) {
+        setReviewError(err instanceof Error ? err.message : "Không thể khôi phục hiển thị đánh giá.");
+      } finally {
+        setActionBusy(false);
+      }
+      return;
+    }
+    app.addAuditLog({
+      actor: "Admin",
+      role: "Quản trị viên",
+      action: "Bỏ ẩn đánh giá",
+      targetEntity: "Review",
+      targetId: rev.id,
+      detail: "Mở hiển thị lại đánh giá đã kiểm duyệt",
+    });
+  };
+
   const orderBasisDetail = orderBasisReview
-    ? app.orders.find((o) => o.id === orderBasisReview.orderId)
+    ? app.orders.find(
+        (o) =>
+          o.id === orderBasisReview.orderId ||
+          String(o.backendId ?? "") === orderBasisReview.orderId
+      )
     : null;
 
   return (
@@ -378,10 +594,64 @@ export function ReviewsTab({ app }: { app: ReturnType<typeof useApp> }) {
             Kiểm tra và xử lý đánh giá theo quy tắc khách quan: Đánh giá điểm thấp không phải lý do vi phạm.
           </p>
         </div>
-        <span className="badge badge-success" style={{ padding: "6px 12px", fontSize: "0.8rem" }}>
-          Tổng cộng {app.reviews.length} đánh giá
-        </span>
+        <div className="flex items-center gap-2">
+          {realApi && (
+            <button
+              type="button"
+              disabled={reviewLoading}
+              onClick={() => void loadReviews()}
+              className="btn btn-secondary btn-sm"
+            >
+              <span className="icon-label"><Icon name="refresh" size={14} /> Làm mới</span>
+            </button>
+          )}
+          <span className="badge badge-success" style={{ padding: "6px 12px", fontSize: "0.8rem" }}>
+            Tổng cộng {sourceReviews.length} đánh giá
+          </span>
+        </div>
       </div>
+
+      {reviewError && (
+        <div
+          role="alert"
+          style={{
+            background: "#FEF2F2",
+            border: "1px solid #FECACA",
+            color: "#B91C1C",
+            borderRadius: 8,
+            padding: "10px 14px",
+            marginBottom: 14,
+            fontSize: "0.82rem",
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+          }}
+        >
+          <Icon name="alert-circle" size={16} />
+          <span>{reviewError}</span>
+        </div>
+      )}
+
+      {reviewSuccess && (
+        <div
+          role="status"
+          style={{
+            background: "#DCFCE7",
+            border: "1px solid #A7F3D0",
+            color: "#15803D",
+            borderRadius: 8,
+            padding: "10px 14px",
+            marginBottom: 14,
+            fontSize: "0.82rem",
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+          }}
+        >
+          <Icon name="check" size={16} />
+          <span>{reviewSuccess}</span>
+        </div>
+      )}
 
       {/* Thông điệp nghiệp vụ bất biến UC9.2 */}
       <div style={{ background: "#EFF6FF", border: "1px solid #BFDBFE", borderRadius: 10, padding: "10px 14px", marginBottom: 16, display: "flex", alignItems: "center", gap: 10 }}>
@@ -430,7 +700,11 @@ export function ReviewsTab({ app }: { app: ReturnType<typeof useApp> }) {
 
       {/* Reviews list */}
       <div className="flex flex-col gap-3">
-        {filtered.length === 0 ? (
+        {reviewLoading ? (
+          <div style={{ background: "white", borderRadius: 12, border: "1px solid var(--color-bone)", padding: 30, textAlign: "center", color: "#6B7280" }}>
+            Đang tải danh sách đánh giá từ máy chủ...
+          </div>
+        ) : filtered.length === 0 ? (
           <div style={{ background: "white", borderRadius: 12, border: "1px solid var(--color-bone)", padding: 30, textAlign: "center", color: "#6B7280" }}>
             Không tìm thấy đánh giá nào phù hợp.
           </div>
@@ -538,6 +812,7 @@ export function ReviewsTab({ app }: { app: ReturnType<typeof useApp> }) {
                   onClick={() => {
                     setReplyModalReview(rev);
                     setReplyText(rev.storeResponse?.response || rev.response || "");
+                    setReplyError("");
                   }}
                   style={{
                     background: "#F0FDF4",
@@ -558,9 +833,11 @@ export function ReviewsTab({ app }: { app: ReturnType<typeof useApp> }) {
                 {rev.status === "active" ? (
                   <button
                     type="button"
+                    disabled={actionBusy}
                     onClick={() => {
                       setHideModalReview(rev);
                       setHideReason("Vi phạm ngôn từ / Thô tục");
+                      setHideError("");
                     }}
                     style={{
                       background: "white",
@@ -579,10 +856,8 @@ export function ReviewsTab({ app }: { app: ReturnType<typeof useApp> }) {
                 ) : (
                   <button
                     type="button"
-                    onClick={() => {
-                      app.reviews = app.reviews.map((r) => r.id === rev.id ? { ...r, status: "active", hiddenReason: undefined } : r);
-                      app.addAuditLog({ actor: "Admin", role: "Quản trị viên", action: "Bỏ ẩn đánh giá", targetEntity: "Review", targetId: rev.id, detail: "Mở hiển thị lại đánh giá đã kiểm duyệt" });
-                    }}
+                    disabled={actionBusy}
+                    onClick={() => void handleRestoreReview(rev)}
                     style={{
                       background: "var(--color-parchment)",
                       border: "1px solid var(--color-bone)",
@@ -664,6 +939,26 @@ export function ReviewsTab({ app }: { app: ReturnType<typeof useApp> }) {
               <button onClick={() => setReplyModalReview(null)} className="btn btn-ghost btn-sm text-lg">×</button>
             </div>
             <div className="modal-body">
+              {replyError && (
+                <div
+                  role="alert"
+                  style={{
+                    background: "#FEF2F2",
+                    border: "1px solid #FECACA",
+                    color: "#B91C1C",
+                    borderRadius: 8,
+                    padding: "8px 10px",
+                    fontSize: "0.78rem",
+                    marginBottom: 10,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6,
+                  }}
+                >
+                  <Icon name="alert-circle" size={15} />
+                  <span>{replyError}</span>
+                </div>
+              )}
               <div style={{ background: "#F8FAFC", borderRadius: 8, padding: 10, border: "1px solid #E2E8F0", marginBottom: 12, fontSize: "0.8rem" }}>
                 <div style={{ fontWeight: 700, color: "var(--color-bark)" }}>{replyModalReview.customerName} đánh giá {replyModalReview.rating} sao:</div>
                 <div style={{ fontStyle: "italic", color: "#475569", marginTop: 2 }}>"{replyModalReview.comment}"</div>
@@ -681,9 +976,24 @@ export function ReviewsTab({ app }: { app: ReturnType<typeof useApp> }) {
               </div>
             </div>
             <div className="modal-footer">
-              <button onClick={() => setReplyModalReview(null)} className="btn btn-secondary btn-sm">Hủy</button>
-              <button onClick={handleConfirmReply} className="btn btn-primary btn-sm" disabled={!replyText.trim()}>
-                Lưu và phát hành phản hồi
+              <button
+                type="button"
+                disabled={actionBusy}
+                onClick={() => {
+                  setReplyModalReview(null);
+                  setReplyError("");
+                }}
+                className="btn btn-secondary btn-sm"
+              >
+                Hủy
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleConfirmReply()}
+                className="btn btn-primary btn-sm"
+                disabled={actionBusy || !replyText.trim()}
+              >
+                {actionBusy ? "Đang lưu..." : "Lưu và phát hành phản hồi"}
               </button>
             </div>
           </div>
@@ -699,6 +1009,26 @@ export function ReviewsTab({ app }: { app: ReturnType<typeof useApp> }) {
               <button onClick={() => setHideModalReview(null)} className="btn btn-ghost btn-sm text-lg">×</button>
             </div>
             <div className="modal-body">
+              {hideError && (
+                <div
+                  role="alert"
+                  style={{
+                    background: "#FEF2F2",
+                    border: "1px solid #FECACA",
+                    color: "#B91C1C",
+                    borderRadius: 8,
+                    padding: "8px 10px",
+                    fontSize: "0.78rem",
+                    marginBottom: 10,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6,
+                  }}
+                >
+                  <Icon name="alert-circle" size={15} />
+                  <span>{hideError}</span>
+                </div>
+              )}
               <div style={{ background: "#FEF2F2", border: "1px solid #FCA5A5", borderRadius: 8, padding: 10, marginBottom: 12, fontSize: "0.75rem", color: "#991B1B" }}>
                 <strong>LƯU Ý NGHIỆP VỤ BẮT BUỘC:</strong> Điểm đánh giá 1-2 sao tự nó KHÔNG phải lý do vi phạm. Chỉ được ẩn khi nhận xét có từ ngữ thô tục, quảng cáo spam hoặc hình ảnh phản cảm.
               </div>
@@ -717,8 +1047,27 @@ export function ReviewsTab({ app }: { app: ReturnType<typeof useApp> }) {
                 <option value="Thông tin hoàn toàn sai sự thật">Thông tin hoàn toàn sai sự thật (đã xác minh đối chiếu)</option>
               </select>
               <div className="flex gap-2">
-                <button onClick={() => setHideModalReview(null)} className="btn btn-secondary btn-md" style={{ flex: 1 }}>Hủy</button>
-                <button onClick={handleConfirmHide} className="btn btn-md" style={{ flex: 1, background: "#DC2626", color: "white", border: 0 }}>Xác nhận ẩn</button>
+                <button
+                  type="button"
+                  disabled={actionBusy}
+                  onClick={() => {
+                    setHideModalReview(null);
+                    setHideError("");
+                  }}
+                  className="btn btn-secondary btn-md"
+                  style={{ flex: 1 }}
+                >
+                  Hủy
+                </button>
+                <button
+                  type="button"
+                  disabled={actionBusy}
+                  onClick={() => void handleConfirmHide()}
+                  className="btn btn-md"
+                  style={{ flex: 1, background: "#DC2626", color: "white", border: 0 }}
+                >
+                  {actionBusy ? "Đang xử lý..." : "Xác nhận ẩn"}
+                </button>
               </div>
             </div>
           </div>
@@ -729,14 +1078,30 @@ export function ReviewsTab({ app }: { app: ReturnType<typeof useApp> }) {
 }
 
 // ─── 3. Cấu hình Chính Sách Thuê & Hủy (UC8.1 & UC8.1.1) ───────────────────────
+function formatLocalDatetimeMinutes(date: Date): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
 export function PoliciesTab({ app }: { app: ReturnType<typeof useApp> }) {
+  const realApi = app.realApi || isRealApiEnabled();
   const [subTab, setSubTab] = useState<"current" | "history">("current");
   const [form, setForm] = useState<RentalPolicyConfig>({ ...app.policies });
   const [changeReason, setChangeReason] = useState("");
-  const [effectiveDate, setEffectiveDate] = useState(new Date().toLocaleDateString("vi-VN"));
+  const [effectiveDate, setEffectiveDate] = useState(() => formatLocalDatetimeMinutes(new Date(Date.now() + 5 * 60_000)));
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [selectedSnapshot, setSelectedSnapshot] = useState<PolicyVersion | null>(null);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [modalError, setModalError] = useState("");
+  const [policySaving, setPolicySaving] = useState(false);
+  const [checkingPolicy, setCheckingPolicy] = useState(false);
+  const [previewCheck, setPreviewCheck] = useState<KiemTraChinhSachBackend | null>(null);
+
+  useEffect(() => {
+    if (realApi) {
+      void app.refreshPolicies?.();
+    }
+  }, [realApi]);
 
   // Đồng bộ form khi app.policies thay đổi
   useEffect(() => {
@@ -754,6 +1119,9 @@ export function PoliciesTab({ app }: { app: ReturnType<typeof useApp> }) {
     }
     if (form.standardReturnTime !== app.policies.standardReturnTime) {
       diffs.push({ field: "Giờ trả tiêu chuẩn", oldVal: app.policies.standardReturnTime, newVal: form.standardReturnTime });
+    }
+    if (form.minDepositPercentage !== app.policies.minDepositPercentage) {
+      diffs.push({ field: "Tỷ lệ đặt cọc tối thiểu", oldVal: `${app.policies.minDepositPercentage}%`, newVal: `${form.minDepositPercentage}%` });
     }
     if (form.overdueMultiplier !== app.policies.overdueMultiplier) {
       diffs.push({ field: "Hệ số phạt trễ hạn", oldVal: `${app.policies.overdueMultiplier}x`, newVal: `${form.overdueMultiplier}x` });
@@ -779,7 +1147,7 @@ export function PoliciesTab({ app }: { app: ReturnType<typeof useApp> }) {
     return diffs;
   };
 
-  const handleOpenReview = (e: React.FormEvent) => {
+  const handleOpenReview = async (e: React.FormEvent) => {
     e.preventDefault();
     const diffs = getChangedFields();
     if (diffs.length === 0) {
@@ -793,21 +1161,91 @@ export function PoliciesTab({ app }: { app: ReturnType<typeof useApp> }) {
       return setMessage({ type: "error", text: "Mâu thuẫn mốc hủy: Phạt hủy 24-48h không được cao hơn phạt hủy sát giờ (<24h)." });
     }
     setMessage(null);
+    setModalError("");
+    setPreviewCheck(null);
+
+    const parsedEff = new Date(effectiveDate);
+    const nextEff =
+      !isNaN(parsedEff.getTime()) && parsedEff.getTime() > Date.now()
+        ? effectiveDate
+        : formatLocalDatetimeMinutes(new Date(Date.now() + 5 * 60_000));
+    if (nextEff !== effectiveDate) {
+      setEffectiveDate(nextEff);
+    }
+
     setShowConfirmModal(true);
+
+    if (realApi) {
+      setCheckingPolicy(true);
+      try {
+        const req = buildTaoChinhSachRequestFromConfig(
+          changeReason.trim() || `Cập nhật chính sách từ ${nextEff.slice(0, 10)}`,
+          new Date(nextEff).toISOString(),
+          form
+        );
+        const check = await policyApi.kiemTra(req);
+        setPreviewCheck(check);
+      } catch (err) {
+        setModalError(err instanceof Error ? err.message : "Không thể kiểm tra hợp lệ chính sách với máy chủ.");
+      } finally {
+        setCheckingPolicy(false);
+      }
+    }
   };
 
-  const handleConfirmSave = () => {
+  const handleConfirmSave = async () => {
     if (!changeReason.trim()) {
-      alert("Vui lòng ghi rõ lý do ban hành chính sách mới (bắt buộc theo UC8.1).");
+      setModalError("Vui lòng ghi rõ lý do ban hành chính sách mới (bắt buộc theo UC8.1).");
       return;
     }
+
+    if (realApi) {
+      const parsed = new Date(effectiveDate);
+      if (isNaN(parsed.getTime())) {
+        setModalError("Thời điểm bắt đầu có hiệu lực không hợp lệ.");
+        return;
+      }
+      setPolicySaving(true);
+      setModalError("");
+      try {
+        const req = buildTaoChinhSachRequestFromConfig(
+          changeReason.trim(),
+          parsed.toISOString(),
+          form
+        );
+        const check = await policyApi.kiemTra(req);
+        setPreviewCheck(check);
+        if (!check.hopLe) {
+          const detail = (check.loiTheoDuongDan ?? [])
+            .map((l) => (l.duongDan ? `${l.duongDan}: ${l.thongDiep}` : l.thongDiep))
+            .join(" | ");
+          setModalError(detail || "Nội dung chính sách chưa hợp lệ theo kiểm tra máy chủ.");
+          return;
+        }
+        await policyApi.taoPhienBan(req);
+        await app.refreshPolicies?.();
+        setShowConfirmModal(false);
+        setChangeReason("");
+        setPreviewCheck(null);
+        setMessage({
+          type: "success",
+          text: "Đã ban hành phiên bản chính sách mới lên máy chủ! Đơn cũ giữ nguyên chính sách đã chốt (UC8.1).",
+        });
+      } catch (err) {
+        setModalError(err instanceof Error ? err.message : "Không thể ban hành phiên bản chính sách mới.");
+      } finally {
+        setPolicySaving(false);
+      }
+      return;
+    }
+
     const res = app.updatePolicy(form, changeReason.trim(), effectiveDate.trim() || undefined);
     if (res.ok) {
       setShowConfirmModal(false);
       setChangeReason("");
       setMessage({ type: "success", text: `Đã ban hành phiên bản chính sách mới thành công! Đơn cũ giữ nguyên chính sách đã chốt (UC8.1).` });
     } else {
-      alert(res.message);
+      setModalError(res.message);
     }
   };
 
@@ -1254,28 +1692,66 @@ export function PoliciesTab({ app }: { app: ReturnType<typeof useApp> }) {
                 Thời điểm bắt đầu có hiệu lực
               </label>
               <input
-                type="text"
+                type="datetime-local"
                 value={effectiveDate}
                 onChange={(e) => setEffectiveDate(e.target.value)}
                 style={{ width: "100%", border: "1px solid var(--color-bone)", borderRadius: 8, padding: "8px 10px", fontSize: "0.82rem" }}
               />
-              <span style={{ fontSize: "0.7rem", color: "#6B7280" }}>Chính sách mới sẽ chỉ áp dụng cho các đơn đặt thuê phát sinh từ mốc thời gian này.</span>
+              <span style={{ fontSize: "0.7rem", color: "#6B7280" }}>Chính sách mới sẽ chỉ áp dụng cho các đơn đặt thuê phát sinh từ mốc thời gian này (không hồi tố).</span>
             </div>
+
+            {checkingPolicy && (
+              <div style={{ fontSize: "0.78rem", color: "#6B7280", marginBottom: 10 }}>
+                Đang kiểm tra hợp lệ phiên bản chính sách với máy chủ...
+              </div>
+            )}
+
+            {previewCheck && (previewCheck.canhBao?.length ?? 0) > 0 && (
+              <div style={{ background: "#FEF3C7", border: "1px solid #FCD34D", color: "#92400E", borderRadius: 8, padding: "8px 10px", fontSize: "0.76rem", marginBottom: 10 }}>
+                <strong>Cảnh báo từ hệ thống:</strong> {previewCheck.canhBao.join(" | ")}
+              </div>
+            )}
+
+            {modalError && (
+              <div
+                role="alert"
+                style={{
+                  background: "#FEF2F2",
+                  border: "1px solid #FECACA",
+                  color: "#B91C1C",
+                  borderRadius: 8,
+                  padding: "8px 10px",
+                  fontSize: "0.78rem",
+                  marginBottom: 12,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                }}
+              >
+                <Icon name="alert-circle" size={15} />
+                <span>{modalError}</span>
+              </div>
+            )}
 
             <div className="flex justify-end gap-2">
               <button
                 type="button"
-                onClick={() => setShowConfirmModal(false)}
+                disabled={policySaving}
+                onClick={() => {
+                  setShowConfirmModal(false);
+                  setModalError("");
+                }}
                 style={{ background: "white", border: "1px solid var(--color-bone)", borderRadius: 8, padding: "8px 16px", cursor: "pointer", fontSize: "0.82rem" }}
               >
                 Hủy bỏ
               </button>
               <button
                 type="button"
-                onClick={handleConfirmSave}
+                disabled={policySaving}
+                onClick={() => void handleConfirmSave()}
                 style={{ background: "var(--color-forest)", color: "white", border: "none", borderRadius: 8, padding: "8px 18px", fontWeight: 700, fontSize: "0.82rem", cursor: "pointer" }}
               >
-                ✓ Ban hành & Lưu phiên bản mới
+                {policySaving ? "Đang ban hành..." : "✓ Ban hành & Lưu phiên bản mới"}
               </button>
             </div>
           </div>
@@ -1328,11 +1804,13 @@ export function PoliciesTab({ app }: { app: ReturnType<typeof useApp> }) {
   );
 }
 
-// ─── 4. Soạn & Gửi Thông Báo Hệ Thống (UC9.4 & UC9.4.1) ────────────────────────
+// ─── 4. Soạn & Gửi Thông Báo Hệ Thống (UC9.4 & UC9.5) ──────────────────────────
 export function NotificationsTab({ app }: { app: ReturnType<typeof useApp> }) {
+  const realApi = app.realApi || isRealApiEnabled();
   const [title, setTitle] = useState("");
   const [message, setMessage] = useState("");
   const [targetRole, setTargetRole] = useState<AppNotification["targetRole"]>("all");
+  const [targetAccountId, setTargetAccountId] = useState("");
   const [type, setType] = useState<AppNotification["type"]>("info");
   const [category, setCategory] = useState<"order" | "rental" | "finance" | "promo" | "system">("system");
   const [hasActionLink, setHasActionLink] = useState(false);
@@ -1340,14 +1818,110 @@ export function NotificationsTab({ app }: { app: ReturnType<typeof useApp> }) {
   const [actionTargetId, setActionTargetId] = useState("");
   const [actionLabel, setActionLabel] = useState("");
   const [sentSuccess, setSentSuccess] = useState(false);
+  const [sendLoading, setSendLoading] = useState(false);
+  const [sendError, setSendError] = useState("");
 
   // Bộ lọc danh sách đã phát
   const [filterRole, setFilterRole] = useState<string>("all");
   const [filterCategory, setFilterCategory] = useState<string>("all");
 
-  const handleSend = (e: React.FormEvent) => {
+  // State UC95: Hàng chờ gửi lỗi & Thử lại (/api/v1/admin/thong-bao/gui-loi & thu-lai)
+  const [failedItems, setFailedItems] = useState<ThongBaoGuiLoiBackend[]>([]);
+  const [failedTotal, setFailedTotal] = useState(0);
+  const [failedPage, setFailedPage] = useState(1);
+  const [failedLoading, setFailedLoading] = useState(false);
+  const [failedError, setFailedError] = useState("");
+  const [failedSuccess, setFailedSuccess] = useState("");
+  const [retryTarget, setRetryTarget] = useState<ThongBaoGuiLoiBackend | null>(null);
+  const [retryReason, setRetryReason] = useState("Thử gửi lại thông báo qua hàng chờ thủ công");
+  const [retryingId, setRetryingId] = useState<number | null>(null);
+
+  const loadFailedQueue = useCallback(
+    async (page = 1) => {
+      if (!realApi) return;
+      setFailedLoading(true);
+      setFailedError("");
+      try {
+        const res = await notificationApi.adminLayGuiLoi({ trang: page, soMoiTrang: 10 });
+        setFailedItems(res.items ?? []);
+        setFailedTotal(Number(res.totalItems ?? (res.items ?? []).length));
+        setFailedPage(res.currentPage || page);
+      } catch (err) {
+        setFailedError(err instanceof Error ? err.message : "Không thể tải danh sách thông báo gửi lỗi.");
+      } finally {
+        setFailedLoading(false);
+      }
+    },
+    [realApi]
+  );
+
+  useEffect(() => {
+    void loadFailedQueue(1);
+  }, [loadFailedQueue]);
+
+  const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim() || !message.trim()) return;
+
+    if (realApi) {
+      setSendError("");
+      let maTaiKhoanNhan: number | null = null;
+      if (targetAccountId.trim()) {
+        const parsedTk = Number(targetAccountId.trim());
+        if (!Number.isInteger(parsedTk) || parsedTk <= 0) {
+          setSendError("Mã tài khoản nhận phải là số nguyên dương hoặc để trống để gửi toàn hệ thống.");
+          return;
+        }
+        maTaiKhoanNhan = parsedTk;
+      }
+
+      let maDonThue: number | null = null;
+      if (hasActionLink && actionType === "order" && actionTargetId.trim()) {
+        const rawOrder = actionTargetId.trim();
+        const matched = app.orders.find((o) => o.id === rawOrder || o.displayCode === rawOrder);
+        if (matched?.backendId) {
+          maDonThue = matched.backendId;
+        } else {
+          const digits = Number(rawOrder.replace(/\D/g, ""));
+          if (Number.isInteger(digits) && digits > 0) {
+            maDonThue = digits;
+          }
+        }
+      }
+
+      const loaiSuKienMap: Record<typeof category, string> = {
+        order: "DonThue",
+        rental: "NhacLichThue",
+        finance: "ThanhToan",
+        promo: "KhuyenMai",
+        system: type === "warning" || type === "alert" ? "CanhBaoHeThong" : "HeThong",
+      };
+
+      setSendLoading(true);
+      try {
+        await notificationApi.adminGuiThuCong({
+          tieuDe: title.trim(),
+          noiDung: message.trim(),
+          maTaiKhoanNhan,
+          maDonThue,
+          loaiSuKien: loaiSuKienMap[category],
+        });
+        await Promise.all([app.refreshNotifications?.(), loadFailedQueue(failedPage)]);
+        setTitle("");
+        setMessage("");
+        setTargetAccountId("");
+        setHasActionLink(false);
+        setActionTargetId("");
+        setActionLabel("");
+        setSentSuccess(true);
+        setTimeout(() => setSentSuccess(false), 3500);
+      } catch (err) {
+        setSendError(err instanceof Error ? err.message : "Không thể phát hành thông báo qua máy chủ.");
+      } finally {
+        setSendLoading(false);
+      }
+      return;
+    }
 
     app.sendNotification({
       title: title.trim(),
@@ -1371,6 +1945,23 @@ export function NotificationsTab({ app }: { app: ReturnType<typeof useApp> }) {
     setTimeout(() => setSentSuccess(false), 3500);
   };
 
+  const handleConfirmRetry = async () => {
+    if (!retryTarget) return;
+    setRetryingId(retryTarget.maThongBao);
+    setFailedError("");
+    setFailedSuccess("");
+    try {
+      await notificationApi.adminThuLai(retryTarget.maThongBao, retryReason.trim() || undefined);
+      setFailedSuccess(`Đã kích hoạt thử lại gửi thông báo #${retryTarget.maThongBao} ("${retryTarget.tieuDe}").`);
+      setRetryTarget(null);
+      await Promise.all([loadFailedQueue(failedPage), app.refreshNotifications?.()]);
+    } catch (err) {
+      setFailedError(err instanceof Error ? err.message : `Không thể thử lại gửi thông báo #${retryTarget.maThongBao}.`);
+    } finally {
+      setRetryingId(null);
+    }
+  };
+
   const filteredHistory = app.notifications.filter((n) => {
     const matchRole = filterRole === "all" || n.targetRole === filterRole || n.targetRole === "all";
     const matchCat = filterCategory === "all" || n.category === filterCategory;
@@ -1378,6 +1969,7 @@ export function NotificationsTab({ app }: { app: ReturnType<typeof useApp> }) {
   });
 
   return (
+    <div className="flex flex-col gap-6">
     <div className="grid gap-6" style={{ gridTemplateColumns: "1.2fr 1fr" }}>
       {/* Form soạn tin & Live Preview */}
       <div style={{ background: "white", borderRadius: 12, border: "1px solid var(--color-bone)", padding: 22 }}>
@@ -1565,9 +2157,45 @@ export function NotificationsTab({ app }: { app: ReturnType<typeof useApp> }) {
             </div>
           </div>
 
+          {realApi && (
+            <div>
+              <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, marginBottom: 4 }}>
+                Mã tài khoản nhận cụ thể (tùy chọn)
+              </label>
+              <input
+                type="number"
+                min="1"
+                placeholder="Để trống để gửi thông báo hệ thống chung"
+                value={targetAccountId}
+                onChange={(e) => setTargetAccountId(e.target.value)}
+                style={{ width: "100%", border: "1px solid var(--color-bone)", borderRadius: 8, padding: "8px 10px", fontSize: "0.82rem" }}
+              />
+            </div>
+          )}
+
+          {sendError && (
+            <div
+              role="alert"
+              style={{
+                background: "#FEF2F2",
+                border: "1px solid #FECACA",
+                color: "#B91C1C",
+                borderRadius: 8,
+                padding: "8px 12px",
+                fontSize: "0.8rem",
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+              }}
+            >
+              <Icon name="alert-circle" size={16} />
+              <span>{sendError}</span>
+            </div>
+          )}
+
           <div className="flex items-center gap-3">
-            <button type="submit" className="btn btn-primary btn-md">
-              ✓ Xác nhận & Phát hành thông báo (UC9.4)
+            <button type="submit" disabled={sendLoading} className="btn btn-primary btn-md">
+              {sendLoading ? "Đang phát hành..." : "✓ Xác nhận & Phát hành thông báo (UC9.4)"}
             </button>
             {sentSuccess && (
               <span className="badge badge-success">✓ Đã phát thông báo thành công đến đối tượng mục tiêu!</span>
@@ -1641,20 +2269,444 @@ export function NotificationsTab({ app }: { app: ReturnType<typeof useApp> }) {
         </div>
       </div>
     </div>
+
+      {/* Hàng chờ gửi lỗi & Thử lại thủ công (UC9.5) */}
+      <div style={{ background: "#F8F6F0", borderRadius: 12, border: "1px solid #E2DDD1", padding: 20 }}>
+        <div className="flex justify-between items-center mb-3 flex-wrap gap-3">
+          <div>
+            <h3 style={{ fontFamily: "var(--font-display)", fontSize: "1.15rem", color: "#11231B", display: "flex", alignItems: "center", gap: 8 }}>
+              <Icon name="alert-circle" size={18} style={{ color: "#E07A43" }} />
+              <span>Hàng chờ gửi lỗi &amp; Thử lại (UC9.5)</span>
+              <span
+                style={{
+                  fontFamily: "var(--font-mono)",
+                  fontSize: "0.72rem",
+                  background: failedTotal > 0 ? "#FEF2F2" : "#E2DDD1",
+                  color: failedTotal > 0 ? "#B91C1C" : "#11231B",
+                  padding: "2px 8px",
+                  borderRadius: 999,
+                  fontWeight: 700,
+                }}
+              >
+                {failedTotal} bản ghi lỗi
+              </span>
+            </h3>
+            <p style={{ color: "#6B7280", fontSize: "0.8rem", margin: 0 }}>
+              Theo dõi các thông báo/email gửi thất bại từ hàng chờ nền và kích hoạt thử lại thủ công theo dõi số lần thử.
+            </p>
+          </div>
+          {realApi && (
+            <button
+              type="button"
+              disabled={failedLoading}
+              onClick={() => void loadFailedQueue(failedPage)}
+              className="btn btn-secondary btn-sm"
+            >
+              <span className="icon-label">
+                <Icon name="refresh" size={14} />
+                {failedLoading ? "Đang tải..." : "Tải lại hàng chờ"}
+              </span>
+            </button>
+          )}
+        </div>
+
+        {failedError && (
+          <div
+            role="alert"
+            style={{
+              background: "#FEF2F2",
+              border: "1px solid #FECACA",
+              color: "#B91C1C",
+              borderRadius: 8,
+              padding: "8px 12px",
+              marginBottom: 12,
+              fontSize: "0.8rem",
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+            }}
+          >
+            <Icon name="alert-circle" size={15} />
+            <span>{failedError}</span>
+          </div>
+        )}
+
+        {failedSuccess && (
+          <div
+            role="status"
+            style={{
+              background: "#DCFCE7",
+              border: "1px solid #A7F3D0",
+              color: "#15803D",
+              borderRadius: 8,
+              padding: "8px 12px",
+              marginBottom: 12,
+              fontSize: "0.8rem",
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+            }}
+          >
+            <Icon name="check" size={15} />
+            <span>{failedSuccess}</span>
+          </div>
+        )}
+
+        {!realApi ? (
+          <div style={{ background: "#F1ECE2", borderRadius: 8, padding: 14, fontSize: "0.8rem", color: "#4B5563" }}>
+            Hàng chờ gửi lỗi kết nối trực tiếp tới máy chủ (/api/v1/admin/thong-bao/gui-loi). Vui lòng bật chế độ API thật để theo dõi và thử lại.
+          </div>
+        ) : (
+          <div style={{ background: "white", borderRadius: 10, border: "1px solid #E2DDD1", overflow: "hidden" }}>
+            <div className="responsive-table">
+              <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ background: "#F1ECE2", fontSize: "0.78rem", fontWeight: 700, color: "#11231B" }}>
+                    {["Mã TB", "Tài khoản / Đơn", "Tiêu đề & Nội dung", "Trạng thái / Lần thử", "Lỗi gần nhất", "Thời điểm tạo", "Thao tác"].map((h) => (
+                      <th key={h} style={{ padding: "10px 12px", textAlign: "left" }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {failedLoading ? (
+                    <tr>
+                      <td colSpan={7} style={{ padding: 24, textAlign: "center", color: "#6B7280", fontSize: "0.82rem" }}>
+                        Đang tải hàng chờ thông báo gửi lỗi...
+                      </td>
+                    </tr>
+                  ) : failedItems.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} style={{ padding: 24, textAlign: "center", color: "#1B3F2F", fontSize: "0.82rem" }}>
+                        Không có thông báo nào đang lỗi trong hàng chờ gửi.
+                      </td>
+                    </tr>
+                  ) : (
+                    failedItems.map((item, idx) => (
+                      <tr key={item.maThongBao} style={{ borderTop: "1px solid #E2DDD1", background: idx % 2 === 0 ? "white" : "#F8F6F0", fontSize: "0.8rem" }}>
+                        <td style={{ padding: "10px 12px", fontFamily: "var(--font-mono)", fontWeight: 700, color: "#1B3F2F" }}>
+                          #{item.maThongBao}
+                        </td>
+                        <td style={{ padding: "10px 12px", fontFamily: "var(--font-mono)", fontSize: "0.76rem" }}>
+                          <div>TK #{item.maTaiKhoan}</div>
+                          {item.maDonThue && <div style={{ color: "#6B7280" }}>Đơn #{item.maDonThue}</div>}
+                        </td>
+                        <td style={{ padding: "10px 12px", maxWidth: 260 }}>
+                          <div style={{ fontWeight: 700, color: "#11231B" }}>{item.tieuDe}</div>
+                          <div style={{ fontSize: "0.74rem", color: "#4B5563", marginTop: 2 }}>{item.noiDung}</div>
+                        </td>
+                        <td style={{ padding: "10px 12px" }}>
+                          <span style={{ background: "#FEE2E2", color: "#B91C1C", padding: "2px 7px", borderRadius: 6, fontSize: "0.7rem", fontWeight: 700 }}>
+                            {item.trangThaiGui}
+                          </span>
+                          <div style={{ fontSize: "0.72rem", color: "#6B7280", marginTop: 4 }}>
+                            Đã thử: <strong>{item.soLanThuGui}</strong> lần
+                          </div>
+                        </td>
+                        <td style={{ padding: "10px 12px", fontSize: "0.75rem", color: "#991B1B", maxWidth: 220 }}>
+                          {item.loiGuiGanNhat || "Lỗi kết nối cổng gửi"}
+                        </td>
+                        <td style={{ padding: "10px 12px", fontFamily: "var(--font-mono)", fontSize: "0.74rem", color: "#6B7280", whiteSpace: "nowrap" }}>
+                          {new Date(item.thoiDiemTao).toLocaleString("vi-VN")}
+                        </td>
+                        <td style={{ padding: "10px 12px" }}>
+                          <button
+                            type="button"
+                            disabled={retryingId === item.maThongBao}
+                            onClick={() => {
+                              setRetryTarget(item);
+                              setRetryReason("Thử gửi lại thông báo qua hàng chờ thủ công");
+                            }}
+                            style={{
+                              background: "#E07A43",
+                              color: "white",
+                              border: "none",
+                              borderRadius: 6,
+                              padding: "5px 10px",
+                              fontSize: "0.75rem",
+                              fontWeight: 700,
+                              cursor: "pointer",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: 4,
+                            }}
+                          >
+                            <Icon name="refresh" size={13} />
+                            Thử lại
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {failedTotal > 10 && (
+              <div className="flex justify-between items-center p-3" style={{ borderTop: "1px solid #E2DDD1", background: "#F8F6F0", fontSize: "0.78rem" }}>
+                <span>Trang {failedPage} · Tổng {failedTotal} bản ghi</span>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    disabled={failedPage <= 1 || failedLoading}
+                    onClick={() => void loadFailedQueue(failedPage - 1)}
+                    className="btn btn-secondary btn-sm"
+                  >
+                    Trước
+                  </button>
+                  <button
+                    type="button"
+                    disabled={failedPage * 10 >= failedTotal || failedLoading}
+                    onClick={() => void loadFailedQueue(failedPage + 1)}
+                    className="btn btn-secondary btn-sm"
+                  >
+                    Sau
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Modal xác nhận thử lại gửi thông báo lỗi (UC9.5) */}
+      {retryTarget && (
+        <div role="dialog" aria-modal="true" className="modal-overlay">
+          <div className="modal-container" style={{ maxWidth: 460 }}>
+            <div className="modal-header">
+              <h3 className="modal-title">Thử lại gửi thông báo #{retryTarget.maThongBao}</h3>
+              <button type="button" onClick={() => setRetryTarget(null)} className="btn btn-ghost btn-sm text-lg">×</button>
+            </div>
+            <div className="modal-body flex flex-col gap-3">
+              <div style={{ background: "#F8F6F0", borderRadius: 8, padding: 10, border: "1px solid #E2DDD1", fontSize: "0.8rem" }}>
+                <div style={{ fontWeight: 700, color: "#11231B" }}>{retryTarget.tieuDe}</div>
+                <div style={{ color: "#4B5563", marginTop: 4 }}>{retryTarget.noiDung}</div>
+                {retryTarget.loiGuiGanNhat && (
+                  <div style={{ color: "#B91C1C", fontSize: "0.74rem", marginTop: 6 }}>
+                    Lỗi gần nhất: {retryTarget.loiGuiGanNhat}
+                  </div>
+                )}
+              </div>
+              <div>
+                <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 700, marginBottom: 4 }}>
+                  Lý do / ghi chú thử lại (lưu nhật ký UC9.5)
+                </label>
+                <textarea
+                  rows={2}
+                  value={retryReason}
+                  onChange={(e) => setRetryReason(e.target.value)}
+                  placeholder="VD: Đã kiểm tra cấu hình SMTP, kích hoạt gửi lại..."
+                  style={{ width: "100%", border: "1px solid var(--color-bone)", borderRadius: 8, padding: 8, fontSize: "0.82rem" }}
+                />
+              </div>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  disabled={retryingId !== null}
+                  onClick={() => setRetryTarget(null)}
+                  className="btn btn-secondary btn-md"
+                  style={{ flex: 1 }}
+                >
+                  Hủy
+                </button>
+                <button
+                  type="button"
+                  disabled={retryingId !== null}
+                  onClick={() => void handleConfirmRetry()}
+                  className="btn btn-primary btn-md"
+                  style={{ flex: 1 }}
+                >
+                  {retryingId === retryTarget.maThongBao ? "Đang gửi lại..." : "Xác nhận thử lại"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
 // ─── 5. Điều Chỉnh Tài Chính & Sai Lệch Phiếu Nhập (UC5.7, UC7.10) ─────────────
 export function AdjustmentsTab({ app }: { app: ReturnType<typeof useApp> }) {
+  const realApi = app.realApi || isRealApiEnabled();
   const [showModal, setShowModal] = useState(false);
-  const [type, setType] = useState<FinancialAdjustment["type"]>("Sai lệch kiểm kê");
+  const [type, setType] = useState<FinancialAdjustment["type"]>("Thu bù");
   const [amount, setAmount] = useState<number>(100000);
   const [orderId, setOrderId] = useState("");
   const [importReceiptId, setImportReceiptId] = useState("");
   const [reason, setReason] = useState("");
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // State kết nối API thật: đối chiếu ngoại lệ thanh toán & điều chỉnh đối soát sau chốt
+  const [pendingPayments, setPendingPayments] = useState<GiaoDichCanDoiChieuBackend[]>([]);
+  const [payLoading, setPayLoading] = useState(false);
+  const [payError, setPayError] = useState("");
+  const [paySuccess, setPaySuccess] = useState("");
+
+  const [reconcileTarget, setReconcileTarget] = useState<GiaoDichCanDoiChieuBackend | null>(null);
+  const [reconcileOutcome, setReconcileOutcome] = useState<"HopLe_XacNhan" | "HopLe_HoanTienThua" | "TuChoi">("HopLe_XacNhan");
+  const [reconcileNote, setReconcileNote] = useState("");
+  const [reconcileRefundAmount, setReconcileRefundAmount] = useState<number>(0);
+  const [reconcileBusy, setReconcileBusy] = useState(false);
+  const [reconcileModalError, setReconcileModalError] = useState("");
+
+  // Tra cứu biên bản đối soát gốc & phụ phí của đơn được chọn để điều chỉnh sau chốt (UC5.7)
+  const [orderDoiSoat, setOrderDoiSoat] = useState<DoiSoatBackend | null>(null);
+  const [orderSurchargeIds, setOrderSurchargeIds] = useState<Array<{ id: number; label: string }>>([]);
+  const [selectedSurchargeId, setSelectedSurchargeId] = useState("");
+  const [orderLookupLoading, setOrderLookupLoading] = useState(false);
+  const [orderLookupError, setOrderLookupError] = useState("");
+  const [modalError, setModalError] = useState("");
+  const [submitBusy, setSubmitBusy] = useState(false);
+
+  const loadPendingPayments = useCallback(async () => {
+    if (!realApi) return;
+    setPayLoading(true);
+    setPayError("");
+    try {
+      const items = await paymentApi.layDanhSachCanDoiChieu();
+      setPendingPayments(items ?? []);
+    } catch (err) {
+      setPayError(err instanceof Error ? err.message : "Không thể tải danh sách giao dịch cần đối chiếu ngoại lệ.");
+    } finally {
+      setPayLoading(false);
+    }
+  }, [realApi]);
+
+  useEffect(() => {
+    void loadPendingPayments();
+  }, [loadPendingPayments]);
+
+  const resolveOrderBackendId = (rawOrderId: string): number | null => {
+    if (!rawOrderId) return null;
+    const matched = app.orders.find((o) => o.id === rawOrderId || o.displayCode === rawOrderId);
+    if (matched?.backendId) return matched.backendId;
+    const parsed = Number(rawOrderId.replace(/\D/g, ""));
+    return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+  };
+
+  useEffect(() => {
+    if (!realApi || !showModal || !orderId) {
+      setOrderDoiSoat(null);
+      setOrderSurchargeIds([]);
+      setSelectedSurchargeId("");
+      setOrderLookupError("");
+      return;
+    }
+    const maDonThue = resolveOrderBackendId(orderId);
+    if (!maDonThue) {
+      setOrderLookupError("Không xác định được mã đơn thuê hợp lệ trên máy chủ.");
+      return;
+    }
+    let cancelled = false;
+    setOrderLookupLoading(true);
+    setOrderLookupError("");
+    void Promise.all([
+      reconciliationApi.layTheoDon(maDonThue).catch(() => null),
+      surchargeApi.layTheoDon(maDonThue).catch(() => []),
+    ])
+      .then(([ds, phis]) => {
+        if (cancelled) return;
+        setOrderDoiSoat(ds);
+        if (!ds) {
+          setOrderLookupError("Đơn hàng này chưa có biên bản đối soát gốc (UC5.4) để lập điều chỉnh sau chốt.");
+        }
+        const list = (phis ?? []).map((p) => ({
+          id: p.maPhuPhi,
+          label: `#${p.maPhuPhi} · ${p.loaiPhi} (${fmt(p.soTien)}) — ${p.trangThaiDuyet}`,
+        }));
+        setOrderSurchargeIds(list);
+      })
+      .finally(() => {
+        if (!cancelled) setOrderLookupLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [realApi, showModal, orderId]);
+
+  const handleConfirmReconcilePayment = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!reconcileTarget) return;
+    if (!reconcileNote.trim()) {
+      setReconcileModalError("Vui lòng nhập ghi chú kết luận đối chiếu giao dịch.");
+      return;
+    }
+    if (reconcileOutcome === "HopLe_HoanTienThua" && reconcileRefundAmount <= 0) {
+      setReconcileModalError("Số tiền hoàn lại cho khách phải lớn hơn 0.");
+      return;
+    }
+    setReconcileBusy(true);
+    setReconcileModalError("");
+    setPaySuccess("");
+    try {
+      await paymentApi.doiChieuGiaoDich(reconcileTarget.maThanhToan, {
+        ketLuan: reconcileOutcome,
+        ghiChu: reconcileNote.trim(),
+        soTienHoan: reconcileOutcome === "HopLe_HoanTienThua" ? Number(reconcileRefundAmount) : undefined,
+      });
+      await Promise.all([loadPendingPayments(), app.refreshOrders?.()]);
+      setPaySuccess(`Đã hoàn tất đối chiếu giao dịch ${reconcileTarget.maYeuCau}.`);
+      setReconcileTarget(null);
+      setReconcileNote("");
+    } catch (err) {
+      setReconcileModalError(err instanceof Error ? err.message : "Không thể lưu kết quả đối chiếu giao dịch.");
+    } finally {
+      setReconcileBusy(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (realApi) {
+      setModalError("");
+      if (!reason.trim()) {
+        setModalError("Vui lòng nhập lý do điều chỉnh bù trừ.");
+        return;
+      }
+      if (!orderId && importReceiptId) {
+        setModalError("Sai lệch phiếu nhập kho (UC7.10) được kiểm soát và duyệt tại mục Điều chỉnh kho.");
+        return;
+      }
+      if (!orderDoiSoat) {
+        setModalError("Vui lòng chọn đơn thuê đã có biên bản đối soát gốc để lập điều chỉnh tài chính sau chốt (UC5.7).");
+        return;
+      }
+
+      const signedAmount =
+        type === "Hoàn trả" || type === "Bù trừ chiết khấu"
+          ? -Math.abs(Number(amount || 0))
+          : Math.abs(Number(amount || 0));
+
+      setSubmitBusy(true);
+      setPaySuccess("");
+      try {
+        let adjustedSurchargeIds: number[] | undefined;
+        if (selectedSurchargeId) {
+          const createdPhi = await surchargeApi.lapDieuChinhPhi(Number(selectedSurchargeId), {
+            soTienDieuChinhCoDau: signedAmount,
+            lyDo: reason.trim(),
+          });
+          adjustedSurchargeIds = [createdPhi.maPhuPhi];
+        }
+        await reconciliationApi.lapDieuChinh(orderDoiSoat.maDoiSoat, {
+          lyDoDieuChinh: reason.trim(),
+          danhSachMaPhuPhiDieuChinh: adjustedSurchargeIds,
+          ghiChu: reason.trim(),
+        });
+        await Promise.all([loadPendingPayments(), app.refreshOrders?.()]);
+        setPaySuccess(`Đã lập biên bản điều chỉnh sau chốt cho đơn #${orderDoiSoat.maDonHienThi || orderDoiSoat.maDonThue}.`);
+        setShowModal(false);
+        setReason("");
+        setSelectedSurchargeId("");
+      } catch (err) {
+        setModalError(err instanceof Error ? err.message : "Không thể lập chứng từ điều chỉnh tài chính trên máy chủ.");
+      } finally {
+        setSubmitBusy(false);
+      }
+      return;
+    }
+
     app.saveFinancialAdjustment({
       type,
       amount,
@@ -1670,23 +2722,158 @@ export function AdjustmentsTab({ app }: { app: ReturnType<typeof useApp> }) {
   };
 
   return (
-    <div>
-      <div className="flex justify-between items-center mb-4 flex-wrap gap-3">
+    <div className="flex flex-col gap-6">
+      <div className="flex justify-between items-center flex-wrap gap-3">
         <div>
           <h2 style={{ fontFamily: "var(--font-display)", fontSize: "1.4rem", color: "var(--color-bark)", marginBottom: 4 }}>
             Điều chỉnh tài chính & Sai lệch phiếu nhập (UC5.7, UC7.10)
           </h2>
           <p style={{ color: "#6B7280", fontSize: "0.85rem" }}>
-            Lập chứng từ bù trừ số liệu tài chính sau khi đã đối soát đơn hoặc xử lý sai lệch số lượng/giá phiếu nhập kho.
+            Đối chiếu giao dịch thanh toán ngoại lệ, lập chứng từ bù trừ sau đối soát đơn hoặc xử lý sai lệch nhập kho.
           </p>
         </div>
-        <button
-          onClick={() => setShowModal(true)}
-          className="btn btn-primary btn-md"
-        >
-          + Lập chứng từ điều chỉnh
-        </button>
+        <div className="flex gap-2">
+          {realApi && (
+            <button
+              type="button"
+              disabled={payLoading}
+              onClick={() => void loadPendingPayments()}
+              className="btn btn-secondary btn-md"
+            >
+              <span className="icon-label"><Icon name="refresh" size={14} /> Làm mới đối chiếu</span>
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => {
+              setModalError("");
+              setShowModal(true);
+            }}
+            className="btn btn-primary btn-md"
+          >
+            + Lập chứng từ điều chỉnh
+          </button>
+        </div>
       </div>
+
+      {payError && (
+        <div
+          role="alert"
+          style={{
+            background: "#FEF2F2",
+            border: "1px solid #FECACA",
+            color: "#B91C1C",
+            borderRadius: 8,
+            padding: "10px 14px",
+            fontSize: "0.82rem",
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+          }}
+        >
+          <Icon name="alert-circle" size={16} />
+          <span>{payError}</span>
+        </div>
+      )}
+
+      {paySuccess && (
+        <div
+          role="status"
+          style={{
+            background: "#DCFCE7",
+            border: "1px solid #A7F3D0",
+            color: "#15803D",
+            borderRadius: 8,
+            padding: "10px 14px",
+            fontSize: "0.82rem",
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+          }}
+        >
+          <Icon name="check" size={16} />
+          <span>{paySuccess}</span>
+        </div>
+      )}
+
+      {/* Giao dịch thanh toán cần đối chiếu ngoại lệ (/api/v1/thanh-toan/can-doi-chieu) */}
+      {realApi && (
+        <div style={{ background: "#F8F6F0", borderRadius: 12, border: "1px solid #E2DDD1", overflow: "hidden" }}>
+          <div style={{ padding: "14px 18px", borderBottom: "1px solid #E2DDD1", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div>
+              <h3 style={{ fontSize: "1rem", fontWeight: 700, color: "#11231B", margin: 0 }}>
+                Giao dịch thanh toán cần đối chiếu ngoại lệ ({pendingPayments.length})
+              </h3>
+              <p style={{ fontSize: "0.75rem", color: "#6B7280", margin: "2px 0 0" }}>
+                Xử lý các giao dịch lệch số tiền, trùng thanh toán hoặc cần hoàn tiền thừa qua cổng thanh toán.
+              </p>
+            </div>
+          </div>
+          <div className="responsive-table">
+            <table style={{ width: "100%", borderCollapse: "collapse", background: "white" }}>
+              <thead>
+                <tr style={{ background: "#F1ECE2", fontSize: "0.78rem", fontWeight: 700, color: "#11231B" }}>
+                  {["Mã GD", "Đơn thuê", "Phương thức", "Số tiền", "Lý do cần đối chiếu", "Trạng thái", "Thời điểm", "Thao tác"].map((h) => (
+                    <th key={h} style={{ padding: "10px 12px", textAlign: "left" }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {payLoading ? (
+                  <tr>
+                    <td colSpan={8} style={{ padding: 24, textAlign: "center", color: "#6B7280", fontSize: "0.82rem" }}>
+                      Đang tải danh sách giao dịch cần đối chiếu...
+                    </td>
+                  </tr>
+                ) : pendingPayments.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} style={{ padding: 20, textAlign: "center", color: "#1B3F2F", fontSize: "0.82rem" }}>
+                      Không có giao dịch thanh toán ngoại lệ nào đang chờ đối chiếu.
+                    </td>
+                  </tr>
+                ) : (
+                  pendingPayments.map((g, i) => (
+                    <tr key={g.maThanhToan} style={{ borderTop: "1px solid #E2DDD1", background: i % 2 === 0 ? "white" : "#F8F6F0", fontSize: "0.8rem" }}>
+                      <td style={{ padding: "10px 12px", fontFamily: "var(--font-mono)", fontWeight: 700, color: "#1B3F2F" }}>
+                        {g.maYeuCau}
+                      </td>
+                      <td style={{ padding: "10px 12px", fontFamily: "var(--font-mono)" }}>#{g.maDonThue}</td>
+                      <td style={{ padding: "10px 12px" }}>{g.phuongThuc}</td>
+                      <td style={{ padding: "10px 12px", fontFamily: "var(--font-mono)", fontWeight: 700, color: "#B45309" }}>
+                        {fmt(g.tongSoTien)}
+                      </td>
+                      <td style={{ padding: "10px 12px", color: "#374151" }}>{g.lyDoCanDoiChieu || "Chênh lệch đối soát cổng thanh toán"}</td>
+                      <td style={{ padding: "10px 12px" }}>
+                        <span style={{ background: "#FEF3C7", color: "#92400E", padding: "2px 7px", borderRadius: 6, fontSize: "0.72rem", fontWeight: 700 }}>
+                          {g.trangThaiDoiChieu || g.trangThai}
+                        </span>
+                      </td>
+                      <td style={{ padding: "10px 12px", fontSize: "0.74rem", color: "#6B7280" }}>
+                        {new Date(g.thoiDiemTao).toLocaleString("vi-VN")}
+                      </td>
+                      <td style={{ padding: "10px 12px" }}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setReconcileTarget(g);
+                            setReconcileOutcome("HopLe_XacNhan");
+                            setReconcileNote("");
+                            setReconcileRefundAmount(Number(g.tongSoTien || 0));
+                            setReconcileModalError("");
+                          }}
+                          style={{ background: "#E07A43", color: "white", border: "none", borderRadius: 6, padding: "5px 10px", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer" }}
+                        >
+                          Đối chiếu
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {/* Bảng chứng từ */}
       <div style={{ background: "white", borderRadius: 12, border: "1px solid var(--color-bone)", overflow: "hidden" }}>
@@ -1714,7 +2901,7 @@ export function AdjustmentsTab({ app }: { app: ReturnType<typeof useApp> }) {
                 <td style={{ padding: "11px 14px", fontSize: "0.82rem", color: "#374151" }}>{a.reason}</td>
                 <td style={{ padding: "11px 14px", fontSize: "0.8rem" }}>
                   <div>{a.createdBy}</div>
-                  <div style={{ fontSize: "0.7rem", color: "#15803D" }}>Duyệt: {a.approvedBy}</div>
+                  <div style={{ fontSize: "0.7rem", color: "#15803D" }}>Duyệt: {a.approvedBy || "Hệ thống"}</div>
                 </td>
                 <td style={{ padding: "11px 14px", fontSize: "0.75rem", color: "#6B7280" }}>{a.createdAt}</td>
                 <td style={{ padding: "11px 14px" }}>
@@ -1726,15 +2913,87 @@ export function AdjustmentsTab({ app }: { app: ReturnType<typeof useApp> }) {
         </table>
       </div>
 
+      {/* Modal Đối chiếu giao dịch ngoại lệ */}
+      {reconcileTarget && (
+        <div role="dialog" aria-modal="true" className="modal-overlay">
+          <div className="modal-container" style={{ maxWidth: 480 }}>
+            <div className="modal-header">
+              <h3 className="modal-title">Đối chiếu giao dịch {reconcileTarget.maYeuCau}</h3>
+              <button type="button" onClick={() => setReconcileTarget(null)} className="btn btn-ghost btn-sm text-lg">×</button>
+            </div>
+            <form onSubmit={(e) => void handleConfirmReconcilePayment(e)} className="modal-body flex flex-col gap-3">
+              {reconcileModalError && (
+                <div role="alert" style={{ background: "#FEF2F2", border: "1px solid #FECACA", color: "#B91C1C", borderRadius: 8, padding: "8px 10px", fontSize: "0.78rem", display: "flex", alignItems: "center", gap: 6 }}>
+                  <Icon name="alert-circle" size={15} />
+                  <span>{reconcileModalError}</span>
+                </div>
+              )}
+              <div style={{ background: "#F8F6F0", borderRadius: 8, padding: 10, border: "1px solid #E2DDD1", fontSize: "0.8rem" }}>
+                <div>Đơn thuê: <strong>#{reconcileTarget.maDonThue}</strong> · Phương thức: <strong>{reconcileTarget.phuongThuc}</strong></div>
+                <div>Số tiền giao dịch: <strong style={{ color: "#B45309" }}>{fmt(reconcileTarget.tongSoTien)}</strong></div>
+              </div>
+              <div>
+                <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 700, marginBottom: 4 }}>Kết luận đối chiếu</label>
+                <select
+                  value={reconcileOutcome}
+                  onChange={(e) => setReconcileOutcome(e.target.value as any)}
+                  style={{ width: "100%", border: "1px solid var(--color-bone)", borderRadius: 8, padding: 9, fontSize: "0.84rem", background: "white" }}
+                >
+                  <option value="HopLe_XacNhan">Hợp lệ — Xác nhận ghi nhận thanh toán</option>
+                  <option value="HopLe_HoanTienThua">Hợp lệ — Cần hoàn tiền thừa cho khách</option>
+                  <option value="TuChoi">Từ chối — Không ghi nhận giao dịch</option>
+                </select>
+              </div>
+              {reconcileOutcome === "HopLe_HoanTienThua" && (
+                <div>
+                  <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 700, marginBottom: 4 }}>Số tiền cần hoàn (VNĐ)</label>
+                  <input
+                    type="number"
+                    min="1000"
+                    step="1000"
+                    value={reconcileRefundAmount}
+                    onChange={(e) => setReconcileRefundAmount(Number(e.target.value))}
+                    style={{ width: "100%", border: "1px solid var(--color-bone)", borderRadius: 8, padding: 9, fontSize: "0.84rem" }}
+                  />
+                </div>
+              )}
+              <div>
+                <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 700, marginBottom: 4 }}>Ghi chú kết luận *</label>
+                <textarea
+                  required
+                  rows={2}
+                  value={reconcileNote}
+                  onChange={(e) => setReconcileNote(e.target.value)}
+                  placeholder="Ghi rõ căn cứ sao kê / mã giao dịch ngân hàng..."
+                  style={{ width: "100%", border: "1px solid var(--color-bone)", borderRadius: 8, padding: 9, fontSize: "0.84rem" }}
+                />
+              </div>
+              <div className="flex gap-2 mt-1">
+                <button type="button" disabled={reconcileBusy} onClick={() => setReconcileTarget(null)} className="btn btn-secondary btn-md" style={{ flex: 1 }}>Hủy</button>
+                <button type="submit" disabled={reconcileBusy} className="btn btn-primary btn-md" style={{ flex: 1 }}>
+                  {reconcileBusy ? "Đang lưu..." : "Xác nhận đối chiếu"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* Modal Lập chứng từ */}
       {showModal && (
         <div role="dialog" aria-modal="true" className="modal-overlay">
-          <div className="modal-container" style={{ maxWidth: 500 }}>
+          <div className="modal-container" style={{ maxWidth: 520 }}>
             <div className="modal-header">
               <h3 className="modal-title">Lập chứng từ điều chỉnh bù trừ</h3>
               <button onClick={() => setShowModal(false)} className="btn btn-ghost btn-sm text-lg">×</button>
             </div>
-            <form onSubmit={handleSubmit} className="modal-body flex flex-col gap-4">
+            <form onSubmit={(e) => void handleSubmit(e)} className="modal-body flex flex-col gap-4">
+              {modalError && (
+                <div role="alert" style={{ background: "#FEF2F2", border: "1px solid #FECACA", color: "#B91C1C", borderRadius: 8, padding: "8px 10px", fontSize: "0.78rem", display: "flex", alignItems: "center", gap: 6 }}>
+                  <Icon name="alert-circle" size={15} />
+                  <span>{modalError}</span>
+                </div>
+              )}
               <div>
                 <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 700, marginBottom: 5 }}>Loại điều chỉnh</label>
                 <select
@@ -1742,10 +3001,10 @@ export function AdjustmentsTab({ app }: { app: ReturnType<typeof useApp> }) {
                   onChange={(e) => setType(e.target.value as any)}
                   style={{ width: "100%", border: "1px solid var(--color-bone)", borderRadius: 8, padding: 10, fontSize: "0.85rem", background: "white" }}
                 >
-                  <option value="Sai lệch kiểm kê">Sai lệch kiểm kê</option>
-                  <option value="Bù trừ chiết khấu">Bù trừ chiết khấu phát sinh</option>
                   <option value="Thu bù">Thu bù phụ phí sau hoàn tất</option>
                   <option value="Hoàn trả">Hoàn trả chênh lệch cọc</option>
+                  <option value="Bù trừ chiết khấu">Bù trừ chiết khấu phát sinh</option>
+                  <option value="Sai lệch kiểm kê">Sai lệch kiểm kê</option>
                 </select>
               </div>
 
@@ -1759,7 +3018,7 @@ export function AdjustmentsTab({ app }: { app: ReturnType<typeof useApp> }) {
                   >
                     <option value="">Không có</option>
                     {app.orders.map((o) => (
-                      <option key={o.id} value={o.id}>{o.id} ({o.customerName})</option>
+                      <option key={o.id} value={o.id}>{o.displayCode || o.id} ({o.customerName})</option>
                     ))}
                   </select>
                 </div>
@@ -1778,6 +3037,39 @@ export function AdjustmentsTab({ app }: { app: ReturnType<typeof useApp> }) {
                   </select>
                 </div>
               </div>
+
+              {realApi && orderId && (
+                <div style={{ background: "#F8F6F0", borderRadius: 8, padding: 10, border: "1px solid #E2DDD1", fontSize: "0.78rem" }}>
+                  {orderLookupLoading ? (
+                    <span style={{ color: "#6B7280" }}>Đang kiểm tra biên bản đối soát &amp; phụ phí của đơn...</span>
+                  ) : orderDoiSoat ? (
+                    <div className="flex flex-col gap-2">
+                      <div>
+                        Biên bản đối soát gốc: <strong style={{ color: "#1B3F2F" }}>#{orderDoiSoat.maDoiSoat}</strong> ({orderDoiSoat.trangThai})
+                      </div>
+                      {orderSurchargeIds.length > 0 && (
+                        <div>
+                          <label style={{ display: "block", fontSize: "0.75rem", fontWeight: 700, marginBottom: 3 }}>
+                            Phụ phí gốc cần lập dòng điều chỉnh kèm (tùy chọn):
+                          </label>
+                          <select
+                            value={selectedSurchargeId}
+                            onChange={(e) => setSelectedSurchargeId(e.target.value)}
+                            style={{ width: "100%", border: "1px solid #CBD5E1", borderRadius: 6, padding: "6px 8px", fontSize: "0.78rem", background: "white" }}
+                          >
+                            <option value="">Chỉ lập điều chỉnh trên biên bản đối soát</option>
+                            {orderSurchargeIds.map((p) => (
+                              <option key={p.id} value={String(p.id)}>{p.label}</option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <span style={{ color: "#B91C1C" }}>{orderLookupError || "Đơn chưa có biên bản đối soát."}</span>
+                  )}
+                </div>
+              )}
 
               <div>
                 <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 700, marginBottom: 5 }}>Số tiền điều chỉnh (VNĐ)</label>
@@ -1805,8 +3097,10 @@ export function AdjustmentsTab({ app }: { app: ReturnType<typeof useApp> }) {
               </div>
 
               <div className="flex gap-2 mt-2">
-                <button type="button" onClick={() => setShowModal(false)} className="btn btn-secondary btn-md" style={{ flex: 1 }}>Hủy</button>
-                <button type="submit" className="btn btn-primary btn-md" style={{ flex: 1 }}>Lưu chứng từ</button>
+                <button type="button" disabled={submitBusy} onClick={() => setShowModal(false)} className="btn btn-secondary btn-md" style={{ flex: 1 }}>Hủy</button>
+                <button type="submit" disabled={submitBusy} className="btn btn-primary btn-md" style={{ flex: 1 }}>
+                  {submitBusy ? "Đang lưu..." : "Lưu chứng từ"}
+                </button>
               </div>
             </form>
           </div>
@@ -1816,12 +3110,37 @@ export function AdjustmentsTab({ app }: { app: ReturnType<typeof useApp> }) {
   );
 }
 
+function getDefaultAuditDates(): { from: string; to: string } {
+  const now = new Date();
+  const past = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+  return {
+    from: past.toISOString().slice(0, 10),
+    to: now.toISOString().slice(0, 10),
+  };
+}
+
+function escapeCsvCell(raw: unknown): string {
+  const s = String(raw ?? "");
+  const safe = /^[=+\-@\t\r]/.test(s) ? `'${s}` : s;
+  return `"${safe.replace(/"/g, '""')}"`;
+}
+
 // ─── 6. Nhật Ký Hệ Thống - Audit Log (UC10.4 & UC10.4.2) ─────────────────────────
 export function AuditLogTab({ app }: { app: ReturnType<typeof useApp> }) {
+  const realApi = app.realApi || isRealApiEnabled();
+  const defaultRange = getDefaultAuditDates();
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
-  const [fromDate, setFromDate] = useState("2024-01-01");
-  const [toDate, setToDate] = useState("2024-12-31");
+  const [fromDate, setFromDate] = useState(defaultRange.from);
+  const [toDate, setToDate] = useState(defaultRange.to);
+
+  // State đồng bộ API nhật ký thật (/api/v1/admin/nhat-ky)
+  const [apiLogs, setApiLogs] = useState<AuditLogEntryWithRef[]>([]);
+  const [totalLogs, setTotalLogs] = useState(0);
+  const [page, setPage] = useState(1);
+  const [logsLoading, setLogsLoading] = useState(false);
+  const [logsError, setLogsError] = useState("");
+  const [exportNotice, setExportNotice] = useState("");
 
   // State mở xem chứng từ liên quan từ nhật ký (UC10.4.2)
   const [inspectDoc, setInspectDoc] = useState<{
@@ -1830,11 +3149,45 @@ export function AuditLogTab({ app }: { app: ReturnType<typeof useApp> }) {
     title: string;
     data?: any;
   } | null>(null);
+  const [docLoading, setDocLoading] = useState(false);
+  const [docError, setDocError] = useState("");
 
   // State xem chi tiết biến động sự kiện (UC10.4 Bước 4)
-  const [selectedEvent, setSelectedEvent] = useState<AuditLogEntry | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<AuditLogEntryWithRef | null>(null);
 
-  // Hàm kiểm tra ngày nằm trong khoảng lọc
+  const loadAuditLogs = useCallback(
+    async (targetPage = page) => {
+      if (!realApi) return;
+      setLogsLoading(true);
+      setLogsError("");
+      try {
+        const res = await auditApi.traCuu({
+          tuKhoa: search.trim() || undefined,
+          tuNgay: fromDate || undefined,
+          denNgay: toDate || undefined,
+          trang: targetPage,
+          soMoiTrang: 50,
+        });
+        setApiLogs((res.items ?? []).map(mapNhatKyToAuditLog));
+        setTotalLogs(Number(res.totalItems ?? (res.items ?? []).length));
+      } catch (err) {
+        setLogsError(err instanceof Error ? err.message : "Không thể tải nhật ký thao tác hệ thống từ máy chủ.");
+      } finally {
+        setLogsLoading(false);
+      }
+    },
+    [realApi, search, fromDate, toDate, page]
+  );
+
+  useEffect(() => {
+    if (!realApi) return;
+    const timer = window.setTimeout(() => {
+      void loadAuditLogs(page);
+    }, 250);
+    return () => window.clearTimeout(timer);
+  }, [realApi, page, loadAuditLogs]);
+
+  // Hàm kiểm tra ngày nằm trong khoảng lọc (dành cho dữ liệu mock)
   const isWithinRange = (dateStr?: string) => {
     if (!dateStr) return true;
     let d: Date;
@@ -1852,63 +3205,128 @@ export function AuditLogTab({ app }: { app: ReturnType<typeof useApp> }) {
     return true;
   };
 
-  const filtered = app.auditLogs.filter((l) => {
+  const matchRoleValue = (entryRole: string, selected: string): boolean => {
+    if (selected === "all") return true;
+    const norm = entryRole.toLowerCase();
+    if (selected === "Quản trị viên") return norm.includes("quản trị") || norm.includes("quantrivien") || norm.includes("admin");
+    if (selected === "Nhân viên") return norm.includes("nhân viên") || norm.includes("nhanvien") || norm.includes("staff");
+    if (selected === "Khách hàng") return norm.includes("khách") || norm.includes("khachhang") || norm.includes("customer");
+    return entryRole === selected;
+  };
+
+  const sourceLogs: AuditLogEntryWithRef[] = realApi ? apiLogs : app.auditLogs;
+
+  const filtered = sourceLogs.filter((l) => {
     const matchSearch =
+      realApi ||
       l.actor.toLowerCase().includes(search.toLowerCase()) ||
       l.action.toLowerCase().includes(search.toLowerCase()) ||
       l.targetEntity.toLowerCase().includes(search.toLowerCase()) ||
       l.targetId.toLowerCase().includes(search.toLowerCase()) ||
       l.detail.toLowerCase().includes(search.toLowerCase());
-    const matchRole = roleFilter === "all" || l.role === roleFilter;
-    const matchDate = isWithinRange(l.timestamp);
+    const matchRole = matchRoleValue(l.role, roleFilter);
+    const matchDate = realApi ? true : isWithinRange(l.timestamp);
     return matchSearch && matchRole && matchDate;
   });
 
   // Xử lý mở chứng từ liên quan (UC10.4.2)
-  const handleOpenRelatedDoc = (targetEntity: string, targetId: string) => {
-    // 1. Kiểm tra nếu là Đơn hàng (DT-...)
-    const order = app.orders.find((o) => o.id === targetId || targetId.startsWith("DT-"));
-    if (order && (targetEntity.toLowerCase().includes("order") || targetId.startsWith("DT-"))) {
+  const handleOpenRelatedDoc = async (targetEntity: string, targetId: string, logEntry?: AuditLogEntryWithRef) => {
+    setDocError("");
+    setDocLoading(false);
+
+    // 1. Kiểm tra nếu là Đơn hàng (DT-... hoặc backendId)
+    const order = app.orders.find(
+      (o) => o.id === targetId || o.displayCode === targetId || String(o.backendId ?? "") === targetId
+    );
+    if (order && (targetEntity.toLowerCase().includes("order") || targetEntity.toLowerCase().includes("don") || targetId.startsWith("DT-"))) {
       setInspectDoc({
         type: "order",
-        id: order.id,
-        title: `Chứng từ đơn thuê — ${order.id}`,
+        id: order.displayCode || order.id,
+        title: `Chứng từ đơn thuê — ${order.displayCode || order.id}`,
         data: order,
       });
       return;
     }
 
     // 2. Kiểm tra nếu là Phiếu nhập kho (PN-...)
-    const receipt = app.importReceipts.find((r) => r.id === targetId || targetId.startsWith("PN-"));
-    if (receipt && (targetEntity.toLowerCase().includes("import") || targetId.startsWith("PN-"))) {
+    const receipt = app.importReceipts.find((r) => r.id === targetId || r.displayCode === targetId);
+    if (receipt && (targetEntity.toLowerCase().includes("import") || targetEntity.toLowerCase().includes("phieunhap") || targetId.startsWith("PN-"))) {
       setInspectDoc({
         type: "import",
-        id: receipt.id,
-        title: `Chứng từ phiếu nhập kho — ${receipt.id}`,
+        id: receipt.displayCode || receipt.id,
+        title: `Chứng từ phiếu nhập kho — ${receipt.displayCode || receipt.id}`,
         data: receipt,
       });
       return;
     }
 
     // 3. Kiểm tra nếu là Thiết bị
-    const equip = app.equipment.find((e) => e.id === targetId);
+    const equip = app.equipment.find((e) => e.id === targetId || e.displayCode === targetId);
     if (equip) {
       setInspectDoc({
         type: "equipment",
-        id: equip.id,
-        title: `Hồ sơ vòng đời thiết bị — ${equip.id}`,
+        id: equip.displayCode || equip.id,
+        title: `Hồ sơ vòng đời thiết bị — ${equip.displayCode || equip.id}`,
         data: equip,
       });
       return;
     }
 
-    // 4. Mở thông tin tham chiếu chung
+    // 4. Nạp chứng từ gốc trực tiếp từ URL tham chiếu backend nếu có
+    if (realApi && logEntry?.thamChieuUrl) {
+      setInspectDoc({
+        type: "generic",
+        id: targetId,
+        title: `Chứng từ tham chiếu: ${targetEntity} #${targetId}`,
+        data: { entity: targetEntity, id: targetId, thamChieuUrl: logEntry.thamChieuUrl, serverDoc: null },
+      });
+      setDocLoading(true);
+      try {
+        const doc = await auditApi.xemChungTuThamChieu(logEntry.thamChieuUrl);
+        setInspectDoc({
+          type: "generic",
+          id: targetId,
+          title: `Chứng từ tham chiếu: ${targetEntity} #${targetId}`,
+          data: { entity: targetEntity, id: targetId, thamChieuUrl: logEntry.thamChieuUrl, serverDoc: doc },
+        });
+      } catch (err) {
+        setDocError(err instanceof Error ? err.message : "Không thể tải dữ liệu chứng từ tham chiếu từ máy chủ.");
+      } finally {
+        setDocLoading(false);
+      }
+      return;
+    }
+
+    // 5. Mở thông tin tham chiếu chung
     setInspectDoc({
       type: "generic",
       id: targetId,
       title: `Chứng từ tham chiếu: ${targetEntity} #${targetId}`,
       data: { entity: targetEntity, id: targetId },
     });
+  };
+
+  const handleExportCsv = () => {
+    const header = ["Thời gian", "Người thực hiện", "Vai trò", "Hành động", "Loại đối tượng", "Mã đối tượng", "Chi tiết"];
+    const lines = [
+      header.map(escapeCsvCell).join(","),
+      ...filtered.map((row) =>
+        [row.timestamp, row.actor, row.role, row.action, row.targetEntity, row.targetId, row.detail]
+          .map(escapeCsvCell)
+          .join(",")
+      ),
+    ];
+    const blob = new Blob(["\uFEFF" + lines.join("\r\n")], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `Audit_Logs_Export_${toDate || "all"}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    setExportNotice(`Đã xuất ${filtered.length} bản ghi nhật ký ra tệp CSV.`);
+    window.setTimeout(() => setExportNotice(""), 4000);
   };
 
   return (
@@ -1922,13 +3340,40 @@ export function AuditLogTab({ app }: { app: ReturnType<typeof useApp> }) {
             Truy vết toàn bộ thao tác quan trọng: phân quyền, đổi trạng thái đơn, sửa xóa chứng từ, đổi chính sách. Không cho phép sửa xóa qua giao diện tra cứu (Read-only).
           </p>
         </div>
-        <button
-          onClick={() => alert("Đã xuất 1 tệp Audit_Logs_Export.csv với " + filtered.length + " bản ghi.")}
-          className="btn btn-secondary btn-sm"
-        >
-          <span className="icon-label"><Icon name="chart" size={14} /> Xuất file CSV</span>
-        </button>
+        <div className="flex gap-2">
+          {realApi && (
+            <button
+              type="button"
+              disabled={logsLoading}
+              onClick={() => void loadAuditLogs(page)}
+              className="btn btn-secondary btn-sm"
+            >
+              <span className="icon-label"><Icon name="refresh" size={14} /> Làm mới</span>
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={handleExportCsv}
+            className="btn btn-secondary btn-sm"
+          >
+            <span className="icon-label"><Icon name="chart" size={14} /> Xuất file CSV</span>
+          </button>
+        </div>
       </div>
+
+      {logsError && (
+        <div role="alert" style={{ background: "#FEF2F2", border: "1px solid #FECACA", color: "#B91C1C", borderRadius: 8, padding: "10px 14px", marginBottom: 14, fontSize: "0.82rem", display: "flex", alignItems: "center", gap: 8 }}>
+          <Icon name="alert-circle" size={16} />
+          <span>{logsError}</span>
+        </div>
+      )}
+
+      {exportNotice && (
+        <div role="status" style={{ background: "#DCFCE7", border: "1px solid #A7F3D0", color: "#15803D", borderRadius: 8, padding: "10px 14px", marginBottom: 14, fontSize: "0.82rem", display: "flex", alignItems: "center", gap: 8 }}>
+          <Icon name="check" size={16} />
+          <span>{exportNotice}</span>
+        </div>
+      )}
 
       {/* Filter kết hợp thời gian (UC10.4 Dòng sự kiện 2) */}
       <div className="flex gap-3 mb-4 flex-wrap items-center">
@@ -1937,7 +3382,10 @@ export function AuditLogTab({ app }: { app: ReturnType<typeof useApp> }) {
             type="text"
             placeholder="Tìm theo người thực hiện, hành động, chứng từ..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPage(1);
+            }}
             style={{ width: "100%", border: "1px solid var(--color-bone)", borderRadius: 8, padding: "8px 12px 8px 32px", fontSize: "0.85rem", background: "white" }}
           />
           <div style={{ position: "absolute", left: 10, top: 9, color: "#9CA3AF" }}><Icon name="search" size={16} /></div>
@@ -1959,14 +3407,20 @@ export function AuditLogTab({ app }: { app: ReturnType<typeof useApp> }) {
           <input
             type="date"
             value={fromDate}
-            onChange={(e) => setFromDate(e.target.value)}
+            onChange={(e) => {
+              setFromDate(e.target.value);
+              setPage(1);
+            }}
             style={{ border: "1px solid var(--color-bone)", borderRadius: 4, padding: "2px 5px", fontSize: "0.75rem" }}
           />
           <span>→</span>
           <input
             type="date"
             value={toDate}
-            onChange={(e) => setToDate(e.target.value)}
+            onChange={(e) => {
+              setToDate(e.target.value);
+              setPage(1);
+            }}
             style={{ border: "1px solid var(--color-bone)", borderRadius: 4, padding: "2px 5px", fontSize: "0.75rem" }}
           />
         </div>
@@ -1983,7 +3437,13 @@ export function AuditLogTab({ app }: { app: ReturnType<typeof useApp> }) {
             </tr>
           </thead>
           <tbody>
-            {filtered.length === 0 ? (
+            {logsLoading ? (
+              <tr>
+                <td colSpan={7} style={{ padding: "36px 0", textAlign: "center", color: "#6B7280", fontSize: "0.85rem" }}>
+                  Đang tải nhật ký thao tác hệ thống...
+                </td>
+              </tr>
+            ) : filtered.length === 0 ? (
               <tr>
                 <td colSpan={7} style={{ padding: "36px 0", textAlign: "center", color: "#6B7280", fontSize: "0.85rem" }}>
                   Không tìm thấy nhật ký biến động phù hợp với bộ lọc đã chọn.
@@ -2004,8 +3464,8 @@ export function AuditLogTab({ app }: { app: ReturnType<typeof useApp> }) {
                       fontWeight: 700,
                       padding: "2px 8px",
                       borderRadius: 6,
-                      background: log.role === "Quản trị viên" ? "#FEF3C7" : log.role === "Nhân viên" ? "#E0E7FF" : "#F3F4F6",
-                      color: log.role === "Quản trị viên" ? "#B45309" : log.role === "Nhân viên" ? "#3730A3" : "#4B5563"
+                      background: matchRoleValue(log.role, "Quản trị viên") ? "#FEF3C7" : matchRoleValue(log.role, "Nhân viên") ? "#E0E7FF" : "#F3F4F6",
+                      color: matchRoleValue(log.role, "Quản trị viên") ? "#B45309" : matchRoleValue(log.role, "Nhân viên") ? "#3730A3" : "#4B5563"
                     }}>
                       {log.role}
                     </span>
@@ -2016,13 +3476,14 @@ export function AuditLogTab({ app }: { app: ReturnType<typeof useApp> }) {
                   {/* Nhấn vào để mở chứng từ liên quan (UC10.4.2) */}
                   <td style={{ padding: "11px 14px", fontFamily: "var(--font-mono)", fontSize: "0.78rem" }}>
                     <button
-                      onClick={() => handleOpenRelatedDoc(log.targetEntity, log.targetId)}
+                      type="button"
+                      onClick={() => void handleOpenRelatedDoc(log.targetEntity, log.targetId, log)}
                       style={{ background: "none", border: "none", cursor: "pointer", textAlign: "left", padding: 0 }}
                       title="Nhấn để mở chứng từ đối chiếu (UC10.4.2)"
                     >
                       <span style={{ color: "#6B7280" }}>{log.targetEntity}:</span>{" "}
                       <strong style={{ color: "var(--color-forest)", textDecoration: "underline" }}>
-                        {log.targetId} 🔍
+                        {log.targetId}
                       </strong>
                     </button>
                   </td>
@@ -2031,6 +3492,7 @@ export function AuditLogTab({ app }: { app: ReturnType<typeof useApp> }) {
                   </td>
                   <td style={{ padding: "11px 14px" }}>
                     <button
+                      type="button"
                       onClick={() => setSelectedEvent(log)}
                       className="btn btn-secondary btn-sm"
                       style={{ padding: "3px 8px", fontSize: "0.72rem" }}
@@ -2043,6 +3505,20 @@ export function AuditLogTab({ app }: { app: ReturnType<typeof useApp> }) {
             )}
           </tbody>
         </table>
+
+        {realApi && totalLogs > 50 && (
+          <div className="flex justify-between items-center p-3" style={{ borderTop: "1px solid var(--color-bone)", background: "var(--color-cream)", fontSize: "0.78rem" }}>
+            <span>Trang {page} · Tổng {totalLogs} bản ghi</span>
+            <div className="flex gap-2">
+              <button type="button" disabled={page <= 1 || logsLoading} onClick={() => setPage((p) => Math.max(1, p - 1))} className="btn btn-secondary btn-sm">
+                Trước
+              </button>
+              <button type="button" disabled={page * 50 >= totalLogs || logsLoading} onClick={() => setPage((p) => p + 1)} className="btn btn-secondary btn-sm">
+                Sau
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ─── MODAL XEM CHI TIẾT SỰ KIỆN BIẾN ĐỘNG (UC10.4 Bước 4) ───────────── */}
@@ -2056,12 +3532,12 @@ export function AuditLogTab({ app }: { app: ReturnType<typeof useApp> }) {
                 </h3>
                 <div style={{ fontSize: "0.75rem", color: "#6B7280" }}>Thời điểm: {selectedEvent.timestamp}</div>
               </div>
-              <button onClick={() => setSelectedEvent(null)} style={{ border: "none", background: "none", cursor: "pointer", padding: 4 }}>
+              <button type="button" onClick={() => setSelectedEvent(null)} style={{ border: "none", background: "none", cursor: "pointer", padding: 4 }}>
                 <Icon name="close" size={20} />
               </button>
             </div>
 
-            <div style={{ padding: 20, overflowY: "auto", fontSize: "0.85rem" }}>
+            <div style={{ padding: 20, overflowY: "auto", fontSize: "0.85rem", maxHeight: "75vh" }}>
               <div className="grid gap-3 mb-4" style={{ gridTemplateColumns: "1fr 1fr" }}>
                 <div style={{ background: "var(--color-parchment)", borderRadius: 8, padding: 12 }}>
                   <div style={{ fontSize: "0.75rem", color: "#6B7280" }}>Người thực hiện:</div>
@@ -2074,11 +3550,11 @@ export function AuditLogTab({ app }: { app: ReturnType<typeof useApp> }) {
                   <strong style={{ fontFamily: "var(--font-mono)" }}>{selectedEvent.targetEntity}: {selectedEvent.targetId}</strong>
                   <div style={{ marginTop: 4 }}>
                     <button
+                      type="button"
                       onClick={() => {
-                        const entity = selectedEvent.targetEntity;
-                        const id = selectedEvent.targetId;
+                        const ev = selectedEvent;
                         setSelectedEvent(null);
-                        handleOpenRelatedDoc(entity, id);
+                        void handleOpenRelatedDoc(ev.targetEntity, ev.targetId, ev);
                       }}
                       className="btn btn-secondary btn-sm"
                       style={{ padding: "2px 8px", fontSize: "0.7rem" }}
@@ -2093,7 +3569,29 @@ export function AuditLogTab({ app }: { app: ReturnType<typeof useApp> }) {
                 <div style={{ fontSize: "0.75rem", color: "#6B7280", fontWeight: 700, marginBottom: 4 }}>HÀNH ĐỘNG & NỘI DUNG BIẾN ĐỘNG:</div>
                 <div style={{ fontWeight: 600, color: "var(--color-forest)", marginBottom: 6 }}>{selectedEvent.action}</div>
                 <div style={{ color: "#374151", lineHeight: 1.5 }}>{selectedEvent.detail}</div>
+                {selectedEvent.lyDo && (
+                  <div style={{ marginTop: 8, fontSize: "0.78rem", color: "#4B5563" }}>
+                    <strong>Lý do ghi nhận:</strong> {selectedEvent.lyDo}
+                  </div>
+                )}
               </div>
+
+              {(selectedEvent.duLieuTruoc || selectedEvent.duLieuSau) && (
+                <div className="grid gap-3 mt-3" style={{ gridTemplateColumns: "1fr 1fr" }}>
+                  {selectedEvent.duLieuTruoc && (
+                    <div style={{ background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: 8, padding: 10, fontSize: "0.75rem" }}>
+                      <div style={{ fontWeight: 700, color: "#991B1B", marginBottom: 4 }}>Dữ liệu trước</div>
+                      <pre style={{ margin: 0, whiteSpace: "pre-wrap", wordBreak: "break-word", fontFamily: "var(--font-mono)" }}>{selectedEvent.duLieuTruoc}</pre>
+                    </div>
+                  )}
+                  {selectedEvent.duLieuSau && (
+                    <div style={{ background: "#F0FDF4", border: "1px solid #BBF7D0", borderRadius: 8, padding: 10, fontSize: "0.75rem" }}>
+                      <div style={{ fontWeight: 700, color: "#166534", marginBottom: 4 }}>Dữ liệu sau</div>
+                      <pre style={{ margin: 0, whiteSpace: "pre-wrap", wordBreak: "break-word", fontFamily: "var(--font-mono)" }}>{selectedEvent.duLieuSau}</pre>
+                    </div>
+                  )}
+                </div>
+              )}
 
               <div style={{ marginTop: 14, fontSize: "0.75rem", color: "#9CA3AF", fontStyle: "italic" }}>
                 🔒 Nhật ký kiểm toán được niêm phong bất biến. Chức năng tra cứu chỉ hỗ trợ đọc (Read-only) và không cung cấp thao tác sửa/xóa theo chuẩn an toàn thông tin (UC10.4 Dòng phụ 4.2).
@@ -2101,7 +3599,7 @@ export function AuditLogTab({ app }: { app: ReturnType<typeof useApp> }) {
             </div>
 
             <div style={{ padding: "12px 20px", borderTop: "1px solid var(--color-bone)", display: "flex", justifyContent: "flex-end" }}>
-              <button onClick={() => setSelectedEvent(null)} className="btn btn-secondary btn-sm">Đóng</button>
+              <button type="button" onClick={() => setSelectedEvent(null)} className="btn btn-secondary btn-sm">Đóng</button>
             </div>
           </div>
         </div>
@@ -2118,7 +3616,7 @@ export function AuditLogTab({ app }: { app: ReturnType<typeof useApp> }) {
                 </h3>
                 <div style={{ fontSize: "0.75rem", color: "var(--color-forest)", fontWeight: 600 }}>Chế độ tra cứu chứng từ gốc (Read-only — UC10.4.2)</div>
               </div>
-              <button onClick={() => setInspectDoc(null)} style={{ border: "none", background: "none", cursor: "pointer", padding: 4 }}>
+              <button type="button" onClick={() => setInspectDoc(null)} style={{ border: "none", background: "none", cursor: "pointer", padding: 4 }}>
                 <Icon name="close" size={20} />
               </button>
             </div>
@@ -2222,13 +3720,44 @@ export function AuditLogTab({ app }: { app: ReturnType<typeof useApp> }) {
                 <div style={{ background: "var(--color-parchment)", borderRadius: 8, padding: 14 }}>
                   <div>Chứng từ tham chiếu: <strong>{inspectDoc.data.entity}</strong></div>
                   <div>Mã định danh: <strong style={{ fontFamily: "var(--font-mono)" }}>{inspectDoc.data.id}</strong></div>
-                  <div style={{ marginTop: 8, color: "#6B7280" }}>Dữ liệu gốc được lưu trữ trong cơ sở dữ liệu hệ thống.</div>
+                  {inspectDoc.data.thamChieuUrl && (
+                    <div style={{ fontSize: "0.75rem", color: "#6B7280", marginTop: 4 }}>
+                      Đường dẫn máy chủ: <code style={{ fontFamily: "var(--font-mono)" }}>{inspectDoc.data.thamChieuUrl}</code>
+                    </div>
+                  )}
+                  {docLoading && (
+                    <div style={{ marginTop: 10, color: "#6B7280" }}>Đang tải dữ liệu chứng từ gốc từ máy chủ...</div>
+                  )}
+                  {docError && (
+                    <div role="alert" style={{ marginTop: 10, color: "#B91C1C" }}>{docError}</div>
+                  )}
+                  {inspectDoc.data.serverDoc ? (
+                    <pre
+                      style={{
+                        marginTop: 10,
+                        background: "white",
+                        border: "1px solid var(--color-bone)",
+                        borderRadius: 8,
+                        padding: 12,
+                        maxHeight: 280,
+                        overflow: "auto",
+                        fontSize: "0.75rem",
+                        fontFamily: "var(--font-mono)",
+                      }}
+                    >
+                      {JSON.stringify(inspectDoc.data.serverDoc, null, 2)}
+                    </pre>
+                  ) : (
+                    !docLoading && (
+                      <div style={{ marginTop: 8, color: "#6B7280" }}>Dữ liệu gốc được lưu trữ trong cơ sở dữ liệu hệ thống.</div>
+                    )
+                  )}
                 </div>
               )}
             </div>
 
             <div style={{ padding: "12px 20px", borderTop: "1px solid var(--color-bone)", display: "flex", justifyContent: "flex-end" }}>
-              <button onClick={() => setInspectDoc(null)} className="btn btn-secondary btn-sm">Đóng</button>
+              <button type="button" onClick={() => setInspectDoc(null)} className="btn btn-secondary btn-sm">Đóng</button>
             </div>
           </div>
         </div>

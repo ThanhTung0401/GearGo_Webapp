@@ -80,14 +80,66 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<{ data:
     if (response.status === 401) {
       setAuthToken(null);
     }
+    // Khi backend báo quyền/vai trò trong token đã lệch với DB, phát sự kiện để App và hook phân quyền làm mới ngay
+    if (response.status === 403 && code === "QUYEN_DA_THAY_DOI" && typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("geargo:permissions-changed", { detail: { code, message: msg } }));
+      window.dispatchEvent(new CustomEvent("geargo-permissions-changed"));
+    }
     throw new ApiError(msg, response.status, code);
   }
 
   return { data: payload as T, status: response.status };
 }
 
+/**
+ * Tải tệp nhị phân (CSV/PDF) kèm JWT Bearer token và tự tách tên tệp từ Content-Disposition.
+ */
+async function requestBlob(path: string): Promise<{ blob: Blob; fileName: string }> {
+  const token = getAuthToken();
+  const response = await fetch(`${API_BASE}${path}`, {
+    method: "GET",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    credentials: "include",
+  });
+
+  if (!response.ok) {
+    let msg = `Lỗi tải tệp HTTP ${response.status}`;
+    let code: string | undefined;
+    try {
+      const ct = response.headers.get("content-type") ?? "";
+      if (ct.includes("application/json")) {
+        const errObj = (await response.json()) as { maLoi?: string; thongDiep?: string; message?: string };
+        msg = errObj.thongDiep ?? errObj.message ?? msg;
+        code = errObj.maLoi;
+      }
+    } catch {
+      // Giữ thông điệp mặc định khi response lỗi không phải JSON
+    }
+    if (response.status === 401) {
+      setAuthToken(null);
+    }
+    if (response.status === 403 && code === "QUYEN_DA_THAY_DOI" && typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("geargo:permissions-changed", { detail: { code, message: msg } }));
+    }
+    throw new ApiError(msg, response.status, code);
+  }
+
+  const blob = await response.blob();
+  const disposition = response.headers.get("content-disposition") ?? "";
+  let fileName = "geargo-export.csv";
+  const utf8Match = disposition.match(/filename\*=UTF-8''([^;]+)/i);
+  const asciiMatch = disposition.match(/filename="?([^";]+)"?/i);
+  if (utf8Match?.[1]) {
+    fileName = decodeURIComponent(utf8Match[1].trim());
+  } else if (asciiMatch?.[1]) {
+    fileName = asciiMatch[1].trim();
+  }
+  return { blob, fileName };
+}
+
 export const apiClient = {
   get: <T>(path: string) => request<T>(path, { method: "GET" }),
+  getBlob: (path: string) => requestBlob(path),
   post: <T>(path: string, body?: unknown) =>
     request<T>(path, { method: "POST", body: body !== undefined ? JSON.stringify(body) : undefined }),
   postFormData: <T>(path: string, formData: FormData) =>

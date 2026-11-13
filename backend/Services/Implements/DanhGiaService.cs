@@ -157,6 +157,8 @@ public class DanhGiaService : IDanhGiaService
                     .ThenInclude(dt => dt.KhachHang)
             .Include(d => d.ChiTietDonThue)
                 .ThenInclude(c => c.SanPham)
+            .Include(d => d.NguoiPhanHoi)
+                .ThenInclude(t => t!.NhanVien)
             .Where(d => d.ChiTietDonThue.DonThue.MaKhachHang == maKhachHang)
             .OrderByDescending(d => d.NgayTao);
 
@@ -193,6 +195,8 @@ public class DanhGiaService : IDanhGiaService
                     .ThenInclude(dt => dt.KhachHang)
             .Include(d => d.ChiTietDonThue)
                 .ThenInclude(c => c.SanPham)
+            .Include(d => d.NguoiPhanHoi)
+                .ThenInclude(t => t!.NhanVien)
             .Where(d => d.TrangThaiHienThi == "HienThi" && d.ChiTietDonThue.MaSanPham == request.SanPhamId);
 
         if (request.SoSao.HasValue && request.SoSao.Value >= 1 && request.SoSao.Value <= 5)
@@ -278,6 +282,8 @@ public class DanhGiaService : IDanhGiaService
                     .ThenInclude(dt => dt.KhachHang)
             .Include(d => d.ChiTietDonThue)
                 .ThenInclude(c => c.SanPham)
+            .Include(d => d.NguoiPhanHoi)
+                .ThenInclude(t => t!.NhanVien)
             .AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(trangThai))
@@ -316,6 +322,8 @@ public class DanhGiaService : IDanhGiaService
             .Include(d => d.ChiTietDonThue)
                 .ThenInclude(c => c.SanPham)
             .Include(d => d.ChiTietDonThue.DonThue.KhachHang)
+            .Include(d => d.NguoiPhanHoi)
+                .ThenInclude(t => t!.NhanVien)
             .FirstOrDefaultAsync(d => d.MaDanhGia == maDanhGia);
 
         if (danhGia == null)
@@ -357,6 +365,8 @@ public class DanhGiaService : IDanhGiaService
             .Include(d => d.ChiTietDonThue)
                 .ThenInclude(c => c.SanPham)
             .Include(d => d.ChiTietDonThue.DonThue.KhachHang)
+            .Include(d => d.NguoiPhanHoi)
+                .ThenInclude(t => t!.NhanVien)
             .FirstOrDefaultAsync(d => d.MaDanhGia == maDanhGia);
 
         if (danhGia == null)
@@ -388,9 +398,83 @@ public class DanhGiaService : IDanhGiaService
         return Result<DanhGiaResponse>.Ok(response);
     }
 
+    public async Task<Result<DanhGiaResponse>> PhanHoiDanhGiaAsync(long maDanhGia, PhanHoiDanhGiaRequest request, long maTaiKhoan)
+    {
+        // Chỉ nhân viên đang làm việc hoặc quản trị viên còn hoạt động mới được phản hồi đánh giá
+        await ActorGuard.EnsureVanHanhAsync(_context, maTaiKhoan);
+
+        var noiDung = request.NoiDung?.Trim();
+        if (string.IsNullOrWhiteSpace(noiDung))
+        {
+            return Result<DanhGiaResponse>.Loi("NOI_DUNG_PHAN_HOI_TRONG", "Nội dung phản hồi không được để trống.");
+        }
+
+        var danhGia = await _context.DanhGias
+            .Include(d => d.ChiTietDonThue)
+                .ThenInclude(c => c.SanPham)
+            .Include(d => d.ChiTietDonThue.DonThue.KhachHang)
+            .Include(d => d.NguoiPhanHoi)
+                .ThenInclude(t => t!.NhanVien)
+            .FirstOrDefaultAsync(d => d.MaDanhGia == maDanhGia);
+
+        if (danhGia == null)
+        {
+            return Result<DanhGiaResponse>.Loi("DANH_GIA_NOT_FOUND", "Đánh giá không tồn tại.");
+        }
+
+        var duLieuTruoc = JsonSerializer.Serialize(new
+        {
+            phanHoiCuaHang = danhGia.PhanHoiCuaHang,
+            thoiDiemPhanHoi = danhGia.ThoiDiemPhanHoi,
+            maNguoiPhanHoi = danhGia.MaNguoiPhanHoi
+        });
+
+        var thoiDiemPhanHoi = DateTime.UtcNow;
+        danhGia.PhanHoiCuaHang = noiDung;
+        danhGia.ThoiDiemPhanHoi = thoiDiemPhanHoi;
+        danhGia.MaNguoiPhanHoi = maTaiKhoan;
+        danhGia.NgayCapNhat = thoiDiemPhanHoi;
+
+        // Lấy tên hiển thị của người phản hồi từ DB (AsNoTracking tránh xung đột ChangeTracker)
+        var tenNguoiPhanHoi = await _context.TaiKhoans
+            .AsNoTracking()
+            .Where(t => t.MaTaiKhoan == maTaiKhoan)
+            .Select(t => t.NhanVien != null && !string.IsNullOrWhiteSpace(t.NhanVien.HoTen)
+                ? t.NhanVien.HoTen
+                : t.Email)
+            .FirstOrDefaultAsync();
+
+        _context.NhatKyThaoTacs.Add(new NhatKyThaoTac
+        {
+            MaTaiKhoan = maTaiKhoan,
+            HanhDong = "PHAN_HOI_DANH_GIA",
+            LoaiDoiTuong = "DANH_GIA",
+            MaDoiTuong = maDanhGia.ToString(),
+            DuLieuTruoc = duLieuTruoc,
+            DuLieuSau = JsonSerializer.Serialize(new
+            {
+                phanHoiCuaHang = noiDung,
+                thoiDiemPhanHoi,
+                maNguoiPhanHoi = maTaiKhoan
+            }),
+            LyDo = noiDung,
+            ThoiDiem = thoiDiemPhanHoi
+        });
+
+        await _context.SaveChangesAsync();
+
+        var response = MapToResponse(danhGia,
+            danhGia.ChiTietDonThue.SanPham.TenSanPham,
+            danhGia.ChiTietDonThue.DonThue.KhachHang.HoTen,
+            danhGia.ChiTietDonThue.MaSanPham,
+            tenNguoiPhanHoi);
+
+        return Result<DanhGiaResponse>.Ok(response);
+    }
+
     #region Helper Methods
 
-    private static DanhGiaResponse MapToResponse(DanhGia d, string tenSanPham, string tenNguoiDung, long maSanPham)
+    private static DanhGiaResponse MapToResponse(DanhGia d, string tenSanPham, string tenNguoiDung, long maSanPham, string? tenNguoiPhanHoiOverride = null)
     {
         List<string> danhSachAnh = new();
         if (!string.IsNullOrWhiteSpace(d.DanhSachAnh))
@@ -405,6 +489,14 @@ public class DanhGiaService : IDanhGiaService
             }
         }
 
+        string? nguoiPhanHoi = null;
+        if (!string.IsNullOrWhiteSpace(d.PhanHoiCuaHang))
+        {
+            nguoiPhanHoi = tenNguoiPhanHoiOverride
+                ?? (!string.IsNullOrWhiteSpace(d.NguoiPhanHoi?.NhanVien?.HoTen) ? d.NguoiPhanHoi!.NhanVien!.HoTen : d.NguoiPhanHoi?.Email)
+                ?? "Cửa hàng GearGo";
+        }
+
         return new DanhGiaResponse
         {
             MaDanhGia = d.MaDanhGia,
@@ -417,7 +509,10 @@ public class DanhGiaService : IDanhGiaService
             DanhSachAnh = danhSachAnh,
             NgayTao = d.NgayTao,
             TrangThaiHienThi = d.TrangThaiHienThi,
-            LyDoAn = d.LyDoAn
+            LyDoAn = d.LyDoAn,
+            PhanHoiCuaHang = d.PhanHoiCuaHang,
+            ThoiDiemPhanHoi = d.ThoiDiemPhanHoi,
+            NguoiPhanHoi = nguoiPhanHoi
         };
     }
 

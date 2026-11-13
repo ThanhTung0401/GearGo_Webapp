@@ -1,7 +1,30 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useApp } from "../App";
 import { fmt, statusColors } from "../store";
 import Icon from "../components/Icon";
+import { ApiError } from "../services/apiClient";
+import {
+  rentalCartApi,
+  orderApi,
+  paymentApi,
+  surchargeApi,
+  aiAdvisorApi,
+  profileApi,
+  authApi,
+  reviewApi,
+  type GioThueBackend,
+  type XemTruocHuyBackend,
+  type TuVanBoDoBackend,
+  type SanPhamDuDieuKienDanhGiaBackend,
+} from "../services/api";
+import { mapDonChiTietToOrder, mapDanhGiaToReview } from "../services/mappers";
+
+/** Chuyển đổi ngày (YYYY-MM-DD) và giờ (HH:mm) sang ISO timestamp phục vụ gọi API backend. */
+function toIsoDateTime(date: string, hour?: string): string {
+  const h = hour || "09:00";
+  const parsed = new Date(`${date}T${h}:00`);
+  return Number.isNaN(parsed.getTime()) ? new Date().toISOString() : parsed.toISOString();
+}
 
 // ─── Giỏ hàng (CartView) ──────────────────────────────────────────────────────
 // ─── Giỏ hàng (CartView - UC3.1, UC3.1.1, UC3.1.2) ───────────────────────────
@@ -11,34 +34,179 @@ function CartView() {
   const [promoApplied, setPromoApplied] = useState(Boolean(app.appliedPromoCode));
   const [promoError, setPromoError] = useState("");
   const [showAuthModal, setShowAuthModal] = useState(false);
-  const days = app.getDays();
+  const [backendCart, setBackendCart] = useState<GioThueBackend | null>(null);
+  const [cartBusy, setCartBusy] = useState(false);
+  const [cartApiError, setCartApiError] = useState("");
+
+  // Đồng bộ giỏ thuê & báo giá thật từ backend khi đang ở chế độ realApi và đã đăng nhập
+  const loadBackendCart = useCallback(async () => {
+    if (!app.realApi || !app.currentUser) {
+      setBackendCart(null);
+      return;
+    }
+    try {
+      const res = await rentalCartApi.layGio();
+      setBackendCart(res);
+      app.setCartItems?.(
+        res.chiTiet.map((item) => ({
+          productId: String(item.maSanPham),
+          qty: item.soLuong,
+        }))
+      );
+      if (res.maKhuyenMaiApDung) {
+        setPromoCode(res.maKhuyenMaiApDung);
+        setPromoApplied(true);
+        app.setAppliedPromoCode(res.maKhuyenMaiApDung);
+      } else {
+        setPromoApplied(false);
+      }
+      setCartApiError("");
+    } catch (err) {
+      setCartApiError(err instanceof Error ? err.message : "Không thể tải giỏ thuê từ máy chủ.");
+    }
+  }, [app.realApi, app.currentUser?.id]);
+
+  useEffect(() => {
+    void loadBackendCart();
+  }, [loadBackendCart]);
+
+  const localDays = app.getDays();
+  const days = app.realApi && backendCart?.baoGia ? backendCart.baoGia.soNgayThue : localDays;
   const datesValid = app.hasValidRentalPeriod();
 
   // Tính tổng tiền thuê theo số ngày và số lượng (UC3.1.1: block 24h)
-  const rental = app.cart.reduce((s, c) => {
+  const localRental = app.cart.reduce((s, c) => {
     const p = app.products.find((p) => p.id === c.productId)!;
-    return s + (p ? p.pricePerDay * c.qty * days : 0);
+    return s + (p ? p.pricePerDay * c.qty * localDays : 0);
   }, 0);
 
   // Tính tổng tiền cọc bảo đảm (UC3.1.1: cọc tách riêng không phụ thuộc ngày thuê)
-  const depositTotal = app.cart.reduce((s, c) => {
+  const localDepositTotal = app.cart.reduce((s, c) => {
     const p = app.products.find((p) => p.id === c.productId)!;
     return s + (p ? p.deposit * c.qty : 0);
   }, 0);
 
   const promotionItems = app.cart.map((item) => {
     const product = app.products.find((entry) => entry.id === item.productId)!;
-    return { productId: item.productId, rental: product ? product.pricePerDay * item.qty * days : 0 };
+    return { productId: item.productId, rental: product ? product.pricePerDay * item.qty * localDays : 0 };
   });
 
   // Đánh giá mã ưu đãi (UC3.1.2: Chỉ giảm trên tiền thuê, không giảm tiền cọc)
-  const promoResult = promoApplied ? app.evaluatePromotion(promoCode, rental, promotionItems) : null;
-  const discount = promoResult?.ok ? promoResult.data.discount : 0;
+  const promoResult = !app.realApi && promoApplied ? app.evaluatePromotion(promoCode, localRental, promotionItems) : null;
+  const rental = app.realApi && backendCart?.baoGia ? Number(backendCart.baoGia.tongTienThueTruocGiam) : localRental;
+  const depositTotal = app.realApi && backendCart?.baoGia ? Number(backendCart.baoGia.tongTienCoc) : localDepositTotal;
+  const discount = app.realApi && backendCart?.baoGia ? Number(backendCart.baoGia.tongTienGiam) : (promoResult?.ok ? promoResult.data.discount : 0);
   const grand = rental - discount + depositTotal;
 
-  // Áp dụng mã khuyến mãi
-  const applyPromo = () => {
-    const result = app.evaluatePromotion(promoCode, rental, promotionItems);
+  // Cập nhật khung giờ nhận/trả và đồng bộ báo giá backend
+  const handleScheduleChange = async (
+    nextPickupDate: string,
+    nextPickupHour: string,
+    nextReturnDate: string,
+    nextReturnHour: string
+  ) => {
+    app.setPickupDate(nextPickupDate);
+    app.setPickupHour(nextPickupHour);
+    app.setReturnDate(nextReturnDate);
+    app.setReturnHour(nextReturnHour);
+    if (!app.realApi) return;
+
+    const gioNhan = toIsoDateTime(nextPickupDate, nextPickupHour);
+    const gioTra = toIsoDateTime(nextReturnDate, nextReturnHour);
+    void app.refreshCatalog?.({ gioNhan, gioTra });
+    if (app.currentUser && new Date(gioTra).getTime() > new Date(gioNhan).getTime()) {
+      setCartBusy(true);
+      try {
+        await rentalCartApi.datThoiGian(gioNhan, gioTra);
+        await loadBackendCart();
+      } catch (err) {
+        setCartApiError(err instanceof Error ? err.message : "Không thể cập nhật lịch thuê.");
+      } finally {
+        setCartBusy(false);
+      }
+    }
+  };
+
+  // Điều chỉnh số lượng món trong giỏ
+  const handleQtyDelta = async (productId: string, delta: number) => {
+    if (!app.realApi || !app.currentUser) {
+      app.updateCartQty(productId, delta);
+      return;
+    }
+    const line = backendCart?.chiTiet.find((item) => String(item.maSanPham) === productId);
+    setCartBusy(true);
+    setCartApiError("");
+    try {
+      if (!line) {
+        if (delta > 0) await rentalCartApi.themVaoGio(Number(productId), delta);
+      } else {
+        const nextQty = line.soLuong + delta;
+        if (nextQty <= 0) {
+          await rentalCartApi.xoaChiTiet(line.maChiTietGio);
+        } else {
+          await rentalCartApi.capNhatSoLuong(line.maChiTietGio, nextQty);
+        }
+      }
+      await loadBackendCart();
+    } catch (err) {
+      setCartApiError(err instanceof Error ? err.message : "Không thể cập nhật số lượng thiết bị.");
+    } finally {
+      setCartBusy(false);
+    }
+  };
+
+  const handleRemoveItem = async (productId: string) => {
+    if (!app.realApi || !app.currentUser) {
+      app.removeFromCart(productId);
+      return;
+    }
+    const line = backendCart?.chiTiet.find((item) => String(item.maSanPham) === productId);
+    if (!line) {
+      app.removeFromCart(productId);
+      return;
+    }
+    setCartBusy(true);
+    try {
+      await rentalCartApi.xoaChiTiet(line.maChiTietGio);
+      await loadBackendCart();
+    } catch (err) {
+      setCartApiError(err instanceof Error ? err.message : "Không thể xóa thiết bị khỏi giỏ.");
+    } finally {
+      setCartBusy(false);
+    }
+  };
+
+  // Áp dụng / Gỡ bỏ mã khuyến mãi
+  const applyPromo = async () => {
+    const cleanCode = promoCode.trim().toUpperCase();
+    if (!cleanCode) {
+      setPromoError("Vui lòng nhập mã khuyến mãi.");
+      return;
+    }
+    if (app.realApi) {
+      if (!app.currentUser) {
+        setShowAuthModal(true);
+        return;
+      }
+      setCartBusy(true);
+      setPromoError("");
+      try {
+        await rentalCartApi.apMaKhuyenMai(cleanCode);
+        await loadBackendCart();
+        setPromoCode(cleanCode);
+        setPromoApplied(true);
+        app.setAppliedPromoCode(cleanCode);
+      } catch (err) {
+        setPromoApplied(false);
+        app.setAppliedPromoCode("");
+        setPromoError(err instanceof Error ? err.message : "Mã khuyến mãi không hợp lệ hoặc chưa đạt điều kiện.");
+      } finally {
+        setCartBusy(false);
+      }
+      return;
+    }
+
+    const result = app.evaluatePromotion(cleanCode, localRental, promotionItems);
     if (result.ok) {
       setPromoApplied(true);
       app.setAppliedPromoCode(result.data.promotion.code);
@@ -51,11 +219,30 @@ function CartView() {
     }
   };
 
+  const removePromo = async () => {
+    if (app.realApi && app.currentUser) {
+      setCartBusy(true);
+      try {
+        await rentalCartApi.boMaKhuyenMai();
+        await loadBackendCart();
+      } catch (err) {
+        setPromoError(err instanceof Error ? err.message : "Không thể gỡ mã khuyến mãi.");
+      } finally {
+        setCartBusy(false);
+      }
+    }
+    setPromoApplied(false);
+    setPromoCode("");
+    setPromoError("");
+    app.setAppliedPromoCode("");
+  };
+
   // Kiểm tra khả dụng tồn kho từng dòng cho lịch thuê đã chọn (UC3.1 dòng 3, dòng phụ 2.1)
   const cartAvailability = app.cart.map((c) => {
-    const avail = app.getAvailable(c.productId);
+    const serverLine = backendCart?.chiTiet.find((item) => String(item.maSanPham) === c.productId);
+    const avail = serverLine ? serverLine.soLuongKhaDung : app.getAvailable(c.productId);
     const isOver = c.qty > avail;
-    const isOutOfStock = avail <= 0;
+    const isOutOfStock = avail <= 0 || Boolean(serverLine?.ngungKinhDoanh);
     return {
       productId: c.productId,
       avail,
@@ -118,12 +305,12 @@ function CartView() {
               <input
                 type="date"
                 value={app.pickupDate}
-                onChange={(e) => app.setPickupDate(e.target.value)}
+                onChange={(e) => void handleScheduleChange(e.target.value, app.pickupHour || "09:00", app.returnDate, app.returnHour || "09:00")}
                 style={{ padding: "8px 10px", borderRadius: "8px 0 0 8px", border: "1px solid var(--color-bone)", fontSize: "0.85rem" }}
               />
               <select
                 value={app.pickupHour || "09:00"}
-                onChange={(e) => app.setPickupHour(e.target.value)}
+                onChange={(e) => void handleScheduleChange(app.pickupDate, e.target.value, app.returnDate, app.returnHour || "09:00")}
                 style={{ padding: "8px 8px", borderRadius: "0 8px 8px 0", border: "1px solid var(--color-bone)", borderLeft: "none", background: "var(--color-parchment)", fontSize: "0.82rem" }}
               >
                 {["08:00", "09:00", "10:00", "12:00", "14:00", "16:00", "18:00", "20:00"].map((h) => (
@@ -141,12 +328,12 @@ function CartView() {
               <input
                 type="date"
                 value={app.returnDate}
-                onChange={(e) => app.setReturnDate(e.target.value)}
+                onChange={(e) => void handleScheduleChange(app.pickupDate, app.pickupHour || "09:00", e.target.value, app.returnHour || "09:00")}
                 style={{ padding: "8px 10px", borderRadius: "8px 0 0 8px", border: "1px solid var(--color-bone)", fontSize: "0.85rem" }}
               />
               <select
                 value={app.returnHour || "09:00"}
-                onChange={(e) => app.setReturnHour(e.target.value)}
+                onChange={(e) => void handleScheduleChange(app.pickupDate, app.pickupHour || "09:00", app.returnDate, e.target.value)}
                 style={{ padding: "8px 8px", borderRadius: "0 8px 8px 0", border: "1px solid var(--color-bone)", borderLeft: "none", background: "var(--color-parchment)", fontSize: "0.82rem" }}
               >
                 {["08:00", "09:00", "10:00", "12:00", "14:00", "16:00", "18:00", "20:00"].map((h) => (
@@ -160,6 +347,11 @@ function CartView() {
             💡 <em>Đổi lịch thuê sẽ tự động kiểm tra lại tồn kho khả dụng và tính toán lại toàn bộ báo giá.</em>
           </div>
         </div>
+        {cartApiError && (
+          <div role="alert" style={{ marginTop: 10, padding: "8px 12px", borderRadius: 8, background: "#FEF2F2", color: "#B91C1C", fontSize: "0.78rem", border: "1px solid #FECACA" }}>
+            {cartApiError}
+          </div>
+        )}
       </div>
 
       <div className="cart-grid" style={{ display: "grid", gridTemplateColumns: "1fr 380px", gap: 24, alignItems: "start" }}>
@@ -230,9 +422,10 @@ function CartView() {
                 {/* Bộ điều chỉnh số lượng (+ / −) */}
                 <div className="qty-stepper" style={{ display: "flex", alignItems: "center", gap: 3, background: "var(--color-parchment)", padding: 4, borderRadius: 8, border: "1px solid var(--color-bone)" }}>
                   <button
-                    onClick={() => app.updateCartQty(c.productId, -1)}
+                    disabled={cartBusy}
+                    onClick={() => void handleQtyDelta(c.productId, -1)}
                     className="qty-btn"
-                    style={{ width: 28, height: 28, borderRadius: 6, border: "none", background: "white", cursor: "pointer", fontWeight: 700 }}
+                    style={{ width: 28, height: 28, borderRadius: 6, border: "none", background: "white", cursor: cartBusy ? "wait" : "pointer", fontWeight: 700 }}
                     aria-label="Giảm số lượng"
                   >
                     −
@@ -241,9 +434,10 @@ function CartView() {
                     {c.qty}
                   </span>
                   <button
-                    onClick={() => app.updateCartQty(c.productId, 1)}
+                    disabled={cartBusy}
+                    onClick={() => void handleQtyDelta(c.productId, 1)}
                     className="qty-btn"
-                    style={{ width: 28, height: 28, borderRadius: 6, border: "none", background: "white", cursor: "pointer", fontWeight: 700 }}
+                    style={{ width: 28, height: 28, borderRadius: 6, border: "none", background: "white", cursor: cartBusy ? "wait" : "pointer", fontWeight: 700 }}
                     aria-label="Tăng số lượng"
                   >
                     +
@@ -252,8 +446,9 @@ function CartView() {
 
                 {/* Nút xóa khỏi giỏ */}
                 <button
-                  onClick={() => app.removeFromCart(c.productId)}
-                  style={{ background: "none", border: "none", cursor: "pointer", color: "#9CA3AF", padding: 6, borderRadius: 6 }}
+                  disabled={cartBusy}
+                  onClick={() => void handleRemoveItem(c.productId)}
+                  style={{ background: "none", border: "none", cursor: cartBusy ? "wait" : "pointer", color: "#9CA3AF", padding: 6, borderRadius: 6 }}
                   title="Xóa thiết bị khỏi giỏ"
                   aria-label="Xóa sản phẩm"
                 >
@@ -304,12 +499,24 @@ function CartView() {
               />
               <button
                 type="button"
-                onClick={applyPromo}
+                disabled={cartBusy}
+                onClick={() => void applyPromo()}
                 className="btn btn-secondary btn-sm"
                 style={{ padding: "8px 14px", borderRadius: 6, fontWeight: 700, fontSize: "0.8rem" }}
               >
-                Áp dụng
+                {cartBusy ? "..." : "Áp dụng"}
               </button>
+              {promoApplied && (
+                <button
+                  type="button"
+                  disabled={cartBusy}
+                  onClick={() => void removePromo()}
+                  className="btn btn-ghost btn-sm"
+                  style={{ padding: "8px 10px", borderRadius: 6, fontSize: "0.78rem", color: "#B91C1C" }}
+                >
+                  Bỏ mã
+                </button>
+              )}
             </div>
             {promoError && <div style={{ fontSize: "0.74rem", color: "#DC2626", marginTop: 4 }}>{promoError}</div>}
             <div style={{ fontSize: "0.7rem", color: "#6B7280", marginTop: 4 }}>
@@ -382,7 +589,7 @@ function CartView() {
             <div className="flex gap-2">
               <button
                 type="button"
-                onClick={() => { setShowAuthModal(false); app.setPage("auth"); }}
+                onClick={() => { setShowAuthModal(false); app.setPage("login"); }}
                 className="btn btn-primary"
                 style={{ flex: 1, padding: "11px", borderRadius: 8, fontWeight: 700 }}
               >
@@ -408,40 +615,101 @@ function CartView() {
 function CheckoutView() {
   const app = useApp();
   const [checkoutError, setCheckoutError] = useState("");
-  const [receiverName, setReceiverName] = useState(app.currentUser?.name || "Nguyễn Văn An");
-  const [receiverPhone, setReceiverPhone] = useState(app.currentUser?.phone || "0901 234 567");
-  const [receiverEmail, setReceiverEmail] = useState(app.currentUser?.email || "customer@geargo.vn");
+  const [submitting, setSubmitting] = useState(false);
+  const [backendQuote, setBackendQuote] = useState<GioThueBackend | null>(null);
+  const [receiverName, setReceiverName] = useState(app.currentUser?.name || (app.realApi ? "" : "Nguyễn Văn An"));
+  const [receiverPhone, setReceiverPhone] = useState(app.currentUser?.phone || (app.realApi ? "" : "0901 234 567"));
+  const [receiverEmail, setReceiverEmail] = useState(app.currentUser?.email || (app.realApi ? "" : "customer@geargo.vn"));
+  const [orderNote, setOrderNote] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<"qr" | "store" | "wallet">("qr");
   const [agreedTerms, setAgreedTerms] = useState(false);
-  const days = app.getDays();
 
-  const rental = app.cart.reduce((s, c) => {
+  // Đồng bộ thông tin người nhận từ tài khoản hiện hành và lấy báo giá chốt mới nhất từ backend
+  useEffect(() => {
+    if (app.currentUser) {
+      setReceiverName((prev) => prev || app.currentUser?.name || "");
+      setReceiverPhone((prev) => prev || app.currentUser?.phone || "");
+      setReceiverEmail((prev) => prev || app.currentUser?.email || "");
+    }
+    if (app.realApi && app.currentUser) {
+      void rentalCartApi.layGio().then(setBackendQuote).catch(() => {});
+    }
+  }, [app.realApi, app.currentUser?.id]);
+
+  const localDays = app.getDays();
+  const days = app.realApi && backendQuote?.baoGia ? backendQuote.baoGia.soNgayThue : localDays;
+
+  const localRental = app.cart.reduce((s, c) => {
     const p = app.products.find((p) => p.id === c.productId)!;
-    return s + (p ? p.pricePerDay * c.qty * days : 0);
+    return s + (p ? p.pricePerDay * c.qty * localDays : 0);
   }, 0);
-  const depositTotal = app.cart.reduce((s, c) => {
+  const localDepositTotal = app.cart.reduce((s, c) => {
     const p = app.products.find((p) => p.id === c.productId)!;
     return s + (p ? p.deposit * c.qty : 0);
   }, 0);
 
-  const promoCode = app.appliedPromoCode;
-  const promoResult = promoCode
+  const promoCode = backendQuote?.maKhuyenMaiApDung || app.appliedPromoCode;
+  const promoResult = !app.realApi && promoCode
     ? app.evaluatePromotion(
         promoCode,
-        rental,
+        localRental,
         app.cart.map((item) => {
           const product = app.products.find((entry) => entry.id === item.productId)!;
-          return { productId: item.productId, rental: product ? product.pricePerDay * item.qty * days : 0 };
+          return { productId: item.productId, rental: product ? product.pricePerDay * item.qty * localDays : 0 };
         })
       )
     : null;
-  const discount = promoResult?.ok ? promoResult.data.discount : 0;
+  const rental = app.realApi && backendQuote?.baoGia ? Number(backendQuote.baoGia.tongTienThueTruocGiam) : localRental;
+  const depositTotal = app.realApi && backendQuote?.baoGia ? Number(backendQuote.baoGia.tongTienCoc) : localDepositTotal;
+  const discount = app.realApi && backendQuote?.baoGia ? Number(backendQuote.baoGia.tongTienGiam) : (promoResult?.ok ? promoResult.data.discount : 0);
   const grand = rental - discount + depositTotal;
 
   // Thực hiện đặt đơn (UC3.2: Khởi tạo giữ chỗ 15 phút)
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     if (!agreedTerms) {
       setCheckoutError("Quý khách vui lòng xác nhận đồng ý với điều khoản thuê và chính sách hoàn cọc của GearGo.");
+      return;
+    }
+    if (!receiverName.trim() || !receiverPhone.trim()) {
+      setCheckoutError("Vui lòng nhập đầy đủ họ tên và số điện thoại người nhận.");
+      return;
+    }
+
+    if (app.realApi) {
+      setSubmitting(true);
+      setCheckoutError("");
+      try {
+        const created = await orderApi.taoDon({
+          gioNhanDuKien: toIsoDateTime(app.pickupDate, app.pickupHour),
+          gioTraDuKien: toIsoDateTime(app.returnDate, app.returnHour),
+          tenNguoiNhan: receiverName.trim(),
+          soDienThoaiNguoiNhan: receiverPhone.trim(),
+          emailLienHe: receiverEmail.trim() || app.currentUser?.email || "",
+          ghiChu: orderNote.trim() || undefined,
+          maKhuyenMai: promoCode || undefined,
+          chiTiet: app.cart.map((c) => ({
+            maSanPham: Number(c.productId),
+            soLuong: c.qty,
+          })),
+        });
+        // Tải full chi tiết đơn hàng vừa tạo để đồng bộ vào state dùng chung
+        const fullDto = await orderApi.layChiTietDon(created.maDonThue);
+        const mappedOrder = mapDonChiTietToOrder(fullDto, {
+          customerId: app.currentUser?.id,
+          customerName: app.currentUser?.name,
+          ghiChu: orderNote.trim() || undefined,
+        });
+        app.upsertOrder?.(mappedOrder);
+        app.setCartItems?.([]);
+        app.setAppliedPromoCode("");
+        app.setNewOrderId(mappedOrder.id);
+        void app.refreshCatalog?.();
+        app.setPage("order-confirmed");
+      } catch (error) {
+        setCheckoutError(error instanceof Error ? error.message : "Không thể tạo đơn thuê trên máy chủ.");
+      } finally {
+        setSubmitting(false);
+      }
       return;
     }
 
@@ -513,10 +781,21 @@ function CheckoutView() {
               </div>
             </div>
 
-            <div style={{ marginTop: 14, paddingTop: 12, borderTop: "1px dashed var(--color-bone)", display: "flex", gap: 16, fontSize: "0.82rem", color: "#6B7280" }}>
+            <div style={{ marginTop: 14, paddingTop: 12, borderTop: "1px dashed var(--color-bone)", display: "flex", gap: 16, flexWrap: "wrap", fontSize: "0.82rem", color: "#6B7280" }}>
               <span>🕒 <strong>Nhận đồ:</strong> {app.pickupDate} ({app.pickupHour || "09:00"})</span>
               <span>→</span>
               <span>🕒 <strong>Trả đồ:</strong> {app.returnDate} ({app.returnHour || "09:00"})</span>
+            </div>
+
+            <div className="form-group mt-3">
+              <label className="form-label" style={{ fontSize: "0.78rem", fontWeight: 600 }}>Ghi chú cho cửa hàng (tùy chọn)</label>
+              <input
+                value={orderNote}
+                onChange={(e) => setOrderNote(e.target.value)}
+                placeholder="VD: Nhận sớm hơn 15 phút, cần hỗ trợ kiểm tra gậy lều..."
+                className="form-input"
+                style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid var(--color-bone)", fontSize: "0.82rem" }}
+              />
             </div>
           </div>
 
@@ -666,8 +945,8 @@ function CheckoutView() {
           )}
 
           <button
-            onClick={handleConfirm}
-            disabled={!agreedTerms}
+            onClick={() => void handleConfirm()}
+            disabled={!agreedTerms || submitting}
             className="btn btn-primary btn-lg btn-full mt-4"
             style={{
               width: "100%",
@@ -675,11 +954,11 @@ function CheckoutView() {
               borderRadius: 10,
               fontWeight: 700,
               fontSize: "0.95rem",
-              background: !agreedTerms ? "#9CA3AF" : "var(--color-forest)",
-              cursor: !agreedTerms ? "not-allowed" : "pointer",
+              background: !agreedTerms || submitting ? "#9CA3AF" : "var(--color-forest)",
+              cursor: !agreedTerms || submitting ? "not-allowed" : "pointer",
             }}
           >
-            ✓ Xác nhận đặt thuê & Giữ chỗ 15 phút
+            {submitting ? "Đang tạo đơn & giữ chỗ 15 phút..." : "✓ Xác nhận đặt thuê & Giữ chỗ 15 phút"}
           </button>
 
           <p style={{ fontSize: "0.72rem", color: "#9CA3AF", textAlign: "center", marginTop: 8 }}>
@@ -698,26 +977,49 @@ function OrderConfirmedView() {
   const [processing, setProcessing] = useState(false);
   const [checkingGateway, setCheckingGateway] = useState(false);
   const [gatewayMessage, setGatewayMessage] = useState("");
+  const [payError, setPayError] = useState("");
   const order = app.newOrderId ? app.orders.find((o) => o.id === app.newOrderId) : null;
   const paid = order?.status === "Đã xác nhận";
-  const expired = order?.status === "Hết hạn";
+  const expired = order?.status === "Hết hạn" || (Boolean(order?.expiresAt) && seconds === 0 && !paid && order?.status === "Chờ thanh toán" && new Date(order.expiresAt!).getTime() <= Date.now());
   const latestPayment = order?.transactions?.filter((transaction) => transaction.type === "Thanh toán ban đầu").at(-1);
+  const displayOrderCode = order?.displayCode || order?.id || "";
+
+  // Khi mở trang xác nhận ở chế độ API thật, tải full chi tiết đơn hàng từ backend
+  useEffect(() => {
+    if (!app.realApi || !app.newOrderId) return;
+    const numericId = Number(app.newOrderId);
+    if (!Number.isFinite(numericId)) return;
+    void orderApi
+      .layChiTietDon(numericId)
+      .then((dto) => {
+        app.upsertOrder?.(
+          mapDonChiTietToOrder(dto, {
+            customerId: app.currentUser?.id,
+            customerName: app.currentUser?.name,
+          })
+        );
+      })
+      .catch(() => {});
+  }, [app.realApi, app.newOrderId]);
 
   // Bộ đếm ngược thời gian giữ chỗ thanh toán 15 phút (UC3.2)
   useEffect(() => {
-    if (!order?.expiresAt || paid || expired) return;
+    if (!order?.expiresAt || paid || order?.status === "Hết hạn") return;
     const updateCountdown = () => {
       const remaining = Math.max(0, Math.ceil((new Date(order.expiresAt!).getTime() - Date.now()) / 1000));
       setSeconds(remaining);
-      // Tự động hết hạn khi chạm 0s
-      if (remaining === 0 && !paid && !expired) {
-        order.status = "Hết hạn";
+      // Tự động làm mới trạng thái từ backend khi hết giờ giữ chỗ
+      if (remaining === 0 && app.realApi) {
+        void orderApi
+          .layChiTietDon(Number(order.backendId ?? order.id))
+          .then((dto) => app.upsertOrder?.(mapDonChiTietToOrder(dto, { customerId: app.currentUser?.id, customerName: app.currentUser?.name })))
+          .catch(() => {});
       }
     };
     updateCountdown();
     const t = setInterval(updateCountdown, 1000);
     return () => clearInterval(t);
-  }, [paid, expired, order?.expiresAt]);
+  }, [paid, order?.status, order?.expiresAt, app.realApi]);
 
   const mm = String(Math.floor(seconds / 60)).padStart(2, "0");
   const ss = String(seconds % 60).padStart(2, "0");
@@ -726,12 +1028,68 @@ function OrderConfirmedView() {
 
   const totalAmount = order.rental - order.discount + order.depositTotal;
 
-  const handlePay = (succeed: boolean) => {
+  const refreshOrderDetail = async () => {
+    const dto = await orderApi.layChiTietDon(Number(order.backendId ?? order.id));
+    const mapped = mapDonChiTietToOrder(dto, {
+      customerId: app.currentUser?.id,
+      customerName: app.currentUser?.name,
+    });
+    app.upsertOrder?.(mapped);
+    return mapped;
+  };
+
+  const handlePay = async (succeed: boolean) => {
+    if (app.realApi) {
+      setProcessing(true);
+      setPayError("");
+      try {
+        await paymentApi.xacNhanThanhToan({
+          maDonThue: Number(order.backendId ?? order.id),
+          phuongThucThanhToan: "VietQR",
+          soTienDaTra: totalAmount,
+        });
+        await refreshOrderDetail();
+        void app.refreshCatalog?.();
+      } catch (err) {
+        setPayError(err instanceof Error ? err.message : "Xác nhận thanh toán thất bại.");
+      } finally {
+        setProcessing(false);
+      }
+      return;
+    }
+
     setProcessing(true);
     window.setTimeout(() => {
       app.payOrder(order.id, succeed);
       setProcessing(false);
     }, 650);
+  };
+
+  const handleCheckGateway = async () => {
+    setCheckingGateway(true);
+    setGatewayMessage("");
+    setPayError("");
+    if (app.realApi) {
+      try {
+        const updated = await refreshOrderDetail();
+        if (updated.status === "Đã xác nhận") {
+          setGatewayMessage("Hệ thống đã ghi nhận giao dịch thành công và xác nhận giữ chỗ cho đơn của bạn.");
+        } else if (updated.status === "Hết hạn") {
+          setGatewayMessage("Đơn hàng đã hết thời hạn giữ chỗ 15 phút.");
+        } else {
+          setGatewayMessage("Đơn hàng đang chờ thanh toán. Nếu bạn vừa chuyển khoản xong, vui lòng đợi vài giây hoặc bấm xác nhận bên dưới.");
+        }
+      } catch (err) {
+        setPayError(err instanceof Error ? err.message : "Không thể kiểm tra trạng thái giao dịch.");
+      } finally {
+        setCheckingGateway(false);
+      }
+      return;
+    }
+    setTimeout(() => {
+      setCheckingGateway(false);
+      setGatewayMessage("Hệ thống đang đối chiếu tự động với cổng MB Bank. Nếu bạn vừa chuyển tiền, trạng thái sẽ cập nhật trong vài giây.");
+    }, 800);
   };
 
   return (
@@ -761,7 +1119,7 @@ function OrderConfirmedView() {
           <div className="flex justify-between items-center mb-4 pb-3 border-b border-bone">
             <div>
               <div className="text-xs text-gray-400 font-mono">MÃ ĐƠN THUÊ</div>
-              <div className="font-mono font-bold text-forest text-lg">{order.id}</div>
+              <div className="font-mono font-bold text-forest text-lg">{displayOrderCode}</div>
             </div>
             <span
               className={`badge ${
@@ -806,7 +1164,7 @@ function OrderConfirmedView() {
               {/* QR Image */}
               <div style={{ background: "white", padding: 12, borderRadius: 12, display: "inline-block", boxShadow: "0 4px 12px rgba(0,0,0,0.08)", marginBottom: 12 }}>
                 <img
-                  src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=2|99|0901234567|CONG%20TY%20GEARGO||0|0|${totalAmount}|${order.id}|transfer_myqr`}
+                  src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=2|99|0901234567|CONG%20TY%20GEARGO||0|0|${totalAmount}|${encodeURIComponent(displayOrderCode)}|transfer_myqr`}
                   alt="Mã QR Chuyển khoản VietQR"
                   style={{ width: 170, height: 170, display: "block" }}
                 />
@@ -817,7 +1175,7 @@ function OrderConfirmedView() {
                 <div>Số tài khoản: <strong style={{ fontFamily: "var(--font-mono)", color: "var(--color-forest)" }}>0901 234 567</strong></div>
                 <div>Chủ tài khoản: <strong>CONG TY TNHH GEARGO OUTDOOR</strong></div>
                 <div>Số tiền chuyển: <strong style={{ fontFamily: "var(--font-mono)", color: "var(--color-forest)" }}>{fmt(totalAmount)}</strong></div>
-                <div>Nội dung chuyển khoản: <strong style={{ fontFamily: "var(--font-mono)", color: "#D97706", background: "#FEF3C7", padding: "1px 6px", borderRadius: 4 }}>{order.id}</strong></div>
+                <div>Nội dung chuyển khoản: <strong style={{ fontFamily: "var(--font-mono)", color: "#D97706", background: "#FEF3C7", padding: "1px 6px", borderRadius: 4 }}>{displayOrderCode}</strong></div>
               </div>
 
               <div style={{ fontSize: "0.72rem", color: "#6B7280", marginTop: 8 }}>
@@ -870,7 +1228,7 @@ function OrderConfirmedView() {
                 <div className="flex justify-between items-center">
                   <span>Mã tham chiếu ngân hàng:</span>
                   <strong style={{ fontFamily: "var(--font-mono)", color: "var(--color-forest)", background: "#DCFCE7", padding: "2px 8px", borderRadius: 4 }}>
-                    {latestPayment?.referenceCode || `FT${order.id.replace(/\D/g, "")}889`}
+                    {latestPayment?.referenceCode || `FT${displayOrderCode.replace(/\D/g, "")}889`}
                   </strong>
                 </div>
                 <div className="flex justify-between">
@@ -899,52 +1257,57 @@ function OrderConfirmedView() {
             </div>
           )}
 
+          {payError && (
+            <div role="alert" className="form-error-msg bg-red-50 p-3 rounded mb-3 text-red-700 text-xs border border-red-200">
+              {payError}
+            </div>
+          )}
+
           {/* Dòng phụ 4.1: Kiểm tra đối chiếu với cổng thanh toán */}
           {!paid && !expired && seconds > 0 && (
             <div style={{ margin: "14px 0" }}>
               <button
                 type="button"
                 disabled={checkingGateway}
-                onClick={() => {
-                  setCheckingGateway(true);
-                  setGatewayMessage("");
-                  setTimeout(() => {
-                    setCheckingGateway(false);
-                    setGatewayMessage("Hệ thống đang đối chiếu tự động với cổng MB Bank. Nếu bạn vừa chuyển tiền, trạng thái sẽ cập nhật trong vài giây.");
-                  }, 800);
-                }}
+                onClick={() => void handleCheckGateway()}
                 className="btn btn-secondary btn-sm"
                 style={{ width: "100%", padding: "9px", fontSize: "0.82rem", fontWeight: 600, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}
               >
-                {checkingGateway ? "⏳ Đang đối chiếu cổng thanh toán..." : "🔄 Kiểm tra trạng thái giao dịch ngân hàng (Dòng 4.1)"}
+                {checkingGateway ? "Đang đối chiếu cổng thanh toán..." : "Kiểm tra trạng thái giao dịch ngân hàng (Dòng 4.1)"}
               </button>
               {gatewayMessage && (
                 <div style={{ marginTop: 8, fontSize: "0.76rem", color: "#B45309", background: "#FEF3C7", padding: "8px 12px", borderRadius: 8, border: "1px solid #FCD34D" }}>
-                  💡 {gatewayMessage}
+                  {gatewayMessage}
                 </div>
               )}
             </div>
           )}
 
-          {/* Nút mô phỏng thanh toán (Test) */}
+          {/* Nút xác nhận thanh toán / mô phỏng cho demo */}
           {!paid && !expired && seconds > 0 && (
-            <div className="grid grid-cols-2 gap-3 my-4">
+            <div className={app.realApi ? "my-4" : "grid grid-cols-2 gap-3 my-4"}>
               <button
                 disabled={processing}
-                onClick={() => handlePay(true)}
-                className="btn btn-primary btn-md"
-                style={{ padding: "12px", fontWeight: 700 }}
+                onClick={() => void handlePay(true)}
+                className="btn btn-primary btn-md w-full"
+                style={{ padding: "12px", fontWeight: 700, width: "100%" }}
               >
-                {processing ? "Đang xử lý..." : "✓ Xác nhận thanh toán (Mô phỏng)"}
+                {processing
+                  ? "Đang xử lý thanh toán..."
+                  : app.realApi
+                  ? "Xác nhận đã thanh toán VietQR"
+                  : "✓ Xác nhận thanh toán (Mô phỏng)"}
               </button>
-              <button
-                disabled={processing}
-                onClick={() => handlePay(false)}
-                className="btn btn-secondary btn-md text-red-600 border-red-200"
-                style={{ padding: "12px" }}
-              >
-                Mô phỏng lỗi thanh toán
-              </button>
+              {!app.realApi && (
+                <button
+                  disabled={processing}
+                  onClick={() => void handlePay(false)}
+                  className="btn btn-secondary btn-md text-red-600 border-red-200"
+                  style={{ padding: "12px" }}
+                >
+                  Mô phỏng lỗi thanh toán
+                </button>
+              )}
             </div>
           )}
 
@@ -965,13 +1328,19 @@ function OrderConfirmedView() {
 function MyOrdersView() {
   const app = useApp();
   const [selected, setSelected] = useState<string | null>(null);
+  const [loadingDetail, setLoadingDetail] = useState(false);
   const [cancelling, setCancelling] = useState<string | null>(null);
   const [cancelReason, setCancelReason] = useState("");
+  const [cancelPreview, setCancelPreview] = useState<XemTruocHuyBackend | null>(null);
+  const [cancelPreviewLoading, setCancelPreviewLoading] = useState(false);
+  const [cancelSubmitting, setCancelSubmitting] = useState(false);
+  const [actionError, setActionError] = useState("");
   const [statusTab, setStatusTab] = useState<string>("Tất cả");
   const [viewingRecord, setViewingRecord] = useState<"bbbg" | "pnt" | "reconciliation" | null>(null);
   // UC5.2 Dòng 5.1: Khiếu nại phụ phí
   const [disputeSurchargeTarget, setDisputeSurchargeTarget] = useState<import("../store").Surcharge | null>(null);
   const [disputeReason, setDisputeReason] = useState("");
+  const [disputeSubmitting, setDisputeSubmitting] = useState(false);
 
   // Tab lọc đầy đủ trạng thái theo quy trình vòng đời đơn (UC3.3)
   const statusOptions = ["Tất cả", "Chờ thanh toán", "Đã xác nhận", "Đang thuê", "Hoàn tất", "Hết hạn", "Đã hủy"];
@@ -983,8 +1352,89 @@ function MyOrdersView() {
   });
 
   const detail = app.orders.find((o) => o.id === selected);
-  const cancellationQuote = cancelling ? app.getCancellationQuote(cancelling) : null;
+  const localCancellationQuote = cancelling ? app.getCancellationQuote(cancelling) : null;
   const cancellingOrder = cancelling ? app.orders.find((o) => o.id === cancelling) : null;
+
+  const refreshOrderById = async (orderId: string | number) => {
+    const dto = await orderApi.layChiTietDon(Number(orderId));
+    app.upsertOrder?.(
+      mapDonChiTietToOrder(dto, {
+        customerId: app.currentUser?.id,
+        customerName: app.currentUser?.name,
+      })
+    );
+  };
+
+  // Khi bấm vào 1 đơn ở realApi, tải full chi tiết chứng từ (BBBG, PNT, phụ phí, đối soát)
+  const handleSelectOrder = async (orderId: string) => {
+    if (selected === orderId) {
+      setSelected(null);
+      return;
+    }
+    setSelected(orderId);
+    setActionError("");
+    if (app.realApi) {
+      setLoadingDetail(true);
+      try {
+        await refreshOrderById(orderId);
+      } catch (err) {
+        setActionError(err instanceof Error ? err.message : "Không thể tải chi tiết đơn thuê.");
+      } finally {
+        setLoadingDetail(false);
+      }
+    }
+  };
+
+  // Mở modal hủy và lấy báo giá hoàn tiền từ backend (UC3.4)
+  const handleOpenCancel = async (orderId: string) => {
+    setCancelling(orderId);
+    setCancelReason("");
+    setActionError("");
+    setCancelPreview(null);
+    if (!app.realApi) return;
+
+    const target = app.orders.find((o) => o.id === orderId);
+    if (target?.status === "Chờ thanh toán") return;
+
+    setCancelPreviewLoading(true);
+    try {
+      const preview = await orderApi.xemTruocHuy(Number(orderId));
+      setCancelPreview(preview);
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Không thể kiểm tra chính sách hủy đơn.");
+    } finally {
+      setCancelPreviewLoading(false);
+    }
+  };
+
+  const handleConfirmCancel = async () => {
+    if (!cancelling || !cancelReason.trim()) return;
+    if (!app.realApi) {
+      app.cancelOrder(cancelling, cancelReason);
+      setCancelling(null);
+      return;
+    }
+    setCancelSubmitting(true);
+    setActionError("");
+    try {
+      if (cancellingOrder?.status === "Chờ thanh toán") {
+        await orderApi.huyDonChuaThanhToan(Number(cancelling), cancelReason.trim());
+      } else {
+        await orderApi.khachHuyDon(Number(cancelling), {
+          lyDo: cancelReason.trim(),
+          xacNhanChiPhi: true,
+          dauVanTayXemTruoc: cancelPreview?.dauVanTay ?? undefined,
+        });
+      }
+      await refreshOrderById(cancelling);
+      void app.refreshCatalog?.();
+      setCancelling(null);
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Không thể hủy đơn thuê.");
+    } finally {
+      setCancelSubmitting(false);
+    }
+  };
 
   return (
     <div className="customer-container" style={{ maxWidth: 1100, margin: "0 auto", padding: "28px 20px" }}>
@@ -1041,7 +1491,7 @@ function MyOrdersView() {
               return (
                 <div
                   key={o.id}
-                  onClick={() => setSelected(isSelected ? null : o.id)}
+                  onClick={() => void handleSelectOrder(o.id)}
                   className={`order-card cursor-pointer`}
                   style={{
                     background: "white",
@@ -1055,11 +1505,11 @@ function MyOrdersView() {
                   <div className="flex justify-between items-start flex-wrap gap-2">
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="font-mono text-xs text-moss font-bold">{o.id}</span>
+                        <span className="font-mono text-xs text-moss font-bold">{o.displayCode || o.id}</span>
                         <span style={{ fontSize: "0.72rem", color: "#9CA3AF" }}>· Tạo lúc: {o.createdAt}</span>
                       </div>
                       <div className="font-bold text-bark my-1 text-sm">
-                        {o.items.map((i) => `${i.productName} ×${i.qty}`).join(", ")}
+                        {o.items.length > 0 ? o.items.map((i) => `${i.productName} ×${i.qty}`).join(", ") : `Đơn thuê ${o.displayCode || o.id}`}
                       </div>
                       <div className="text-xs text-gray-500">
                         📅 Lịch nhận - trả: <strong>{o.pickupTime}</strong> → <strong>{o.returnTime}</strong>
@@ -1114,8 +1564,10 @@ function MyOrdersView() {
           <div className="card-panel self-start sticky top-24" style={{ background: "white", borderRadius: 16, padding: 22, border: "1px solid var(--color-bone)", boxShadow: "0 4px 15px rgba(0,0,0,0.05)" }}>
             <div className="flex justify-between items-start mb-4 pb-3 border-b border-bone">
               <div>
-                <div className="font-mono text-xs text-moss font-bold">{detail.id}</div>
-                <h3 className="font-display font-bold text-base text-bark" style={{ margin: "2px 0 0" }}>Chi tiết đơn thuê & Chứng từ</h3>
+                <div className="font-mono text-xs text-moss font-bold">{detail.displayCode || detail.id}</div>
+                <h3 className="font-display font-bold text-base text-bark" style={{ margin: "2px 0 0" }}>
+                  Chi tiết đơn thuê & Chứng từ {loadingDetail ? "(Đang tải...)" : ""}
+                </h3>
               </div>
               <button
                 onClick={() => setSelected(null)}
@@ -1125,6 +1577,11 @@ function MyOrdersView() {
                 ✕
               </button>
             </div>
+            {actionError && !cancelling && !disputeSurchargeTarget && (
+              <div role="alert" style={{ background: "#FEF2F2", color: "#B91C1C", border: "1px solid #FECACA", padding: "8px 10px", borderRadius: 8, fontSize: "0.75rem", marginBottom: 10 }}>
+                {actionError}
+              </div>
+            )}
 
             {/* Bảng kê thiết bị trong đơn */}
             <div style={{ marginBottom: 14 }}>
@@ -1379,10 +1836,7 @@ function MyOrdersView() {
             {/* Nút Hủy đơn cho mọi trạng thái trước bàn giao (UC3.4) */}
             {["Chờ thanh toán", "Đã xác nhận", "Đang chuẩn bị", "Sẵn sàng nhận"].includes(detail.status) && (
               <button
-                onClick={() => {
-                  setCancelling(detail.id);
-                  setCancelReason("");
-                }}
+                onClick={() => void handleOpenCancel(detail.id)}
                 className="btn btn-danger btn-sm btn-full"
                 style={{ width: "100%", padding: "10px", borderRadius: 8, fontWeight: 700 }}
               >
@@ -1427,15 +1881,38 @@ function MyOrdersView() {
             </div>
 
             <form
-              onSubmit={(e) => {
+              onSubmit={async (e) => {
                 e.preventDefault();
                 if (!disputeReason.trim()) return;
-                app.disputeSurcharge(detail.id, disputeSurchargeTarget.id, disputeReason);
-                setDisputeSurchargeTarget(null);
-                setDisputeReason("");
+                if (!app.realApi) {
+                  app.disputeSurcharge(detail.id, disputeSurchargeTarget.id, disputeReason);
+                  setDisputeSurchargeTarget(null);
+                  setDisputeReason("");
+                  return;
+                }
+                setDisputeSubmitting(true);
+                setActionError("");
+                try {
+                  await surchargeApi.taoTranhChap(
+                    Number(disputeSurchargeTarget.backendId ?? disputeSurchargeTarget.id),
+                    disputeReason.trim()
+                  );
+                  await refreshOrderById(detail.id);
+                  setDisputeSurchargeTarget(null);
+                  setDisputeReason("");
+                } catch (err) {
+                  setActionError(err instanceof Error ? err.message : "Không thể gửi khiếu nại phụ phí.");
+                } finally {
+                  setDisputeSubmitting(false);
+                }
               }}
               className="flex flex-col gap-3"
             >
+              {actionError && (
+                <div role="alert" className="text-xs text-red-600 bg-red-50 p-2 rounded border border-red-200">
+                  {actionError}
+                </div>
+              )}
               <div className="form-group">
                 <label className="form-label" style={{ fontSize: "0.8rem", fontWeight: 700 }}>
                   Lý do bạn không đồng ý với mức phụ phí này: *
@@ -1461,10 +1938,11 @@ function MyOrdersView() {
                 </button>
                 <button
                   type="submit"
+                  disabled={disputeSubmitting}
                   className="btn btn-primary btn-sm"
                   style={{ background: "#B91C1C", borderColor: "#B91C1C", color: "white", fontWeight: 700 }}
                 >
-                  Gửi khiếu nại (Chuyển Quản trị viên)
+                  {disputeSubmitting ? "Đang gửi khiếu nại..." : "Gửi khiếu nại (Chuyển Quản trị viên)"}
                 </button>
               </div>
             </form>
@@ -1596,12 +2074,12 @@ function MyOrdersView() {
       )}
 
       {/* Modal Hủy Đơn Thuê & Dự Toán Hoàn Tiền (UC3.4) */}
-      {cancelling && cancellationQuote && cancellingOrder && (
+      {cancelling && cancellingOrder && (cancelPreview || localCancellationQuote) && (
         <div className="modal-overlay" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)", display: "grid", placeItems: "center", zIndex: 9999, padding: 16 }}>
           <div className="modal-container max-w-md" style={{ background: "white", borderRadius: 18, maxWidth: 480, width: "100%", padding: 24, boxShadow: "0 20px 40px rgba(0,0,0,0.2)" }}>
             <div className="modal-header flex justify-between items-center mb-3">
               <h2 className="modal-title font-bold text-base text-bark" style={{ margin: 0 }}>
-                Xác nhận hủy đơn thuê? (UC3.4)
+                Xác nhận hủy đơn thuê #{cancellingOrder.displayCode || cancellingOrder.id}? (UC3.4)
               </h2>
               <button onClick={() => setCancelling(null)} className="btn btn-ghost btn-sm" style={{ border: "none", background: "none", cursor: "pointer", fontSize: "1.2rem" }}>✕</button>
             </div>
@@ -1617,32 +2095,75 @@ function MyOrdersView() {
                 </ul>
               </div>
 
-              {/* Bảng kê chi tiết các khoản hoàn trả minh bạch (UC3.4 bước 3) */}
-              <div style={{ background: "var(--color-parchment)", borderRadius: 10, padding: 14, marginBottom: 14 }}>
-                <div style={{ fontWeight: 700, color: "var(--color-bark)", marginBottom: 8, fontSize: "0.82rem" }}>
-                  Bảng dự tính hoàn tiền & phí giữ lại:
+              {cancelPreviewLoading ? (
+                <div style={{ padding: 14, background: "var(--color-parchment)", borderRadius: 10, marginBottom: 14, textAlign: "center" }}>
+                  Đang tính toán dự toán hoàn tiền từ máy chủ...
                 </div>
-                <div className="flex justify-between py-1 text-gray-600">
-                  <span>Tiền thuê ban đầu:</span>
-                  <span className="font-mono">{fmt(cancellingOrder.rental - cancellingOrder.discount)}</span>
+              ) : app.realApi && cancelPreview && cancellingOrder.status !== "Chờ thanh toán" ? (
+                <div style={{ background: "var(--color-parchment)", borderRadius: 10, padding: 14, marginBottom: 14 }}>
+                  <div style={{ fontWeight: 700, color: "var(--color-bark)", marginBottom: 8, fontSize: "0.82rem" }}>
+                    Bảng dự tính hoàn tiền & phí giữ lại ({cancelPreview.nhanhChinhSach}):
+                  </div>
+                  {!cancelPreview.coTheHuy && cancelPreview.lyDoKhongTheHuy && (
+                    <div style={{ color: "#B91C1C", fontWeight: 700, marginBottom: 8 }}>{cancelPreview.lyDoKhongTheHuy}</div>
+                  )}
+                  <div className="flex justify-between py-1 text-gray-600">
+                    <span>Tiền thuê đã thu:</span>
+                    <span className="font-mono">{fmt(cancelPreview.tienThueDaThu)}</span>
+                  </div>
+                  <div className="flex justify-between py-1 text-red-600">
+                    <span>Phí hủy giữ lại ({Math.round(cancelPreview.tyLeGiuLai * 100)}%):</span>
+                    <strong className="font-mono">−{fmt(cancelPreview.tienThueGiuLai)}</strong>
+                  </div>
+                  <div className="flex justify-between py-1 text-gray-600">
+                    <span>Tiền thuê được hoàn:</span>
+                    <span className="font-mono">{fmt(cancelPreview.tienThueHoan)}</span>
+                  </div>
+                  <div className="flex justify-between py-1 text-gray-600">
+                    <span>Tiền cọc hoàn trả 100%:</span>
+                    <span className="font-mono">{fmt(cancelPreview.tienCocHoan)}</span>
+                  </div>
+                  <div style={{ borderTop: "1px dashed var(--color-bone)", marginTop: 8, paddingTop: 8 }} className="flex justify-between font-bold text-sm text-forest">
+                    <span>Tổng tiền thực tế hoàn trả cho bạn:</span>
+                    <span className="font-mono text-base">{fmt(cancelPreview.tongHoan)}</span>
+                  </div>
+                  {cancelPreview.canhBao && (
+                    <div style={{ marginTop: 6, color: "#92400E" }}>{cancelPreview.canhBao}</div>
+                  )}
                 </div>
-                <div className="flex justify-between py-1 text-red-600">
-                  <span>Phí hủy giữ lại (theo quy chế):</span>
-                  <strong className="font-mono">−{fmt(cancellationQuote.fee)}</strong>
+              ) : (
+                <div style={{ background: "var(--color-parchment)", borderRadius: 10, padding: 14, marginBottom: 14 }}>
+                  <div style={{ fontWeight: 700, color: "var(--color-bark)", marginBottom: 8, fontSize: "0.82rem" }}>
+                    Bảng dự tính hoàn tiền & phí giữ lại:
+                  </div>
+                  <div className="flex justify-between py-1 text-gray-600">
+                    <span>Tiền thuê ban đầu:</span>
+                    <span className="font-mono">{fmt(cancellingOrder.rental - cancellingOrder.discount)}</span>
+                  </div>
+                  <div className="flex justify-between py-1 text-red-600">
+                    <span>Phí hủy giữ lại (theo quy chế):</span>
+                    <strong className="font-mono">−{fmt(localCancellationQuote?.fee ?? 0)}</strong>
+                  </div>
+                  <div className="flex justify-between py-1 text-gray-600">
+                    <span>Tiền thuê được hoàn:</span>
+                    <span className="font-mono">{fmt(Math.max(0, cancellingOrder.rental - cancellingOrder.discount - (localCancellationQuote?.fee ?? 0)))}</span>
+                  </div>
+                  <div className="flex justify-between py-1 text-gray-600">
+                    <span>Tiền cọc hoàn trả 100%:</span>
+                    <span className="font-mono">{fmt(cancellingOrder.depositTotal)}</span>
+                  </div>
+                  <div style={{ borderTop: "1px dashed var(--color-bone)", marginTop: 8, paddingTop: 8 }} className="flex justify-between font-bold text-sm text-forest">
+                    <span>Tổng tiền thực tế hoàn trả cho bạn:</span>
+                    <span className="font-mono text-base">{fmt(localCancellationQuote?.refund ?? 0)}</span>
+                  </div>
                 </div>
-                <div className="flex justify-between py-1 text-gray-600">
-                  <span>Tiền thuê được hoàn:</span>
-                  <span className="font-mono">{fmt(Math.max(0, cancellingOrder.rental - cancellingOrder.discount - cancellationQuote.fee))}</span>
+              )}
+
+              {actionError && (
+                <div role="alert" style={{ background: "#FEF2F2", color: "#B91C1C", border: "1px solid #FECACA", padding: "8px 10px", borderRadius: 8, fontSize: "0.75rem", marginBottom: 10 }}>
+                  {actionError}
                 </div>
-                <div className="flex justify-between py-1 text-gray-600">
-                  <span>Tiền cọc hoàn trả 100%:</span>
-                  <span className="font-mono">{fmt(cancellingOrder.depositTotal)}</span>
-                </div>
-                <div style={{ borderTop: "1px dashed var(--color-bone)", marginTop: 8, paddingTop: 8 }} className="flex justify-between font-bold text-sm text-forest">
-                  <span>Tổng tiền thực tế hoàn trả cho bạn:</span>
-                  <span className="font-mono text-base">{fmt(cancellationQuote.refund)}</span>
-                </div>
-              </div>
+              )}
 
               <div className="form-group mb-4">
                 <label className="form-label" style={{ fontWeight: 700, marginBottom: 4, display: "block" }}>Lý do hủy đơn *</label>
@@ -1668,23 +2189,20 @@ function MyOrdersView() {
               </button>
               <button
                 type="button"
-                disabled={!cancelReason.trim()}
-                onClick={() => {
-                  app.cancelOrder(cancelling, cancelReason);
-                  setCancelling(null);
-                }}
+                disabled={!cancelReason.trim() || cancelSubmitting || cancelPreviewLoading || (Boolean(cancelPreview) && !cancelPreview?.coTheHuy)}
+                onClick={() => void handleConfirmCancel()}
                 className="btn btn-danger btn-sm"
                 style={{
                   padding: "8px 18px",
                   borderRadius: 8,
                   fontWeight: 700,
-                  background: !cancelReason.trim() ? "#D1D5DB" : "#DC2626",
+                  background: !cancelReason.trim() || cancelSubmitting ? "#D1D5DB" : "#DC2626",
                   color: "white",
                   border: "none",
-                  cursor: !cancelReason.trim() ? "not-allowed" : "pointer",
+                  cursor: !cancelReason.trim() || cancelSubmitting ? "not-allowed" : "pointer",
                 }}
               >
-                Xác nhận hủy đơn thuê
+                {cancelSubmitting ? "Đang xử lý hủy..." : "Xác nhận hủy đơn thuê"}
               </button>
             </div>
           </div>
@@ -1719,6 +2237,10 @@ function AIAdvisorView() {
   // State điều khiển phân tích AI
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisStep, setAnalysisStep] = useState(0);
+  const [advisorError, setAdvisorError] = useState("");
+  const [aiResponse, setAiResponse] = useState<TuVanBoDoBackend | null>(null);
+  const [addingToCart, setAddingToCart] = useState(false);
+  const [scheduleConflict, setScheduleConflict] = useState<{ message: string; gioNhan: string; gioTra: string } | null>(null);
 
   // State danh sách các món trong combo hiện tại (người dùng có thể chỉnh sửa số lượng / xóa bớt món theo UC2.4 bước 5)
   const [customItems, setCustomItems] = useState<SuggestedItem[]>([]);
@@ -1869,29 +2391,75 @@ function AIAdvisorView() {
     },
   ];
 
-  // Kích hoạt phân tích AI với hiệu ứng sinh động (UC2.4 & UC2.4.1)
-  const handleStartAIAnalysis = () => {
+  // Tính khoảng thời gian gợi ý theo ngày nhận + số ngày thuê
+  const getSuggestedRange = () => {
+    const gioNhan = aiResponse?.gioNhan || toIsoDateTime(app.pickupDate, app.pickupHour);
+    if (aiResponse?.gioTra) {
+      return { gioNhan, gioTra: aiResponse.gioTra };
+    }
+    const startMs = new Date(gioNhan).getTime();
+    const gioTra = new Date(startMs + numNights * 24 * 60 * 60 * 1000).toISOString();
+    return { gioNhan, gioTra };
+  };
+
+  // Kích hoạt phân tích AI qua Backend ASP.NET Core (hoặc mô phỏng khi không bật realApi)
+  const handleStartAIAnalysis = async () => {
+    setAdvisorError("");
+    setScheduleConflict(null);
+    if (app.realApi) {
+      setIsAnalyzing(true);
+      setAnalysisStep(1);
+      try {
+        const startIso = toIsoDateTime(app.pickupDate, app.pickupHour);
+        const endIso = new Date(new Date(startIso).getTime() + numNights * 24 * 60 * 60 * 1000).toISOString();
+        const res = await aiAdvisorApi.tuVanBoDo({
+          diemDen: destination,
+          soNguoi: numPeople,
+          gioNhan: startIso,
+          gioTra: endIso,
+          nganSach: targetBudget,
+          loaiNganSach: "TongBanDau",
+        });
+        setAiResponse(res);
+        const mapped: SuggestedItem[] = res.cacDong.map((line) => {
+          const prod = app.products.find((p) => p.id === String(line.maSanPham));
+          return {
+            productId: String(line.maSanPham),
+            name: line.tenSanPham || prod?.name || `Sản phẩm #${line.maSanPham}`,
+            category: prod?.category || "Thiết bị dã ngoại",
+            image: prod?.image,
+            qty: line.soLuong,
+            reason: line.lyDo || "Đề xuất phù hợp theo quy mô và ngân sách chuyến đi.",
+            pricePerDay: Number(line.donGiaThueMoiNgay ?? prod?.pricePerDay ?? 0),
+            deposit: Number(line.mucCocMoiThietBi ?? prod?.deposit ?? 0),
+          };
+        });
+        setCustomItems(mapped);
+        setSent(true);
+      } catch (err) {
+        setAdvisorError(err instanceof Error ? err.message : "Không thể nhận gợi ý bộ đồ từ máy chủ.");
+      } finally {
+        setIsAnalyzing(false);
+      }
+      return;
+    }
+
     setIsAnalyzing(true);
     setAnalysisStep(0);
-
-    const timer1 = setTimeout(() => setAnalysisStep(1), 400);
-    const timer2 = setTimeout(() => setAnalysisStep(2), 850);
-    const timer3 = setTimeout(() => {
+    setTimeout(() => setAnalysisStep(1), 400);
+    setTimeout(() => setAnalysisStep(2), 850);
+    setTimeout(() => {
       const generated = generateAISuggestion();
       setCustomItems(generated);
       setIsAnalyzing(false);
       setSent(true);
     }, 1300);
-
-    return () => {
-      clearTimeout(timer1);
-      clearTimeout(timer2);
-      clearTimeout(timer3);
-    };
   };
 
   // Chọn bộ combo mẫu có sẵn (UC2.4.1)
   const handleSelectPreset = (preset: (typeof presetCombos)[0]) => {
+    setAiResponse(null);
+    setAdvisorError("");
     const list: SuggestedItem[] = [];
     preset.items.forEach((item) => {
       const p = getProduct(item.cat);
@@ -1962,7 +2530,7 @@ function AIAdvisorView() {
   const totalInitial = totalRental + totalDeposit;
 
   // Xử lý đưa vào giỏ thuê (UC2.4.2 - Bắt buộc kiểm tra đăng nhập đối với Khách vãng lai)
-  const handleAddAllToCart = () => {
+  const handleAddAllToCart = async (conflictResolution?: "ThayThe" | "GiuHienTai") => {
     if (!app.currentUser) {
       // Khách vãng lai chưa đăng nhập -> mở modal yêu cầu đăng nhập theo UC2.4.2
       setShowAuthModal(true);
@@ -1971,7 +2539,38 @@ function AIAdvisorView() {
 
     if (customItems.length === 0) return;
 
-    // Đưa từng món với số lượng đã chỉnh sửa vào giỏ thuê
+    if (app.realApi) {
+      setAddingToCart(true);
+      setAdvisorError("");
+      const { gioNhan, gioTra } = getSuggestedRange();
+      try {
+        await aiAdvisorApi.themBoDoVaoGio({
+          gioNhan,
+          gioTra,
+          cacDong: customItems.map((i) => ({ maSanPham: Number(i.productId), soLuong: i.qty })),
+          xuLyXungDotLich: conflictResolution,
+        });
+        setScheduleConflict(null);
+        await app.refreshCart?.();
+        setAddedAllNotice(true);
+        setTimeout(() => setAddedAllNotice(false), 3500);
+      } catch (err) {
+        if (err instanceof ApiError && (err.code === "NGAY_GIO_KHAC_GIO_HIEN_TAI" || err.status === 409) && !conflictResolution) {
+          setScheduleConflict({
+            message: err.message || "Giỏ thuê hiện tại đang chọn khung giờ khác với bộ đồ gợi ý.",
+            gioNhan,
+            gioTra,
+          });
+        } else {
+          setAdvisorError(err instanceof Error ? err.message : "Không thể đưa bộ đồ vào giỏ thuê.");
+        }
+      } finally {
+        setAddingToCart(false);
+      }
+      return;
+    }
+
+    // Đưa từng món với số lượng đã chỉnh sửa vào giỏ thuê (Mock)
     customItems.forEach((item) => {
       app.addToCart(item.productId, item.qty);
     });
@@ -2163,6 +2762,12 @@ function AIAdvisorView() {
             </div>
           </div>
 
+          {advisorError && !sent && (
+            <div role="alert" style={{ marginTop: 14, padding: "10px 14px", borderRadius: 10, background: "#FEF2F2", color: "#B91C1C", border: "1px solid #FECACA", fontSize: "0.82rem" }}>
+              {advisorError}
+            </div>
+          )}
+
           {/* Nút kích hoạt AI với trạng thái Loading */}
           <div style={{ marginTop: 24, textAlign: "right" }}>
             {isAnalyzing ? (
@@ -2182,7 +2787,7 @@ function AIAdvisorView() {
             ) : (
               <button
                 type="button"
-                onClick={handleStartAIAnalysis}
+                onClick={() => void handleStartAIAnalysis()}
                 className="btn btn-primary"
                 style={{ padding: "14px 28px", fontSize: "0.95rem", fontWeight: 700, borderRadius: 10 }}
               >
@@ -2499,6 +3104,56 @@ function AIAdvisorView() {
             </div>
           </div>
 
+          {aiResponse?.nguonGoiY === "ComboMacDinh" && (
+            <div style={{ background: "#EFF6FF", border: "1px solid #BFDBFE", padding: "10px 14px", borderRadius: 10, fontSize: "0.8rem", color: "#1E40AF", marginBottom: 12 }}>
+              Đang hiển thị bộ combo chuẩn đề xuất tự động từ kho GearGo (UC2.4.1 Fallback).
+            </div>
+          )}
+
+          {aiResponse?.thongBaoPhanThieu && (
+            <div style={{ background: "#FFFBEB", border: "1px solid #FCD34D", padding: "10px 14px", borderRadius: 10, fontSize: "0.8rem", color: "#92400E", marginBottom: 12 }}>
+              Lưu ý tồn kho từ hệ thống: {aiResponse.thongBaoPhanThieu}
+            </div>
+          )}
+
+          {advisorError && (
+            <div role="alert" style={{ background: "#FEF2F2", border: "1px solid #FECACA", padding: "10px 14px", borderRadius: 10, fontSize: "0.8rem", color: "#B91C1C", marginBottom: 12 }}>
+              {advisorError}
+            </div>
+          )}
+
+          {scheduleConflict && (
+            <div style={{ background: "#FFFBEB", border: "1px solid #F59E0B", padding: "12px 16px", borderRadius: 12, fontSize: "0.82rem", color: "#92400E", marginBottom: 14 }}>
+              <div className="font-bold mb-1">Xung đột khung giờ với giỏ thuê hiện tại</div>
+              <p className="mb-3">{scheduleConflict.message}</p>
+              <div className="flex gap-2 flex-wrap">
+                <button
+                  type="button"
+                  disabled={addingToCart}
+                  onClick={() => void handleAddAllToCart("ThayThe")}
+                  className="btn btn-primary btn-sm"
+                >
+                  Thay thế lịch giỏ bằng lịch combo
+                </button>
+                <button
+                  type="button"
+                  disabled={addingToCart}
+                  onClick={() => void handleAddAllToCart("GiuHienTai")}
+                  className="btn btn-secondary btn-sm"
+                >
+                  Giữ nguyên lịch giỏ hiện tại
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setScheduleConflict(null)}
+                  className="btn btn-ghost btn-sm"
+                >
+                  Hủy
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Banner thông báo thêm thành công */}
           {addedAllNotice && (
             <div className="badge badge-success p-3 rounded-lg text-center w-full mb-4" style={{ background: "#DCFCE7", color: "#166534", border: "1px solid #86EFAC", fontWeight: 700 }}>
@@ -2510,8 +3165,8 @@ function AIAdvisorView() {
           <div className="flex gap-3 flex-wrap">
             <button
               type="button"
-              onClick={handleAddAllToCart}
-              disabled={customItems.length === 0}
+              onClick={() => void handleAddAllToCart()}
+              disabled={customItems.length === 0 || addingToCart}
               className="btn btn-accent btn-md"
               style={{
                 flex: 1,
@@ -2522,10 +3177,10 @@ function AIAdvisorView() {
                 background: "var(--color-forest)",
                 color: "white",
                 border: "none",
-                cursor: customItems.length === 0 ? "not-allowed" : "pointer",
+                cursor: customItems.length === 0 || addingToCart ? "not-allowed" : "pointer",
               }}
             >
-              + Thêm toàn bộ vào giỏ thuê ({customItems.reduce((s, i) => s + i.qty, 0)} món)
+              {addingToCart ? "Đang đưa vào giỏ..." : `+ Thêm toàn bộ vào giỏ thuê (${customItems.reduce((s, i) => s + i.qty, 0)} món)`}
             </button>
             <button
               type="button"
@@ -2591,7 +3246,7 @@ function AIAdvisorView() {
                 type="button"
                 onClick={() => {
                   setShowAuthModal(false);
-                  app.setPage("auth");
+                  app.setPage("login");
                 }}
                 className="btn btn-primary"
                 style={{ flex: 1, padding: "12px", borderRadius: 10, fontWeight: 700 }}
@@ -2626,16 +3281,28 @@ function ProfileView() {
     return "profile";
   });
 
-  const defaultProfile = {
-    name: "Nguyễn Văn An",
-    phone: "0901 234 567",
-    email: "an.nguyen@example.com",
-    address: "142 Hai Bà Trưng, Phường Đa Kao, Quận 1, TP. Hồ Chí Minh",
-    birthDate: "1995-08-15",
-    avatarUrl: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150",
+  const emptyProfile = {
+    name: app.currentUser?.name || "",
+    phone: app.currentUser?.phone || "",
+    email: app.currentUser?.email || "",
+    address: app.currentUser?.address || "",
+    birthDate: "",
+    avatarUrl: "",
   };
 
+  const defaultProfile = app.realApi
+    ? emptyProfile
+    : {
+        name: "Nguyễn Văn An",
+        phone: "0901 234 567",
+        email: "an.nguyen@example.com",
+        address: "142 Hai Bà Trưng, Phường Đa Kao, Quận 1, TP. Hồ Chí Minh",
+        birthDate: "1995-08-15",
+        avatarUrl: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150",
+      };
+
   const [savedProfile, setSavedProfile] = useState(() => {
+    if (app.realApi) return defaultProfile;
     try {
       const saved = localStorage.getItem("geargo-demo-customer-profile");
       return saved ? (JSON.parse(saved) as typeof defaultProfile) : defaultProfile;
@@ -2646,6 +3313,9 @@ function ProfileView() {
 
   const [profile, setProfile] = useState(savedProfile);
   const [saved, setSaved] = useState(false);
+  const [profileLoading, setProfileLoading] = useState(false);
+  const [profileSaving, setProfileSaving] = useState(false);
+  const [profileError, setProfileError] = useState("");
 
   // Đổi mật khẩu state (UC1.12)
   const [oldPassword, setOldPassword] = useState("");
@@ -2653,19 +3323,90 @@ function ProfileView() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [passwordMsg, setPasswordMsg] = useState("");
   const [passwordError, setPasswordError] = useState("");
+  const [passwordSaving, setPasswordSaving] = useState(false);
+
+  // Đánh giá từ API thật (UC9.1)
+  const [eligibleReviewItems, setEligibleReviewItems] = useState<SanPhamDuDieuKienDanhGiaBackend[]>([]);
+  const [myRealReviews, setMyRealReviews] = useState<import("../store").Review[]>([]);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
 
   const [reviewingTarget, setReviewingTarget] = useState<{
     orderId: string;
     productId: string;
     productName: string;
+    maChiTietDonThue?: number;
   } | null>(null);
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState("");
   const [reviewImage, setReviewImage] = useState("");
   const [reviewError, setReviewError] = useState("");
+  const [reviewSubmitting, setReviewSubmitting] = useState(false);
   const completedOrders = app.orders.filter((order) => order.status === "Hoàn tất");
 
-  const saveProfile = () => {
+  // Nạp hồ sơ thật & danh sách sản phẩm đủ điều kiện đánh giá từ backend
+  useEffect(() => {
+    if (!app.realApi || !app.currentUser) return;
+    setProfileLoading(true);
+    void profileApi
+      .layHoSoToi()
+      .then((dto) => {
+        const next = {
+          name: dto.hoTen || app.currentUser?.name || "",
+          phone: dto.soDienThoai || app.currentUser?.phone || "",
+          email: dto.email || app.currentUser?.email || "",
+          address: dto.diaChi || "",
+          birthDate: dto.ngaySinh ? dto.ngaySinh.slice(0, 10) : "",
+          avatarUrl: dto.anhDaiDien || "",
+        };
+        setSavedProfile(next);
+        setProfile(next);
+      })
+      .catch(() => {})
+      .finally(() => setProfileLoading(false));
+
+    setReviewsLoading(true);
+    void Promise.all([reviewApi.laySanPhamDuDieuKien(), reviewApi.layDanhGiaCuaToi()])
+      .then(([eligible, myRevs]) => {
+        setEligibleReviewItems(eligible);
+        setMyRealReviews(myRevs.map(mapDanhGiaToReview));
+      })
+      .catch(() => {})
+      .finally(() => setReviewsLoading(false));
+  }, [app.realApi, app.currentUser?.id]);
+
+  const saveProfile = async () => {
+    setProfileError("");
+    setSaved(false);
+    if (app.realApi) {
+      setProfileSaving(true);
+      try {
+        const dto = await profileApi.capNhatHoSoToi({
+          hoTen: profile.name.trim(),
+          email: profile.email.trim(),
+          soDienThoai: profile.phone.trim(),
+          diaChi: profile.address.trim() || null,
+          ngaySinh: profile.birthDate || null,
+          anhDaiDien: profile.avatarUrl.trim() || null,
+        });
+        const next = {
+          name: dto.hoTen || profile.name,
+          phone: dto.soDienThoai || profile.phone,
+          email: dto.email || profile.email,
+          address: dto.diaChi || "",
+          birthDate: dto.ngaySinh ? dto.ngaySinh.slice(0, 10) : "",
+          avatarUrl: dto.anhDaiDien || "",
+        };
+        setSavedProfile(next);
+        setProfile(next);
+        setSaved(true);
+      } catch (err) {
+        setProfileError(err instanceof Error ? err.message : "Không thể cập nhật hồ sơ cá nhân.");
+      } finally {
+        setProfileSaving(false);
+      }
+      return;
+    }
+
     localStorage.setItem("geargo-demo-customer-profile", JSON.stringify(profile));
     setSavedProfile(profile);
     setSaved(true);
@@ -2675,9 +3416,10 @@ function ProfileView() {
   const handleCancelProfileChanges = () => {
     setProfile(savedProfile);
     setSaved(false);
+    setProfileError("");
   };
 
-  const handleChangePassword = (e: React.FormEvent) => {
+  const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setPasswordError("");
     setPasswordMsg("");
@@ -2686,12 +3428,33 @@ function ProfileView() {
       setPasswordError("Vui lòng nhập mật khẩu hiện tại");
       return;
     }
-    if (newPassword.length < 6) {
-      setPasswordError("Mật khẩu mới phải có tối thiểu 6 ký tự");
+    const minLen = app.realApi ? 8 : 6;
+    if (newPassword.length < minLen) {
+      setPasswordError(`Mật khẩu mới phải có tối thiểu ${minLen} ký tự`);
       return;
     }
     if (newPassword !== confirmPassword) {
       setPasswordError("Mật khẩu mới và xác nhận mật khẩu không khớp");
+      return;
+    }
+
+    if (app.realApi) {
+      setPasswordSaving(true);
+      try {
+        await authApi.doiMatKhau({
+          matKhauHienTai: oldPassword,
+          matKhauMoi: newPassword,
+          xacNhanMatKhauMoi: confirmPassword,
+        });
+        setPasswordMsg("✓ Đổi mật khẩu thành công! Vui lòng dùng mật khẩu mới cho các lần đăng nhập sau.");
+        setOldPassword("");
+        setNewPassword("");
+        setConfirmPassword("");
+      } catch (err) {
+        setPasswordError(err instanceof Error ? err.message : "Đổi mật khẩu thất bại.");
+      } finally {
+        setPasswordSaving(false);
+      }
       return;
     }
 
@@ -2702,9 +3465,43 @@ function ProfileView() {
     app.addAuditLog({ actor: profile.name, role: "Khách hàng", action: "Đổi mật khẩu (UC1.12)", targetEntity: "CustomerAccount", targetId: profile.email, detail: "Người dùng đổi mật khẩu bảo mật cá nhân" });
   };
 
-  const handleSendReview = (e: React.FormEvent) => {
+  const handleSendReview = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!reviewingTarget) return;
+
+    if (app.realApi) {
+      if (!reviewingTarget.maChiTietDonThue) {
+        setReviewError("Không xác định được dòng đơn thuê đủ điều kiện đánh giá.");
+        return;
+      }
+      setReviewSubmitting(true);
+      setReviewError("");
+      try {
+        await reviewApi.taoDanhGia({
+          maChiTietDonThue: reviewingTarget.maChiTietDonThue,
+          soSao: rating,
+          noiDung: comment.trim() || undefined,
+          danhSachAnh: reviewImage.trim() ? [reviewImage.trim()] : undefined,
+        });
+        const [eligible, myRevs] = await Promise.all([
+          reviewApi.laySanPhamDuDieuKien(),
+          reviewApi.layDanhGiaCuaToi(),
+        ]);
+        setEligibleReviewItems(eligible);
+        setMyRealReviews(myRevs.map(mapDanhGiaToReview));
+        void app.refreshReviews?.();
+        setReviewingTarget(null);
+        setComment("");
+        setRating(5);
+        setReviewImage("");
+      } catch (err) {
+        setReviewError(err instanceof Error ? err.message : "Không thể gửi đánh giá sản phẩm.");
+      } finally {
+        setReviewSubmitting(false);
+      }
+      return;
+    }
+
     const res = app.addReview({
       orderId: reviewingTarget.orderId,
       productId: reviewingTarget.productId,
@@ -2747,7 +3544,7 @@ function ProfileView() {
             onClick={() => setSection("reviews")}
             className={`btn btn-sm ${section === "reviews" ? "btn-primary" : "btn-secondary"}`}
           >
-            Đánh giá sản phẩm ({completedOrders.length})
+            Đánh giá sản phẩm ({app.realApi ? eligibleReviewItems.length : completedOrders.length})
           </button>
         </div>
       </div>
@@ -2756,7 +3553,7 @@ function ProfileView() {
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            saveProfile();
+            void saveProfile();
           }}
           className="card-panel"
         >
@@ -2764,7 +3561,7 @@ function ProfileView() {
             <div>
               <h2 className="font-display font-bold text-lg text-bark">Hồ sơ cá nhân & Thông tin liên hệ (UC1.6)</h2>
               <p className="text-xs text-gray-500 mt-0.5">
-                * Chuẩn thực thể KHACH_HANG & TAI_KHOAN: GearGo nhận và trả thiết bị trực tiếp tại cửa hàng (128 Nguyễn Đình Chiểu, Q.3).
+                {profileLoading ? "Đang tải hồ sơ cá nhân..." : "* GearGo nhận và trả thiết bị trực tiếp tại cửa hàng (128 Nguyễn Đình Chiểu, Q.3)."}
               </p>
             </div>
             {profile.avatarUrl && (
@@ -2775,12 +3572,17 @@ function ProfileView() {
               />
             )}
           </div>
+          {profileError && (
+            <div role="alert" className="form-error-msg mb-3">
+              {profileError}
+            </div>
+          )}
           <div className="form-grid-2">
             {[
               { key: "name" as const, label: "Họ và tên", type: "text" },
               { key: "phone" as const, label: "Số điện thoại", type: "tel" },
               { key: "email" as const, label: "Email", type: "email" },
-              { key: "birthDate" as const, label: "Ngày sinh (KHACH_HANG.ngay_sinh)", type: "date" },
+              { key: "birthDate" as const, label: "Ngày sinh", type: "date" },
               { key: "address" as const, label: "Địa chỉ thường trú / liên hệ", type: "text" },
               { key: "avatarUrl" as const, label: "Ảnh đại diện (URL)", type: "url" },
             ].map((field) => (
@@ -2799,8 +3601,8 @@ function ProfileView() {
             ))}
           </div>
           <div className="flex items-center gap-3 mt-5">
-            <button type="submit" className="btn btn-primary btn-md">
-              Lưu thay đổi
+            <button type="submit" disabled={profileSaving || profileLoading} className="btn btn-primary btn-md">
+              {profileSaving ? "Đang lưu..." : "Lưu thay đổi"}
             </button>
             <button
               type="button"
@@ -2815,7 +3617,7 @@ function ProfileView() {
           </div>
         </form>
       ) : section === "security" ? (
-        <form onSubmit={handleChangePassword} className="card-panel max-w-lg">
+        <form onSubmit={(e) => void handleChangePassword(e)} className="card-panel max-w-lg">
           <h2 className="font-display font-bold text-lg text-bark mb-2">Đổi mật khẩu tài khoản</h2>
           <p className="text-xs text-gray-500 mb-4">Mật khẩu mới cần dài tối thiểu 6 ký tự để bảo mật tài khoản thuê thiết bị.</p>
 
@@ -2865,8 +3667,8 @@ function ProfileView() {
             </div>
           )}
 
-          <button type="submit" className="btn btn-primary btn-md">
-            Cập nhật mật khẩu mới
+          <button type="submit" disabled={passwordSaving} className="btn btn-primary btn-md">
+            {passwordSaving ? "Đang cập nhật..." : "Cập nhật mật khẩu mới"}
           </button>
         </form>
       ) : (
@@ -2878,7 +3680,171 @@ function ProfileView() {
             Lưu ý: Mỗi sản phẩm trong một đơn hoàn tất chỉ được đánh giá một lần duy nhất.
           </p>
 
-          {completedOrders.length === 0 ? (
+          {app.realApi ? (
+            reviewsLoading ? (
+              <div className="card-panel-muted text-center py-8 text-gray-500 text-sm">
+                Đang tải danh sách sản phẩm đủ điều kiện đánh giá...
+              </div>
+            ) : eligibleReviewItems.length === 0 && myRealReviews.length === 0 ? (
+              <div className="card-panel-muted text-center py-8 text-gray-500 text-sm">
+                Chưa có đơn thuê nào hoàn tất để gửi đánh giá.
+              </div>
+            ) : (
+              <div className="flex flex-col gap-3">
+                {eligibleReviewItems.map((el) => {
+                  const existing = myRealReviews.find(
+                    (r) => r.orderId === String(el.maDonThue) && r.productId === String(el.maSanPham)
+                  );
+                  const isCurrentReviewing =
+                    reviewingTarget?.orderId === String(el.maDonThue) &&
+                    reviewingTarget?.productId === String(el.maSanPham);
+
+                  return (
+                    <div key={el.maChiTietDonThue} className="border border-bone rounded-xl p-4">
+                      <div className="flex justify-between items-center mb-2 pb-2 border-b border-dashed border-bone">
+                        <div>
+                          <strong className="font-mono text-forest">{el.maDonHienThi || el.maDonThue}</strong>
+                          <span className="text-xs text-gray-400 ml-3">
+                            Hoàn tất: {el.thoiDiemHoanTat ? new Date(el.thoiDiemHoanTat).toLocaleDateString("vi-VN") : "-"}
+                          </span>
+                        </div>
+                        <span className="badge badge-success">Đã hoàn tất</span>
+                      </div>
+
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <div className="font-bold text-bark text-sm">{el.tenSanPham}</div>
+                        </div>
+                        {el.daDanhGia || existing ? (
+                          <div className="text-right">
+                            {existing && (
+                              <span className="text-amber font-bold text-sm">
+                                {"★".repeat(existing.rating)}{"☆".repeat(5 - existing.rating)}
+                              </span>
+                            )}
+                            <div className="text-xs text-emerald-600 font-semibold">✓ Đã đánh giá</div>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => {
+                              setReviewingTarget({
+                                orderId: String(el.maDonThue),
+                                productId: String(el.maSanPham),
+                                productName: el.tenSanPham,
+                                maChiTietDonThue: el.maChiTietDonThue,
+                              });
+                              setReviewError("");
+                              setRating(5);
+                              setComment("");
+                              setReviewImage("");
+                            }}
+                            className="btn btn-secondary btn-sm"
+                          >
+                            Viết đánh giá
+                          </button>
+                        )}
+                      </div>
+
+                      {existing && (
+                        <div className="mt-2.5 flex flex-col gap-2">
+                          <div className="bg-white p-2.5 rounded-lg border border-bone text-xs text-gray-700 italic">
+                            "{existing.comment}"
+                          </div>
+                          {existing.images && existing.images.length > 0 && (
+                            <div className="flex gap-2 items-center flex-wrap">
+                              {existing.images.map((img, idx) => (
+                                <img
+                                  key={idx}
+                                  src={img}
+                                  alt="Ảnh đánh giá"
+                                  style={{ width: 56, height: 56, objectFit: "cover", borderRadius: 6, border: "1px solid #CBD5E1" }}
+                                />
+                              ))}
+                            </div>
+                          )}
+                          {(existing.storeResponse || existing.response) && (
+                            <div style={{ background: "#F0FDF4", borderLeft: "3px solid #16A34A", borderRadius: "0 6px 6px 0", padding: "8px 12px" }}>
+                              <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "#166534", display: "flex", justifyContent: "space-between" }}>
+                                <span>Phản hồi từ GearGo ({existing.storeResponse?.respondedBy || "Cửa hàng"})</span>
+                                <span style={{ fontWeight: 400, color: "#64748B" }}>{existing.storeResponse?.respondedAt}</span>
+                              </div>
+                              <div style={{ fontSize: "0.78rem", color: "#14532D", marginTop: 4 }}>
+                                {existing.storeResponse?.response || existing.response}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {isCurrentReviewing && (
+                        <form onSubmit={(e) => void handleSendReview(e)} className="mt-3 bg-white p-4 rounded-lg border border-bone shadow-sm">
+                          <div className="flex justify-between items-center mb-3 border-b border-bone pb-2">
+                            <h4 className="font-bold text-sm text-bark">Đánh giá trải nghiệm: {reviewingTarget.productName}</h4>
+                            <span className="badge badge-neutral text-xs">Mã đơn #{el.maDonHienThi || reviewingTarget.orderId}</span>
+                          </div>
+                          <div className="mb-3">
+                            <label className="form-label mb-1">Mức độ hài lòng của bạn</label>
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              {[1, 2, 3, 4, 5].map((s) => (
+                                <button
+                                  key={s}
+                                  type="button"
+                                  onClick={() => setRating(s)}
+                                  style={{
+                                    background: rating >= s ? "#FEF3C7" : "#F3F4F6",
+                                    border: `1px solid ${rating >= s ? "#F59E0B" : "#E5E7EB"}`,
+                                    color: rating >= s ? "#D97706" : "#9CA3AF",
+                                    borderRadius: 8,
+                                    padding: "6px 10px",
+                                    cursor: "pointer",
+                                    fontSize: "0.8rem",
+                                    fontWeight: 700,
+                                  }}
+                                >
+                                  ★ {s}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                          <div className="form-group mb-3">
+                            <label className="form-label">Nhận xét chi tiết chuyến đi</label>
+                            <textarea
+                              required
+                              value={comment}
+                              onChange={(e) => setComment(e.target.value)}
+                              rows={3}
+                              placeholder="Chia sẻ trải nghiệm thực tế: độ bền, độ sạch sẽ..."
+                              className="form-textarea"
+                            />
+                          </div>
+                          <div className="mb-3">
+                            <label className="form-label mb-1">Ảnh thực tế (URL tùy chọn)</label>
+                            <input
+                              type="url"
+                              placeholder="Dán URL ảnh dã ngoại (https://...)"
+                              value={reviewImage}
+                              onChange={(e) => setReviewImage(e.target.value)}
+                              className="form-input"
+                              style={{ fontSize: "0.82rem" }}
+                            />
+                          </div>
+                          {reviewError && <div className="form-error-msg mb-2">{reviewError}</div>}
+                          <div className="flex gap-2">
+                            <button type="submit" disabled={reviewSubmitting} className="btn btn-primary btn-sm">
+                              {reviewSubmitting ? "Đang gửi..." : "✓ Gửi đánh giá ngay"}
+                            </button>
+                            <button type="button" onClick={() => setReviewingTarget(null)} className="btn btn-secondary btn-sm">
+                              Hủy bỏ
+                            </button>
+                          </div>
+                        </form>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )
+          ) : completedOrders.length === 0 ? (
             <div className="card-panel-muted text-center py-8 text-gray-500 text-sm">
               Chưa có đơn thuê nào hoàn tất để gửi đánh giá.
             </div>
