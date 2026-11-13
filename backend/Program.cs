@@ -66,6 +66,20 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         {
             OnTokenValidated = async ctx =>
             {
+                // UC1.3 / UC1.12: Từ chối token đã đăng xuất hoặc đã đổi mật khẩu trong IMemoryCache.
+                var authHeader = ctx.Request.Headers.Authorization.ToString();
+                if (authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+                {
+                    var rawToken = authHeader["Bearer ".Length..].Trim();
+                    var hash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(Encoding.UTF8.GetBytes(rawToken)));
+                    var cache = ctx.HttpContext.RequestServices.GetRequiredService<Microsoft.Extensions.Caching.Memory.IMemoryCache>();
+                    if (cache.TryGetValue($"revoked_token:{hash}", out _))
+                    {
+                        ctx.Fail("Phiên đăng nhập đã kết thúc.");
+                        return;
+                    }
+                }
+
                 var db = ctx.HttpContext.RequestServices.GetRequiredService<ApplicationDbContext>();
                 var raw = ctx.Principal?.FindFirst("MaTaiKhoan")?.Value
                           ?? ctx.Principal?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
@@ -213,7 +227,7 @@ builder.Services.AddScoped<IBaoCaoVanHanhService, BaoCaoVanHanhService>();
 
 // ── W5-T6 & W5-T8 (Kiện Minh): Đánh giá sản phẩm, Kiểm duyệt và Hàng chờ thông báo ──
 builder.Services.AddScoped<IDanhGiaService, DanhGiaService>();
-builder.Services.AddSingleton<GearGo.Integrations.Notifications.IEmailNotificationAdapter, GearGo.Integrations.Notifications.MockEmailNotificationAdapter>();
+builder.Services.AddSingleton<GearGo.Integrations.Notifications.IEmailNotificationAdapter, GearGo.Integrations.Notifications.EmailNotificationAdapter>();
 builder.Services.AddScoped<IGuiThongBaoService, GuiThongBaoService>();
 builder.Services.AddHostedService<ThongBaoJob>();
 

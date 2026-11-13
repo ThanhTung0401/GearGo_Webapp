@@ -54,10 +54,30 @@ namespace GearGo.Services.Admin
                 // 1. Không cho phép danh mục cha là chính nó
                 if (req.MaDanhMucCha.Value == id) 
                     throw new Exception("Danh mục cha không được là chính nó.");
+
+                // Kiểm tra danh mục cha tồn tại trong cơ sở dữ liệu
+                var parent = await _context.Set<DanhMucSanPham>().FindAsync(req.MaDanhMucCha.Value);
+                if (parent == null) throw new Exception("Danh mục cha không tồn tại.");
                     
-                // 2. Không cho phép danh mục con trực tiếp làm danh mục cha (chống vòng lặp)
-                bool isChild = await _context.Set<DanhMucSanPham>().AnyAsync(d => d.MaDanhMucCha == id && d.MaDanhMuc == req.MaDanhMucCha.Value);
-                if (isChild) throw new Exception("Không thể chọn danh mục con làm danh mục cha.");
+                // 2. Thuật toán kiểm tra chống tạo vòng lặp phân cấp đa tầng (Cycle Detection):
+                // Duyệt ngược từ danh mục cha mới lên tới gốc để đảm bảo không gặp lại chính danh mục id hiện tại.
+                long? currentAncestorId = req.MaDanhMucCha.Value;
+                var visited = new HashSet<long>();
+                while (currentAncestorId.HasValue)
+                {
+                    if (currentAncestorId.Value == id)
+                    {
+                        throw new Exception("Không thể chọn danh mục con hoặc cháu làm danh mục cha (phát hiện vòng lặp phân cấp).");
+                    }
+                    if (!visited.Add(currentAncestorId.Value))
+                    {
+                        break; // Đã kiểm tra qua nút này
+                    }
+                    var ancestor = await _context.Set<DanhMucSanPham>()
+                        .AsNoTracking()
+                        .FirstOrDefaultAsync(d => d.MaDanhMuc == currentAncestorId.Value);
+                    currentAncestorId = ancestor?.MaDanhMucCha;
+                }
             }
 
             danhMuc.TenDanhMuc = req.TenDanhMuc;

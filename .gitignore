@@ -11,3 +11,5 @@ backend/.idea/
 review/
 backend/global.json
 node_modules/
+graphify-out/
+.archify/

@@ -17,10 +17,25 @@ namespace GearGo.Controllers.Admin;
 public class ThongBaoController : ControllerBase
 {
     private readonly IGuiThongBaoService _guiThongBaoService;
+    private readonly IThongBaoService _thongBaoService;
 
-    public ThongBaoController(IGuiThongBaoService guiThongBaoService)
+    public ThongBaoController(IGuiThongBaoService guiThongBaoService, IThongBaoService thongBaoService)
     {
         _guiThongBaoService = guiThongBaoService;
+        _thongBaoService = thongBaoService;
+    }
+
+    /// <summary>
+    /// UC9.4: Admin soạn và gửi thông báo chủ động cho một tài khoản hoặc toàn bộ hệ thống.
+    /// </summary>
+    [HttpPost]
+    public async Task<IActionResult> GuiThongBaoThuCong([FromBody] GuiThongBaoAdminRequest request)
+    {
+        var maTaiKhoan = User.LayMaTaiKhoan();
+        var result = await _thongBaoService.GuiThongBaoThuCongAsync(request, maTaiKhoan);
+        if (!result.ThanhCong)
+            return StatusCode(LayStatusCode(result.MaLoi), new { result.MaLoi, result.ThongDiep });
+        return StatusCode(201, result.DuLieu);
     }
 
     /// <summary>

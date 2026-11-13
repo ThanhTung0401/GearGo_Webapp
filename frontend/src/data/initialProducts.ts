@@ -1,5 +1,10 @@
 import type { Product } from "../types";
 
+/**
+ * Dữ liệu sản phẩm khởi tạo / dự phòng (fallback) khi Backend API chưa sẵn sàng.
+ * Khi kết nối với ASP.NET Core API (WP-M06: UC49 - UC53 / UC6.5 - UC6.8),
+ * hệ thống sẽ ưu tiên tải danh sách sản phẩm thực tế từ `catalogApi.layDanhSachSanPham()`.
+ */
 export const INITIAL_PRODUCTS: Product[] = [
   {
     id: "P001",

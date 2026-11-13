@@ -25,16 +25,25 @@ public class HoSoService : IHoSoService
 
     public async Task<HoSoResponse> LayHoSoCuaToiAsync(long maTaiKhoan)
     {
-        await ActorGuard.LayMaKhachHangAsync(_context, maTaiKhoan);
-        var kh = await _context.KhachHangs.AsNoTracking().Include(k => k.TaiKhoan)
-            .FirstAsync(k => k.MaTaiKhoan == maTaiKhoan);
-        return Map(kh);
+        var tk = await ActorGuard.LayTaiKhoanHoatDongAsync(_context, maTaiKhoan);
+        if (tk.VaiTro == "KhachHang")
+        {
+            await ActorGuard.LayMaKhachHangAsync(_context, maTaiKhoan);
+            var kh = await _context.KhachHangs.AsNoTracking().Include(k => k.TaiKhoan)
+                .FirstAsync(k => k.MaTaiKhoan == maTaiKhoan);
+            return Map(kh);
+        }
+
+        var nv = await _context.NhanViens.AsNoTracking().Include(n => n.TaiKhoan)
+            .FirstOrDefaultAsync(n => n.MaTaiKhoan == maTaiKhoan)
+            ?? throw new KhongCoQuyenException("Không tìm thấy hồ sơ nhân viên.");
+        return new HoSoResponse(nv.MaNhanVien, nv.HoTen, nv.TaiKhoan.Email, nv.TaiKhoan.SoDienThoai, null, null, null);
     }
 
     public async Task<HoSoResponse> CapNhatHoSoCuaToiAsync(CapNhatHoSoRequest request, long maTaiKhoan)
     {
         // Quy ước PUT thay thế toàn bộ: diaChi/ngaySinh/anhDaiDien null hoặc rỗng = xóa giá trị.
-        await ActorGuard.LayMaKhachHangAsync(_context, maTaiKhoan);
+        var tk = await ActorGuard.LayTaiKhoanHoatDongAsync(_context, maTaiKhoan);
 
         var email = request.Email?.Trim().ToLowerInvariant() ?? "";
         var sdt = request.SoDienThoai?.Trim() ?? "";
@@ -45,26 +54,49 @@ public class HoSoService : IHoSoService
 
         await using var tx = await _context.Database.BeginTransactionAsync();
 
-        var kh = await _context.KhachHangs.Include(k => k.TaiKhoan)
-            .FirstAsync(k => k.MaTaiKhoan == maTaiKhoan);
-
         if (await _context.TaiKhoans.AnyAsync(t => t.MaTaiKhoan != maTaiKhoan && (t.Email == email || t.SoDienThoai == sdt)))
             throw new LienHeDaTonTaiException("Email hoặc số điện thoại đã thuộc tài khoản khác.");
 
-        var truoc = new { kh.HoTen, kh.TaiKhoan.Email, kh.TaiKhoan.SoDienThoai, kh.DiaChi, kh.NgaySinh, kh.AnhDaiDien };
+        HoSoResponse ketQua;
+        if (tk.VaiTro == "KhachHang")
+        {
+            await ActorGuard.LayMaKhachHangAsync(_context, maTaiKhoan);
+            var kh = await _context.KhachHangs.Include(k => k.TaiKhoan)
+                .FirstAsync(k => k.MaTaiKhoan == maTaiKhoan);
 
-        kh.TaiKhoan.Email = email;
-        kh.TaiKhoan.SoDienThoai = sdt;
-        kh.TaiKhoan.NgayCapNhat = DateTime.UtcNow;
-        kh.HoTen = hoTen;
-        kh.DiaChi = diaChi;
-        kh.NgaySinh = request.NgaySinh;
-        kh.AnhDaiDien = anh;
-        // Không đụng tới snapshot trên DON_THUE (ten_nguoi_nhan, so_dien_thoai_nguoi_nhan, email_lien_he).
+            var truoc = new { kh.HoTen, kh.TaiKhoan.Email, kh.TaiKhoan.SoDienThoai, kh.DiaChi, kh.NgaySinh, kh.AnhDaiDien };
 
-        _lichSu.GhiNhatKyThaoTac(new GhiNhatKyCommand(
-            maTaiKhoan, "CAP_NHAT_HO_SO", "KHACH_HANG", kh.MaKhachHang.ToString(),
-            truoc, new { kh.HoTen, Email = email, SoDienThoai = sdt, kh.DiaChi, kh.NgaySinh, kh.AnhDaiDien }, null));
+            kh.TaiKhoan.Email = email;
+            kh.TaiKhoan.SoDienThoai = sdt;
+            kh.TaiKhoan.NgayCapNhat = DateTime.UtcNow;
+            kh.HoTen = hoTen;
+            kh.DiaChi = diaChi;
+            kh.NgaySinh = request.NgaySinh;
+            kh.AnhDaiDien = anh;
+            // Không đụng tới snapshot trên DON_THUE (ten_nguoi_nhan, so_dien_thoai_nguoi_nhan, email_lien_he).
+
+            _lichSu.GhiNhatKyThaoTac(new GhiNhatKyCommand(
+                maTaiKhoan, "CAP_NHAT_HO_SO", "KHACH_HANG", kh.MaKhachHang.ToString(),
+                truoc, new { kh.HoTen, Email = email, SoDienThoai = sdt, kh.DiaChi, kh.NgaySinh, kh.AnhDaiDien }, null));
+            ketQua = Map(kh);
+        }
+        else
+        {
+            var nv = await _context.NhanViens.Include(n => n.TaiKhoan)
+                .FirstOrDefaultAsync(n => n.MaTaiKhoan == maTaiKhoan)
+                ?? throw new KhongCoQuyenException("Không tìm thấy hồ sơ nhân viên.");
+
+            var truoc = new { nv.HoTen, nv.TaiKhoan.Email, nv.TaiKhoan.SoDienThoai };
+            nv.TaiKhoan.Email = email;
+            nv.TaiKhoan.SoDienThoai = sdt;
+            nv.TaiKhoan.NgayCapNhat = DateTime.UtcNow;
+            nv.HoTen = hoTen;
+
+            _lichSu.GhiNhatKyThaoTac(new GhiNhatKyCommand(
+                maTaiKhoan, "CAP_NHAT_HO_SO", "NHAN_VIEN", nv.MaNhanVien.ToString(),
+                truoc, new { nv.HoTen, Email = email, SoDienThoai = sdt }, null));
+            ketQua = new HoSoResponse(nv.MaNhanVien, nv.HoTen, nv.TaiKhoan.Email, nv.TaiKhoan.SoDienThoai, null, null, null);
+        }
 
         try
         {
@@ -77,7 +109,7 @@ public class HoSoService : IHoSoService
             throw new LienHeDaTonTaiException("Email hoặc số điện thoại đã thuộc tài khoản khác.");
         }
 
-        return Map(kh);
+        return ketQua;
     }
 
     private static bool LaViPhamUnique(DbUpdateException ex)

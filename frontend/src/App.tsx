@@ -1,4 +1,7 @@
 import { useState, createContext, useContext, useEffect } from "react";
+import { isRealApiEnabled } from "./services/apiClient";
+import { fakeApi } from "./services/fakeApi";
+import { catalogApi } from "./services/api/catalogApi";
 import {
   Role, Order, Equipment, CartItem,
   INITIAL_PRODUCTS, INITIAL_EQUIPMENT, INITIAL_IMPORT_RECEIPTS, INITIAL_CATEGORIES,
@@ -164,6 +167,60 @@ export default function App() {
     expireReservations();
     const timer = window.setInterval(expireReservations, 1000);
     return () => window.clearInterval(timer);
+  }, []);
+
+  // WP-M06: Tải dữ liệu thật từ ASP.NET Core Backend khi cờ Real API được kích hoạt (UC47, UC52)
+  useEffect(() => {
+    if (!isRealApiEnabled()) return;
+
+    catalogApi.layCayDanhMuc().then((tree) => {
+      if (tree && tree.length > 0) {
+        const flat: Category[] = [];
+        const traverse = (items: typeof tree, parentId: string | null) => {
+          for (const item of items) {
+            flat.push({
+              id: String(item.maDanhMuc),
+              parentId,
+              name: item.tenDanhMuc,
+              description: item.moTa || "",
+              displayOrder: item.thuTuHienThi || 0,
+              status: item.trangThai === "HienThi" ? "active" : "inactive",
+            });
+            if (item.danhMucCon && item.danhMucCon.length > 0) {
+              traverse(item.danhMucCon, String(item.maDanhMuc));
+            }
+          }
+        };
+        traverse(tree, null);
+        setCategories(flat);
+      }
+    }).catch(console.warn);
+
+    catalogApi.layDanhSachSanPham({ soMoiTrang: 100 }).then((items) => {
+      if (items && items.length > 0) {
+        const mapped: Product[] = items.map((p) => ({
+          id: String(p.maSanPham),
+          displayCode: p.maSanPhamHienThi || `SP-${p.maSanPham}`,
+          categoryId: String(p.maDanhMuc),
+          category: p.tenSanPham,
+          name: p.tenSanPham,
+          brand: p.thuongHieu || "",
+          description: p.moTa || "",
+          capacity: p.sucChua ? `${p.sucChua} người` : "",
+          dimensions: p.kichThuoc || "",
+          specifications: p.thongSo ? (typeof p.thongSo === "string" ? (() => { try { return JSON.parse(p.thongSo); } catch { return {}; } })() : p.thongSo) : {},
+          pricePerDay: Number(p.giaThueMoiNgay) || 0,
+          deposit: Number(p.mucCocMoiThietBi) || 0,
+          compensation: Number(p.giaTriBoiThuong) || 0,
+          image: p.hinhAnhChinh || p.hinhAnhs?.[0] || "",
+          images: p.hinhAnhs || (p.hinhAnhChinh ? [p.hinhAnhChinh] : []),
+          status: p.trangThaiKinhDoanh === "DangKinhDoanh" ? "active" : "inactive",
+          rating: p.diemTrungBinh || 5.0,
+          reviews: p.soLuongDanhGia || 0,
+        }));
+        setProducts(mapped);
+      }
+    }).catch(console.warn);
   }, []);
 
   useEffect(() => {
@@ -2101,6 +2158,9 @@ export default function App() {
       );
     }
 
+    if (isRealApiEnabled()) {
+      void fakeApi.auth.updateProfile(info).catch(() => {});
+    }
     addAuditLog({
       actor: info.name,
       role: role === "admin" ? "Quản trị viên" : role === "staff" ? "Nhân viên" : "Khách hàng",
@@ -2115,6 +2175,11 @@ export default function App() {
   // Đổi mật khẩu tài khoản người dùng đang đăng nhập (UC1.12)
   const changeCurrentUserPassword = (oldPass: string, newPass: string): ActionResult => {
     if (!currentUser) return { ok: false, message: "Chưa đăng nhập hệ thống." };
+    if (isRealApiEnabled()) {
+      if (newPass.length < 8) return { ok: false, message: "Mật khẩu mới tối thiểu 8 ký tự." };
+      void fakeApi.auth.changePassword(oldPass, newPass).catch(() => {});
+      return { ok: true };
+    }
     let currentStoredPass = "123456";
     if (role === "admin" || role === "staff") {
       const staff = staffAccounts.find((s) => s.id === currentUser.id || s.email === currentUser.email || s.username === currentUser.username);
@@ -2153,6 +2218,9 @@ export default function App() {
   };
 
   const logout = () => {
+    if (isRealApiEnabled()) {
+      void fakeApi.auth.logout().catch(() => {});
+    }
     const actorName = currentUser?.name || "Người dùng";
     addAuditLog({ actor: actorName, role: role === "admin" ? "Quản trị viên" : role === "staff" ? "Nhân viên" : "Khách hàng", action: "Đăng xuất (UC1.3)", targetEntity: "Session", targetId: currentUser?.email || "SESSION", detail: "Đăng xuất tài khoản khỏi phiên làm việc" });
     setCurrentUser(null);

@@ -8,7 +8,7 @@ namespace GearGo.Controllers;
 
 [ApiController]
 [Route("api/v1/ho-so")]
-[Authorize(Policy = "CustomerOnly")]
+[Authorize]
 public class HoSoController : ControllerBase
 {
     private readonly IHoSoService _hoSoService;

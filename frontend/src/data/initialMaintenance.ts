@@ -1,5 +1,10 @@
 import type { MaintenanceReceipt } from "../types";
 
+/**
+ * Dữ liệu phiếu bảo trì khởi tạo / dự phòng (fallback) khi Backend API chưa sẵn sàng.
+ * Khi kết nối với ASP.NET Core API (WP-M06: UC59 - UC61 / UC6.12, UC6.13),
+ * hệ thống sẽ ưu tiên tải dữ liệu bảo dưỡng và nghiệm thu từ `equipmentApi.timKiemBaoTri()`.
+ */
 export const INITIAL_MAINTENANCE_RECEIPTS: MaintenanceReceipt[] = [
   {
     id: "PBT-20240810-01",

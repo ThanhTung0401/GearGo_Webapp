@@ -1,6 +1,9 @@
 import { useState } from "react";
 import { useApp } from "../App";
 import Icon from "../components/Icon";
+import { ApiError, isRealApiEnabled } from "../services/apiClient";
+import { fakeApi } from "../services/fakeApi";
+import { authApi } from "../services/api/authApi";
 
 // ─── Đăng nhập (LoginView - UC1.2, UC1.2.1) ───────────────────────────────────
 export function LoginView() {
@@ -20,7 +23,7 @@ export function LoginView() {
     setLockedAccount(null);
   };
 
-  const submit = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErr("");
     setLockedAccount(null);
@@ -37,6 +40,28 @@ export function LoginView() {
     }
     if (pass.length < 6) {
       setErr("Mật khẩu tối thiểu 6 ký tự.");
+      return;
+    }
+
+    if (isRealApiEnabled()) {
+      try {
+        const res = await fakeApi.auth.login({ identifier: accountInput.trim(), password: pass });
+        app.login({
+          id: res.data.id,
+          username: res.data.username,
+          name: res.data.name,
+          email: res.data.email,
+          phone: res.data.phone,
+          role: res.data.role,
+          permissions: res.data.permissions,
+        });
+      } catch (error) {
+        if (error instanceof ApiError && (error.code === "TAI_KHOAN_BI_KHOA" || error.code === "TAM_KHOA")) {
+          setLockedAccount({ name: accountInput.trim(), reason: error.message });
+        } else {
+          setErr(error instanceof Error ? error.message : "Đăng nhập thất bại.");
+        }
+      }
       return;
     }
 
@@ -300,7 +325,9 @@ export function RegisterView() {
     return e;
   };
 
-  const submit = (e: React.FormEvent) => {
+  const [loading, setLoading] = useState(false);
+
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     const errs = validate();
     if (Object.keys(errs).length > 0) {
@@ -308,7 +335,57 @@ export function RegisterView() {
       return;
     }
 
-    // Tạo khách hàng mới vào hệ thống (lưu kèm mật khẩu phục vụ UC1.2)
+    setLoading(true);
+
+    // Đấu nối API thật POST /api/auth/dang-ky (UC01 / UC1.1)
+    if (isRealApiEnabled()) {
+      try {
+        const res = await authApi.dangKy({
+          email: form.email.trim(),
+          soDienThoai: form.phone.trim(),
+          matKhau: form.pass,
+          xacNhanMatKhau: form.confirm,
+          hoTen: form.name.trim(),
+        });
+
+        const nextId = `KH${String(res.maTaiKhoan).padStart(3, "0")}`;
+        app.saveCustomer({
+          id: nextId,
+          name: form.name.trim(),
+          email: form.email.trim(),
+          phone: form.phone.trim(),
+          password: form.pass,
+          address: "Chưa cập nhật",
+          status: "active",
+          createdAt: new Date().toLocaleDateString("vi-VN"),
+          totalOrders: 0,
+          totalSpent: 0,
+          currentDeposit: 0,
+        });
+
+        setCreatedCustomer({ id: nextId, name: form.name.trim(), email: form.email.trim(), phone: form.phone.trim() });
+        setSuccess(true);
+      } catch (error) {
+        if (error instanceof ApiError) {
+          if (error.code === "EMAIL_DA_TON_TAI") {
+            setErrors({ email: "Email này đã được đăng ký tài khoản trong hệ thống." });
+          } else if (error.code === "SDT_DA_TON_TAI") {
+            setErrors({ phone: "Số điện thoại này đã được sử dụng bởi tài khoản khác." });
+          } else if (error.code === "RATE_LIMIT_VUOT_MUC") {
+            setErrors({ general: "Bạn đã thao tác đăng ký quá nhiều lần. Vui lòng thử lại sau 10 phút." });
+          } else {
+            setErrors({ general: error.message || "Đăng ký thất bại. Vui lòng kiểm tra lại thông tin." });
+          }
+        } else {
+          setErrors({ general: error instanceof Error ? error.message : "Đăng ký thất bại." });
+        }
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
+    // Luồng dữ liệu giả lập dự phòng khi chưa bật Backend API
     const nextId = `KH00${app.customers.length + 1}`;
     app.saveCustomer({
       id: nextId,
@@ -326,6 +403,7 @@ export function RegisterView() {
 
     setCreatedCustomer({ id: nextId, name: form.name.trim(), email: form.email.trim(), phone: form.phone.trim() });
     setSuccess(true);
+    setLoading(false);
   };
 
   if (success && createdCustomer) {
@@ -436,8 +514,14 @@ export function RegisterView() {
             </label>
             {errors.agree && <div className="form-error-msg">{errors.agree}</div>}
 
-            <button type="submit" className="btn btn-primary btn-lg btn-full mt-2">
-              Tạo tài khoản
+            {errors.general && (
+              <div role="alert" className="form-error-msg text-center p-2 rounded" style={{ background: "#FEE2E2", color: "#B91C1C", fontSize: "0.82rem" }}>
+                {errors.general}
+              </div>
+            )}
+
+            <button type="submit" disabled={loading} className="btn btn-primary btn-lg btn-full mt-2">
+              {loading ? "Đang tạo tài khoản..." : "Tạo tài khoản"}
             </button>
 
             <p className="text-center text-sm text-gray-500 mt-2">
@@ -466,8 +550,25 @@ export function ForgotPasswordView() {
   const [newPass, setNewPass] = useState("");
   const [confirm, setConfirm] = useState("");
   const [err, setErr] = useState("");
+  const [verifiedToken, setVerifiedToken] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  // Bước 2: Nhập OTP xác thực (UC1.4)
+  // Gửi lại mã OTP qua email
+  const handleResendOtp = async () => {
+    if (!contact.trim()) return;
+    try {
+      if (isRealApiEnabled()) {
+        await authApi.quenMatKhau(contact.trim().toLowerCase());
+        alert(`Đã gửi lại mã xác minh OTP mới đến ${contact}. Vui lòng kiểm tra hộp thư!`);
+      } else {
+        alert("Đã gửi lại mã OTP demo: 123456");
+      }
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Không thể gửi lại mã OTP.");
+    }
+  };
+
+  // Bước 2: Nhập OTP xác thực (UC1.4 / UC15)
   if (step === "otp") {
     return (
       <div className="auth-page">
@@ -481,18 +582,43 @@ export function ForgotPasswordView() {
               Mã OTP gồm 6 chữ số đã được gửi đến <strong>{contact}</strong>.
             </p>
             <div className="policy-banner text-xs mb-4">
-              💡 Mã thử nghiệm demo: <strong>123456</strong>
+              💡 Mã thử nghiệm demo: <strong>123456</strong> (hoặc mã 6 số trong email gửi đến)
             </div>
 
             <form
-              onSubmit={(e) => {
+              onSubmit={async (e) => {
                 e.preventDefault();
-                if (otp.trim() !== "123456" && otp.trim().length !== 6) {
-                  setErr("Mã OTP không chính xác hoặc đã hết hạn (Thử mã: 123456).");
+                const cleanOtp = otp.trim();
+                if (cleanOtp.length !== 6) {
+                  setErr("Vui lòng nhập đủ 6 chữ số của mã xác minh OTP.");
                   return;
                 }
+
+                setLoading(true);
                 setErr("");
+
+                if (isRealApiEnabled()) {
+                  try {
+                    const res = await authApi.xacThucOtp(contact.trim().toLowerCase(), cleanOtp);
+                    setVerifiedToken(res.token || cleanOtp);
+                    setStep("reset");
+                  } catch (error) {
+                    setErr(error instanceof Error ? error.message : "Mã OTP không chính xác hoặc đã hết hạn.");
+                  } finally {
+                    setLoading(false);
+                  }
+                  return;
+                }
+
+                if (cleanOtp !== "123456") {
+                  setErr("Mã OTP không chính xác hoặc đã hết hạn (Thử mã demo: 123456).");
+                  setLoading(false);
+                  return;
+                }
+
+                setVerifiedToken(cleanOtp);
                 setStep("reset");
+                setLoading(false);
               }}
               className="auth-form"
             >
@@ -514,14 +640,14 @@ export function ForgotPasswordView() {
                 {err && <div className="form-error-msg">{err}</div>}
               </div>
 
-              <button type="submit" className="btn btn-primary btn-lg btn-full mb-3">
-                Xác minh mã OTP →
+              <button type="submit" disabled={loading} className="btn btn-primary btn-lg btn-full mb-3">
+                {loading ? "Đang xác minh..." : "Xác minh mã OTP →"}
               </button>
 
               <div className="flex justify-between items-center text-xs text-gray-500">
                 <button
                   type="button"
-                  onClick={() => alert("Đã gửi lại mã OTP mới: 123456")}
+                  onClick={handleResendOtp}
                   className="auth-link text-xs"
                 >
                   Gửi lại mã OTP
@@ -556,7 +682,7 @@ export function ForgotPasswordView() {
 
           <div className="auth-card">
             <form
-              onSubmit={(e) => {
+              onSubmit={async (e) => {
                 e.preventDefault();
                 if (newPass.length < 6) {
                   setErr("Mật khẩu tối thiểu 6 ký tự.");
@@ -567,7 +693,26 @@ export function ForgotPasswordView() {
                   return;
                 }
 
-                // Cập nhật mật khẩu mới vào cơ sở dữ liệu tài khoản tương ứng (UC1.4)
+                setLoading(true);
+                setErr("");
+
+                if (isRealApiEnabled()) {
+                  try {
+                    await authApi.datLaiMatKhau({
+                      token: verifiedToken || otp.trim(),
+                      matKhauMoi: newPass,
+                      xacNhanMatKhau: confirm,
+                    });
+                    setStep("success");
+                  } catch (error) {
+                    setErr(error instanceof Error ? error.message : "Đặt lại mật khẩu thất bại. Mã xác minh có thể đã hết hạn.");
+                  } finally {
+                    setLoading(false);
+                  }
+                  return;
+                }
+
+                // Cập nhật mật khẩu mới vào cơ sở dữ liệu tài khoản tương ứng (UC1.4 Local Mock)
                 const cleanContact = contact.trim().toLowerCase();
                 const matchedCust = app.customers.find(
                   (c) =>
@@ -597,6 +742,7 @@ export function ForgotPasswordView() {
                 });
 
                 setStep("success");
+                setLoading(false);
               }}
               className="auth-form"
             >
@@ -630,8 +776,8 @@ export function ForgotPasswordView() {
 
               {err && <div className="form-error-msg">{err}</div>}
 
-              <button type="submit" className="btn btn-primary btn-lg btn-full mt-2">
-                Xác nhận đổi mật khẩu
+              <button type="submit" disabled={loading} className="btn btn-primary btn-lg btn-full mt-2">
+                {loading ? "Đang xử lý..." : "Xác nhận đổi mật khẩu"}
               </button>
             </form>
           </div>
@@ -679,7 +825,7 @@ export function ForgotPasswordView() {
 
         <div className="auth-card">
           <form
-            onSubmit={(e) => {
+            onSubmit={async (e) => {
               e.preventDefault();
               const cleanContact = contact.trim().toLowerCase();
               if (!cleanContact) {
@@ -687,7 +833,22 @@ export function ForgotPasswordView() {
                 return;
               }
 
-              // Kiểm tra sự tồn tại của tài khoản (UC1.4 bước 3)
+              setLoading(true);
+              setErr("");
+
+              if (isRealApiEnabled()) {
+                try {
+                  await authApi.quenMatKhau(cleanContact);
+                  setStep("otp");
+                } catch (error) {
+                  setErr(error instanceof Error ? error.message : "Không thể gửi mã OTP. Vui lòng thử lại.");
+                } finally {
+                  setLoading(false);
+                }
+                return;
+              }
+
+              // Kiểm tra sự tồn tại của tài khoản trong local mock (UC1.4 bước 3)
               const matchedCust = app.customers.find(
                 (c) =>
                   c.email.toLowerCase() === cleanContact ||
@@ -702,11 +863,12 @@ export function ForgotPasswordView() {
 
               if (!matchedCust && !matchedStaff) {
                 setErr("Không tìm thấy tài khoản nào khớp với Email hoặc Số điện thoại này trên hệ thống GearGo.");
+                setLoading(false);
                 return;
               }
 
-              setErr("");
               setStep("otp");
+              setLoading(false);
             }}
             className="auth-form"
           >
@@ -725,8 +887,8 @@ export function ForgotPasswordView() {
               {err && <div className="form-error-msg">{err}</div>}
             </div>
 
-            <button type="submit" className="btn btn-primary btn-lg btn-full mt-2">
-              Gửi mã OTP xác minh →
+            <button type="submit" disabled={loading} className="btn btn-primary btn-lg btn-full mt-2">
+              {loading ? "Đang gửi mã OTP..." : "Gửi mã OTP xác minh →"}
             </button>
 
             <div className="text-center mt-3">

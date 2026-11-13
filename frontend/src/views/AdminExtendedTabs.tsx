@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import { useApp } from "../App";
+import { isRealApiEnabled } from "../services/apiClient";
+import { staffApi } from "../services/api/staffApi";
 import { fmt, statusColors, type CustomerAccount, type Review, type RentalPolicyConfig, type PolicyVersion, type FinancialAdjustment, type AuditLogEntry, type AppNotification } from "../store";
 import Icon, { type IconName } from "../components/Icon";
 
@@ -11,21 +13,107 @@ export function CustomersTab({ app }: { app: ReturnType<typeof useApp> }) {
   const [lockModalCustomer, setLockModalCustomer] = useState<CustomerAccount | null>(null);
   const [lockReason, setLockReason] = useState("");
 
-  const filtered = app.customers.filter((c) => {
-    const matchQuery =
-      c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.phone.includes(searchQuery) ||
-      c.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.id.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchStatus = statusFilter === "all" || c.status === statusFilter;
-    return matchQuery && matchStatus;
-  });
+  // State kết nối API thật /api/v1/admin/tai-khoan?vaiTro=KhachHang (UC13 / UC1.13, UC11)
+  const [apiCustomers, setApiCustomers] = useState<CustomerAccount[]>([]);
+  const [customerIdToTaiKhoanId, setCustomerIdToTaiKhoanId] = useState<Record<string, number>>({});
+  const [loading, setLoading] = useState(false);
+  const [apiError, setApiError] = useState("");
 
-  const handleConfirmLock = () => {
+  const loadCustomerList = async () => {
+    if (!isRealApiEnabled()) return;
+    setLoading(true);
+    setApiError("");
+    try {
+      const res = await staffApi.timTaiKhoan({
+        vaiTro: "KhachHang",
+        tuKhoa: searchQuery.trim() || undefined,
+        trangThai: statusFilter === "all" ? undefined : statusFilter === "active" ? "HoatDong" : "BiKhoa",
+      });
+
+      const idMap: Record<string, number> = {};
+      const mapped: CustomerAccount[] = res.items.map((tk) => {
+        const custId = `KH${String(tk.maKhachHang ?? tk.maTaiKhoan).padStart(3, "0")}`;
+        idMap[custId] = tk.maTaiKhoan;
+
+        // Tính lịch sử đơn thuê và tiền cọc từ đơn hàng của hệ thống
+        const matchingOrders = app.orders.filter(
+          (o) => o.customerId === custId || (tk.soDienThoai && o.customerPhone === tk.soDienThoai)
+        );
+        const totalOrders = matchingOrders.length;
+        const totalSpent = matchingOrders.reduce((sum, o) => sum + (o.rental - o.discount), 0);
+        const currentDeposit = matchingOrders
+          .filter((o) => !["Hoàn tất", "Đã hủy", "Hết hạn"].includes(o.status))
+          .reduce((sum, o) => sum + o.depositTotal, 0);
+
+        return {
+          id: custId,
+          name: tk.hoTen || (tk.email ? tk.email.split("@")[0] : "Khách hàng"),
+          phone: tk.soDienThoai || "Chưa cập nhật",
+          email: tk.email || "",
+          address: "Khách hàng GearGo",
+          status: tk.trangThai === "HoatDong" ? "active" : "locked",
+          lockedReason: tk.lyDoKhoa || undefined,
+          createdAt: tk.ngayTao ? new Date(tk.ngayTao).toLocaleDateString("vi-VN") : "01/01/2026",
+          totalOrders,
+          totalSpent,
+          currentDeposit,
+        };
+      });
+
+      setCustomerIdToTaiKhoanId(idMap);
+      setApiCustomers(mapped);
+    } catch (err) {
+      setApiError(err instanceof Error ? err.message : "Không thể tải danh sách tài khoản khách hàng từ máy chủ.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadCustomerList();
+  }, [searchQuery, statusFilter]);
+
+  const filtered = isRealApiEnabled()
+    ? apiCustomers
+    : app.customers.filter((c) => {
+        const matchQuery =
+          c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          c.phone.includes(searchQuery) ||
+          c.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          c.id.toLowerCase().includes(searchQuery.toLowerCase());
+        const matchStatus = statusFilter === "all" || c.status === statusFilter;
+        return matchQuery && matchStatus;
+      });
+
+  const handleConfirmLock = async () => {
     if (!lockModalCustomer) return;
+    if (isRealApiEnabled()) {
+      try {
+        const maTaiKhoan = customerIdToTaiKhoanId[lockModalCustomer.id] || parseInt(lockModalCustomer.id.replace(/\D/g, ""), 10);
+        await staffApi.khoaTaiKhoan(maTaiKhoan, lockReason || "Khóa tài khoản khách hàng vi phạm quy chế");
+        await loadCustomerList();
+      } catch (err) {
+        alert(err instanceof Error ? err.message : "Không thể khóa tài khoản khách hàng.");
+        return;
+      }
+    }
     app.toggleCustomerLock(lockModalCustomer.id, lockReason);
     setLockModalCustomer(null);
     setLockReason("");
+  };
+
+  const handleUnlockCustomer = async (cust: CustomerAccount) => {
+    if (isRealApiEnabled()) {
+      try {
+        const maTaiKhoan = customerIdToTaiKhoanId[cust.id] || parseInt(cust.id.replace(/\D/g, ""), 10);
+        await staffApi.moKhoaTaiKhoan(maTaiKhoan, "Mở khóa tài khoản khách hàng");
+        await loadCustomerList();
+      } catch (err) {
+        alert(err instanceof Error ? err.message : "Không thể mở khóa tài khoản khách hàng.");
+        return;
+      }
+    }
+    app.toggleCustomerLock(cust.id);
   };
 
   const customerOrders = selectedCustomer
@@ -142,7 +230,7 @@ export function CustomersTab({ app }: { app: ReturnType<typeof useApp> }) {
                             setLockModalCustomer(c);
                             setLockReason("");
                           } else {
-                            app.toggleCustomerLock(c.id);
+                            handleUnlockCustomer(c);
                           }
                         }}
                         style={{

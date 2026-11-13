@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import { type useApp } from "../App";
 import { type Equipment, type EquipmentStatus, type StockAdjustmentLine } from "../store";
+import { isRealApiEnabled } from "../services/apiClient";
+import { inventoryApi } from "../services/api/inventoryApi";
 
 interface Props {
   app: ReturnType<typeof useApp>;
@@ -57,13 +59,49 @@ export default function InventoryAuditModal({ app, onClose, onAuditSubmitted }: 
     return st && st.checkResult !== "Khớp";
   });
 
-  // Xử lý gửi phiếu đề nghị điều chỉnh kho
-  const handleSubmitAudit = (e: React.FormEvent) => {
+  // Xử lý gửi phiếu đề nghị điều chỉnh kho (UC55, UC56 / UC6.10, UC6.10.1)
+  const handleSubmitAudit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (discrepancies.length === 0) {
       alert("Tất cả thiết bị tại kho đều khớp 100%! Không cần tạo phiếu điều chỉnh.");
       onClose();
       return;
+    }
+
+    // Đấu nối API Kiểm kê & Điều chỉnh kho Backend (DieuChinhKhoController)
+    if (isRealApiEnabled()) {
+      try {
+        const dto = {
+          loaiDieuChinh: "KiemKeSaiLech",
+          lyDo: auditReason.trim(),
+          chiTiet: discrepancies.map((eq) => {
+            const st = auditStates[eq.id];
+            const targetStatus = st?.checkResult === "Đang bảo trì"
+              ? "DangBaoTri"
+              : st?.checkResult === "Thất lạc"
+              ? "ThatLac"
+              : st?.checkResult === "Ngừng sử dụng"
+              ? "NgungSuDung"
+              : "SanSang";
+
+            return {
+              maThietBi: Number(eq.id) || parseInt(eq.id.replace(/\D/g, ""), 10) || 1,
+              giaTriDeNghiSau: {
+                trangThaiSuDung: targetStatus,
+                tinhTrang: st?.note || st?.checkResult,
+              },
+              ghiChu: st?.note || `Kiểm kê lệch: ${st?.checkResult}`,
+            };
+          }),
+        };
+
+        const createdPhieu = await inventoryApi.lapPhieu(dto);
+        // Chuyển sang trạng thái ChoDuyet để Quản trị viên duyệt áp dụng (UC57)
+        await inventoryApi.guiDuyet(createdPhieu.maPhieuDieuChinh);
+      } catch (err) {
+        alert(err instanceof Error ? err.message : "Lỗi lưu phiếu kiểm kê lên máy chủ.");
+        return;
+      }
     }
 
     const lines: StockAdjustmentLine[] = discrepancies.map((e) => {

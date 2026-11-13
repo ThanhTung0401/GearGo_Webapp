@@ -167,5 +167,63 @@ public class ThongBaoService : IThongBaoService
         _context.ThongBaos.Add(tb);
         return tb;
     }
+
+    public async Task<Result<GuiThongBaoAdminResponse>> GuiThongBaoThuCongAsync(GuiThongBaoAdminRequest request, long actorId)
+    {
+        if (string.IsNullOrWhiteSpace(request.TieuDe) || request.TieuDe.Trim().Length > 255)
+            return Result<GuiThongBaoAdminResponse>.Loi("THONG_BAO_TIEU_DE_KHONG_HOP_LE", "Tiêu đề bắt buộc và tối đa 255 ký tự.");
+        if (string.IsNullOrWhiteSpace(request.NoiDung))
+            return Result<GuiThongBaoAdminResponse>.Loi("THONG_BAO_NOI_DUNG_TRONG", "Nội dung thông báo không được để trống.");
+
+        List<long> danhSachNguoiNhan;
+        if (request.MaTaiKhoanNhan.HasValue)
+        {
+            var tonTai = await _context.TaiKhoans.AsNoTracking()
+                .AnyAsync(t => t.MaTaiKhoan == request.MaTaiKhoanNhan.Value && t.TrangThai == "HoatDong");
+            if (!tonTai)
+                return Result<GuiThongBaoAdminResponse>.Loi("TAI_KHOAN_NOT_FOUND", "Không tìm thấy tài khoản người nhận đang hoạt động.");
+            danhSachNguoiNhan = [request.MaTaiKhoanNhan.Value];
+        }
+        else
+        {
+            danhSachNguoiNhan = await _context.TaiKhoans.AsNoTracking()
+                .Where(t => t.TrangThai == "HoatDong")
+                .Select(t => t.MaTaiKhoan)
+                .ToListAsync();
+        }
+
+        if (request.MaDonThue.HasValue && !await _context.DonThues.AnyAsync(d => d.MaDonThue == request.MaDonThue.Value))
+            return Result<GuiThongBaoAdminResponse>.Loi("DON_THUE_NOT_FOUND", "Đơn thuê gắn kèm không tồn tại.");
+
+        var now = DateTime.UtcNow;
+        var eventKey = $"ADMIN_MANUAL:{Guid.NewGuid():N}";
+        var loaiSuKien = string.IsNullOrWhiteSpace(request.LoaiSuKien) ? "ThongBaoHeThong" : request.LoaiSuKien.Trim();
+        var taoMoi = danhSachNguoiNhan.Select(maNhan => new ThongBao
+        {
+            MaTaiKhoan = maNhan,
+            MaDonThue = request.MaDonThue,
+            MaSuKien = eventKey,
+            LoaiSuKien = loaiSuKien,
+            TieuDe = request.TieuDe.Trim(),
+            NoiDung = request.NoiDung.Trim(),
+            KenhGui = KenhTrongUngDung,
+            TrangThaiGui = "DaGui",
+            ThoiDiemTao = now
+        }).ToList();
+
+        _context.ThongBaos.AddRange(taoMoi);
+        _context.NhatKyThaoTacs.Add(new NhatKyThaoTac
+        {
+            MaTaiKhoan = actorId,
+            HanhDong = "GUI_THONG_BAO_THU_CONG",
+            LoaiDoiTuong = "THONG_BAO",
+            MaDoiTuong = request.MaTaiKhoanNhan?.ToString() ?? "ALL",
+            DuLieuSau = System.Text.Json.JsonSerializer.Serialize(new { TieuDe = request.TieuDe.Trim(), SoNguoiNhan = taoMoi.Count }),
+            ThoiDiem = now
+        });
+
+        await _context.SaveChangesAsync();
+        return Result<GuiThongBaoAdminResponse>.Ok(new GuiThongBaoAdminResponse(taoMoi.Count, taoMoi.Select(x => x.MaThongBao).ToList()));
+    }
 }
 

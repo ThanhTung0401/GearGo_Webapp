@@ -1,5 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useApp } from "../context/AppContext";
+import { isRealApiEnabled } from "../services/apiClient";
+import { staffApi } from "../services/api/staffApi";
+import { catalogApi } from "../services/api/catalogApi";
+import { equipmentApi } from "../services/api/equipmentApi";
+import { inventoryApi } from "../services/api/inventoryApi";
 import {
   fmt, statusColors, type Category, type Product, type Supplier, type Promotion, type ImportReceipt,
   type StaffAccount, type StockAdjustmentReceipt, type StockAdjustmentLine, type EquipmentStatus, type Order,
@@ -70,8 +75,45 @@ function FormActions({ onClose }: { onClose: () => void }) {
 function CategoryForm({ app, category, onClose }: { app: ReturnType<typeof useApp>; category?: Category; onClose: () => void }) {
   const [form, setForm] = useState<Category>(category ?? { id: "", parentId: null, name: "", description: "", displayOrder: app.categories.length + 1, status: "active" });
   const [error, setError] = useState("");
-  const submit = (event: React.FormEvent) => {
+  const [loading, setLoading] = useState(false);
+
+  // Đấu nối API Quản trị danh mục (UC44, UC45, UC46 / UC6.1, UC6.2)
+  const submit = async (event: React.FormEvent) => {
     event.preventDefault();
+    setError("");
+
+    if (isRealApiEnabled()) {
+      setLoading(true);
+      try {
+        const maDanhMucChaNum = form.parentId && !isNaN(Number(form.parentId)) ? Number(form.parentId) : null;
+        if (category?.id && !isNaN(Number(category.id))) {
+          // UC46 / UC6.2: Cập nhật danh mục
+          const updated = await catalogApi.adminCapNhatDanhMuc(Number(category.id), {
+            tenDanhMuc: form.name.trim(),
+            maDanhMucCha: maDanhMucChaNum,
+            moTa: form.description || "",
+            thuTuHienThi: Number(form.displayOrder) || 0,
+            trangThai: form.status === "active" ? "HienThi" : "TamAn",
+          });
+          form.id = String(updated.maDanhMuc);
+        } else {
+          // UC44 / UC6.1: Thêm danh mục mới (Backend kiểm tra chống vòng lặp cha-con UC45)
+          const created = await catalogApi.adminTaoDanhMuc({
+            tenDanhMuc: form.name.trim(),
+            maDanhMucCha: maDanhMucChaNum,
+            moTa: form.description || "",
+            thuTuHienThi: Number(form.displayOrder) || 0,
+            trangThai: form.status === "active" ? "HienThi" : "TamAn",
+          });
+          form.id = String(created.maDanhMuc);
+        }
+      } catch (err) {
+        setLoading(false);
+        return setError(err instanceof Error ? err.message : "Không thể lưu danh mục lên máy chủ.");
+      }
+      setLoading(false);
+    }
+
     const result = app.saveCategory(form);
     if (!result.ok) return setError(result.message);
     onClose();
@@ -97,16 +139,87 @@ function ProductForm({ app, product, onClose }: { app: ReturnType<typeof useApp>
   });
   const [specText, setSpecText] = useState(Object.entries(form.specifications ?? {}).map(([key, value]) => `${key}: ${value}`).join("\n"));
   const [imageText, setImageText] = useState((form.images?.length ? form.images : [form.image]).filter(Boolean).join("\n"));
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
   const set = <K extends keyof Product>(key: K, value: Product[K]) => setForm((current) => ({ ...current, [key]: value }));
-  const submit = (event: React.FormEvent) => {
+
+  // Đấu nối API Quản trị sản phẩm & Upload ảnh Multipart (UC49, UC50, UC51 / UC6.5, UC6.6)
+  const submit = async (event: React.FormEvent) => {
     event.preventDefault();
+    setError("");
+
+    // UC50: Kiểm tra hợp lệ giá thuê và tiền cọc
+    if (form.pricePerDay <= 0) return setError("Giá thuê mỗi ngày phải lớn hơn 0 đ.");
+    if (form.deposit < 0) return setError("Mức tiền cọc không được là số âm.");
+    if (form.compensation < form.deposit) return setError("Giá trị bồi thường phải lớn hơn hoặc bằng mức cọc.");
+    if (!form.name.trim()) return setError("Tên sản phẩm không được để trống.");
+
     const specifications = Object.fromEntries(specText.split("\n").map((line) => line.split(":")).filter((parts) => parts.length >= 2).map(([key, ...value]) => [key.trim(), value.join(":").trim()]));
     const images = imageText.split("\n").map((url) => url.trim()).filter(Boolean);
+
+    if (isRealApiEnabled()) {
+      setLoading(true);
+      try {
+        const catId = Number(form.categoryId) || (app.categories[0] ? Number(app.categories[0].id) : 1);
+        const displayCode = form.displayCode || `SP-${Date.now().toString().slice(-4)}`;
+        let savedSpId = product?.id && !isNaN(Number(product.id)) ? Number(product.id) : null;
+
+        if (savedSpId) {
+          // UC51 / UC6.6: Cập nhật thông tin & giá sản phẩm
+          await catalogApi.adminCapNhatSanPham(savedSpId, {
+            maDanhMuc: catId,
+            maSanPhamHienThi: displayCode,
+            tenSanPham: form.name.trim(),
+            thuongHieu: form.brand,
+            moTa: form.description,
+            sucChua: parseInt(form.capacity) || 0,
+            kichThuoc: form.dimensions,
+            thongSo: JSON.stringify(specifications),
+            giaThueMoiNgay: form.pricePerDay,
+            mucCocMoiThietBi: form.deposit,
+            giaTriBoiThuong: form.compensation,
+            trangThaiKinhDoanh: form.status === "active" ? "DangKinhDoanh" : "TamNgung",
+          });
+        } else {
+          // UC49 / UC6.5: Thêm mới sản phẩm cho thuê
+          const created = await catalogApi.adminTaoSanPham({
+            maDanhMuc: catId,
+            maSanPhamHienThi: displayCode,
+            tenSanPham: form.name.trim(),
+            thuongHieu: form.brand,
+            moTa: form.description,
+            sucChua: parseInt(form.capacity) || 0,
+            kichThuoc: form.dimensions,
+            thongSo: JSON.stringify(specifications),
+            giaThueMoiNgay: form.pricePerDay,
+            mucCocMoiThietBi: form.deposit,
+            giaTriBoiThuong: form.compensation,
+            trangThaiKinhDoanh: form.status === "active" ? "DangKinhDoanh" : "TamNgung",
+          });
+          savedSpId = created.maSanPham;
+          form.id = String(created.maSanPham);
+        }
+
+        // UC49: Upload hình ảnh qua Multipart Form Data nếu người dùng chọn tệp
+        if (uploadFile && savedSpId) {
+          const imgRes = await catalogApi.adminUploadHinhAnh(savedSpId, uploadFile);
+          if (imgRes && imgRes.duongDan) {
+            images.unshift(imgRes.duongDan);
+          }
+        }
+      } catch (err) {
+        setLoading(false);
+        return setError(err instanceof Error ? err.message : "Không thể lưu sản phẩm lên máy chủ.");
+      }
+      setLoading(false);
+    }
+
     const result = app.saveProduct({ ...form, specifications, images, image: images[0] ?? "" });
     if (!result.ok) return setError(result.message);
     onClose();
   };
+
   return <FormModal title={product ? "Sửa sản phẩm" : "Thêm sản phẩm"} description="Giá thuê, cọc và bồi thường là ba giá trị riêng theo ERD. Giá nhập chỉ được ghi ở phiếu nhập." onClose={onClose}>
     <form onSubmit={submit} className="grid gap-4 mt-5">
       <div className="responsive-two-column grid gap-4" style={{ gridTemplateColumns: "1fr 1fr" }}>
@@ -123,6 +236,28 @@ function ProductForm({ app, product, onClose }: { app: ReturnType<typeof useApp>
       </div>
       <label style={labelStyle}>Mô tả<textarea rows={3} value={form.description} onChange={(e) => set("description", e.target.value)} style={fieldStyle} /></label>
       <label style={labelStyle}>Thông số kỹ thuật <span style={{ color: "#6B7280", fontWeight: 400 }}>Mỗi dòng theo mẫu: Chống nước: IPX4</span><textarea rows={3} value={specText} onChange={(e) => setSpecText(e.target.value)} style={fieldStyle} /></label>
+      
+      {/* Upload file hình ảnh Multipart Form Data (UC49) */}
+      <label style={labelStyle}>
+        Tải ảnh từ máy tính (Multipart Form Data - UC49)
+        <input
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) {
+              if (file.size > 5 * 1024 * 1024) {
+                setError("Dung lượng file ảnh vượt quá 5MB.");
+                return;
+              }
+              setUploadFile(file);
+            }
+          }}
+          style={fieldStyle}
+        />
+        {uploadFile && <span style={{ fontSize: "0.75rem", color: "var(--color-forest)", fontWeight: 600 }}>✓ Đã chọn file: {uploadFile.name} ({(uploadFile.size / 1024).toFixed(1)} KB)</span>}
+      </label>
+
       <label style={labelStyle}>URL hình ảnh <span style={{ color: "#6B7280", fontWeight: 400 }}>Mỗi dòng một URL; dòng đầu là ảnh chính.</span><textarea rows={3} value={imageText} onChange={(e) => setImageText(e.target.value)} placeholder="https://..." style={fieldStyle} /></label>
       {imageText.split("\n")[0]?.trim() && <img src={imageText.split("\n")[0].trim()} alt="Xem trước sản phẩm" style={{ width: 180, height: 120, objectFit: "cover", borderRadius: 10, border: "1px solid var(--color-bone)" }} />}
       <div style={{ background: "var(--color-parchment)", borderRadius: 10, padding: 12, fontSize: "0.8rem" }}>Giá thuê: <strong>{fmt(form.pricePerDay)}</strong> · Cọc: <strong>{fmt(form.deposit)}</strong> · Bồi thường: <strong>{fmt(form.compensation)}</strong></div>
@@ -888,7 +1023,23 @@ function CategoriesTab({ app }: { app: ReturnType<typeof useApp> }) {
               </div>
               <div style={{ padding: "0 18px 14px", display: "flex", gap: "6px" }}>
                 <button onClick={() => setAction(c.category)} style={{ flex: 1, background: "var(--color-parchment)", border: "1px solid var(--color-bone)", borderRadius: "6px", padding: "6px", fontSize: "0.75rem", cursor: "pointer" }}>Sửa</button>
-                <button onClick={() => { const result = app.setCategoryStatus(c.category.id, c.category.status === "active" ? "inactive" : "active"); setMessage(result.ok ? "" : result.message); }} style={{ flex: 1, background: "var(--color-parchment)", border: "1px solid var(--color-bone)", borderRadius: "6px", padding: "6px", fontSize: "0.75rem", cursor: "pointer" }}>{c.category.status === "active" ? "Ẩn" : "Hiện"}</button>
+                <button
+                  onClick={async () => {
+                    const nextStatus = c.category.status === "active" ? "inactive" : "active";
+                    if (isRealApiEnabled() && !isNaN(Number(c.category.id))) {
+                      try {
+                        await catalogApi.adminDoiTrangThaiDanhMuc(Number(c.category.id), nextStatus === "active" ? "HienThi" : "TamAn");
+                      } catch (err) {
+                        return setMessage(err instanceof Error ? err.message : "Lỗi cập nhật trạng thái danh mục");
+                      }
+                    }
+                    const result = app.setCategoryStatus(c.category.id, nextStatus);
+                    setMessage(result.ok ? "" : result.message);
+                  }}
+                  style={{ flex: 1, background: "var(--color-parchment)", border: "1px solid var(--color-bone)", borderRadius: "6px", padding: "6px", fontSize: "0.75rem", cursor: "pointer" }}
+                >
+                  {c.category.status === "active" ? "Ẩn" : "Hiện"}
+                </button>
               </div>
             </div>
           );
@@ -1001,6 +1152,30 @@ function ProductsTab({ app }: { app: ReturnType<typeof useApp> }) {
                 <span style={{ fontWeight: 600, fontFamily: k.includes("Giá") || k.includes("Cọc") || k.includes("Bồi") ? "var(--font-mono)" : "inherit" }}>{v}</span>
               </div>
             ))}
+            {/* UC53 / UC6.8: Thay đổi trạng thái kinh doanh của sản phẩm */}
+            <div className="flex justify-between items-center mt-3 pt-2" style={{ borderTop: "1px dashed var(--color-bone)" }}>
+              <span style={{ fontSize: "0.8rem", color: "#6B7280", fontWeight: 600 }}>Trạng thái KD:</span>
+              <select
+                value={detail.status === "active" ? "DangKinhDoanh" : "TamNgung"}
+                onChange={async (e) => {
+                  const val = e.target.value;
+                  if (isRealApiEnabled() && !isNaN(Number(detail.id))) {
+                    try {
+                      await catalogApi.adminDoiTrangThaiSanPham(Number(detail.id), val);
+                    } catch (err) {
+                      alert(err instanceof Error ? err.message : "Lỗi đổi trạng thái kinh doanh.");
+                      return;
+                    }
+                  }
+                  app.saveProduct({ ...detail, status: val === "DangKinhDoanh" ? "active" : "inactive" });
+                }}
+                style={{ border: "1px solid var(--color-bone)", borderRadius: 6, padding: "3px 8px", fontSize: "0.78rem", background: "white" }}
+              >
+                <option value="DangKinhDoanh">Đang kinh doanh</option>
+                <option value="TamNgung">Tạm ngưng</option>
+                <option value="NgungKinhDoanh">Ngừng kinh doanh</option>
+              </select>
+            </div>
             <p style={{ fontSize: "0.72rem", color: "#9CA3AF", marginTop: "8px" }}>Số lượng thiết bị chỉ thay đổi qua phiếu nhập hàng.</p>
           </div>
         )}
@@ -2108,10 +2283,44 @@ function StockAdjustTab({ app }: { app: ReturnType<typeof useApp> }) {
 
   const currentEquip = app.equipment.find((e) => e.id === selectedEquipId);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedEquipId) return alert("Vui lòng chọn mã thiết bị.");
     if (!reason.trim()) return alert("Vui lòng nhập lý do điều chỉnh kho.");
+
+    // UC55, UC57 / UC6.10, UC6.11: Lập và duyệt điều chỉnh kho
+    if (isRealApiEnabled()) {
+      try {
+        const targetStatus = newStatus === "Đang bảo trì"
+          ? "DangBaoTri"
+          : newStatus === "Thất lạc"
+          ? "ThatLac"
+          : newStatus === "Ngừng sử dụng"
+          ? "NgungSuDung"
+          : "SanSang";
+
+        const dto = {
+          loaiDieuChinh: newStatus === "Ngừng sử dụng" ? "NgungSuDung" : "KiemKeSaiLech",
+          lyDo: reason.trim(),
+          chiTiet: [
+            {
+              maThietBi: Number(selectedEquipId) || parseInt(selectedEquipId.replace(/\D/g, ""), 10) || 1,
+              giaTriDeNghiSau: {
+                trangThaiSuDung: targetStatus,
+                tinhTrang: notes.trim() || newStatus,
+              },
+              ghiChu: notes.trim() || reason.trim(),
+            },
+          ],
+        };
+        const created = await inventoryApi.lapPhieu(dto);
+        // Admin tạo phiếu thủ công thì duyệt và áp dụng ngay lập tức
+        await inventoryApi.duyetVaApDung(created.maPhieuDieuChinh);
+      } catch (err) {
+        alert(err instanceof Error ? err.message : "Lỗi lập phiếu điều chỉnh trên máy chủ.");
+        return;
+      }
+    }
 
     const res = app.createStockAdjustment({
       reason: reason.trim(),
@@ -2218,22 +2427,39 @@ function StockAdjustTab({ app }: { app: ReturnType<typeof useApp> }) {
                   {sa.status === "Chờ duyệt" ? (
                     <div className="flex gap-1">
                       <button
-                        onClick={() => {
+                        onClick={async () => {
+                          // UC57, UC58: Phê duyệt điều chỉnh kho nguyên tử
+                          if (isRealApiEnabled() && !isNaN(Number(sa.id))) {
+                            try {
+                              await inventoryApi.duyetVaApDung(Number(sa.id));
+                              alert("Đã phê duyệt điều chỉnh kho thành công qua API Backend (UC57, UC58)!");
+                            } catch (err) {
+                              return alert(err instanceof Error ? err.message : "Lỗi phê duyệt điều chỉnh kho");
+                            }
+                          }
                           const res = app.approveStockAdjustment(sa.id);
-                          if (res.ok) alert("Đã phê duyệt điều chỉnh kho thành công! Kho đã được cập nhật.");
-                          else alert(res.message);
+                          if (res.ok && !isRealApiEnabled()) alert("Đã phê duyệt điều chỉnh kho thành công! Kho đã được cập nhật.");
+                          else if (!res.ok) alert(res.message);
                         }}
                         style={{ background: "var(--color-forest)", color: "white", border: "none", borderRadius: 6, padding: "5px 10px", fontSize: "0.72rem", cursor: "pointer", fontWeight: 700 }}
                       >
                         ✓ Duyệt (UC6.11)
                       </button>
                       <button
-                        onClick={() => {
-                          if (confirm("Bạn có chắc chắn muốn từ chối đề nghị điều chỉnh kho này?")) {
-                            const res = app.rejectStockAdjustment(sa.id);
-                            if (res.ok) alert("Đã từ chối phiếu điều chỉnh!");
-                            else alert(res.message);
+                        onClick={async () => {
+                          const rejectReason = prompt("Lý do từ chối đề nghị điều chỉnh kho:");
+                          if (!rejectReason || !rejectReason.trim()) return;
+                          if (isRealApiEnabled() && !isNaN(Number(sa.id))) {
+                            try {
+                              await inventoryApi.tuChoi(Number(sa.id), rejectReason.trim());
+                              alert("Đã từ chối phiếu điều chỉnh qua API Backend.");
+                            } catch (err) {
+                              return alert(err instanceof Error ? err.message : "Lỗi từ chối phiếu điều chỉnh.");
+                            }
                           }
+                          const res = app.rejectStockAdjustment(sa.id);
+                          if (res.ok && !isRealApiEnabled()) alert("Đã từ chối phiếu điều chỉnh!");
+                          else if (!res.ok) alert(res.message);
                         }}
                         style={{ background: "white", border: "1px solid #DC2626", color: "#DC2626", borderRadius: 6, padding: "5px 8px", fontSize: "0.72rem", cursor: "pointer", fontWeight: 600 }}
                       >
@@ -2315,20 +2541,82 @@ function StaffAccountsTab({ app }: { app: ReturnType<typeof useApp> }) {
   const [lockReason, setLockReason] = useState("Nghỉ việc từ " + new Date().toLocaleDateString("vi-VN"));
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "locked">("all");
 
-  const filtered = app.staffAccounts.filter((s) => {
-    const matchSearch =
-      s.name.toLowerCase().includes(search.toLowerCase()) ||
-      s.username.toLowerCase().includes(search.toLowerCase()) ||
-      s.id.toLowerCase().includes(search.toLowerCase()) ||
-      s.phone.includes(search) ||
-      s.email.toLowerCase().includes(search.toLowerCase());
-    const matchRole = roleFilter === "all" || s.role === roleFilter;
-    const matchStatus = statusFilter === "all" || s.status === statusFilter;
-    return matchSearch && matchRole && matchStatus;
-  });
+  // State kết nối API thật /api/v1/admin/nhan-vien (UC07 - UC11)
+  const [apiStaff, setApiStaff] = useState<StaffAccount[]>([]);
+  const [staffAccountToTaiKhoanId, setStaffAccountToTaiKhoanId] = useState<Record<string, number>>({});
+  const [staffAccountToNhanVienId, setStaffAccountToNhanVienId] = useState<Record<string, number>>({});
+  const [isLoading, setIsLoading] = useState(false);
+  const [apiError, setApiError] = useState("");
+
+  const loadStaffList = async () => {
+    if (!isRealApiEnabled()) return;
+    setIsLoading(true);
+    setApiError("");
+    try {
+      const res = await staffApi.timNhanVien({
+        tuKhoa: search.trim() || undefined,
+        vaiTro: roleFilter === "all" ? undefined : roleFilter === "Quản trị viên" ? "QuanTriVien" : "NhanVien",
+        trangThaiLamViec: statusFilter === "all" ? undefined : statusFilter === "active" ? "DangLamViec" : "DaNghiViec",
+      });
+
+      const tkMap: Record<string, number> = {};
+      const nvMap: Record<string, number> = {};
+      const mapped: StaffAccount[] = res.items.map((nv) => {
+        const staffId = `NV-${String(nv.maNhanVien).padStart(3, "0")}`;
+        tkMap[staffId] = nv.maTaiKhoan;
+        nvMap[staffId] = nv.maNhanVien;
+
+        const isLocked = nv.trangThaiTaiKhoan === "BiKhoa" || nv.trangThaiLamViec === "DaNghiViec";
+        return {
+          id: staffId,
+          username: nv.email ? nv.email.split("@")[0] : `nv_${nv.maNhanVien}`,
+          name: nv.hoTen || "Nhân viên",
+          role: nv.vaiTro === "QuanTriVien" ? "Quản trị viên" : "Nhân viên kho",
+          phone: nv.soDienThoai || "",
+          email: nv.email || "",
+          status: isLocked ? "locked" : "active",
+          lockedReason: nv.trangThaiLamViec === "DaNghiViec"
+            ? `Nghỉ việc từ ${nv.ngayNghiViec || "đã nghỉ"}`
+            : nv.trangThaiTaiKhoan === "BiKhoa"
+            ? "Tài khoản bị khóa"
+            : undefined,
+          permissions: nv.vaiTro === "QuanTriVien"
+            ? ["Quản lý kho thiết bị", "Bàn giao & Nhận trả", "Lập phụ phí & Đối soát", "Xem báo cáo doanh thu", "Quản lý khuyến mãi"]
+            : ["Quản lý kho thiết bị", "Bàn giao & Nhận trả"],
+          createdAt: nv.ngayVaoLam || "01/01/2026",
+        };
+      });
+
+      setStaffAccountToTaiKhoanId(tkMap);
+      setStaffAccountToNhanVienId(nvMap);
+      setApiStaff(mapped);
+    } catch (error) {
+      setApiError(error instanceof Error ? error.message : "Không thể tải danh sách nhân viên từ máy chủ.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadStaffList();
+  }, [search, roleFilter, statusFilter]);
+
+  const filtered = isRealApiEnabled()
+    ? apiStaff
+    : app.staffAccounts.filter((s) => {
+        const matchSearch =
+          s.name.toLowerCase().includes(search.toLowerCase()) ||
+          s.username.toLowerCase().includes(search.toLowerCase()) ||
+          s.id.toLowerCase().includes(search.toLowerCase()) ||
+          s.phone.includes(search) ||
+          s.email.toLowerCase().includes(search.toLowerCase());
+        const matchRole = roleFilter === "all" || s.role === roleFilter;
+        const matchStatus = statusFilter === "all" || s.status === statusFilter;
+        return matchSearch && matchRole && matchStatus;
+      });
 
   const handleOpenAdd = () => {
-    const nextNum = app.staffAccounts.length + 1;
+    const nextNum = (isRealApiEnabled() ? apiStaff.length : app.staffAccounts.length) + 1;
     const newId = `NV-00${nextNum}`;
     setEditingStaff({
       id: newId,
@@ -2345,23 +2633,96 @@ function StaffAccountsTab({ app }: { app: ReturnType<typeof useApp> }) {
     setIsNew(true);
   };
 
-  const handleSaveStaff = (e: React.FormEvent) => {
+  const handleSaveStaff = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingStaff) return;
+
+    if (isRealApiEnabled()) {
+      try {
+        if (isNew) {
+          const vaiTroBackend = editingStaff.role === "Quản trị viên" ? "QuanTriVien" : "NhanVien";
+          await staffApi.taoNhanVien({
+            hoTen: editingStaff.name.trim(),
+            email: editingStaff.email.trim(),
+            soDienThoai: editingStaff.phone.trim(),
+            vaiTro: vaiTroBackend,
+            matKhauKhoiTao: editingStaff.password || "GearGo@2026",
+            diaChi: "Văn phòng GearGo",
+          });
+        } else {
+          const nvId = staffAccountToNhanVienId[editingStaff.id] || parseInt(editingStaff.id.replace(/\D/g, ""), 10);
+          await staffApi.capNhatNhanVien(nvId, {
+            hoTen: editingStaff.name.trim(),
+            email: editingStaff.email.trim(),
+            soDienThoai: editingStaff.phone.trim(),
+            diaChi: "Văn phòng GearGo",
+          });
+
+          const vaiTroBackend = editingStaff.role === "Quản trị viên" ? "QuanTriVien" : "NhanVien";
+          await staffApi.doiVaiTro(nvId, {
+            vaiTroMoi: vaiTroBackend,
+            lyDo: "Cập nhật vai trò từ trang quản trị nhân viên",
+          });
+        }
+        await loadStaffList();
+      } catch (error) {
+        alert(error instanceof Error ? error.message : "Thao tác cập nhật nhân viên thất bại.");
+        return;
+      }
+    }
+
     app.saveStaffAccount(editingStaff);
     setEditingStaff(null);
   };
 
-  const handleSavePermissions = (perms: string[]) => {
+  const handleSavePermissions = async (perms: string[]) => {
     if (!permStaff) return;
+    if (isRealApiEnabled()) {
+      try {
+        const nvId = staffAccountToNhanVienId[permStaff.id] || parseInt(permStaff.id.replace(/\D/g, ""), 10);
+        const isQuanTri = perms.includes("Xem báo cáo doanh thu");
+        await staffApi.doiVaiTro(nvId, {
+          vaiTroMoi: isQuanTri ? "QuanTriVien" : "NhanVien",
+          lyDo: "Điều chỉnh phân quyền vai trò nhân viên",
+        });
+        await loadStaffList();
+      } catch (error) {
+        alert(error instanceof Error ? error.message : "Không thể cập nhật phân quyền.");
+        return;
+      }
+    }
     app.saveStaffAccount({ ...permStaff, permissions: perms });
     setPermStaff(null);
   };
 
-  const handleConfirmLock = () => {
+  const handleConfirmLock = async () => {
     if (!lockModalStaff) return;
+    if (isRealApiEnabled()) {
+      try {
+        const tkId = staffAccountToTaiKhoanId[lockModalStaff.id] || parseInt(lockModalStaff.id.replace(/\D/g, ""), 10);
+        await staffApi.khoaTaiKhoan(tkId, lockReason || "Khóa tài khoản theo yêu cầu quản trị viên");
+        await loadStaffList();
+      } catch (error) {
+        alert(error instanceof Error ? error.message : "Không thể khóa tài khoản.");
+        return;
+      }
+    }
     app.toggleStaffLock(lockModalStaff.id, lockReason);
     setLockModalStaff(null);
+  };
+
+  const handleUnlockStaff = async (staff: StaffAccount) => {
+    if (isRealApiEnabled()) {
+      try {
+        const tkId = staffAccountToTaiKhoanId[staff.id] || parseInt(staff.id.replace(/\D/g, ""), 10);
+        await staffApi.moKhoaTaiKhoan(tkId, "Mở khóa tài khoản nhân viên");
+        await loadStaffList();
+      } catch (error) {
+        alert(error instanceof Error ? error.message : "Không thể mở khóa tài khoản.");
+        return;
+      }
+    }
+    app.toggleStaffLock(staff.id);
   };
 
   return (
@@ -2484,7 +2845,7 @@ function StaffAccountsTab({ app }: { app: ReturnType<typeof useApp> }) {
                           if (s.status === "active") {
                             setLockModalStaff(s);
                           } else {
-                            app.toggleStaffLock(s.id);
+                            handleUnlockStaff(s);
                           }
                         }}
                         style={{

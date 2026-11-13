@@ -35,6 +35,13 @@ public class VongDoiThietBiController : BaseApiController
     public async Task<IActionResult> DeNghiGiangCap(long id, [FromBody] DeNghiGiangCapRequest request)
         => HandleCreatedResult(await _vongDoiService.DeNghiGiangCapAsync(id, request, User.LayMaTaiKhoan()));
 
+    /// <summary>
+    /// UC6.15: Đề nghị điều chuyển thiết bị sang sản phẩm khác (tái sử dụng kiểm tra cam kết & phiếu điều chỉnh vòng đời).
+    /// </summary>
+    [HttpPost("{id:long}/dieu-chuyen-san-pham")]
+    public async Task<IActionResult> DeNghiDieuChuyenSanPham(long id, [FromBody] DeNghiGiangCapRequest request)
+        => HandleCreatedResult(await _vongDoiService.DeNghiGiangCapAsync(id, request, User.LayMaTaiKhoan()));
+
     [HttpPost("{id:long}/de-nghi-ngung-su-dung")]
     public async Task<IActionResult> DeNghiNgungSuDung(long id, [FromBody] DeNghiNgungSuDungRequest request)
         => HandleCreatedResult(await _vongDoiService.DeNghiNgungSuDungAsync(id, request, User.LayMaTaiKhoan()));

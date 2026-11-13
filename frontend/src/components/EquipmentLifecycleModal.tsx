@@ -1,6 +1,8 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { type useApp } from "../App";
 import { fmt, type Equipment } from "../store";
+import { isRealApiEnabled } from "../services/apiClient";
+import { equipmentApi, type HoSoVongDoiResponse } from "../services/api/equipmentApi";
 
 interface Props {
   equipment: Equipment;
@@ -17,6 +19,28 @@ export default function EquipmentLifecycleModal({ equipment, app, onClose }: Pro
   const originalProduct = app.products.find((p) => p.id === equipment.originalProductId);
   const importReceipt = app.importReceipts.find((r) => r.id === equipment.importReceiptId);
   const supplier = importReceipt ? app.suppliers.find((s) => s.id === importReceipt.supplierId) : null;
+
+  // UC54 / UC6.9: Kết nối API Sổ đời thiết bị GET /api/vong-doi-thiet-bi/{id}
+  const [hoSoApi, setHoSoApi] = useState<HoSoVongDoiResponse | null>(null);
+  const [loadingApi, setLoadingApi] = useState(false);
+  const [apiError, setApiError] = useState("");
+
+  useEffect(() => {
+    if (isRealApiEnabled()) {
+      const equipIdNum = Number(equipment.id) || parseInt(equipment.id.replace(/\D/g, ""), 10);
+      if (equipIdNum) {
+        setLoadingApi(true);
+        equipmentApi.layHoSoVongDoi(equipIdNum)
+          .then((res) => {
+            setHoSoApi(res);
+          })
+          .catch((err) => {
+            setApiError(err instanceof Error ? err.message : "Không thể tải sổ đời từ API");
+          })
+          .finally(() => setLoadingApi(false));
+      }
+    }
+  }, [equipment.id]);
 
   // Lọc lịch sử các đơn hàng đã phục vụ thiết bị này
   const orderHistory = app.orders.filter((o) => {
@@ -473,6 +497,73 @@ export default function EquipmentLifecycleModal({ equipment, app, onClose }: Pro
               </div>
             )}
           </div>
+
+          {/* Card: Lịch sử điều chỉnh kho & giáng cấp từ API Backend (UC6.14, UC6.15) */}
+          {hoSoApi && hoSoApi.lichSuDieuChinh && hoSoApi.lichSuDieuChinh.length > 0 && (
+            <div
+              style={{
+                border: "1px solid var(--color-bone, #E5E7EB)",
+                borderRadius: 12,
+                padding: "16px",
+                background: "white",
+              }}
+            >
+              <h4
+                style={{
+                  fontSize: "0.9rem",
+                  fontWeight: 700,
+                  color: "var(--color-bark, #1F2937)",
+                  marginBottom: 10,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                }}
+              >
+                ⚡ Lịch sử điều chỉnh kho & vòng đời thiết bị ({hoSoApi.lichSuDieuChinh.length} phiếu)
+              </h4>
+              <div style={{ overflowX: "auto" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.8rem" }}>
+                  <thead>
+                    <tr style={{ background: "var(--color-parchment, #F5F1E9)", color: "var(--color-bark)" }}>
+                      <th style={{ padding: "8px 10px", textAlign: "left" }}>Mã phiếu</th>
+                      <th style={{ padding: "8px 10px", textAlign: "left" }}>Loại điều chỉnh</th>
+                      <th style={{ padding: "8px 10px", textAlign: "left" }}>Lý do</th>
+                      <th style={{ padding: "8px 10px", textAlign: "left" }}>Thời điểm</th>
+                      <th style={{ padding: "8px 10px", textAlign: "center" }}>Trạng thái</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {hoSoApi.lichSuDieuChinh.map((dc) => (
+                      <tr key={dc.maPhieuDieuChinh} style={{ borderTop: "1px solid var(--color-bone)" }}>
+                        <td style={{ padding: "8px 10px", fontFamily: "monospace", fontWeight: 700, color: "var(--color-forest)" }}>
+                          PDCK-{dc.maPhieuDieuChinh}
+                        </td>
+                        <td style={{ padding: "8px 10px", fontWeight: 600 }}>{dc.loaiDieuChinh}</td>
+                        <td style={{ padding: "8px 10px", color: "#4B5563" }}>{dc.lyDo || "—"}</td>
+                        <td style={{ padding: "8px 10px", color: "#6B7280" }}>{dc.thoiDiemLap}</td>
+                        <td style={{ padding: "8px 10px", textAlign: "center" }}>
+                          <span style={{
+                            background: dc.trangThai === "DaDuyet" || dc.trangThai === "ApDung" ? "#DCFCE7" : "#FEF3C7",
+                            color: dc.trangThai === "DaDuyet" || dc.trangThai === "ApDung" ? "#15803D" : "#B45309",
+                            padding: "2px 8px", borderRadius: 8, fontSize: "0.72rem", fontWeight: 700
+                          }}>
+                            {dc.trangThai}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* Hiển thị giá nhập cho Quản trị viên (UC54 / UC6.9) */}
+          {hoSoApi?.giaNhap !== undefined && hoSoApi?.giaNhap !== null && (
+            <div style={{ background: "#EFF6FF", border: "1px solid #BFDBFE", borderRadius: 8, padding: "8px 12px", fontSize: "0.78rem", color: "#1D4ED8" }}>
+              🔒 <strong>Chế độ Quản trị viên:</strong> Giá vốn nhập gốc được bảo mật là <strong>{fmt(hoSoApi.giaNhap)}</strong> (Nhân viên không xem được trường này).
+            </div>
+          )}
         </div>
 
         {/* Modal Footer */}

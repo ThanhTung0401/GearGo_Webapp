@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import { useApp } from "../context/AppContext";
+import { isRealApiEnabled } from "../services/apiClient";
+import { equipmentApi } from "../services/api/equipmentApi";
 import {
   fmt,
   statusColors,
@@ -1871,8 +1873,34 @@ function EquipmentTab({ app }: { app: ReturnType<typeof useApp> }) {
     "Ngừng sử dụng": { bg: "#F3F4F6", text: "#6B7280" },
   };
 
-  const handleTransfer = () => {
+  const handleTransfer = async () => {
     if (!transferModal || !targetProductId) return;
+
+    // UC63 / UC6.15: Giáng cấp & Điều chuyển sản phẩm khác (Kiểm tra cam kết đơn tương lai)
+    if (isRealApiEnabled()) {
+      try {
+        const equipIdNum = Number(transferModal.id) || parseInt(transferModal.id.replace(/\D/g, ""), 10);
+        const targetSpIdNum = Number(targetProductId) || parseInt(targetProductId.replace(/\D/g, ""), 10);
+        if (equipIdNum && targetSpIdNum) {
+          const checkImpact = await equipmentApi.xemAnhHuongThayDoi(equipIdNum, {
+            loaiThayDoi: "GiangCap",
+            maSanPhamDich: targetSpIdNum,
+          });
+          if (!checkImpact.coTheApDungHienTai) {
+            alert(`Cảnh báo cam kết: Không thể điều chuyển do vướng đơn thuê: ${checkImpact.vuongMac.join("; ")}`);
+            return;
+          }
+          await equipmentApi.deNghiDieuChuyenSanPham(equipIdNum, {
+            maSanPhamDich: targetSpIdNum,
+            lyDo: "Giáng cấp / điều chuyển thiết bị cũ sang phân khúc tiết kiệm",
+          });
+        }
+      } catch (err) {
+        alert(err instanceof Error ? err.message : "Lỗi gửi đề nghị điều chuyển thiết bị.");
+        return;
+      }
+    }
+
     const res = app.transferEquipment(transferModal.id, targetProductId);
     if (res.ok) {
       alert(`Đã chuyển thiết bị ${transferModal.id} sang sản phẩm đích thành công!`);
@@ -2302,9 +2330,33 @@ function EquipmentTab({ app }: { app: ReturnType<typeof useApp> }) {
               <button
                 type="button"
                 disabled={!createMaintEquipId || !createMaintIssue.trim()}
-                onClick={() => {
-                  const newId = `BT-${Date.now().toString().slice(-6)}`;
+                onClick={async () => {
+                  let newId = `BT-${Date.now().toString().slice(-6)}`;
                   const now = new Date().toLocaleString("vi-VN");
+
+                  // UC59 / UC6.12: Lập phiếu bảo dưỡng / sửa chữa backend (Loại thiết bị khỏi tồn khả dụng)
+                  if (isRealApiEnabled()) {
+                    try {
+                      const equipIdNum = Number(createMaintEquipId) || parseInt(createMaintEquipId.replace(/\D/g, ""), 10) || 1;
+                      const orderIdNum = createMaintOrderId && !isNaN(Number(createMaintOrderId)) ? Number(createMaintOrderId) : undefined;
+                      const res = await equipmentApi.lapPhieuBaoTri({
+                        maThietBi: equipIdNum,
+                        maDonThue: orderIdNum,
+                        loaiXuLy: "SuaChua",
+                        moTaLoi: createMaintIssue.trim(),
+                        mucDo: "Nhe",
+                        chiPhi: createMaintCost,
+                        ghiChu: createMaintNote.trim(),
+                      });
+                      if (res && res.maPhieuBaoTri) {
+                        newId = `BT-${res.maPhieuBaoTri}`;
+                      }
+                    } catch (err) {
+                      alert(err instanceof Error ? err.message : "Lỗi lập phiếu bảo trì trên máy chủ.");
+                      return;
+                    }
+                  }
+
                   app.saveMaintenanceReceipt({
                     id: newId,
                     equipmentId: createMaintEquipId,
@@ -2410,7 +2462,32 @@ function EquipmentTab({ app }: { app: ReturnType<typeof useApp> }) {
               </button>
               <button
                 type="button"
-                onClick={() => {
+                onClick={async () => {
+                  // UC61 / UC6.13: Nghiệm thu bảo trì & Hoàn tất (Sẵn sàng hoặc Kết thúc không đạt)
+                  if (isRealApiEnabled()) {
+                    try {
+                      const maintIdNum = Number(acceptingMaintenance.id) || parseInt(acceptingMaintenance.id.replace(/\D/g, ""), 10);
+                      if (maintIdNum) {
+                        if (repairOutcome === "Hoàn tất") {
+                          await equipmentApi.xacNhanHoanThanh(maintIdNum, {
+                            ketQuaKiemTra: repairOutcomeNote || "Đạt chuẩn kỹ thuật",
+                            chiPhi: actualRepairCost,
+                            lyDo: repairOutcomeNote || "Nghiệm thu đạt chuẩn, đưa về kho Sẵn sàng",
+                          });
+                        } else {
+                          await equipmentApi.ketThucKhongDat(maintIdNum, {
+                            ketQuaKiemTra: repairOutcomeNote || "Không thể sửa",
+                            chiPhi: actualRepairCost,
+                            lyDo: repairOutcomeNote || "Hư hỏng nặng không thể phục hồi",
+                          });
+                        }
+                      }
+                    } catch (err) {
+                      alert(err instanceof Error ? err.message : "Lỗi nghiệm thu phiếu bảo trì trên máy chủ.");
+                      return;
+                    }
+                  }
+
                   app.updateMaintenanceStatus(
                     acceptingMaintenance.id,
                     repairOutcome,

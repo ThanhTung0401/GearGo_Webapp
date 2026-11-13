@@ -15,6 +15,20 @@ public record ThongBaoResponse(
     DateTime? ThoiDiemDoc
 );
 
+/// <summary>Yêu cầu Admin soạn và gửi thông báo chủ động (UC9.4).</summary>
+public record GuiThongBaoAdminRequest(
+    string TieuDe,
+    string NoiDung,
+    long? MaTaiKhoanNhan = null,
+    long? MaDonThue = null,
+    string? LoaiSuKien = null
+);
+
+public record GuiThongBaoAdminResponse(
+    int SoLuongDaTao,
+    List<long> MaThongBaos
+);
+
 // ── Command nội bộ cho service nghiệp vụ khác gọi ──
 
 public record GhiLichSuDonCommand(

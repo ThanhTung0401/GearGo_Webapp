@@ -32,5 +32,8 @@ public interface IThongBaoService
 
     /// <summary>Tạo thông báo kênh Email (đưa vào hàng chờ gửi nền)</summary>
     Task<ThongBao> TaoThongBaoEmailAsync(SuKienThongBaoCommand command);
+
+    /// <summary>Admin tạo và gửi thông báo chủ động cho một tài khoản hoặc toàn bộ tài khoản hoạt động (UC9.4)</summary>
+    Task<Result<GuiThongBaoAdminResponse>> GuiThongBaoThuCongAsync(GuiThongBaoAdminRequest request, long actorId);
 }
 
