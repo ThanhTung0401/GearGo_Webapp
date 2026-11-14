@@ -109,6 +109,20 @@ public class ChuanBiDonController : ControllerBase
         return Ok(result);
     }
 
+    /// <summary>
+    /// Báo thiếu thiết bị trong quá trình chuẩn bị đơn (UC4.1)
+    /// </summary>
+    [HttpPost("{donId:long}/bao-thieu")]
+    public async Task<IActionResult> BaoThieuThietBi(
+        [FromRoute] long donId,
+        [FromBody] BaoThieuThietBiRequest request,
+        CancellationToken ct = default)
+    {
+        var maTaiKhoan = LayMaTaiKhoan();
+        var result = await _chuanBiDonService.BaoThieuThietBiAsync(donId, request, maTaiKhoan, ct);
+        return Ok(result);
+    }
+
     // ─────────────────────────────────────────────────────────────────────────
     // HELPER — lấy mã tài khoản từ JWT (giống pattern của Kiện Minh)
     // ─────────────────────────────────────────────────────────────────────────

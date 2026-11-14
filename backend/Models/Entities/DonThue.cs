@@ -83,6 +83,10 @@ public class DonThue
     [Column("ghi_chu")]
     public string? GhiChu { get; set; }
 
+    [Column("idempotency_key")]
+    [MaxLength(100)]
+    public string? IdempotencyKey { get; set; }
+
     // ─── NAVIGATION PROPERTIES ───
     [ForeignKey(nameof(MaKhachHang))]
     public KhachHang KhachHang { get; set; } = null!;
@@ -115,7 +119,8 @@ public class DonThue
         decimal tienThue,
         decimal tienGiam,
         decimal tienCoc,
-        KhuyenMai? km = null)
+        KhuyenMai? km = null,
+        DateTime? hanThanhToan = null)
     {
         return new DonThue
         {
@@ -125,11 +130,12 @@ public class DonThue
             NgayDat = now,
             GioNhanDuKien = req.GioNhanDuKien,
             GioTraDuKien = req.GioTraDuKien,
-            HanThanhToan = now.AddMinutes(KietDomainConstants.PolicyConfig.ThoiGianGiuChoPhut),
+            HanThanhToan = hanThanhToan ?? now.AddMinutes(KietDomainConstants.PolicyConfig.ThoiGianGiuChoPhut),
             TenNguoiNhan = req.TenNguoiNhan,
             SoDienThoaiNguoiNhan = req.SoDienThoaiNguoiNhan,
             EmailLienHe = req.EmailLienHe,
             GhiChu = req.GhiChu,
+            IdempotencyKey = string.IsNullOrWhiteSpace(req.IdempotencyKey) ? null : req.IdempotencyKey.Trim(),
             TongTienThueTruocGiam = tienThue,
             TongTienGiam = tienGiam,
             TongTienCoc = tienCoc,

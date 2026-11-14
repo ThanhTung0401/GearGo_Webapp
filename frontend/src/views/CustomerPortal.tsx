@@ -13,9 +13,12 @@ import {
   authApi,
   reviewApi,
   type GioThueBackend,
+  type DonChiTietBackend,
+  type PhieuBanGiaoKhachBackend,
   type XemTruocHuyBackend,
   type TuVanBoDoBackend,
   type SanPhamDuDieuKienDanhGiaBackend,
+  type BaoGiaThayDoiDetail,
 } from "../services/api";
 import { mapDonChiTietToOrder, mapDanhGiaToReview } from "../services/mappers";
 
@@ -96,7 +99,7 @@ function CartView() {
   const rental = app.realApi && backendCart?.baoGia ? Number(backendCart.baoGia.tongTienThueTruocGiam) : localRental;
   const depositTotal = app.realApi && backendCart?.baoGia ? Number(backendCart.baoGia.tongTienCoc) : localDepositTotal;
   const discount = app.realApi && backendCart?.baoGia ? Number(backendCart.baoGia.tongTienGiam) : (promoResult?.ok ? promoResult.data.discount : 0);
-  const grand = rental - discount + depositTotal;
+  const grand = Math.max(0, rental - discount) + depositTotal;
 
   // Cập nhật khung giờ nhận/trả và đồng bộ báo giá backend
   const handleScheduleChange = async (
@@ -623,6 +626,21 @@ function CheckoutView() {
   const [orderNote, setOrderNote] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<"qr" | "store" | "wallet">("qr");
   const [agreedTerms, setAgreedTerms] = useState(false);
+  // Khóa chống tạo đơn trùng (IdempotencyKey) cố định cho phiên checkout hiện tại
+  const [idempotencyKey] = useState(() =>
+    typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+      ? crypto.randomUUID()
+      : `ck-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
+  );
+  // Modal xác nhận khi báo giá/khuyến mãi thay đổi trước lúc đặt đơn (UC3.2.2)
+  const [quoteChangeModal, setQuoteChangeModal] = useState<{
+    message: string;
+    oldTotal: number;
+    newTotal: number;
+    newRental: number;
+    newDiscount: number;
+    newDeposit: number;
+  } | null>(null);
 
   // Đồng bộ thông tin người nhận từ tài khoản hiện hành và lấy báo giá chốt mới nhất từ backend
   useEffect(() => {
@@ -662,10 +680,10 @@ function CheckoutView() {
   const rental = app.realApi && backendQuote?.baoGia ? Number(backendQuote.baoGia.tongTienThueTruocGiam) : localRental;
   const depositTotal = app.realApi && backendQuote?.baoGia ? Number(backendQuote.baoGia.tongTienCoc) : localDepositTotal;
   const discount = app.realApi && backendQuote?.baoGia ? Number(backendQuote.baoGia.tongTienGiam) : (promoResult?.ok ? promoResult.data.discount : 0);
-  const grand = rental - discount + depositTotal;
+  const grand = Math.max(0, rental - discount) + depositTotal;
 
-  // Thực hiện đặt đơn (UC3.2: Khởi tạo giữ chỗ 15 phút)
-  const handleConfirm = async () => {
+  // Thực hiện đặt đơn (UC3.2: Khởi tạo giữ chỗ & kiểm tra biến động báo giá UC3.2.2)
+  const handleConfirm = async (dongYThayDoiGia = false) => {
     if (!agreedTerms) {
       setCheckoutError("Quý khách vui lòng xác nhận đồng ý với điều khoản thuê và chính sách hoàn cọc của GearGo.");
       return;
@@ -687,11 +705,15 @@ function CheckoutView() {
           emailLienHe: receiverEmail.trim() || app.currentUser?.email || "",
           ghiChu: orderNote.trim() || undefined,
           maKhuyenMai: promoCode || undefined,
+          idempotencyKey,
+          giaTamTinhKyVong: grand,
+          dongYThayDoiGia,
           chiTiet: app.cart.map((c) => ({
             maSanPham: Number(c.productId),
             soLuong: c.qty,
           })),
         });
+        setQuoteChangeModal(null);
         // Tải full chi tiết đơn hàng vừa tạo để đồng bộ vào state dùng chung
         const fullDto = await orderApi.layChiTietDon(created.maDonThue);
         const mappedOrder = mapDonChiTietToOrder(fullDto, {
@@ -706,7 +728,56 @@ function CheckoutView() {
         void app.refreshCatalog?.();
         app.setPage("order-confirmed");
       } catch (error) {
-        setCheckoutError(error instanceof Error ? error.message : "Không thể tạo đơn thuê trên máy chủ.");
+        if (error instanceof ApiError && error.code === "BAO_GIA_THAY_DOI") {
+          const detailQuote =
+            error.detail && typeof error.detail === "object"
+              ? (error.detail as Partial<BaoGiaThayDoiDetail>)
+              : undefined;
+
+          if (detailQuote && typeof detailQuote.tongThanhToanDuKien === "number") {
+            const newRental = Number(detailQuote.tongTienThueTruocGiam ?? rental);
+            const newDiscount = Number(detailQuote.tongTienGiam ?? 0);
+            const newDeposit = Number(detailQuote.tongTienCoc ?? depositTotal);
+            const newTotal = Number(detailQuote.tongThanhToanDuKien);
+            setQuoteChangeModal({
+              message: error.message,
+              oldTotal: grand,
+              newTotal,
+              newRental,
+              newDiscount,
+              newDeposit,
+            });
+          } else {
+            // Dự phòng tải lại báo giá mới nhất từ giỏ thuê nếu backend không trả chi tiết
+            try {
+              const refreshed = await rentalCartApi.layGio();
+              setBackendQuote(refreshed);
+              const newRental = Number(refreshed.baoGia?.tongTienThueTruocGiam ?? rental);
+              const newDiscount = Number(refreshed.baoGia?.tongTienGiam ?? 0);
+              const newDeposit = Number(refreshed.baoGia?.tongTienCoc ?? depositTotal);
+              const newTotal = Math.max(0, newRental - newDiscount) + newDeposit;
+              setQuoteChangeModal({
+                message: error.message,
+                oldTotal: grand,
+                newTotal,
+                newRental,
+                newDiscount,
+                newDeposit,
+              });
+            } catch {
+              setQuoteChangeModal({
+                message: error.message,
+                oldTotal: grand,
+                newTotal: grand,
+                newRental: rental,
+                newDiscount: discount,
+                newDeposit: depositTotal,
+              });
+            }
+          }
+        } else {
+          setCheckoutError(error instanceof Error ? error.message : "Không thể tạo đơn thuê trên máy chủ.");
+        }
       } finally {
         setSubmitting(false);
       }
@@ -966,6 +1037,66 @@ function CheckoutView() {
           </p>
         </div>
       </div>
+
+      {/* Modal xác nhận báo giá thay đổi (UC3.2.2) */}
+      {quoteChangeModal && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", display: "grid", placeItems: "center", zIndex: 1000, padding: 16 }}>
+          <div style={{ background: "white", borderRadius: 16, maxWidth: 460, width: "100%", padding: 24, boxShadow: "0 20px 40px rgba(0,0,0,0.2)" }}>
+            <h3 style={{ fontFamily: "var(--font-display)", fontSize: "1.1rem", fontWeight: 700, color: "#B45309", margin: "0 0 8px" }}>
+              ⚠️ Báo giá đơn thuê vừa thay đổi (UC3.2.2)
+            </h3>
+            <p style={{ fontSize: "0.84rem", color: "#4B5563", margin: "0 0 14px", lineHeight: 1.5 }}>
+              {quoteChangeModal.message}
+            </p>
+            <div style={{ background: "var(--color-parchment)", borderRadius: 10, padding: 12, fontSize: "0.82rem", marginBottom: 16 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                <span>Tổng trước đó:</span>
+                <span style={{ fontFamily: "var(--font-mono)", textDecoration: "line-through", color: "#6B7280" }}>
+                  {fmt(quoteChangeModal.oldTotal)}
+                </span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                <span>Tiền thuê mới:</span>
+                <span style={{ fontFamily: "var(--font-mono)", fontWeight: 600 }}>{fmt(quoteChangeModal.newRental)}</span>
+              </div>
+              {quoteChangeModal.newDiscount > 0 && (
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4, color: "#059669" }}>
+                  <span>Ưu đãi mới:</span>
+                  <span style={{ fontFamily: "var(--font-mono)", fontWeight: 600 }}>−{fmt(quoteChangeModal.newDiscount)}</span>
+                </div>
+              )}
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                <span>Tiền cọc:</span>
+                <span style={{ fontFamily: "var(--font-mono)", fontWeight: 600 }}>{fmt(quoteChangeModal.newDeposit)}</span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", paddingTop: 6, borderTop: "1px dashed #CBD5E1", fontWeight: 700, color: "var(--color-forest)" }}>
+                <span>Tổng thanh toán mới:</span>
+                <span style={{ fontFamily: "var(--font-mono)" }}>{fmt(quoteChangeModal.newTotal)}</span>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                disabled={submitting}
+                onClick={() => void handleConfirm(true)}
+                className="btn btn-primary"
+                style={{ flex: 1, padding: "10px 14px", borderRadius: 8, fontWeight: 700 }}
+              >
+                {submitting ? "Đang đặt đơn..." : "Đồng ý giá mới & Đặt đơn"}
+              </button>
+              <button
+                type="button"
+                disabled={submitting}
+                onClick={() => setQuoteChangeModal(null)}
+                className="btn btn-secondary"
+                style={{ padding: "10px 16px", borderRadius: 8 }}
+              >
+                Hủy
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -1342,6 +1473,13 @@ function MyOrdersView() {
   const [disputeReason, setDisputeReason] = useState("");
   const [disputeSubmitting, setDisputeSubmitting] = useState(false);
 
+  // UC3.3 & UC5.5: Dữ liệu bàn giao, chính sách gắn với đơn & thu bổ sung đối soát
+  const [rawOrderDetail, setRawOrderDetail] = useState<DonChiTietBackend | null>(null);
+  const [orderHandovers, setOrderHandovers] = useState<PhieuBanGiaoKhachBackend[]>([]);
+  const [orderPolicy, setOrderPolicy] = useState<Record<string, unknown> | null>(null);
+  const [extraPayBusy, setExtraPayBusy] = useState(false);
+  const [extraPayStatus, setExtraPayStatus] = useState<{ maYeuCau?: string; paymentUrl?: string | null; message: string } | null>(null);
+
   // Tab lọc đầy đủ trạng thái theo quy trình vòng đời đơn (UC3.3)
   const statusOptions = ["Tất cả", "Chờ thanh toán", "Đã xác nhận", "Đang thuê", "Hoàn tất", "Hết hạn", "Đã hủy"];
 
@@ -1356,13 +1494,30 @@ function MyOrdersView() {
   const cancellingOrder = cancelling ? app.orders.find((o) => o.id === cancelling) : null;
 
   const refreshOrderById = async (orderId: string | number) => {
-    const dto = await orderApi.layChiTietDon(Number(orderId));
+    const numericId = Number(orderId);
+    const dto = await orderApi.layChiTietDon(numericId);
+    setRawOrderDetail(dto);
     app.upsertOrder?.(
       mapDonChiTietToOrder(dto, {
         customerId: app.currentUser?.id,
         customerName: app.currentUser?.name,
       })
     );
+    // Tải song song biên bản bàn giao (UC3.3) và chính sách áp dụng tại thời điểm đặt đơn
+    const [bgRes, csRes] = await Promise.allSettled([
+      orderApi.layBanGiaoDon(numericId),
+      orderApi.layChinhSachDon(numericId),
+    ]);
+    if (bgRes.status === "fulfilled") {
+      setOrderHandovers(bgRes.value ?? []);
+    } else {
+      setOrderHandovers([]);
+    }
+    if (csRes.status === "fulfilled" && csRes.value && typeof csRes.value === "object") {
+      setOrderPolicy(csRes.value as Record<string, unknown>);
+    } else {
+      setOrderPolicy(null);
+    }
   };
 
   // Khi bấm vào 1 đơn ở realApi, tải full chi tiết chứng từ (BBBG, PNT, phụ phí, đối soát)
@@ -1771,7 +1926,7 @@ function MyOrdersView() {
                 </button>
               )}
 
-              {/* Nút xem Bảng đối soát cọc và hoàn tất đơn (UC5.4) */}
+            {/* Nút xem Bảng đối soát cọc và hoàn tất đơn (UC5.4) */}
               {(detail.reconciliation || detail.status === "Hoàn tất") && (
                 <button
                   onClick={() => setViewingRecord("reconciliation")}
@@ -1790,6 +1945,86 @@ function MyOrdersView() {
                   📑 Xem Bảng đối soát cọc & Hoàn tất đơn (UC5.4)
                 </button>
               )}
+
+              {/* UC5.5: Thanh toán khoản thu bổ sung khi đối soát phát sinh soTienCanThuThem > 0 */}
+              {(() => {
+                const latestDs = rawOrderDetail?.taiChinh?.doiSoat?.[0];
+                const daThuBoSung = Number(rawOrderDetail?.taiChinh?.thu?.thuBoSungDaThu ?? 0);
+                const canThuThem = Number(latestDs?.soTienCanThuThem ?? 0);
+                const conPhaiThu = Math.max(0, canThuThem - daThuBoSung);
+                if (!latestDs || conPhaiThu <= 0) return null;
+
+                return (
+                  <div style={{ background: "#FFF7ED", border: "1px solid #FED7AA", borderRadius: 10, padding: "10px 12px" }}>
+                    <div style={{ fontSize: "0.78rem", fontWeight: 700, color: "#9A3412", marginBottom: 4 }}>
+                      💳 Cần thanh toán bổ sung sau đối soát: {fmt(conPhaiThu)}
+                    </div>
+                    <button
+                      type="button"
+                      disabled={extraPayBusy}
+                      onClick={async () => {
+                        setExtraPayBusy(true);
+                        setActionError("");
+                        try {
+                          const yeuCau = await paymentApi.taoThuBoSung(latestDs.maDoiSoat, "VNPAY");
+                          if (yeuCau.paymentUrl) {
+                            window.open(yeuCau.paymentUrl, "_blank");
+                          }
+                          setExtraPayStatus({
+                            maYeuCau: yeuCau.maYeuCau,
+                            paymentUrl: yeuCau.paymentUrl,
+                            message: yeuCau.paymentUrl
+                              ? `Đã tạo yêu cầu thu bổ sung (${yeuCau.maYeuCau}). Vui lòng hoàn tất trên cổng thanh toán.`
+                              : `Đã ghi nhận yêu cầu thu bổ sung (${yeuCau.maYeuCau}) - Trạng thái: ${yeuCau.trangThai}.`,
+                          });
+                          await refreshOrderById(detail.id);
+                        } catch (err) {
+                          setActionError(err instanceof Error ? err.message : "Không thể tạo giao dịch thu bổ sung.");
+                        } finally {
+                          setExtraPayBusy(false);
+                        }
+                      }}
+                      style={{
+                        width: "100%",
+                        background: "#EA580C",
+                        color: "white",
+                        border: "none",
+                        borderRadius: 8,
+                        padding: "8px 12px",
+                        fontSize: "0.78rem",
+                        fontWeight: 700,
+                        cursor: extraPayBusy ? "wait" : "pointer",
+                      }}
+                    >
+                      {extraPayBusy ? "Đang khởi tạo giao dịch..." : `Thanh toán khoản thu bổ sung (${fmt(conPhaiThu)}) →`}
+                    </button>
+                    {extraPayStatus && (
+                      <div style={{ marginTop: 6, fontSize: "0.74rem", color: "#9A3412" }}>
+                        <div>{extraPayStatus.message}</div>
+                        {extraPayStatus.maYeuCau && (
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              try {
+                                const st = await paymentApi.layTrangThaiGiaoDich(extraPayStatus.maYeuCau!);
+                                setExtraPayStatus((prev) =>
+                                  prev ? { ...prev, message: `Trạng thái giao dịch ${st.maYeuCau}: ${st.trangThai}` } : prev
+                                );
+                                await refreshOrderById(detail.id);
+                              } catch {
+                                /* bỏ qua lỗi kiểm tra tạm thời */
+                              }
+                            }}
+                            style={{ marginTop: 4, background: "transparent", border: "1px solid #FB923C", borderRadius: 6, padding: "2px 8px", fontSize: "0.72rem", fontWeight: 600, color: "#9A3412", cursor: "pointer" }}
+                          >
+                            🔄 Kiểm tra trạng thái giao dịch
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
 
               {/* Nút tắt viết đánh giá sản phẩm (UC9.1) */}
               {detail.status === "Hoàn tất" && (
@@ -1819,6 +2054,59 @@ function MyOrdersView() {
                 </button>
               )}
             </div>
+
+            {/* UC3.3: Thông tin bàn giao & Chính sách áp dụng tại thời điểm đặt */}
+            {app.realApi && (orderHandovers.length > 0 || orderPolicy) && (
+              <div style={{ marginBottom: 14, display: "flex", flexDirection: "column", gap: 8 }}>
+                {orderHandovers.length > 0 && (
+                  <div style={{ background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: 10, padding: 10, fontSize: "0.75rem" }}>
+                    <div style={{ fontWeight: 700, color: "var(--color-bark)", marginBottom: 4 }}>
+                      🤝 Biên bản bàn giao từ cửa hàng ({orderHandovers.length} phiếu)
+                    </div>
+                    {orderHandovers.map((bg) => (
+                      <div key={bg.maPhieuBanGiao} style={{ paddingTop: 4, borderTop: "1px dashed #CBD5E1", marginTop: 4 }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", color: "#475569" }}>
+                          <span>Trạng thái: <strong>{bg.trangThai}</strong></span>
+                          {bg.thoiDiemGiaoThucTe && (
+                            <span>{new Date(bg.thoiDiemGiaoThucTe).toLocaleString("vi-VN")}</span>
+                          )}
+                        </div>
+                        {bg.chiTiet?.length > 0 && (
+                          <div style={{ marginTop: 4, display: "flex", flexDirection: "column", gap: 2 }}>
+                            {bg.chiTiet.map((ct) => (
+                              <div key={ct.maChiTietBanGiao} style={{ color: "#334155" }}>
+                                • {ct.tenSanPham} ({ct.maThietBiHienThi}) — {ct.tinhTrangTruocThue || "Đạt chuẩn"}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {orderPolicy && (
+                  <div style={{ background: "#F0FDF4", border: "1px solid #BBF7D0", borderRadius: 10, padding: 10, fontSize: "0.75rem" }}>
+                    <div style={{ fontWeight: 700, color: "#166534", marginBottom: 3 }}>
+                      📜 Chính sách áp dụng: {String(orderPolicy.tenChinhSach || "Chính sách thuê GearGo")}
+                      {orderPolicy.phienBan ? ` (v${String(orderPolicy.phienBan)})` : ""}
+                    </div>
+                    <div style={{ color: "#15803D" }}>
+                      {Boolean((orderPolicy.noiDung as Record<string, unknown> | undefined)?.thoiGianGiuChoPhut) && (
+                        <span>
+                          Giữ chỗ: {String((orderPolicy.noiDung as Record<string, unknown>).thoiGianGiuChoPhut)} phút ·{" "}
+                        </span>
+                      )}
+                      {Boolean((orderPolicy.noiDung as Record<string, unknown> | undefined)?.heSoTre) && (
+                        <span>
+                          Hệ số trễ: ×{String((orderPolicy.noiDung as Record<string, unknown>).heSoTre)}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Lịch sử trạng thái */}
             <div className="mb-4">
@@ -2112,7 +2400,7 @@ function MyOrdersView() {
                     <span className="font-mono">{fmt(cancelPreview.tienThueDaThu)}</span>
                   </div>
                   <div className="flex justify-between py-1 text-red-600">
-                    <span>Phí hủy giữ lại ({Math.round(cancelPreview.tyLeGiuLai * 100)}%):</span>
+                    <span>Phí hủy giữ lại ({Math.round((cancelPreview.tyLeGiuLai ?? 0) * 100)}%):</span>
                     <strong className="font-mono">−{fmt(cancelPreview.tienThueGiuLai)}</strong>
                   </div>
                   <div className="flex justify-between py-1 text-gray-600">
@@ -2481,22 +2769,47 @@ function AIAdvisorView() {
     setSent(true);
   };
 
+  // Kiểm tra lại bộ đồ với backend khi người dùng chỉnh số lượng hoặc bỏ món (UC2.4)
+  const recheckKitWithBackend = (nextItems: typeof customItems) => {
+    if (!app.realApi || nextItems.length === 0) return;
+    const { gioNhan, gioTra } = getSuggestedRange();
+    void aiAdvisorApi
+      .kiemTraBoDo({
+        diemDen: destination,
+        soNguoi: numPeople,
+        gioNhan,
+        gioTra,
+        nganSach: targetBudget,
+        loaiNganSach: "TongBanDau",
+      })
+      .then((res) => {
+        setAiResponse(res);
+      })
+      .catch(() => {});
+  };
+
   // Tăng giảm số lượng sản phẩm trong bộ gợi ý (UC2.4 bước 5)
   const handleUpdateQty = (productId: string, delta: number) => {
-    setCustomItems((prev) =>
-      prev.map((item) => {
+    setCustomItems((prev) => {
+      const next = prev.map((item) => {
         if (item.productId === productId) {
           const newQty = Math.max(1, item.qty + delta);
           return { ...item, qty: newQty };
         }
         return item;
-      })
-    );
+      });
+      recheckKitWithBackend(next);
+      return next;
+    });
   };
 
   // Xóa bỏ một món không cần thiết khỏi bộ gợi ý (UC2.4 bước 5)
   const handleRemoveItem = (productId: string) => {
-    setCustomItems((prev) => prev.filter((item) => item.productId !== productId));
+    setCustomItems((prev) => {
+      const next = prev.filter((item) => item.productId !== productId);
+      recheckKitWithBackend(next);
+      return next;
+    });
   };
 
   // Thêm một thiết bị bất kỳ từ kho vào bộ gợi ý
@@ -2507,19 +2820,23 @@ function AIAdvisorView() {
     if (existing) {
       handleUpdateQty(prodId, 1);
     } else {
-      setCustomItems((prev) => [
-        ...prev,
-        {
-          productId: p.id,
-          name: p.name,
-          category: p.category,
-          image: p.image,
-          qty: 1,
-          reason: "Thiết bị bổ sung thêm theo nhu cầu riêng của quý khách.",
-          pricePerDay: p.pricePerDay,
-          deposit: p.deposit,
-        },
-      ]);
+      setCustomItems((prev) => {
+        const next = [
+          ...prev,
+          {
+            productId: p.id,
+            name: p.name,
+            category: p.category,
+            image: p.image,
+            qty: 1,
+            reason: "Thiết bị bổ sung thêm theo nhu cầu riêng của quý khách.",
+            pricePerDay: p.pricePerDay,
+            deposit: p.deposit,
+          },
+        ];
+        recheckKitWithBackend(next);
+        return next;
+      });
     }
     setShowAddMoreModal(false);
   };
@@ -3316,6 +3633,10 @@ function ProfileView() {
   const [profileLoading, setProfileLoading] = useState(false);
   const [profileSaving, setProfileSaving] = useState(false);
   const [profileError, setProfileError] = useState("");
+  // OTP xác minh khi thay đổi Email hoặc Số điện thoại (UC1.6)
+  const [otpCode, setOtpCode] = useState("");
+  const [otpSending, setOtpSending] = useState(false);
+  const [otpInfo, setOtpInfo] = useState("");
 
   // Đổi mật khẩu state (UC1.12)
   const [oldPassword, setOldPassword] = useState("");
@@ -3338,7 +3659,8 @@ function ProfileView() {
   } | null>(null);
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState("");
-  const [reviewImage, setReviewImage] = useState("");
+  const [reviewImageInput, setReviewImageInput] = useState("");
+  const [reviewImages, setReviewImages] = useState<string[]>([]);
   const [reviewError, setReviewError] = useState("");
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
   const completedOrders = app.orders.filter((order) => order.status === "Hoàn tất");
@@ -3368,16 +3690,41 @@ function ProfileView() {
     void Promise.all([reviewApi.laySanPhamDuDieuKien(), reviewApi.layDanhGiaCuaToi()])
       .then(([eligible, myRevs]) => {
         setEligibleReviewItems(eligible);
-        setMyRealReviews(myRevs.map(mapDanhGiaToReview));
+        setMyRealReviews((myRevs.items ?? []).map(mapDanhGiaToReview));
       })
       .catch(() => {})
       .finally(() => setReviewsLoading(false));
   }, [app.realApi, app.currentUser?.id]);
 
+  const contactChanged =
+    profile.email.trim() !== (savedProfile.email || "").trim() ||
+    profile.phone.trim() !== (savedProfile.phone || "").trim();
+
+  const handleSendContactOtp = async () => {
+    setProfileError("");
+    setOtpInfo("");
+    setOtpSending(true);
+    try {
+      const res = await profileApi.guiOtpDoiLienHe({
+        emailMoi: profile.email.trim() !== (savedProfile.email || "").trim() ? profile.email.trim() : null,
+        soDienThoaiMoi: profile.phone.trim() !== (savedProfile.phone || "").trim() ? profile.phone.trim() : null,
+      });
+      setOtpInfo(res.thongDiep || "Đã gửi mã OTP xác minh. Vui lòng kiểm tra email/điện thoại.");
+    } catch (err) {
+      setProfileError(err instanceof Error ? err.message : "Không thể gửi mã OTP xác minh.");
+    } finally {
+      setOtpSending(false);
+    }
+  };
+
   const saveProfile = async () => {
     setProfileError("");
     setSaved(false);
     if (app.realApi) {
+      if (contactChanged && !otpCode.trim()) {
+        setProfileError("Bạn đã thay đổi Email hoặc Số điện thoại. Vui lòng gửi và nhập mã OTP xác minh.");
+        return;
+      }
       setProfileSaving(true);
       try {
         const dto = await profileApi.capNhatHoSoToi({
@@ -3387,6 +3734,7 @@ function ProfileView() {
           diaChi: profile.address.trim() || null,
           ngaySinh: profile.birthDate || null,
           anhDaiDien: profile.avatarUrl.trim() || null,
+          maOtp: contactChanged ? otpCode.trim() : null,
         });
         const next = {
           name: dto.hoTen || profile.name,
@@ -3398,6 +3746,8 @@ function ProfileView() {
         };
         setSavedProfile(next);
         setProfile(next);
+        setOtpCode("");
+        setOtpInfo("");
         setSaved(true);
       } catch (err) {
         setProfileError(err instanceof Error ? err.message : "Không thể cập nhật hồ sơ cá nhân.");
@@ -3446,10 +3796,14 @@ function ProfileView() {
           matKhauMoi: newPassword,
           xacNhanMatKhauMoi: confirmPassword,
         });
-        setPasswordMsg("✓ Đổi mật khẩu thành công! Vui lòng dùng mật khẩu mới cho các lần đăng nhập sau.");
+        setPasswordMsg("✓ Đổi mật khẩu thành công! Hệ thống sẽ đăng xuất để bạn đăng nhập lại bằng mật khẩu mới.");
         setOldPassword("");
         setNewPassword("");
         setConfirmPassword("");
+        // UC1.12: Bắt buộc đăng xuất sau khi đổi mật khẩu thành công
+        window.setTimeout(() => {
+          void app.logout();
+        }, 1200);
       } catch (err) {
         setPasswordError(err instanceof Error ? err.message : "Đổi mật khẩu thất bại.");
       } finally {
@@ -3481,19 +3835,20 @@ function ProfileView() {
           maChiTietDonThue: reviewingTarget.maChiTietDonThue,
           soSao: rating,
           noiDung: comment.trim() || undefined,
-          danhSachAnh: reviewImage.trim() ? [reviewImage.trim()] : undefined,
+          danhSachAnh: reviewImages.length > 0 ? reviewImages.slice(0, 5) : undefined,
         });
         const [eligible, myRevs] = await Promise.all([
           reviewApi.laySanPhamDuDieuKien(),
           reviewApi.layDanhGiaCuaToi(),
         ]);
         setEligibleReviewItems(eligible);
-        setMyRealReviews(myRevs.map(mapDanhGiaToReview));
+        setMyRealReviews((myRevs.items ?? []).map(mapDanhGiaToReview));
         void app.refreshReviews?.();
         setReviewingTarget(null);
         setComment("");
         setRating(5);
-        setReviewImage("");
+        setReviewImages([]);
+        setReviewImageInput("");
       } catch (err) {
         setReviewError(err instanceof Error ? err.message : "Không thể gửi đánh giá sản phẩm.");
       } finally {
@@ -3507,13 +3862,14 @@ function ProfileView() {
       productId: reviewingTarget.productId,
       rating,
       comment,
-      images: reviewImage.trim() ? [reviewImage.trim()] : undefined,
+      images: reviewImages.length > 0 ? reviewImages.slice(0, 5) : undefined,
     });
     if (res.ok) {
       setReviewingTarget(null);
       setComment("");
       setRating(5);
-      setReviewImage("");
+      setReviewImages([]);
+      setReviewImageInput("");
       setReviewError("");
     } else {
       setReviewError(res.message);
@@ -3600,6 +3956,39 @@ function ProfileView() {
               </div>
             ))}
           </div>
+
+          {/* UC1.6: Khối xác minh OTP khi thay đổi Email hoặc Số điện thoại */}
+          {app.realApi && contactChanged && (
+            <div style={{ marginTop: 14, padding: 14, borderRadius: 10, background: "#FFFBEB", border: "1px solid #FCD34D" }}>
+              <div style={{ fontSize: "0.8rem", fontWeight: 700, color: "#92400E", marginBottom: 6 }}>
+                🔐 Xác minh OTP khi thay đổi Email / Số điện thoại (UC1.6)
+              </div>
+              <div className="flex gap-2 items-center flex-wrap">
+                <button
+                  type="button"
+                  disabled={otpSending}
+                  onClick={() => void handleSendContactOtp()}
+                  className="btn btn-secondary btn-sm"
+                >
+                  {otpSending ? "Đang gửi OTP..." : "Gửi mã OTP xác minh"}
+                </button>
+                <input
+                  type="text"
+                  placeholder="Nhập mã OTP"
+                  value={otpCode}
+                  onChange={(e) => setOtpCode(e.target.value)}
+                  className="form-input"
+                  style={{ maxWidth: 180, fontSize: "0.84rem" }}
+                />
+              </div>
+              {otpInfo && (
+                <div style={{ marginTop: 6, fontSize: "0.75rem", color: "#065F46", fontWeight: 600 }}>
+                  {otpInfo}
+                </div>
+              )}
+            </div>
+          )}
+
           <div className="flex items-center gap-3 mt-5">
             <button type="submit" disabled={profileSaving || profileLoading} className="btn btn-primary btn-md">
               {profileSaving ? "Đang lưu..." : "Lưu thay đổi"}
@@ -3736,7 +4125,8 @@ function ProfileView() {
                               setReviewError("");
                               setRating(5);
                               setComment("");
-                              setReviewImage("");
+                              setReviewImages([]);
+                              setReviewImageInput("");
                             }}
                             className="btn btn-secondary btn-sm"
                           >
@@ -3818,15 +4208,86 @@ function ProfileView() {
                             />
                           </div>
                           <div className="mb-3">
-                            <label className="form-label mb-1">Ảnh thực tế (URL tùy chọn)</label>
-                            <input
-                              type="url"
-                              placeholder="Dán URL ảnh dã ngoại (https://...)"
-                              value={reviewImage}
-                              onChange={(e) => setReviewImage(e.target.value)}
-                              className="form-input"
-                              style={{ fontSize: "0.82rem" }}
-                            />
+                            <label className="form-label mb-1">Ảnh thực tế (tối đa 5 ảnh - UC9.1.2)</label>
+                            <div className="flex gap-2 mb-2 flex-wrap">
+                              <input
+                                type="url"
+                                placeholder="Dán URL ảnh dã ngoại (https://...)"
+                                value={reviewImageInput}
+                                onChange={(e) => setReviewImageInput(e.target.value)}
+                                className="form-input flex-1"
+                                style={{ fontSize: "0.82rem", minWidth: 200 }}
+                              />
+                              <button
+                                type="button"
+                                disabled={!reviewImageInput.trim() || reviewImages.length >= 5}
+                                onClick={() => {
+                                  const url = reviewImageInput.trim();
+                                  if (url && reviewImages.length < 5 && !reviewImages.includes(url)) {
+                                    setReviewImages((prev) => [...prev, url]);
+                                    setReviewImageInput("");
+                                  }
+                                }}
+                                className="btn btn-secondary btn-sm"
+                              >
+                                + Thêm URL ({reviewImages.length}/5)
+                              </button>
+                              <label className="btn btn-secondary btn-sm" style={{ cursor: reviewImages.length >= 5 ? "not-allowed" : "pointer" }}>
+                                📷 Tải ảnh lên
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  multiple
+                                  disabled={reviewImages.length >= 5}
+                                  style={{ display: "none" }}
+                                  onChange={(e) => {
+                                    const files = Array.from(e.target.files ?? []).slice(0, 5 - reviewImages.length);
+                                    files.forEach((file) => {
+                                      const reader = new FileReader();
+                                      reader.onload = () => {
+                                        if (typeof reader.result === "string") {
+                                          setReviewImages((prev) => (prev.length < 5 ? [...prev, reader.result as string] : prev));
+                                        }
+                                      };
+                                      reader.readAsDataURL(file);
+                                    });
+                                    e.target.value = "";
+                                  }}
+                                />
+                              </label>
+                            </div>
+                            {reviewImages.length > 0 && (
+                              <div className="flex gap-2 flex-wrap mt-2">
+                                {reviewImages.map((img, idx) => (
+                                  <div key={idx} style={{ position: "relative" }}>
+                                    <img
+                                      src={img}
+                                      alt={`Ảnh đánh giá ${idx + 1}`}
+                                      style={{ width: 64, height: 64, objectFit: "cover", borderRadius: 6, border: "1px solid #CBD5E1" }}
+                                    />
+                                    <button
+                                      type="button"
+                                      onClick={() => setReviewImages((prev) => prev.filter((_, i) => i !== idx))}
+                                      style={{
+                                        position: "absolute",
+                                        top: -6,
+                                        right: -6,
+                                        width: 18,
+                                        height: 18,
+                                        borderRadius: "50%",
+                                        background: "#EF4444",
+                                        color: "white",
+                                        border: "none",
+                                        fontSize: "0.65rem",
+                                        cursor: "pointer",
+                                      }}
+                                    >
+                                      ✕
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
                           </div>
                           {reviewError && <div className="form-error-msg mb-2">{reviewError}</div>}
                           <div className="flex gap-2">
@@ -3900,7 +4361,8 @@ function ProfileView() {
                                   setReviewError("");
                                   setRating(5);
                                   setComment("");
-                                  setReviewImage("");
+                                  setReviewImages([]);
+                                  setReviewImageInput("");
                                 }}
                                 className="btn btn-secondary btn-sm"
                               >
@@ -3994,27 +4456,32 @@ function ProfileView() {
                                 />
                               </div>
 
-                              {/* Đính kèm ảnh dã ngoại (UC9.1.2) */}
+                              {/* Đính kèm tối đa 5 ảnh dã ngoại (UC9.1.2) */}
                               <div className="mb-3">
-                                <label className="form-label mb-1">Ảnh thực tế từ chuyến dã ngoại (UC9.1.2)</label>
-                                <div className="flex gap-2 mb-2">
+                                <label className="form-label mb-1">Ảnh thực tế từ chuyến dã ngoại (tối đa 5 ảnh - UC9.1.2)</label>
+                                <div className="flex gap-2 mb-2 flex-wrap">
                                   <input
                                     type="url"
                                     placeholder="Dán URL ảnh dã ngoại (https://...)"
-                                    value={reviewImage}
-                                    onChange={(e) => setReviewImage(e.target.value)}
+                                    value={reviewImageInput}
+                                    onChange={(e) => setReviewImageInput(e.target.value)}
                                     className="form-input flex-1"
-                                    style={{ fontSize: "0.82rem" }}
+                                    style={{ fontSize: "0.82rem", minWidth: 200 }}
                                   />
-                                  {reviewImage && (
-                                    <button
-                                      type="button"
-                                      onClick={() => setReviewImage("")}
-                                      className="btn btn-secondary btn-sm"
-                                    >
-                                      Xóa ảnh
-                                    </button>
-                                  )}
+                                  <button
+                                    type="button"
+                                    disabled={!reviewImageInput.trim() || reviewImages.length >= 5}
+                                    onClick={() => {
+                                      const url = reviewImageInput.trim();
+                                      if (url && reviewImages.length < 5 && !reviewImages.includes(url)) {
+                                        setReviewImages((prev) => [...prev, url]);
+                                        setReviewImageInput("");
+                                      }
+                                    }}
+                                    className="btn btn-secondary btn-sm"
+                                  >
+                                    + Thêm ({reviewImages.length}/5)
+                                  </button>
                                 </div>
 
                                 {/* Gợi ý chọn nhanh ảnh mẫu */}
@@ -4028,7 +4495,12 @@ function ProfileView() {
                                     <button
                                       key={idx}
                                       type="button"
-                                      onClick={() => setReviewImage(sample.url)}
+                                      disabled={reviewImages.length >= 5}
+                                      onClick={() =>
+                                        setReviewImages((prev) =>
+                                          prev.length < 5 && !prev.includes(sample.url) ? [...prev, sample.url] : prev
+                                        )
+                                      }
                                       className="btn btn-ghost btn-sm"
                                       style={{ fontSize: "0.72rem", border: "1px dashed #CBD5E1", padding: "3px 8px" }}
                                     >
@@ -4037,13 +4509,36 @@ function ProfileView() {
                                   ))}
                                 </div>
 
-                                {reviewImage && (
-                                  <div className="mt-2 p-1 bg-parchment rounded-lg border border-bone inline-block">
-                                    <img
-                                      src={reviewImage}
-                                      alt="Xem trước ảnh đánh giá"
-                                      style={{ width: 80, height: 80, objectFit: "cover", borderRadius: 6 }}
-                                    />
+                                {reviewImages.length > 0 && (
+                                  <div className="mt-2 flex gap-2 flex-wrap">
+                                    {reviewImages.map((img, idx) => (
+                                      <div key={idx} style={{ position: "relative" }}>
+                                        <img
+                                          src={img}
+                                          alt={`Xem trước ảnh ${idx + 1}`}
+                                          style={{ width: 72, height: 72, objectFit: "cover", borderRadius: 6, border: "1px solid #CBD5E1" }}
+                                        />
+                                        <button
+                                          type="button"
+                                          onClick={() => setReviewImages((prev) => prev.filter((_, i) => i !== idx))}
+                                          style={{
+                                            position: "absolute",
+                                            top: -6,
+                                            right: -6,
+                                            width: 18,
+                                            height: 18,
+                                            borderRadius: "50%",
+                                            background: "#EF4444",
+                                            color: "white",
+                                            border: "none",
+                                            fontSize: "0.65rem",
+                                            cursor: "pointer",
+                                          }}
+                                        >
+                                          ✕
+                                        </button>
+                                      </div>
+                                    ))}
                                   </div>
                                 )}
                               </div>

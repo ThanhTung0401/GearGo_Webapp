@@ -109,6 +109,14 @@ export interface DanhSachBaoTriBackend {
   soMoiTrang: number;
 }
 
+export interface PhanCongLichThietBiBackend {
+  maPhanCong: number;
+  maDonThue: number;
+  tuNgay: string;
+  denNgay: string;
+  trangThai: string;
+}
+
 export const equipmentApi = {
   // ─── Thiết bị (UC54 / UC6.9) ───
   async timKiemThietBi(params?: TimThietBiParams): Promise<{ items: ThietBiBackend[]; tongSo: number }> {
@@ -135,6 +143,23 @@ export const equipmentApi = {
       return res.data.duLieu;
     }
     return res.data as ThietBiBackend;
+  },
+
+  async layLichThietBi(
+    id: number,
+    params?: { tuNgay?: string; denNgay?: string }
+  ): Promise<PhanCongLichThietBiBackend[]> {
+    const qs = new URLSearchParams();
+    if (params?.tuNgay) qs.set("tuNgay", params.tuNgay);
+    if (params?.denNgay) qs.set("denNgay", params.denNgay);
+    const suffix = qs.toString() ? `?${qs.toString()}` : "";
+    const res = await apiClient.get<{ duLieu?: PhanCongLichThietBiBackend[] } | PhanCongLichThietBiBackend[]>(
+      `/api/thiet-bi/${id}/lich${suffix}`
+    );
+    if (res.data && !Array.isArray(res.data) && "duLieu" in res.data && res.data.duLieu) {
+      return res.data.duLieu;
+    }
+    return Array.isArray(res.data) ? res.data : [];
   },
 
   // ─── Sổ đời & Vòng đời thiết bị (UC54, UC62, UC63 / UC6.9, UC6.14, UC6.15) ───
@@ -228,6 +253,20 @@ export const equipmentApi = {
     bangChung?: string;
   }): Promise<BaoTriResponseBackend> {
     const res = await apiClient.post<{ duLieu?: BaoTriResponseBackend } | BaoTriResponseBackend>("/api/bao-tri", req);
+    if (res.data && "duLieu" in res.data && res.data.duLieu) {
+      return res.data.duLieu;
+    }
+    return res.data as BaoTriResponseBackend;
+  },
+
+  async phanCongXuLy(
+    id: number,
+    req: { maNguoiXuLy: number; lyDo?: string }
+  ): Promise<BaoTriResponseBackend> {
+    const res = await apiClient.post<{ duLieu?: BaoTriResponseBackend } | BaoTriResponseBackend>(
+      `/api/bao-tri/${id}/phan-cong`,
+      req
+    );
     if (res.data && "duLieu" in res.data && res.data.duLieu) {
       return res.data.duLieu;
     }

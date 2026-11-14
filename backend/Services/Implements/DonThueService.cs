@@ -1,4 +1,6 @@
 using System.Data;
+using System.Security.Cryptography;
+using System.Text;
 using GearGo.Data;
 using GearGo.Exceptions;
 using GearGo.Helpers;
@@ -47,6 +49,22 @@ public class DonThueService : IDonThueService
 
         return await TransactionExecutionWrapper.ExecuteInTransactionAsync(_context, async () =>
         {
+            // 0. Kiểm tra IdempotencyKey để chống tạo đơn trùng khi người dùng bấm đúp hoặc mạng retry
+            var idempotencyKey = string.IsNullOrWhiteSpace(request.IdempotencyKey)
+                ? null
+                : request.IdempotencyKey.Trim();
+
+            if (idempotencyKey != null)
+            {
+                var donDaCo = await _context.DonThues
+                    .FirstOrDefaultAsync(d => d.MaKhachHang == request.MaKhachHang && d.IdempotencyKey == idempotencyKey);
+                if (donDaCo != null)
+                {
+                    var hanCu = donDaCo.HanThanhToan ?? donDaCo.NgayDat.AddMinutes(DomainConstants.Policies.HoldTimeMinutes);
+                    return Result<DonThueResponse>.Ok(donDaCo.ToResponse(hanCu));
+                }
+            }
+
             // 1. Kiểm tra sản phẩm & tồn kho khả dụng qua Specification
             var danhSachSpIds = request.ChiTiet.Select(c => c.MaSanPham).Distinct().ToList();
             var sanPhams = await _context.SanPhams
@@ -67,7 +85,6 @@ public class DonThueService : IDonThueService
             // 2. Tính số ngày thuê, tiền thuê, tiền cọc và khuyến mãi
             int soNgayThue = CalculationHelpers.TinhSoNgayThue(request.GioNhanDuKien, request.GioTraDuKien);
             var now = DateTime.UtcNow;
-            var hanThanhToan = now.AddMinutes(DomainConstants.Policies.HoldTimeMinutes);
 
             // W6-T1: dùng selector chung (LayDangHieuLucAsync); chặn tạo đơn nếu chưa có bản hiệu lực.
             var kqChinhSach = await _chinhSachService.LayDangHieuLucAsync(now);
@@ -76,6 +93,12 @@ public class DonThueService : IDonThueService
                     kqChinhSach.MaLoi ?? "CHUA_CO_CHINH_SACH_HIEU_LUC",
                     kqChinhSach.ThongDiep ?? "Chưa có chính sách hiệu lực để tạo đơn.");
             var chinhSachId = kqChinhSach.DuLieu.MaChinhSach;
+
+            // Lấy thời gian giữ chỗ từ chính sách đang hiệu lực (fallback về hằng số mặc định nếu chưa cấu hình)
+            int thoiGianGiuChoPhut = kqChinhSach.DuLieu.NoiDung?.ThoiGianGiuChoPhut is > 0
+                ? kqChinhSach.DuLieu.NoiDung.ThoiGianGiuChoPhut.Value
+                : DomainConstants.Policies.HoldTimeMinutes;
+            var hanThanhToan = now.AddMinutes(thoiGianGiuChoPhut);
 
             decimal tongTienThueTruocGiam = request.ChiTiet.Sum(item =>
                 sanPhams[item.MaSanPham].GiaThueMoiNgay * item.SoLuong * soNgayThue);
@@ -123,6 +146,37 @@ public class DonThueService : IDonThueService
                 }
             }
 
+            // 2.5. Đối chiếu báo giá kỳ vọng (UC3.2.2): nếu giá thuê/khuyến mãi thay đổi so với lúc khách xem
+            // và khách chưa xác nhận DongYThayDoiGia = true, trả lỗi kèm báo giá mới để frontend hiển thị xác nhận
+            var tongTienThueSauGiam = Math.Max(0m, tongTienThueTruocGiam - tongTienGiam);
+            var tongThanhToanDuKien = tongTienThueSauGiam + tongTienCoc;
+            var hashBaoGiaMoi = TaoHashBaoGia(request, sanPhams, soNgayThue, tongTienThueTruocGiam, tongTienGiam, tongTienCoc);
+
+            if (!request.DongYThayDoiGia)
+            {
+                bool giaThayDoi = request.GiaTamTinhKyVong.HasValue
+                    && Math.Abs(request.GiaTamTinhKyVong.Value - tongThanhToanDuKien) > 0.01m;
+                bool hashThayDoi = !string.IsNullOrWhiteSpace(request.HashBaoGia)
+                    && !string.Equals(request.HashBaoGia.Trim(), hashBaoGiaMoi, StringComparison.OrdinalIgnoreCase);
+
+                if (giaThayDoi || hashThayDoi)
+                {
+                    return Result<DonThueResponse>.Loi(
+                        "BAO_GIA_THAY_DOI",
+                        $"Giá thuê hoặc ưu đãi đã thay đổi (tổng mới: {tongThanhToanDuKien:N0} đ). Vui lòng xác nhận báo giá mới.",
+                        new
+                        {
+                            SoNgayThue = soNgayThue,
+                            TongTienThueTruocGiam = tongTienThueTruocGiam,
+                            TongTienGiam = tongTienGiam,
+                            TongTienThueSauGiam = tongTienThueSauGiam,
+                            TongTienCoc = tongTienCoc,
+                            TongThanhToanDuKien = tongThanhToanDuKien,
+                            HashBaoGia = hashBaoGiaMoi
+                        });
+                }
+            }
+
             // 3. Khởi tạo Đơn thuê & Phân bổ Chi tiết + Giữ chỗ qua Rich Domain Model
             var donThueMoi = DonThue.KhoiTao(
                 request,
@@ -131,7 +185,8 @@ public class DonThueService : IDonThueService
                 tongTienThueTruocGiam,
                 tongTienGiam,
                 tongTienCoc,
-                khuyenMaiApDung);
+                khuyenMaiApDung,
+                hanThanhToan);
 
             _context.DonThues.Add(donThueMoi);
             await _context.SaveChangesAsync();
@@ -233,5 +288,26 @@ public class DonThueService : IDonThueService
 
             return Result<bool>.Ok(true);
         }, _logger);
+    }
+
+    // Tạo chữ ký SHA256 cho báo giá dựa trên giỏ hàng, số ngày thuê, giá gốc, giảm giá và tiền cọc
+    private static string TaoHashBaoGia(
+        TaoDonThueRequest request,
+        Dictionary<long, SanPham> sanPhams,
+        int soNgayThue,
+        decimal tongTienThueTruocGiam,
+        decimal tongTienGiam,
+        decimal tongTienCoc)
+    {
+        var itemsPart = string.Join("|", request.ChiTiet
+            .OrderBy(c => c.MaSanPham)
+            .Select(c =>
+            {
+                var sp = sanPhams[c.MaSanPham];
+                return $"{c.MaSanPham}:{c.SoLuong}:{sp.GiaThueMoiNgay:F2}:{sp.MucCocMoiThietBi:F2}";
+            }));
+        var raw = $"{soNgayThue}|{tongTienThueTruocGiam:F2}|{tongTienGiam:F2}|{tongTienCoc:F2}|{request.MaKhuyenMai?.Trim().ToUpperInvariant() ?? ""}|{itemsPart}";
+        var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(raw));
+        return Convert.ToHexString(bytes);
     }
 }

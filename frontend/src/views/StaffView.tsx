@@ -16,6 +16,11 @@ import {
   type ThietBiConNoBackend,
   type QuaHanChiTietBackend,
   type BaoCaoVanHanhBackend,
+  type XemTruocHuyBackend,
+  type DonQuaHanBackend,
+  type NhatKyLienHeQuaHanBackend,
+  type ThietBiBackend,
+  type PhanCongLichThietBiBackend,
 } from "../services/api";
 import { mapDonVanHanhChiTietToOrder, mapPhuPhiToSurcharge, mapNhatKyToAuditLog, type AuditLogEntryWithRef } from "../services/mappers";
 import type { Surcharge } from "../types";
@@ -266,6 +271,7 @@ function OrdersTab({ app, openOrder, hydrateOperationalOrder }: { app: ReturnTyp
   const [noShowNote, setNoShowNote] = useState("Đã gọi điện nhắc 2 lần nhưng không nghe máy / Khách không đến quầy");
   const [noShowSubmitting, setNoShowSubmitting] = useState(false);
   const [noShowError, setNoShowError] = useState("");
+  const [noShowPreview, setNoShowPreview] = useState<XemTruocHuyBackend | null>(null);
   const statuses = ["Tất cả", "Đã xác nhận", "Đang chuẩn bị", "Sẵn sàng nhận", "Đang thuê", "Trả một phần", "Quá hạn", "Chờ đối soát", "Hoàn tất"];
 
   const viewingDetailOrder = viewingDetailOrderId ? app.orders.find((o) => o.id === viewingDetailOrderId) ?? null : null;
@@ -294,6 +300,7 @@ function OrdersTab({ app, openOrder, hydrateOperationalOrder }: { app: ReturnTyp
         await orderApi.ghiNhanKhongDenNhan(Number(noShowTarget.backendId ?? noShowTarget.id), {
           ghiChu: noShowNote.trim(),
           xuLyHuy: false,
+          dauVanTayXemTruoc: noShowPreview?.dauVanTay,
         });
         await hydrateOperationalOrder(noShowTarget.id);
         await app.refreshOrders?.();
@@ -461,7 +468,14 @@ function OrdersTab({ app, openOrder, hydrateOperationalOrder }: { app: ReturnTyp
                           onClick={() => {
                             setNoShowTarget(o);
                             setNoShowError("");
+                            setNoShowPreview(null);
                             setNoShowNote("Đã gọi điện nhắc 2 lần nhưng không nghe máy / Khách không đến quầy");
+                            if (app.realApi || isRealApiEnabled()) {
+                              void orderApi
+                                .xemTruocKhongDenNhan(Number(o.backendId ?? o.id))
+                                .then(setNoShowPreview)
+                                .catch(() => {});
+                            }
                           }}
                           style={{ background: "#FEF2F2", color: "#DC2626", border: "1px solid #FECACA", borderRadius: 6, padding: "5px 6px", fontSize: "0.68rem", cursor: "pointer", fontWeight: 700 }}
                           title="Ghi nhận khách không đến nhận đồ theo UC4.5 Dòng 836"
@@ -626,6 +640,15 @@ function OrdersTab({ app, openOrder, hydrateOperationalOrder }: { app: ReturnTyp
             <p style={{ fontSize: "0.82rem", color: "#4B5563", marginBottom: 12 }}>
               Đơn <strong>#{noShowTarget.displayCode || noShowTarget.id}</strong> — {noShowTarget.customerName} ({noShowTarget.customerPhone})
             </p>
+            {noShowPreview && (
+              <div style={{ background: "#FFFBEB", border: "1px solid #FDE68A", borderRadius: 8, padding: "8px 10px", fontSize: "0.75rem", color: "#92400E", marginBottom: 10 }}>
+                <div>Nhánh chính sách: <strong>{noShowPreview.nhanhChinhSach}</strong></div>
+                <div>Dự kiến giữ lại: <strong>{fmt(noShowPreview.tienThueGiuLai)}</strong> · Dự kiến hoàn: <strong>{fmt(noShowPreview.tongHoan)}</strong></div>
+                {noShowPreview.canhBao?.length > 0 && (
+                  <div style={{ color: "#B91C1C", marginTop: 2 }}>{noShowPreview.canhBao.join(" | ")}</div>
+                )}
+              </div>
+            )}
             <textarea
               rows={3}
               value={noShowNote}
@@ -790,7 +813,7 @@ function HandoverTab({ app, selectedOrder, setSelectedOrderId, hydrateOperationa
 
   const handleSwapEquipment = async (productId: string, oldId: string, newId: string) => {
     if (!order) return;
-    if (app.realApi && prepState) {
+    if ((app.realApi || isRealApiEnabled()) && prepState) {
       const donId = Number(order.backendId ?? order.id);
       const dong = prepState.danhSachDong.find((d) => String(d.maSanPham) === productId);
       const oldPc = dong?.danhSachPhanCong.find((pc) => String(pc.maThietBi) === oldId);
@@ -899,11 +922,34 @@ function HandoverTab({ app, selectedOrder, setSelectedOrderId, hydrateOperationa
   };
 
   // UC4.1: Báo thiếu thiết bị
-  const handleReportShortage = () => {
+  const handleReportShortage = async () => {
     if (!order || !shortageNote.trim()) {
       setHandoverError("Vui lòng nhập lý do thiếu thiết bị để báo Quản trị viên!");
       return;
     }
+
+    if (app.realApi || isRealApiEnabled()) {
+      setHandoverBusy(true);
+      setHandoverError("");
+      try {
+        const donId = Number(order.backendId ?? order.id);
+        await handoverApi.baoThieuThietBi(donId, {
+          lyDo: shortageNote.trim(),
+          ghiChu: shortageNote.trim(),
+        });
+        await hydrateOperationalOrder(order.id);
+        await app.refreshOrders?.();
+        setHandoverSuccess(`Đã gửi báo thiếu thiết bị cho đơn ${order.displayCode || order.id}.`);
+        setShowShortageModal(false);
+        setShortageNote("");
+      } catch (err) {
+        setHandoverError(err instanceof Error ? err.message : "Không thể gửi báo thiếu thiết bị lên máy chủ.");
+      } finally {
+        setHandoverBusy(false);
+      }
+      return;
+    }
+
     const res = app.reportEquipmentShortage(order.id, shortageNote, app.currentUser?.name || "Nhân viên kho");
     if (res.ok) {
       setHandoverSuccess(`Đã ghi nhận cảnh báo thiếu hàng cho đơn ${order.displayCode || order.id}.`);
@@ -912,6 +958,36 @@ function HandoverTab({ app, selectedOrder, setSelectedOrderId, hydrateOperationa
     } else {
       setHandoverError(res.message);
     }
+  };
+
+  // UC4.1: Hủy phân công thiết bị đã gán
+  const handleCancelAssignment = async (productId: string, equipId: string) => {
+    if (!order) return;
+    setHandoverError("");
+    if ((app.realApi || isRealApiEnabled()) && prepState) {
+      const donId = Number(order.backendId ?? order.id);
+      const dong = prepState.danhSachDong.find((d) => String(d.maSanPham) === productId);
+      const pc = dong?.danhSachPhanCong.find((p) => String(p.maThietBi) === equipId);
+      if (pc) {
+        setHandoverBusy(true);
+        try {
+          const updated = await handoverApi.huyPhanCong(donId, pc.maPhanCong, "Hủy phân công thiết bị tại khâu chuẩn bị");
+          syncFromPrepResponse(updated);
+          await hydrateOperationalOrder(order.id);
+          void app.refreshEquipment?.();
+          setHandoverSuccess("Đã hủy phân công thiết bị.");
+        } catch (err) {
+          setHandoverError(err instanceof Error ? err.message : "Không thể hủy phân công thiết bị.");
+        } finally {
+          setHandoverBusy(false);
+        }
+        return;
+      }
+    }
+    setAssignments((prev) => ({
+      ...prev,
+      [productId]: (prev[productId] || []).filter((id) => id !== equipId),
+    }));
   };
 
   // UC4.2: Chốt Bàn giao tại quầy & Ký BBBG
@@ -1238,6 +1314,14 @@ function HandoverTab({ app, selectedOrder, setSelectedOrderId, hydrateOperationa
                                 style={{ background: "#F3F4F6", border: "1px solid var(--color-bone)", borderRadius: 6, padding: "4px 8px", fontSize: "0.72rem", cursor: "pointer" }}>
                                 Đổi mã
                               </button>
+                              <button
+                                type="button"
+                                disabled={handoverBusy}
+                                onClick={() => void handleCancelAssignment(item.productId, currentChosen)}
+                                style={{ background: "#FEF2F2", color: "#DC2626", border: "1px solid #FECACA", borderRadius: 6, padding: "4px 8px", fontSize: "0.72rem", cursor: "pointer" }}
+                              >
+                                Hủy gán
+                              </button>
                             </div>
                           )}
                         </div>
@@ -1309,7 +1393,9 @@ function HandoverTab({ app, selectedOrder, setSelectedOrderId, hydrateOperationa
                     />
                     <div className="flex justify-end gap-2">
                       <button onClick={() => setShowShortageModal(false)} style={{ background: "white", border: "1px solid var(--color-bone)", borderRadius: 6, padding: "6px 12px", cursor: "pointer" }}>Hủy</button>
-                      <button onClick={handleReportShortage} style={{ background: "#DC2626", color: "white", border: "none", borderRadius: 6, padding: "6px 16px", fontWeight: 700, cursor: "pointer" }}>Gửi cảnh báo QTV</button>
+                      <button disabled={handoverBusy} onClick={() => void handleReportShortage()} style={{ background: "#DC2626", color: "white", border: "none", borderRadius: 6, padding: "6px 16px", fontWeight: 700, cursor: "pointer" }}>
+                        {handoverBusy ? "Đang gửi..." : "Gửi cảnh báo QTV"}
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -1546,6 +1632,9 @@ function ReturnTab({
   const [contactNote, setContactNote] = useState("");
   const [newExpectedTime, setNewExpectedTime] = useState("");
   const [contactNotice, setContactNotice] = useState<string | null>(null);
+  const [overdueOrdersBackend, setOverdueOrdersBackend] = useState<DonQuaHanBackend[]>([]);
+  const [scanningOverdue, setScanningOverdue] = useState(false);
+  const [contactLogsBackend, setContactLogsBackend] = useState<NhatKyLienHeQuaHanBackend[]>([]);
 
   // State UC4.3: Ảnh bằng chứng hư hại
   const [damagePhotos] = useState<string[]>([
@@ -1567,17 +1656,19 @@ function ReturnTab({
     setReturnLoading(true);
     setReturnError(null);
     try {
-      const [debt, receipts, surcharges, overdue, affected] = await Promise.all([
+      const [debt, receipts, surcharges, overdue, affected, contactLogs] = await Promise.all([
         returnApi.layThietBiConNo(donId).catch(() => [] as ThietBiConNoBackend[]),
         returnApi.layDanhSachTheoDon(donId).catch(() => [] as NhanTraBackend[]),
         surchargeApi.layTheoDon(donId).catch(() => []),
         returnApi.layChiTietQuaHan(donId).catch(() => null),
         returnApi.layDonBiAnhHuong(donId).catch(() => []),
+        returnApi.layNhatKyLienHe(donId).catch(() => [] as NhatKyLienHeQuaHanBackend[]),
       ]);
       setDebtItemsBackend(debt);
       setReturnReceiptsBackend(receipts);
       setSurchargesBackend(surcharges.map(mapPhuPhiToSurcharge));
       setOverdueDetailBackend(overdue);
+      setContactLogsBackend(contactLogs);
       setAffectedOrdersBackend(Array.isArray(affected) ? (affected as Array<Record<string, unknown>>) : []);
     } catch (err) {
       setReturnError(err instanceof Error ? err.message : "Không thể tải dữ liệu nhận trả của đơn.");
@@ -1978,11 +2069,69 @@ function ReturnTab({
     setReturnSuccess(`Đã thêm phụ phí quá hạn ${fmt(overdueInfo.surcharge)} vào đơn.`);
   };
 
-  const handleSaveContactLog = () => {
+  const handleScanOverdueReminders = async () => {
+    if (!app.realApi && !isRealApiEnabled()) return;
+    setScanningOverdue(true);
+    setReturnError(null);
+    try {
+      await returnApi.quetNhacQuaHan();
+      const paged = await returnApi.layDonQuaHan({ trang: 1, soMoiTrang: 50 });
+      setOverdueOrdersBackend(paged.items || []);
+      setReturnSuccess(`Đã quét nhắc quá hạn (${paged.items?.length ?? 0} đơn quá hạn).`);
+    } catch (err) {
+      setReturnError(err instanceof Error ? err.message : "Không thể quét nhắc quá hạn.");
+    } finally {
+      setScanningOverdue(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!app.realApi && !isRealApiEnabled()) return;
+    void returnApi
+      .layDonQuaHan({ trang: 1, soMoiTrang: 50 })
+      .then((paged) => setOverdueOrdersBackend(paged.items || []))
+      .catch(() => {});
+  }, [app.realApi]);
+
+  const handleSaveContactLog = async () => {
     if (!order || !contactNote.trim()) {
       setContactNotice("Vui lòng nhập ghi chú nội dung cuộc gọi nhắc khách.");
       return;
     }
+
+    if (app.realApi || isRealApiEnabled()) {
+      setReturnBusy(true);
+      setContactNotice(null);
+      try {
+        const donId = Number(order.backendId ?? order.id);
+        const ketQuaMap: Record<typeof contactOutcome, string> = {
+          "Hẹn giờ trả mới": "HenTraMoi",
+          "Xin gia hạn thêm": "XinGiaHan",
+          "Không nghe máy": "KhongLienHeDuoc",
+          "Khách báo mất": "BaoMatThietBi",
+        };
+        const parsedHenTra = newExpectedTime.trim() ? new Date(newExpectedTime.trim()) : null;
+        const henTraMoiIso = parsedHenTra && !Number.isNaN(parsedHenTra.getTime()) ? parsedHenTra.toISOString() : undefined;
+        const created = await returnApi.ghiNhatKyLienHe(donId, {
+          kenhLienHe: "GoiDien",
+          ketQua: ketQuaMap[contactOutcome] || "DaLienHe",
+          noiDung: henTraMoiIso || !newExpectedTime.trim()
+            ? contactNote.trim()
+            : `${contactNote.trim()} (Hẹn trả mới: ${newExpectedTime.trim()})`,
+          henTraMoi: henTraMoiIso,
+        });
+        setContactLogsBackend((prev) => [created, ...prev]);
+        setContactNotice("Đã lưu nhật ký liên hệ lên máy chủ.");
+        setContactNote("");
+        setNewExpectedTime("");
+      } catch (err) {
+        setContactNotice(err instanceof Error ? err.message : "Không thể lưu nhật ký liên hệ lên máy chủ.");
+      } finally {
+        setReturnBusy(false);
+      }
+      return;
+    }
+
     const res = app.addContactLog(order.id, {
       staffName: app.currentUser?.name || "NV Kho",
       outcome: contactOutcome,
@@ -2005,6 +2154,22 @@ function ReturnTab({
         <h3 style={{ fontFamily: "var(--font-display)", fontSize: "1rem", color: "var(--color-bark)", marginBottom: "8px" }}>
           Đơn nhận trả & đối soát
         </h3>
+
+        {(app.realApi || isRealApiEnabled()) && (
+          <div style={{ background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: 8, padding: "8px 10px", marginBottom: 10, fontSize: "0.74rem", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 6 }}>
+            <span style={{ color: "#991B1B", fontWeight: 600 }}>
+              ⏰ Quá hạn hệ thống: <strong>{overdueOrdersBackend.length}</strong> đơn
+            </span>
+            <button
+              type="button"
+              disabled={scanningOverdue}
+              onClick={() => void handleScanOverdueReminders()}
+              style={{ background: "#DC2626", color: "white", border: "none", borderRadius: 6, padding: "4px 8px", fontSize: "0.7rem", fontWeight: 700, cursor: "pointer" }}
+            >
+              {scanningOverdue ? "Đang quét..." : "Quét nhắc"}
+            </button>
+          </div>
+        )}
 
         {/* Bộ lọc trạng thái đơn */}
         <div className="flex gap-1 mb-3">
@@ -2106,7 +2271,7 @@ function ReturnTab({
             <ReconciliationSheet
               order={order}
               app={app}
-              userRole={app.currentUser?.role === "Quản trị viên" ? "admin" : "staff"}
+              userRole={app.currentUser?.role === "admin" ? "admin" : "staff"}
               onAfterMutation={async () => {
                 await Promise.all([loadReturnData(), hydrateOperationalOrder(order.id)]);
               }}
@@ -2540,7 +2705,7 @@ function ReturnTab({
                 <ReconciliationSheet
                   order={order}
                   app={app}
-                  userRole={app.currentUser?.role === "Quản trị viên" ? "admin" : "staff"}
+                  userRole={app.currentUser?.role === "admin" ? "admin" : "staff"}
                   onAfterMutation={async () => {
                     await Promise.all([loadReturnData(), hydrateOperationalOrder(order.id)]);
                   }}
@@ -2799,13 +2964,32 @@ function ReturnTab({
               {/* Lịch sử các cuộc gọi trước */}
               <div style={{ marginBottom: 16 }}>
                 <strong style={{ fontSize: "0.85rem", color: "var(--color-bark)" }}>
-                  Lịch sử các lần liên hệ ({order.contactLogs?.length || 0} lần):
+                  Lịch sử các lần liên hệ ({((app.realApi || isRealApiEnabled()) ? contactLogsBackend.length : order.contactLogs?.length) || 0} lần):
                 </strong>
                 <div className="flex flex-col gap-2 mt-2" style={{ maxHeight: 180, overflowY: "auto" }}>
-                  {(order.contactLogs?.length || 0) === 0 ? (
+                  {((app.realApi || isRealApiEnabled()) ? contactLogsBackend.length === 0 : (order.contactLogs?.length || 0) === 0) ? (
                     <div style={{ fontSize: "0.8rem", color: "#9CA3AF", fontStyle: "italic", background: "#F9FAFB", padding: "8px 12px", borderRadius: 6 }}>
                       Chưa có lịch sử liên hệ nào. Vui lòng ghi lại kết quả cuộc gọi bên dưới.
                     </div>
+                  ) : (app.realApi || isRealApiEnabled()) ? (
+                    contactLogsBackend.map((log) => (
+                      <div key={log.maNhatKyLienHe} style={{ background: "#F9FAFB", border: "1px solid var(--color-bone)", borderRadius: 8, padding: "8px 12px" }}>
+                        <div className="flex justify-between items-center mb-1">
+                          <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--color-forest)" }}>
+                            {log.tenNguoiLienHe} · {new Date(log.thoiDiemLienHe).toLocaleString("vi-VN")}
+                          </span>
+                          <span style={{ fontSize: "0.7rem", background: "#FEF3C7", color: "#B45309", padding: "1px 6px", borderRadius: 4, fontWeight: 700 }}>
+                            {log.ketQua}
+                          </span>
+                        </div>
+                        <div style={{ fontSize: "0.82rem", color: "#374151" }}>{log.noiDung}</div>
+                        {log.henTraMoi && (
+                          <div style={{ fontSize: "0.72rem", color: "#1D4ED8", marginTop: 2 }}>
+                            Khách hẹn trả mới: <strong>{new Date(log.henTraMoi).toLocaleString("vi-VN")}</strong>
+                          </div>
+                        )}
+                      </div>
+                    ))
                   ) : (
                     order.contactLogs?.map((log) => (
                       <div key={log.id} style={{ background: "#F9FAFB", border: "1px solid var(--color-bone)", borderRadius: 8, padding: "8px 12px" }}>
@@ -2851,6 +3035,7 @@ function ReturnTab({
                   <div>
                     <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "#6B7280", display: "block", marginBottom: 2 }}>Hạn hẹn mới (nếu có)</label>
                     <input
+                      type={(app.realApi || isRealApiEnabled()) ? "datetime-local" : "text"}
                       placeholder="VD: 18:00 ngày mai"
                       value={newExpectedTime}
                       onChange={(e) => setNewExpectedTime(e.target.value)}
@@ -2868,10 +3053,11 @@ function ReturnTab({
                 />
                 <button
                   type="button"
-                  onClick={handleSaveContactLog}
+                  disabled={returnBusy}
+                  onClick={() => void handleSaveContactLog()}
                   style={{ marginTop: 8, background: "var(--color-forest)", color: "white", border: "none", borderRadius: 6, padding: "6px 16px", fontSize: "0.82rem", fontWeight: 700, cursor: "pointer" }}
                 >
-                  Lưu vào lịch sử liên hệ
+                  {returnBusy ? "Đang lưu..." : "Lưu vào lịch sử liên hệ"}
                 </button>
               </div>
 
@@ -2921,6 +3107,41 @@ function EquipmentTab({ app }: { app: ReturnType<typeof useApp> }) {
   const [equipError, setEquipError] = useState<string | null>(null);
   const [equipSuccess, setEquipSuccess] = useState<string | null>(null);
 
+  // State UC6.9: Xem chi tiết & lịch bận thiết bị
+  const [viewingEquipDetail, setViewingEquipDetail] = useState<{
+    equip: Equipment;
+    detail?: ThietBiBackend;
+    schedule: PhanCongLichThietBiBackend[];
+    loading: boolean;
+  } | null>(null);
+
+  // State UC6.12: Phân công xử lý & cập nhật tiến độ bảo trì
+  const [assignMaintTarget, setAssignMaintTarget] = useState<MaintenanceReceipt | null>(null);
+  const [assignHandlerId, setAssignHandlerId] = useState<number>(1);
+  const [assignReason, setAssignReason] = useState("");
+  const [progressMaintTarget, setProgressMaintTarget] = useState<MaintenanceReceipt | null>(null);
+  const [progressNote, setProgressNote] = useState("");
+  const [progressCost, setProgressCost] = useState<number>(0);
+
+  const handleOpenEquipSchedule = async (e: Equipment) => {
+    setViewingEquipDetail({ equip: e, schedule: [], loading: true });
+    if (!(app.realApi || isRealApiEnabled())) {
+      setViewingEquipDetail({ equip: e, schedule: [], loading: false });
+      return;
+    }
+    try {
+      const equipIdNum = Number(e.id) || parseInt(e.id.replace(/\D/g, ""), 10);
+      const [detail, schedule] = await Promise.all([
+        equipmentApi.layChiTietThietBi(equipIdNum),
+        equipmentApi.layLichThietBi(equipIdNum),
+      ]);
+      setViewingEquipDetail({ equip: e, detail, schedule, loading: false });
+    } catch (err) {
+      setEquipError(err instanceof Error ? err.message : "Không tải được chi tiết và lịch bận thiết bị.");
+      setViewingEquipDetail(null);
+    }
+  };
+
   const products = ["Tất cả", ...Array.from(new Set(app.products.map((p) => p.name)))];
   const statuses = ["Tất cả", "Sẵn sàng", "Đang thuê", "Đang bảo trì", "Thất lạc", "Ngừng sử dụng"];
 
@@ -2948,8 +3169,8 @@ function EquipmentTab({ app }: { app: ReturnType<typeof useApp> }) {
       setEquipBusy(true);
       try {
         const targetProduct = app.products.find((p) => p.id === targetProductId);
-        const equipIdNum = transferModal.backendId ?? (Number(transferModal.id) || parseInt(transferModal.id.replace(/\D/g, ""), 10));
-        const targetSpIdNum = targetProduct?.backendId ?? (Number(targetProductId) || parseInt(targetProductId.replace(/\D/g, ""), 10));
+        const equipIdNum = Number(transferModal.id) || parseInt(transferModal.id.replace(/\D/g, ""), 10);
+        const targetSpIdNum = Number(targetProduct?.id ?? targetProductId) || parseInt(targetProductId.replace(/\D/g, ""), 10);
         if (!equipIdNum || !targetSpIdNum) {
           throw new Error("Không xác định được mã thiết bị hoặc sản phẩm đích hợp lệ.");
         }
@@ -3076,6 +3297,13 @@ function EquipmentTab({ app }: { app: ReturnType<typeof useApp> }) {
                             style={{ background: "white", border: "1px solid var(--color-forest)", color: "var(--color-forest)", borderRadius: 6, padding: "3px 8px", fontSize: "0.72rem", cursor: "pointer", fontWeight: 600 }}>
                             🔍 Sổ đời
                           </button>
+                          <button
+                            type="button"
+                            onClick={() => void handleOpenEquipSchedule(e)}
+                            style={{ background: "#EFF6FF", border: "1px solid #BFDBFE", color: "#1D4ED8", borderRadius: 6, padding: "3px 8px", fontSize: "0.72rem", cursor: "pointer", fontWeight: 600 }}
+                          >
+                            📅 Lịch bận
+                          </button>
                           {e.equipmentStatus === "Sẵn sàng" && (
                             <button onClick={() => { setTransferModal(e); setTargetProductId(""); }}
                               style={{ background: "white", border: "1px solid var(--color-bone)", borderRadius: 6, padding: "3px 8px", fontSize: "0.72rem", cursor: "pointer", fontWeight: 600 }}>
@@ -3164,7 +3392,7 @@ function EquipmentTab({ app }: { app: ReturnType<typeof useApp> }) {
                   const equipDisplay = matchedEquip?.displayCode || m.equipmentId;
                   return (
                   <tr key={m.id} style={{ borderTop: "1px solid var(--color-bone)", background: i % 2 === 0 ? "white" : "var(--color-cream)" }}>
-                    <td style={{ padding: "9px 12px", fontFamily: "var(--font-mono)", fontSize: "0.8rem", fontWeight: 700, color: "var(--color-forest)" }}>{m.displayCode || m.id}</td>
+                    <td style={{ padding: "9px 12px", fontFamily: "var(--font-mono)", fontSize: "0.8rem", fontWeight: 700, color: "var(--color-forest)" }}>{m.id}</td>
                     <td style={{ padding: "9px 12px", fontFamily: "var(--font-mono)", fontWeight: 600 }}>{equipDisplay}</td>
                     <td style={{ padding: "9px 12px", fontSize: "0.82rem" }}>
                       <div>{m.issueDescription}</div>
@@ -3187,18 +3415,68 @@ function EquipmentTab({ app }: { app: ReturnType<typeof useApp> }) {
                     </td>
                     <td style={{ padding: "9px 12px" }}>
                       {m.status !== "Hoàn tất" && m.status !== "Không thể sửa" ? (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setAcceptingMaintenance(m);
-                            setActualRepairCost(m.actualCost ?? m.estimatedCost);
-                            setRepairOutcome("Hoàn tất");
-                            setRepairOutcomeNote(m.note || "Đã kiểm tra kỹ thuật và vệ sinh đạt chuẩn.");
-                          }}
-                          style={{ background: "var(--color-forest)", color: "white", border: "none", borderRadius: 6, padding: "5px 10px", fontSize: "0.75rem", cursor: "pointer", fontWeight: 700 }}
-                        >
-                          Nghiệm thu →
-                        </button>
+                        <div className="flex gap-1 flex-wrap">
+                          {(app.realApi || isRealApiEnabled()) && (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setAssignMaintTarget(m);
+                                  setAssignHandlerId(1);
+                                  setAssignReason("");
+                                }}
+                                style={{ background: "#EFF6FF", color: "#1D4ED8", border: "1px solid #BFDBFE", borderRadius: 6, padding: "4px 8px", fontSize: "0.72rem", cursor: "pointer", fontWeight: 600 }}
+                              >
+                                Phân công
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setProgressMaintTarget(m);
+                                  setProgressNote(m.note || "");
+                                  setProgressCost(m.actualCost ?? m.estimatedCost);
+                                }}
+                                style={{ background: "#FFFBEB", color: "#B45309", border: "1px solid #FDE68A", borderRadius: 6, padding: "4px 8px", fontSize: "0.72rem", cursor: "pointer", fontWeight: 600 }}
+                              >
+                                Tiến độ
+                              </button>
+                              <button
+                                type="button"
+                                disabled={equipBusy}
+                                onClick={async () => {
+                                  setEquipError(null);
+                                  setEquipSuccess(null);
+                                  setEquipBusy(true);
+                                  try {
+                                    const maintIdNum = Number(m.id) || parseInt(m.id.replace(/\D/g, ""), 10);
+                                    await equipmentApi.guiKiemTra(maintIdNum);
+                                    await app.refreshEquipment?.();
+                                    setEquipSuccess(`Đã gửi kiểm tra phiếu bảo trì ${m.id}.`);
+                                  } catch (err) {
+                                    setEquipError(err instanceof Error ? err.message : "Không thể gửi kiểm tra.");
+                                  } finally {
+                                    setEquipBusy(false);
+                                  }
+                                }}
+                                style={{ background: "#F3E8FF", color: "#7C3AED", border: "1px solid #DDD6FE", borderRadius: 6, padding: "4px 8px", fontSize: "0.72rem", cursor: "pointer", fontWeight: 600 }}
+                              >
+                                Gửi KT
+                              </button>
+                            </>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setAcceptingMaintenance(m);
+                              setActualRepairCost(m.actualCost ?? m.estimatedCost);
+                              setRepairOutcome("Hoàn tất");
+                              setRepairOutcomeNote(m.note || "Đã kiểm tra kỹ thuật và vệ sinh đạt chuẩn.");
+                            }}
+                            style={{ background: "var(--color-forest)", color: "white", border: "none", borderRadius: 6, padding: "5px 10px", fontSize: "0.75rem", cursor: "pointer", fontWeight: 700 }}
+                          >
+                            Nghiệm thu →
+                          </button>
+                        </div>
                       ) : (
                         <span style={{ fontSize: "0.75rem", color: "#9CA3AF" }}>Đã chốt</span>
                       )}
@@ -3430,21 +3708,22 @@ function EquipmentTab({ app }: { app: ReturnType<typeof useApp> }) {
                   if (app.realApi || isRealApiEnabled()) {
                     setEquipBusy(true);
                     try {
-                      const equipIdNum = selectedEquip?.backendId ?? (Number(createMaintEquipId) || parseInt(createMaintEquipId.replace(/\D/g, ""), 10));
+                      const equipIdNum = Number(selectedEquip?.id ?? createMaintEquipId) || parseInt(createMaintEquipId.replace(/\D/g, ""), 10);
                       const orderIdNum = createMaintOrderId && !isNaN(Number(createMaintOrderId)) ? Number(createMaintOrderId) : undefined;
                       if (!equipIdNum) {
                         throw new Error("Không xác định được mã thiết bị hợp lệ.");
                       }
+                      const moTaDayDu = createMaintNote.trim()
+                        ? `${createMaintIssue.trim()} (${createMaintNote.trim()})`
+                        : createMaintIssue.trim();
                       const res = await equipmentApi.lapPhieuBaoTri({
                         maThietBi: equipIdNum,
                         maDonThue: orderIdNum,
                         loaiXuLy: "SuaChua",
-                        moTaLoi: createMaintIssue.trim(),
+                        moTaLoi: moTaDayDu,
                         mucDo: "Nhe",
-                        chiPhi: createMaintCost,
-                        ghiChu: createMaintNote.trim(),
                       });
-                      await Promise.all([app.refreshEquipment?.(), app.refreshMaintenanceReceipts?.()]);
+                      await app.refreshEquipment?.();
                       setEquipSuccess(`Đã tạo phiếu bảo trì ${res?.maPhieuBaoTri ? `BT-${res.maPhieuBaoTri}` : ""} trên máy chủ.`);
                       setCreateMaintIssue("");
                       setCreateMaintNote("");
@@ -3570,7 +3849,7 @@ function EquipmentTab({ app }: { app: ReturnType<typeof useApp> }) {
                   if (app.realApi || isRealApiEnabled()) {
                     setEquipBusy(true);
                     try {
-                      const maintIdNum = acceptingMaintenance.backendId ?? (Number(acceptingMaintenance.id) || parseInt(acceptingMaintenance.id.replace(/\D/g, ""), 10));
+                      const maintIdNum = Number(acceptingMaintenance.id) || parseInt(acceptingMaintenance.id.replace(/\D/g, ""), 10);
                       if (!maintIdNum) {
                         throw new Error("Không tìm thấy mã phiếu bảo trì hợp lệ.");
                       }
@@ -3587,8 +3866,8 @@ function EquipmentTab({ app }: { app: ReturnType<typeof useApp> }) {
                           lyDo: repairOutcomeNote || "Hư hỏng nặng không thể phục hồi",
                         });
                       }
-                      await Promise.all([app.refreshEquipment?.(), app.refreshMaintenanceReceipts?.()]);
-                      setEquipSuccess(`Đã nghiệm thu phiếu bảo trì ${acceptingMaintenance.displayCode || acceptingMaintenance.id}.`);
+                      await app.refreshEquipment?.();
+                      setEquipSuccess(`Đã nghiệm thu phiếu bảo trì ${acceptingMaintenance.id}.`);
                       setAcceptingMaintenance(null);
                     } catch (err) {
                       setEquipError(err instanceof Error ? err.message : "Lỗi nghiệm thu phiếu bảo trì trên máy chủ.");
@@ -3604,7 +3883,7 @@ function EquipmentTab({ app }: { app: ReturnType<typeof useApp> }) {
                     actualRepairCost,
                     repairOutcomeNote
                   );
-                  setEquipSuccess(`Đã nghiệm thu phiếu bảo trì ${acceptingMaintenance.displayCode || acceptingMaintenance.id}.`);
+                  setEquipSuccess(`Đã nghiệm thu phiếu bảo trì ${acceptingMaintenance.id}.`);
                   setAcceptingMaintenance(null);
                 }}
                 style={{ background: repairOutcome === "Hoàn tất" ? "var(--color-forest)" : "#DC2626", color: "white", border: "none", borderRadius: 8, padding: "8px 20px", fontWeight: 700, fontSize: "0.85rem", cursor: "pointer" }}
@@ -3633,6 +3912,156 @@ function EquipmentTab({ app }: { app: ReturnType<typeof useApp> }) {
           app={app}
           onClose={() => setViewingSupplierProfile(null)}
         />
+      )}
+
+      {/* UC6.9: Modal Chi tiết & Lịch bận thiết bị */}
+      {viewingEquipDetail && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 9999, display: "grid", placeItems: "center", padding: 20 }}>
+          <div style={{ background: "white", borderRadius: 16, maxWidth: 540, width: "100%", padding: 22 }}>
+            <div className="flex justify-between items-start mb-3">
+              <div>
+                <span style={{ fontSize: "0.72rem", background: "#DBEAFE", color: "#1D4ED8", padding: "2px 8px", borderRadius: 6, fontWeight: 700 }}>
+                  UC6.9: CHI TIẾT & LỊCH BẬN THIẾT BỊ
+                </span>
+                <h3 style={{ fontFamily: "var(--font-display)", fontSize: "1.2rem", color: "var(--color-bark)", marginTop: 4 }}>
+                  {viewingEquipDetail.detail?.maThietBiHienThi || viewingEquipDetail.equip.displayCode || viewingEquipDetail.equip.id}
+                </h3>
+              </div>
+              <button type="button" onClick={() => setViewingEquipDetail(null)} style={{ border: "none", background: "none", fontSize: "1.2rem", cursor: "pointer" }}>✕</button>
+            </div>
+            {viewingEquipDetail.loading ? (
+              <div style={{ padding: 20, textAlign: "center", color: "#6B7280", fontSize: "0.85rem" }}>Đang tải chi tiết và lịch bận...</div>
+            ) : (
+              <div>
+                <div style={{ background: "var(--color-parchment)", borderRadius: 10, padding: 12, marginBottom: 12, fontSize: "0.82rem" }}>
+                  <div>Trạng thái: <strong>{viewingEquipDetail.detail?.trangThaiSuDung || viewingEquipDetail.equip.equipmentStatus}</strong></div>
+                  <div>Tình trạng: <strong>{viewingEquipDetail.detail?.tinhTrang || viewingEquipDetail.equip.condition}</strong></div>
+                  {viewingEquipDetail.detail?.ngayNhap && (
+                    <div>Ngày nhập: <strong>{new Date(viewingEquipDetail.detail.ngayNhap).toLocaleDateString("vi-VN")}</strong></div>
+                  )}
+                </div>
+                <strong style={{ fontSize: "0.85rem", color: "var(--color-bark)", display: "block", marginBottom: 6 }}>
+                  Lịch phân công / giữ chỗ ({viewingEquipDetail.schedule.length}):
+                </strong>
+                {viewingEquipDetail.schedule.length === 0 ? (
+                  <div style={{ fontSize: "0.8rem", color: "#6B7280", fontStyle: "italic" }}>Hiện không có lịch phân công nào.</div>
+                ) : (
+                  <div className="flex flex-col gap-2" style={{ maxHeight: 220, overflowY: "auto" }}>
+                    {viewingEquipDetail.schedule.map((sch) => (
+                      <div key={sch.maPhanCong} style={{ border: "1px solid var(--color-bone)", borderRadius: 8, padding: "8px 10px", fontSize: "0.78rem", display: "flex", justifyContent: "space-between" }}>
+                        <span>Đơn <strong>#{sch.maDonThue}</strong> · {new Date(sch.tuNgay).toLocaleDateString("vi-VN")} → {new Date(sch.denNgay).toLocaleDateString("vi-VN")}</span>
+                        <span style={{ fontWeight: 700, color: "#1D4ED8" }}>{sch.trangThai}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* UC6.12: Modal Phân công xử lý bảo trì */}
+      {assignMaintTarget && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 9999, display: "grid", placeItems: "center", padding: 20 }}>
+          <div style={{ background: "white", borderRadius: 14, maxWidth: 440, width: "100%", padding: 20 }}>
+            <h3 style={{ fontFamily: "var(--font-display)", fontSize: "1.15rem", color: "var(--color-bark)", marginBottom: 10 }}>
+              Phân công xử lý phiếu {assignMaintTarget.id}
+            </h3>
+            <label style={{ fontSize: "0.78rem", fontWeight: 600, display: "block", marginBottom: 4 }}>Mã nhân viên xử lý:</label>
+            <input
+              type="number"
+              min={1}
+              value={assignHandlerId}
+              onChange={(e) => setAssignHandlerId(Number(e.target.value))}
+              style={{ width: "100%", border: "1px solid var(--color-bone)", borderRadius: 8, padding: "7px 10px", fontSize: "0.85rem", marginBottom: 10 }}
+            />
+            <label style={{ fontSize: "0.78rem", fontWeight: 600, display: "block", marginBottom: 4 }}>Ghi chú / Lý do:</label>
+            <input
+              value={assignReason}
+              onChange={(e) => setAssignReason(e.target.value)}
+              placeholder="Giao kỹ thuật viên kiểm tra..."
+              style={{ width: "100%", border: "1px solid var(--color-bone)", borderRadius: 8, padding: "7px 10px", fontSize: "0.85rem", marginBottom: 14 }}
+            />
+            <div className="flex justify-end gap-2">
+              <button type="button" onClick={() => setAssignMaintTarget(null)} style={{ background: "white", border: "1px solid var(--color-bone)", borderRadius: 8, padding: "7px 14px", cursor: "pointer" }}>Hủy</button>
+              <button
+                type="button"
+                disabled={equipBusy}
+                onClick={async () => {
+                  setEquipBusy(true);
+                  setEquipError(null);
+                  try {
+                    const maintIdNum = Number(assignMaintTarget.id) || parseInt(assignMaintTarget.id.replace(/\D/g, ""), 10);
+                    await equipmentApi.phanCongXuLy(maintIdNum, { maNguoiXuLy: assignHandlerId, lyDo: assignReason.trim() || undefined });
+                    await app.refreshEquipment?.();
+                    setEquipSuccess(`Đã phân công xử lý phiếu ${assignMaintTarget.id}.`);
+                    setAssignMaintTarget(null);
+                  } catch (err) {
+                    setEquipError(err instanceof Error ? err.message : "Không thể phân công xử lý.");
+                  } finally {
+                    setEquipBusy(false);
+                  }
+                }}
+                style={{ background: "var(--color-forest)", color: "white", border: "none", borderRadius: 8, padding: "7px 16px", fontWeight: 700, cursor: "pointer" }}
+              >
+                {equipBusy ? "Đang lưu..." : "Xác nhận"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* UC6.12: Modal Cập nhật tiến độ bảo trì */}
+      {progressMaintTarget && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 9999, display: "grid", placeItems: "center", padding: 20 }}>
+          <div style={{ background: "white", borderRadius: 14, maxWidth: 440, width: "100%", padding: 20 }}>
+            <h3 style={{ fontFamily: "var(--font-display)", fontSize: "1.15rem", color: "var(--color-bark)", marginBottom: 10 }}>
+              Cập nhật tiến độ phiếu {progressMaintTarget.id}
+            </h3>
+            <label style={{ fontSize: "0.78rem", fontWeight: 600, display: "block", marginBottom: 4 }}>Kết quả / Tiến độ xử lý:</label>
+            <textarea
+              rows={3}
+              value={progressNote}
+              onChange={(e) => setProgressNote(e.target.value)}
+              placeholder="Đã thay khóa kéo và vệ sinh..."
+              style={{ width: "100%", border: "1px solid var(--color-bone)", borderRadius: 8, padding: "7px 10px", fontSize: "0.85rem", marginBottom: 10 }}
+            />
+            <label style={{ fontSize: "0.78rem", fontWeight: 600, display: "block", marginBottom: 4 }}>Chi phí phát sinh (đ):</label>
+            <input
+              type="number"
+              min={0}
+              value={progressCost}
+              onChange={(e) => setProgressCost(Number(e.target.value))}
+              style={{ width: "100%", border: "1px solid var(--color-bone)", borderRadius: 8, padding: "7px 10px", fontSize: "0.85rem", marginBottom: 14 }}
+            />
+            <div className="flex justify-end gap-2">
+              <button type="button" onClick={() => setProgressMaintTarget(null)} style={{ background: "white", border: "1px solid var(--color-bone)", borderRadius: 8, padding: "7px 14px", cursor: "pointer" }}>Hủy</button>
+              <button
+                type="button"
+                disabled={equipBusy}
+                onClick={async () => {
+                  setEquipBusy(true);
+                  setEquipError(null);
+                  try {
+                    const maintIdNum = Number(progressMaintTarget.id) || parseInt(progressMaintTarget.id.replace(/\D/g, ""), 10);
+                    await equipmentApi.capNhatTienDo(maintIdNum, { ketQua: progressNote.trim() || undefined, chiPhi: progressCost });
+                    await app.refreshEquipment?.();
+                    setEquipSuccess(`Đã cập nhật tiến độ phiếu ${progressMaintTarget.id}.`);
+                    setProgressMaintTarget(null);
+                  } catch (err) {
+                    setEquipError(err instanceof Error ? err.message : "Không thể cập nhật tiến độ.");
+                  } finally {
+                    setEquipBusy(false);
+                  }
+                }}
+                style={{ background: "var(--color-amber)", color: "white", border: "none", borderRadius: 8, padding: "7px 16px", fontWeight: 700, cursor: "pointer" }}
+              >
+                {equipBusy ? "Đang lưu..." : "Lưu tiến độ"}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

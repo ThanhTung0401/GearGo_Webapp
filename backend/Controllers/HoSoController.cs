@@ -19,6 +19,10 @@ public class HoSoController : ControllerBase
     public async Task<IActionResult> LayHoSoCuaToi()
         => Ok(await _hoSoService.LayHoSoCuaToiAsync(User.LayMaTaiKhoan()));
 
+    [HttpPost("toi/gui-otp-lien-he")]
+    public async Task<IActionResult> GuiOtpDoiLienHe([FromBody] GuiOtpDoiLienHeRequest request)
+        => Ok(await _hoSoService.GuiOtpDoiLienHeAsync(request, User.LayMaTaiKhoan()));
+
     [HttpPut("toi")]
     public async Task<IActionResult> CapNhatHoSoCuaToi([FromBody] CapNhatHoSoRequest request)
         => Ok(await _hoSoService.CapNhatHoSoCuaToiAsync(request, User.LayMaTaiKhoan()));

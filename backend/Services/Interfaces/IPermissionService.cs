@@ -29,4 +29,18 @@ public interface IPermissionService
 
     /// <summary>Version hiện tại của role; handler so với cache để quyết định reload.</summary>
     Task<long> LayVersionAsync(string roleName, CancellationToken ct = default);
+
+    /// <summary>UC1.10: Lấy quyền chi tiết của một nhân viên theo MaTaiKhoan hoặc MaNhanVien.</summary>
+    Task<Result<QuyenCuaNhanVienResponse>> LayQuyenCuaNhanVienAsync(long id, CancellationToken ct = default);
+
+    /// <summary>UC1.10: Cấp/thu quyền riêng cho một tài khoản nhân viên.</summary>
+    Task<Result<QuyenCuaNhanVienResponse>> CapNhatQuyenNhanVienAsync(
+        long id, CapNhatQuyenNhanVienRequest request, long actor, CancellationToken ct = default);
+
+    /// <summary>UC1.10: Xóa phân quyền riêng của nhân viên để quay về kế thừa theo vai trò.</summary>
+    Task<Result<QuyenCuaNhanVienResponse>> XoaPhanQuyenRiengNhanVienAsync(
+        long id, long actor, CancellationToken ct = default);
+
+    /// <summary>Kiểm tra quyền hiệu lực của tài khoản (ưu tiên quyền riêng nếu có, ngược lại theo role).</summary>
+    Task<bool> KiemTraCoQuyenTaiKhoanAsync(long maTaiKhoan, string roleName, string permissionMa, CancellationToken ct = default);
 }

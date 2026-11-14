@@ -93,3 +93,30 @@ public class KetQuaQuetNhacResponse
     public int SoBoQua { get; set; }
     public int SoLoi { get; set; }
 }
+
+/// <summary>
+/// Yêu cầu ghi nhận nhật ký liên hệ khách hàng quá hạn (UC4.4)
+/// </summary>
+public class TaoNhatKyLienHeQuaHanRequest
+{
+    public string KenhLienHe { get; set; } = "GoiDien";
+    public string KetQua { get; set; } = "DaLienHe";
+    public string NoiDung { get; set; } = string.Empty;
+    public DateTime? HenTraMoi { get; set; }
+}
+
+/// <summary>
+/// Phản hồi thông tin nhật ký liên hệ quá hạn (UC4.4)
+/// </summary>
+public class NhatKyLienHeQuaHanResponse
+{
+    public long MaNhatKyLienHe { get; set; }
+    public long MaDonThue { get; set; }
+    public long MaTaiKhoan { get; set; }
+    public string TenNguoiLienHe { get; set; } = string.Empty;
+    public string KenhLienHe { get; set; } = string.Empty;
+    public string KetQua { get; set; } = string.Empty;
+    public string NoiDung { get; set; } = string.Empty;
+    public DateTime? HenTraMoi { get; set; }
+    public DateTime ThoiDiemLienHe { get; set; }
+}

@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using GearGo.Data;
+using GearGo.Exceptions;
 using GearGo.Helpers;
 using GearGo.Models.Common;
 using GearGo.Models.DTOs.HoanTien;
@@ -166,6 +167,26 @@ public class ThanhToanService : IThanhToanService
 
             if (doiSoat == null)
                 return Result<YeuCauThuResponse>.Loi(KietDomainConstants.ErrorCodes.DoiSoatNotFound, "Không tìm thấy bảng đối soát.");
+
+            // UC5.5: Kiểm tra quyền tạo yêu cầu thu bổ sung (chỉ chủ đơn hoặc nhân viên/quản trị viên đang hoạt động)
+            try
+            {
+                var tk = await ActorGuard.LayTaiKhoanHoatDongAsync(_context, actorId);
+                if (tk.VaiTro == "NhanVien" || tk.VaiTro == "QuanTriVien")
+                {
+                    await ActorGuard.EnsureVanHanhAsync(_context, actorId);
+                }
+                else
+                {
+                    var maKhach = await ActorGuard.LayMaKhachHangAsync(_context, actorId);
+                    if (doiSoat.DonThue.MaKhachHang != maKhach)
+                        return Result<YeuCauThuResponse>.Loi("KHONG_CO_QUYEN", "Bạn không có quyền tạo yêu cầu thu bổ sung cho đơn thuê này.");
+                }
+            }
+            catch (NghiepVuException ex) when (ex is KhongCoQuyenException or TaiKhoanBiKhoaException)
+            {
+                return Result<YeuCauThuResponse>.Loi("KHONG_CO_QUYEN", ex.Message);
+            }
 
             if (doiSoat.SoTienCanThuThem <= 0)
                 return Result<YeuCauThuResponse>.Loi(KietDomainConstants.ErrorCodes.KhongCoNghiaVuThuThem, "Bảng tính không thiếu hoặc chưa được xác nhận.");

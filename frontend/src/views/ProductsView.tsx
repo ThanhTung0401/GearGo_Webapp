@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useApp } from "../App";
 import { fmt } from "../store";
 import type { Review } from "../types";
@@ -32,24 +32,33 @@ export default function ProductsView() {
 
   const datesSelected = app.hasValidRentalPeriod();
   const hasBothDates = Boolean(app.pickupDate && app.returnDate);
+  const categoriesRef = useRef(app.categories);
+  categoriesRef.current = app.categories;
+  const refreshCatalogRef = useRef(app.refreshCatalog);
+  refreshCatalogRef.current = app.refreshCatalog;
 
-  // Đồng bộ số lượng khả dụng thực tế từ Backend khi người dùng đổi ngày/giờ thuê
+  // Đồng bộ số lượng khả dụng thực tế và tìm kiếm/lọc server-side qua catalogApi khi người dùng đổi ngày/từ khóa/danh mục
+  // Không đưa app.categories vào dependency để tránh vòng lặp vô hạn khi refreshCatalog cập nhật categories
   useEffect(() => {
     if (!app.realApi) return;
-    if (!datesSelected) {
-      void app.refreshCatalog?.();
-      return;
-    }
-    const { gioNhan, gioTra } = toIsoRange(
-      app.pickupDate,
-      app.pickupHour || "09:00",
-      app.returnDate,
-      app.returnHour || "09:00"
-    );
-    if (gioNhan && gioTra) {
-      void app.refreshCatalog?.({ gioNhan, gioTra });
-    }
-  }, [app.realApi, datesSelected, app.pickupDate, app.pickupHour, app.returnDate, app.returnHour]);
+    const matchedCat = category !== "Tất cả" ? categoriesRef.current.find((c) => c.name === category) : undefined;
+    const maDanhMuc = matchedCat && /^\d+$/.test(matchedCat.id) ? Number(matchedCat.id) : undefined;
+    const tuKhoa = search.trim() || undefined;
+    const range = datesSelected
+      ? toIsoRange(app.pickupDate, app.pickupHour || "09:00", app.returnDate, app.returnHour || "09:00")
+      : { gioNhan: undefined, gioTra: undefined };
+
+    const timer = window.setTimeout(() => {
+      void refreshCatalogRef.current?.({
+        gioNhan: range.gioNhan,
+        gioTra: range.gioTra,
+        tuKhoa,
+        maDanhMuc,
+      });
+    }, 250);
+
+    return () => window.clearTimeout(timer);
+  }, [app.realApi, datesSelected, app.pickupDate, app.pickupHour, app.returnDate, app.returnHour, search, category]);
 
   // Tải đánh giá công khai & khả dụng chi tiết của sản phẩm đang xem
   useEffect(() => {

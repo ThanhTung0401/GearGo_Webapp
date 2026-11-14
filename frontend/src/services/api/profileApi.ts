@@ -22,12 +22,28 @@ export interface CapNhatHoSoRequest {
   diaChi?: string | null;
   ngaySinh?: string | null;
   anhDaiDien?: string | null;
+  maOtp?: string | null;
+}
+
+export interface GuiOtpDoiLienHeRequest {
+  emailMoi?: string | null;
+  soDienThoaiMoi?: string | null;
+}
+
+export interface GuiOtpDoiLienHeResponse {
+  thongDiep: string;
+  hetHanLuc: string;
 }
 
 export const profileApi = {
   async layHoSoToi(): Promise<HoSoBackend> {
     const res = await apiClient.get<unknown>("/api/v1/ho-so/toi");
     return unwrapResult<HoSoBackend>(res.data);
+  },
+
+  async guiOtpDoiLienHe(req: GuiOtpDoiLienHeRequest): Promise<GuiOtpDoiLienHeResponse> {
+    const res = await apiClient.post<unknown>("/api/v1/ho-so/toi/gui-otp-lien-he", req);
+    return unwrapResult<GuiOtpDoiLienHeResponse>(res.data);
   },
 
   async capNhatHoSoToi(req: CapNhatHoSoRequest): Promise<HoSoBackend> {

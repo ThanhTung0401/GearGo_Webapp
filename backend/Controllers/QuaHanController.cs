@@ -76,6 +76,34 @@ public class QuaHanController : ControllerBase
         return Ok(result.DuLieu);
     }
 
+    /// <summary>
+    /// Lấy danh sách nhật ký liên hệ khách hàng đối với đơn quá hạn (UC4.4)
+    /// </summary>
+    [HttpGet("{donId:long}/nhat-ky-lien-he")]
+    public async Task<IActionResult> LayNhatKyLienHe(long donId)
+    {
+        long maTaiKhoan = User.LayMaTaiKhoan();
+        var result = await _quaHanService.LayNhatKyLienHeAsync(donId, maTaiKhoan);
+        if (!result.ThanhCong)
+            return StatusCode(LayStatusCode(result.MaLoi), new { result.MaLoi, result.ThongDiep });
+
+        return Ok(result.DuLieu);
+    }
+
+    /// <summary>
+    /// Ghi nhận nhật ký liên hệ khách hàng quá hạn (UC4.4)
+    /// </summary>
+    [HttpPost("{donId:long}/nhat-ky-lien-he")]
+    public async Task<IActionResult> GhiNhatKyLienHe(long donId, [FromBody] TaoNhatKyLienHeQuaHanRequest request)
+    {
+        long maTaiKhoan = User.LayMaTaiKhoan();
+        var result = await _quaHanService.GhiNhatKyLienHeAsync(donId, request, maTaiKhoan);
+        if (!result.ThanhCong)
+            return StatusCode(LayStatusCode(result.MaLoi), new { result.MaLoi, result.ThongDiep });
+
+        return StatusCode(201, result.DuLieu);
+    }
+
     private static int LayStatusCode(string? maLoi) => maLoi switch
     {
         "DON_NOT_FOUND" or "CHI_TIET_BAN_GIAO_NOT_FOUND" => 404,

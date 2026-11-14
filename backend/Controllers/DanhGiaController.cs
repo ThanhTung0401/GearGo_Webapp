@@ -1,8 +1,12 @@
+using System;
+using System.IO;
 using System.Threading.Tasks;
 using GearGo.Helpers;
 using GearGo.Models.DTOs.DanhGia;
 using GearGo.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
 namespace GearGo.Controllers;
@@ -13,10 +17,12 @@ namespace GearGo.Controllers;
 public class DanhGiaController : ControllerBase
 {
     private readonly IDanhGiaService _danhGiaService;
+    private readonly IWebHostEnvironment _env;
 
-    public DanhGiaController(IDanhGiaService danhGiaService)
+    public DanhGiaController(IDanhGiaService danhGiaService, IWebHostEnvironment env)
     {
         _danhGiaService = danhGiaService;
+        _env = env;
     }
 
     /// <summary>
@@ -80,6 +86,34 @@ public class DanhGiaController : ControllerBase
         if (!result.ThanhCong)
             return StatusCode(LayStatusCode(result.MaLoi), new { result.MaLoi, result.ThongDiep });
         return Ok(result.DuLieu);
+    }
+
+    /// <summary>
+    /// Khách hàng tải lên hình ảnh đính kèm đánh giá (UC9.1.2 - Hỗ trợ .jpg, .jpeg, .png, .webp <= 5MB)
+    /// </summary>
+    [HttpPost("hinh-anh")]
+    [Authorize]
+    public async Task<IActionResult> UploadHinhAnh(IFormFile file)
+    {
+        if (!FileValidator.IsValidImage(file, out var errorMessage))
+            return BadRequest(new { MaLoi = "FILE_KHONG_HOP_LE", ThongDiep = errorMessage });
+
+        var webRoot = _env.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
+        var uploadsFolder = Path.Combine(webRoot, "uploads", "reviews");
+        if (!Directory.Exists(uploadsFolder))
+            Directory.CreateDirectory(uploadsFolder);
+
+        var ext = Path.GetExtension(file.FileName).ToLowerInvariant();
+        var uniqueFileName = $"{Guid.NewGuid():N}{ext}";
+        var filePath = Path.Combine(uploadsFolder, uniqueFileName);
+
+        using (var stream = new FileStream(filePath, FileMode.Create))
+        {
+            await file.CopyToAsync(stream);
+        }
+
+        var relativeUrl = $"/uploads/reviews/{uniqueFileName}";
+        return StatusCode(201, new { url = relativeUrl, duongDan = relativeUrl });
     }
 
     /// <summary>

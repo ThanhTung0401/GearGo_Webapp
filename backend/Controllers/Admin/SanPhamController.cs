@@ -67,6 +67,16 @@ public class SanPhamController : ControllerBase
     }
 
     /// <summary>
+    /// Lấy danh sách hình ảnh của sản phẩm (kèm MaHinhAnh để Admin xóa)
+    /// </summary>
+    [HttpGet("{id:long}/hinh-anh")]
+    public async Task<IActionResult> LayHinhAnh([FromRoute] long id)
+    {
+        var result = await _adminSanPhamService.LayHinhAnhAsync(id);
+        return Ok(result);
+    }
+
+    /// <summary>
     /// Upload hình ảnh cho sản phẩm (Hỗ trợ .jpg, .jpeg, .png, .webp <= 5MB)
     /// </summary>
     [HttpPost("{id:long}/hinh-anh")]

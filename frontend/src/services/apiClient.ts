@@ -30,12 +30,14 @@ export function setAuthToken(token: string | null): void {
 export class ApiError extends Error {
   status: number;
   code?: string;
+  detail?: unknown;
 
-  constructor(message: string, status: number, code?: string) {
+  constructor(message: string, status: number, code?: string, detail?: unknown) {
     super(message);
     this.name = "ApiError";
     this.status = status;
     this.code = code;
+    this.detail = detail;
   }
 }
 
@@ -74,9 +76,12 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<{ data:
       thongDiep?: string;
       ThongDiep?: string;
       message?: string;
+      chiTiet?: unknown;
+      ChiTiet?: unknown;
     };
     const msg = errObj.thongDiep ?? errObj.ThongDiep ?? errObj.message ?? `Lỗi HTTP ${response.status}`;
     const code = errObj.maLoi ?? errObj.MaLoi;
+    const detail = errObj.chiTiet ?? errObj.ChiTiet;
     if (response.status === 401) {
       setAuthToken(null);
     }
@@ -85,7 +90,7 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<{ data:
       window.dispatchEvent(new CustomEvent("geargo:permissions-changed", { detail: { code, message: msg } }));
       window.dispatchEvent(new CustomEvent("geargo-permissions-changed"));
     }
-    throw new ApiError(msg, response.status, code);
+    throw new ApiError(msg, response.status, code, detail);
   }
 
   return { data: payload as T, status: response.status };

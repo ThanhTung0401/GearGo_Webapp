@@ -2,9 +2,11 @@ import { useState, useEffect } from "react";
 import { useApp } from "../context/AppContext";
 import { isRealApiEnabled } from "../services/apiClient";
 import { staffApi } from "../services/api/staffApi";
-import { catalogApi } from "../services/api/catalogApi";
+import { catalogApi, type HinhAnhSanPhamBackend } from "../services/api/catalogApi";
 import { equipmentApi } from "../services/api/equipmentApi";
 import { inventoryApi } from "../services/api/inventoryApi";
+import { orderApi, type XemTruocHuyBackend } from "../services/api/orderApi";
+import { warehouseApi, type PhanTichAnhHuongBackend } from "../services/api/warehouseApi";
 import { supplierApi } from "../services/api/supplierApi";
 import { importReceiptApi } from "../services/api/importReceiptApi";
 import { promotionApi } from "../services/api/promotionApi";
@@ -26,7 +28,7 @@ import SupplierProfileModal from "../components/SupplierProfileModal";
 import GoodsReceivingModal from "../components/GoodsReceivingModal";
 import ImportAdjustmentModal from "../components/ImportAdjustmentModal";
 import PromotionDetailModal from "../components/PromotionDetailModal";
-import { PermissionsTab, usePermissions } from "../features/permissions";
+import { PermissionsTab, usePermissions, permissionApi, type QuyenCatalogResponse } from "../features/permissions";
 
 type AdminTab =
   | "dashboard"
@@ -151,9 +153,37 @@ function ProductForm({ app, product, onClose }: { app: ReturnType<typeof useApp>
   const [specText, setSpecText] = useState(Object.entries(form.specifications ?? {}).map(([key, value]) => `${key}: ${value}`).join("\n"));
   const [imageText, setImageText] = useState((form.images?.length ? form.images : [form.image]).filter(Boolean).join("\n"));
   const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [serverImages, setServerImages] = useState<HinhAnhSanPhamBackend[]>([]);
+  const [deletingImgId, setDeletingImgId] = useState<number | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const set = <K extends keyof Product>(key: K, value: Product[K]) => setForm((current) => ({ ...current, [key]: value }));
+
+  useEffect(() => {
+    if (!isRealApiEnabled() || !product?.id || Number.isNaN(Number(product.id))) return;
+    let active = true;
+    catalogApi.adminLayHinhAnh(Number(product.id)).then((imgs) => {
+      if (active && Array.isArray(imgs)) {
+        setServerImages(imgs);
+      }
+    }).catch(() => {});
+    return () => { active = false; };
+  }, [product?.id]);
+
+  const handleDeleteServerImage = async (maHinhAnh: number, duongDan: string) => {
+    setError("");
+    setDeletingImgId(maHinhAnh);
+    try {
+      await catalogApi.adminXoaHinhAnh(maHinhAnh);
+      setServerImages((prev) => prev.filter((img) => img.maHinhAnh !== maHinhAnh));
+      setImageText((prev) => prev.split("\n").filter((u) => u.trim() !== duongDan).join("\n"));
+      await app.refreshCatalog?.();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Không thể xóa hình ảnh sản phẩm.");
+    } finally {
+      setDeletingImgId(null);
+    }
+  };
 
   // Đấu nối API Quản trị sản phẩm & Upload ảnh Multipart (UC49, UC50, UC51 / UC6.5, UC6.6)
   const submit = async (event: React.FormEvent) => {
@@ -274,6 +304,34 @@ function ProductForm({ app, product, onClose }: { app: ReturnType<typeof useApp>
         />
         {uploadFile && <span style={{ fontSize: "0.75rem", color: "var(--color-forest)", fontWeight: 600 }}>✓ Đã chọn file: {uploadFile.name} ({(uploadFile.size / 1024).toFixed(1)} KB)</span>}
       </label>
+
+      {serverImages.length > 0 && (
+        <div>
+          <div style={{ fontSize: "0.8rem", fontWeight: 600, color: "var(--color-bark)", marginBottom: 6 }}>
+            Hình ảnh hiện có trên máy chủ (UC6.6):
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {serverImages.map((img) => (
+              <div key={img.maHinhAnh} style={{ position: "relative", border: "1px solid var(--color-bone)", borderRadius: 8, padding: 4, background: "white" }}>
+                <img src={img.duongDan} alt="Ảnh sản phẩm" style={{ width: 92, height: 68, objectFit: "cover", borderRadius: 6 }} />
+                {img.laAnhChinh && (
+                  <span style={{ position: "absolute", top: 6, left: 6, background: "var(--color-forest)", color: "white", fontSize: "0.65rem", padding: "1px 5px", borderRadius: 4, fontWeight: 700 }}>
+                    Chính
+                  </span>
+                )}
+                <button
+                  type="button"
+                  disabled={deletingImgId === img.maHinhAnh}
+                  onClick={() => handleDeleteServerImage(img.maHinhAnh, img.duongDan)}
+                  style={{ display: "block", width: "100%", marginTop: 4, border: "1px solid #FECACA", background: "#FEF2F2", color: "#B91C1C", borderRadius: 6, fontSize: "0.7rem", fontWeight: 700, padding: "2px 6px", cursor: "pointer" }}
+                >
+                  {deletingImgId === img.maHinhAnh ? "Đang xóa..." : "Xóa ảnh"}
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <label style={labelStyle}>URL hình ảnh <span style={{ color: "#6B7280", fontWeight: 400 }}>Mỗi dòng một URL; dòng đầu là ảnh chính.</span><textarea rows={3} value={imageText} onChange={(e) => setImageText(e.target.value)} placeholder="https://..." style={fieldStyle} /></label>
       {imageText.split("\n")[0]?.trim() && <img src={imageText.split("\n")[0].trim()} alt="Xem trước sản phẩm" style={{ width: 180, height: 120, objectFit: "cover", borderRadius: 10, border: "1px solid var(--color-bone)" }} />}
@@ -574,7 +632,7 @@ function ImportReceiptForm({ app, receipt, onClose }: { app: ReturnType<typeof u
           note: "",
           status: "Nháp",
           createdAt: new Date().toLocaleString("vi-VN"),
-          createdBy: app.currentUser?.fullName ?? "Nhân viên kho",
+          createdBy: app.currentUser?.name ?? "Nhân viên kho",
           lines: [{ id: "", productId: app.products[0]?.id ?? "", quantity: 1, unitPrice: 0, equipmentCodes: [""], receivingCondition: "Mới", note: "" }],
         }
   );
@@ -625,8 +683,8 @@ function ImportReceiptForm({ app, receipt, onClose }: { app: ReturnType<typeof u
             ghiChu: form.note?.trim() || undefined,
           });
           // Đồng bộ các dòng chi tiết: xóa dòng bỏ, cập nhật dòng cũ, thêm dòng mới
-          const oldIds = new Set(receipt.lines.map((l) => l.id).filter((id) => /^\d+$/.test(id)));
-          const keptIds = new Set(form.lines.map((l) => l.id).filter((id) => /^\d+$/.test(id)));
+          const oldIds = new Set(receipt.lines.map((l) => l.id ?? "").filter((id) => /^\d+$/.test(id)));
+          const keptIds = new Set(form.lines.map((l) => l.id ?? "").filter((id) => /^\d+$/.test(id)));
           for (const oldId of oldIds) {
             if (!keptIds.has(oldId)) {
               await importReceiptApi.xoaDong(receiptId, Number(oldId));
@@ -640,8 +698,9 @@ function ImportReceiptForm({ app, receipt, onClose }: { app: ReturnType<typeof u
               tinhTrangKhiNhap: line.receivingCondition?.trim() || "Mới",
               ghiChu: line.note?.trim() || undefined,
             };
-            if (/^\d+$/.test(line.id)) {
-              await importReceiptApi.suaDong(receiptId, Number(line.id), dongReq);
+            const lineIdStr = line.id ?? "";
+            if (/^\d+$/.test(lineIdStr)) {
+              await importReceiptApi.suaDong(receiptId, Number(lineIdStr), dongReq);
             } else {
               await importReceiptApi.themDong(receiptId, dongReq);
             }
@@ -736,12 +795,17 @@ function EquipmentForm({ app, equipment, onClose }: { app: ReturnType<typeof use
 
       setLoading(true);
       try {
-        // Mọi thay đổi tình trạng/trạng thái ở Real API đều phải đi qua Bảo trì hoặc Điều chỉnh kho
+        // Mọi thay đổi tình trạng/trạng thái ở Real API đều phải đi qua Bảo trì, Đề nghị ngừng sử dụng (UC6.14) hoặc Điều chỉnh kho
         if (form.equipmentStatus === "Đang bảo trì" && equipment.equipmentStatus !== "Đang bảo trì") {
           await equipmentApi.lapPhieuBaoTri({
             maThietBi: equipId,
             loaiXuLy: "SuaChua",
             moTaLoi: form.note?.trim() || form.condition?.trim() || "Chuyển bảo trì từ quản lý thiết bị",
+          });
+        } else if (form.equipmentStatus === "Ngừng sử dụng" && equipment.equipmentStatus !== "Ngừng sử dụng") {
+          await equipmentApi.deNghiNgungSuDung(equipId, {
+            lyDo: form.note?.trim() || form.condition?.trim() || "Ngừng sử dụng thiết bị từ quản lý thiết bị",
+            tinhTrangMoi: form.condition?.trim() || undefined,
           });
         } else {
           const created = await inventoryApi.lapPhieu({
@@ -861,6 +925,12 @@ function DashboardTab({ app }: { app: ReturnType<typeof useApp> }) {
   const [resolveError, setResolveError] = useState("");
   const [exportingCsv, setExportingCsv] = useState(false);
   const [bannerMessage, setBannerMessage] = useState<{ type: "error" | "success"; text: string } | null>(null);
+  // UC3.4: Cửa hàng hủy đơn (xem trước & xác nhận)
+  const [storeCancelOrder, setStoreCancelOrder] = useState<Order | null>(null);
+  const [storeCancelPreview, setStoreCancelPreview] = useState<XemTruocHuyBackend | null>(null);
+  const [storeCancelReason, setStoreCancelReason] = useState("");
+  const [storeCancelLoading, setStoreCancelLoading] = useState(false);
+  const [storeCancelError, setStoreCancelError] = useState("");
 
   const [opsReport, setOpsReport] = useState<BaoCaoVanHanhBackend | null>(null);
   const [revenueSummary, setRevenueSummary] = useState<{ tongDoanhThuHoanTat?: number; soDonHoanTat?: number } | null>(null);
@@ -1146,6 +1216,43 @@ function DashboardTab({ app }: { app: ReturnType<typeof useApp> }) {
                     </div>
 
                     <div className="flex items-center gap-2">
+                      {["Chờ thanh toán", "Đã xác nhận", "Đang chuẩn bị", "Sẵn sàng bàn giao"].includes(o.status) && (
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            setStoreCancelOrder(o);
+                            setStoreCancelPreview(null);
+                            setStoreCancelReason("");
+                            setStoreCancelError("");
+                            if (isRealApi) {
+                              const orderNumId = Number(o.id);
+                              if (!Number.isNaN(orderNumId)) {
+                                setStoreCancelLoading(true);
+                                try {
+                                  const preview = await orderApi.xemTruocCuaHangHuy(orderNumId);
+                                  setStoreCancelPreview(preview);
+                                } catch (err) {
+                                  setStoreCancelError(err instanceof Error ? err.message : "Không thể tải xem trước chi phí hủy đơn.");
+                                } finally {
+                                  setStoreCancelLoading(false);
+                                }
+                              }
+                            }
+                          }}
+                          style={{
+                            background: "#FEF2F2",
+                            color: "#B91C1C",
+                            border: "1px solid #FECACA",
+                            borderRadius: 6,
+                            padding: "6px 12px",
+                            fontSize: "0.78rem",
+                            fontWeight: 700,
+                            cursor: "pointer",
+                          }}
+                        >
+                          Cửa hàng hủy (UC3.4)
+                        </button>
+                      )}
                       {(o.status === "Chờ đối soát" || o.status === "Hoàn tất") && (
                         <button
                           type="button"
@@ -1438,6 +1545,94 @@ function DashboardTab({ app }: { app: ReturnType<typeof useApp> }) {
               userRole="admin"
               onClose={() => setAdminSelectedOrder(null)}
             />
+          </div>
+        </div>
+      )}
+
+      {/* Modal Cửa hàng hủy đơn (UC3.4) */}
+      {storeCancelOrder && (
+        <div role="dialog" aria-modal="true" className="modal-overlay" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 9999, display: "grid", placeItems: "center", padding: 16 }}>
+          <div className="modal-container" style={{ background: "white", borderRadius: 14, maxWidth: 520, width: "100%", padding: 22 }}>
+            <div className="modal-header flex justify-between items-center mb-3">
+              <h3 className="modal-title font-bold text-base text-bark">
+                Cửa hàng hủy đơn {storeCancelOrder.id} (UC3.4)
+              </h3>
+              <button type="button" onClick={() => setStoreCancelOrder(null)} className="btn btn-ghost btn-sm text-lg">×</button>
+            </div>
+            <div className="modal-body grid gap-3">
+              {storeCancelLoading && !storeCancelPreview && (
+                <div style={{ fontSize: "0.82rem", color: "#6B7280" }}>Đang tính toán hoàn tiền và kiểm tra điều kiện hủy...</div>
+              )}
+              {storeCancelPreview && (
+                <div style={{ background: "var(--color-parchment)", borderRadius: 10, padding: 12, fontSize: "0.8rem", display: "grid", gap: 4 }}>
+                  <div>Trạng thái hiện tại: <strong>{storeCancelPreview.trangThaiHienTai}</strong></div>
+                  <div>Tiền thuê đã thu: <strong>{fmt(storeCancelPreview.tienThueDaThu)}</strong> · Tiền cọc đã thu: <strong>{fmt(storeCancelPreview.tienCocDaThu)}</strong></div>
+                  <div>Hoàn tiền thuê: <strong>{fmt(storeCancelPreview.tienThueHoan)}</strong> · Hoàn tiền cọc: <strong>{fmt(storeCancelPreview.tienCocHoan)}</strong></div>
+                  <div>Tổng hoàn dự kiến cho khách: <strong style={{ color: "var(--color-forest)" }}>{fmt(storeCancelPreview.tongHoan)}</strong></div>
+                  {!storeCancelPreview.coTheHuy && (
+                    <div style={{ color: "#B91C1C", fontWeight: 600 }}>Không thể hủy: {storeCancelPreview.lyDoKhongTheHuy}</div>
+                  )}
+                  {storeCancelPreview.canhBao?.length > 0 && (
+                    <div style={{ color: "#B45309" }}>{storeCancelPreview.canhBao.join(" · ")}</div>
+                  )}
+                </div>
+              )}
+              <label style={labelStyle}>
+                Lý do cửa hàng hủy đơn (bắt buộc)
+                <textarea
+                  rows={3}
+                  value={storeCancelReason}
+                  onChange={(e) => setStoreCancelReason(e.target.value)}
+                  placeholder="Ví dụ: Thiết bị gặp sự cố kỹ thuật đột xuất trước giờ bàn giao..."
+                  style={fieldStyle}
+                />
+              </label>
+              {storeCancelError && (
+                <div role="alert" style={{ background: "#FEE2E2", color: "#B91C1C", padding: "8px 10px", borderRadius: 8, fontSize: "0.8rem" }}>
+                  {storeCancelError}
+                </div>
+              )}
+              <div className="flex gap-2 mt-2">
+                <button type="button" disabled={storeCancelLoading} onClick={() => setStoreCancelOrder(null)} className="btn btn-secondary btn-md" style={{ flex: 1 }}>
+                  Đóng
+                </button>
+                <button
+                  type="button"
+                  disabled={storeCancelLoading || (storeCancelPreview !== null && !storeCancelPreview.coTheHuy)}
+                  onClick={async () => {
+                    if (!storeCancelReason.trim()) {
+                      return setStoreCancelError("Vui lòng nhập lý do hủy đơn.");
+                    }
+                    setStoreCancelError("");
+                    if (isRealApi) {
+                      const orderNumId = Number(storeCancelOrder.id);
+                      if (Number.isNaN(orderNumId)) return setStoreCancelError("ID đơn không hợp lệ.");
+                      setStoreCancelLoading(true);
+                      try {
+                        await orderApi.cuaHangHuy(orderNumId, {
+                          lyDo: storeCancelReason.trim(),
+                          xacNhanChiPhi: true,
+                          dauVanTayXemTruoc: storeCancelPreview?.dauVanTay,
+                        });
+                        await app.refreshOrders?.();
+                        setBannerMessage({ type: "success", text: `Đã hủy đơn ${storeCancelOrder.id} từ phía cửa hàng (UC3.4).` });
+                        setStoreCancelOrder(null);
+                      } catch (err) {
+                        setStoreCancelError(err instanceof Error ? err.message : "Không thể hủy đơn hàng.");
+                      } finally {
+                        setStoreCancelLoading(false);
+                      }
+                      return;
+                    }
+                    setStoreCancelOrder(null);
+                  }}
+                  className="btn btn-primary btn-md"
+                  style={{ flex: 1, background: "#DC2626", borderColor: "#DC2626" }}
+                >
+                  {storeCancelLoading ? "Đang xử lý..." : "Xác nhận cửa hàng hủy"}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -3102,17 +3297,30 @@ function StockAdjustTab({ app }: { app: ReturnType<typeof useApp> }) {
   const [rejectError, setRejectError] = useState("");
   const [realAdjustments, setRealAdjustments] = useState<StockAdjustmentReceipt[]>([]);
   const [rawStatuses, setRawStatuses] = useState<Record<string, string>>({});
+  const [rawEquipIds, setRawEquipIds] = useState<Record<string, number>>({});
+  const [impactModal, setImpactModal] = useState<{
+    sa: StockAdjustmentReceipt;
+    analysis: PhanTichAnhHuongBackend | null;
+    loading: boolean;
+    error: string;
+  } | null>(null);
 
   const loadRealAdjustments = async () => {
     if (!isRealApi) return;
     try {
       const res = await inventoryApi.timPhieu({ trang: 1, soMoiTrang: 50 });
       const rawMap: Record<string, string> = {};
+      const equipIdMap: Record<string, number> = {};
       const mapped = (res.items ?? []).map((dc) => {
         rawMap[String(dc.maPhieuDieuChinh)] = dc.trangThai;
+        const firstEquipId = dc.chiTiet?.[0]?.maThietBi;
+        if (typeof firstEquipId === "number") {
+          equipIdMap[String(dc.maPhieuDieuChinh)] = firstEquipId;
+        }
         return mapDieuChinhKhoToReceipt(dc);
       });
       setRawStatuses(rawMap);
+      setRawEquipIds(equipIdMap);
       setRealAdjustments(mapped);
     } catch (err) {
       setTabMessage({ type: "error", text: err instanceof Error ? err.message : "Không thể tải danh sách điều chỉnh kho." });
@@ -3281,6 +3489,42 @@ function StockAdjustTab({ app }: { app: ReturnType<typeof useApp> }) {
                 <td style={{ padding: "11px 14px" }}>
                   {sa.status === "Chờ duyệt" ? (
                     <div className="flex gap-1">
+                      {isRealApi && sa.lines[0] && (
+                        <button
+                          type="button"
+                          disabled={actionLoadingId === sa.id}
+                          onClick={async () => {
+                            const line = sa.lines[0];
+                            // Ưu tiên ID số gốc từ API (tránh lỗi NaN khi equipmentId là mã hiển thị như TB-001)
+                            const matchedEquip = app.equipment.find((e) => e.id === line.equipmentId || e.displayCode === line.equipmentId);
+                            const equipIdNum = rawEquipIds[sa.id] ?? (matchedEquip ? Number(matchedEquip.id) : Number(line.equipmentId));
+                            setImpactModal({ sa, analysis: null, loading: true, error: "" });
+                            if (!equipIdNum || Number.isNaN(equipIdNum)) {
+                              setImpactModal({ sa, analysis: null, loading: false, error: "ID thiết bị không hợp lệ để kiểm tra ảnh hưởng." });
+                              return;
+                            }
+                            try {
+                              const loaiThayDoi = line.newStatus === "Ngừng sử dụng" ? "NgungSuDung" : "BaoTri";
+                              const analysis = await warehouseApi.xemAnhHuongDieuChinh({
+                                maThietBi: equipIdNum,
+                                loaiThayDoi,
+                                lyDo: sa.reason,
+                              });
+                              setImpactModal({ sa, analysis, loading: false, error: "" });
+                            } catch (err) {
+                              setImpactModal({
+                                sa,
+                                analysis: null,
+                                loading: false,
+                                error: err instanceof Error ? err.message : "Không thể kiểm tra ảnh hưởng điều chỉnh kho.",
+                              });
+                            }
+                          }}
+                          style={{ background: "#EFF6FF", border: "1px solid #BFDBFE", color: "#1D4ED8", borderRadius: 6, padding: "5px 8px", fontSize: "0.72rem", cursor: "pointer", fontWeight: 600 }}
+                        >
+                          🔍 Ảnh hưởng
+                        </button>
+                      )}
                       <button
                         disabled={actionLoadingId === sa.id}
                         onClick={async () => {
@@ -3386,6 +3630,67 @@ function StockAdjustTab({ app }: { app: ReturnType<typeof useApp> }) {
         </FormModal>
       )}
 
+      {impactModal && (
+        <FormModal
+          title={`Phân tích ảnh hưởng điều chỉnh #${impactModal.sa.id} (UC6.10.1)`}
+          description="Kiểm tra xung đột lịch đặt trước và đơn thuê tương lai trước khi phê duyệt điều chỉnh kho."
+          onClose={() => setImpactModal(null)}
+        >
+          <div className="grid gap-3 mt-3">
+            {impactModal.loading && (
+              <div style={{ fontSize: "0.85rem", color: "#6B7280" }}>Đang phân tích ảnh hưởng lên đơn thuê tương lai...</div>
+            )}
+            {impactModal.error && (
+              <div role="alert" style={{ background: "#FEE2E2", color: "#B91C1C", padding: "8px 12px", borderRadius: 8, fontSize: "0.82rem" }}>
+                {impactModal.error}
+              </div>
+            )}
+            {impactModal.analysis && (
+              <div className="grid gap-2.5" style={{ fontSize: "0.82rem" }}>
+                <div style={{
+                  padding: "10px 12px",
+                  borderRadius: 8,
+                  background: impactModal.analysis.coTheApDungHienTai ? "#DCFCE7" : "#FEF2F2",
+                  color: impactModal.analysis.coTheApDungHienTai ? "#15803D" : "#B91C1C",
+                  fontWeight: 700,
+                }}>
+                  {impactModal.analysis.coTheApDungHienTai
+                    ? "✓ Có thể áp dụng điều chỉnh hiện tại."
+                    : "⚠ Có xung đột / vướng mắc cần xử lý trước khi áp dụng."}
+                </div>
+                {impactModal.analysis.camKetCuThe.length > 0 && (
+                  <div style={{ background: "#F9FAFB", padding: 10, borderRadius: 8, border: "1px solid var(--color-bone)" }}>
+                    <strong>Cam kết đơn cụ thể:</strong>
+                    <ul style={{ margin: "4px 0 0 16px" }}>
+                      {impactModal.analysis.camKetCuThe.map((item, idx) => <li key={idx}>{item}</li>)}
+                    </ul>
+                  </div>
+                )}
+                {impactModal.analysis.thieuSoLuongTheoLich.length > 0 && (
+                  <div style={{ background: "#FFFBEB", padding: 10, borderRadius: 8, border: "1px solid #FDE68A" }}>
+                    <strong>Thiếu số lượng theo lịch:</strong>
+                    <ul style={{ margin: "4px 0 0 16px" }}>
+                      {impactModal.analysis.thieuSoLuongTheoLich.map((item, idx) => <li key={idx}>{item}</li>)}
+                    </ul>
+                  </div>
+                )}
+                {impactModal.analysis.vuongMac.length > 0 && (
+                  <div style={{ background: "#FEF2F2", padding: 10, borderRadius: 8, border: "1px solid #FECACA" }}>
+                    <strong>Vướng mắc:</strong>
+                    <ul style={{ margin: "4px 0 0 16px" }}>
+                      {impactModal.analysis.vuongMac.map((item, idx) => <li key={idx}>{item}</li>)}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )}
+            <div className="flex justify-end gap-2 mt-2">
+              <button type="button" onClick={() => setImpactModal(null)} className="btn btn-secondary btn-md">Đóng</button>
+            </div>
+          </div>
+        </FormModal>
+      )}
+
       {rejectingId && (
         <FormModal title={`Từ chối phiếu điều chỉnh #${rejectingId}`} description="Vui lòng nhập lý do từ chối đề nghị điều chỉnh kho (UC6.11)." onClose={() => setRejectingId(null)}>
           <form
@@ -3463,6 +3768,10 @@ function StaffAccountsTab({ app }: { app: ReturnType<typeof useApp> }) {
   const [apiError, setApiError] = useState("");
   const [modalError, setModalError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [permCatalog, setPermCatalog] = useState<QuyenCatalogResponse[]>([]);
+  const [permRoleName, setPermRoleName] = useState<"NhanVien" | "QuanTriVien">("NhanVien");
+  const [permOriginalRole, setPermOriginalRole] = useState<"NhanVien" | "QuanTriVien">("NhanVien");
+  const [permLoading, setPermLoading] = useState(false);
 
   const loadStaffList = async () => {
     if (!(app.realApi || isRealApiEnabled())) return;
@@ -3599,6 +3908,29 @@ function StaffAccountsTab({ app }: { app: ReturnType<typeof useApp> }) {
     setEditingStaff(null);
   };
 
+  const openPermissionsModal = async (s: StaffAccount) => {
+    setModalError("");
+    const role: "NhanVien" | "QuanTriVien" = s.role === "Quản trị viên" ? "QuanTriVien" : "NhanVien";
+    setPermRoleName(role);
+    setPermOriginalRole(role);
+    setPermStaff({ ...s });
+    if (app.realApi || isRealApiEnabled()) {
+      setPermLoading(true);
+      try {
+        const [catalog, rolePerms] = await Promise.all([
+          permissionApi.catalog(),
+          permissionApi.getRolePermissions(role),
+        ]);
+        setPermCatalog(catalog);
+        setPermStaff((prev) => (prev ? { ...prev, permissions: rolePerms.quyenCoDuoc } : prev));
+      } catch (error) {
+        setModalError(error instanceof Error ? error.message : "Không thể tải danh sách quyền hạn từ máy chủ.");
+      } finally {
+        setPermLoading(false);
+      }
+    }
+  };
+
   const handleSavePermissions = async (perms: string[]) => {
     if (!permStaff) return;
     setModalError("");
@@ -3606,11 +3938,16 @@ function StaffAccountsTab({ app }: { app: ReturnType<typeof useApp> }) {
       setSubmitting(true);
       try {
         const nvId = staffAccountToNhanVienId[permStaff.id] || parseInt(permStaff.id.replace(/\D/g, ""), 10);
-        const isQuanTri = perms.includes("Xem báo cáo doanh thu");
-        await staffApi.doiVaiTro(nvId, {
-          vaiTroMoi: isQuanTri ? "QuanTriVien" : "NhanVien",
-          lyDo: "Điều chỉnh phân quyền vai trò nhân viên",
-        });
+        if (permRoleName !== permOriginalRole) {
+          await staffApi.doiVaiTro(nvId, {
+            vaiTroMoi: permRoleName,
+            lyDo: "Điều chỉnh vai trò & phân quyền nhân viên",
+          });
+        }
+        if (permRoleName !== "QuanTriVien") {
+          await permissionApi.setRolePermissions(permRoleName, perms);
+          window.dispatchEvent(new CustomEvent("geargo-permissions-changed"));
+        }
         await loadStaffList();
         setPermStaff(null);
       } catch (error) {
@@ -3807,7 +4144,7 @@ function StaffAccountsTab({ app }: { app: ReturnType<typeof useApp> }) {
                       Sửa
                     </button>
                     <button
-                      onClick={() => { setModalError(""); setPermStaff({ ...s }); }}
+                      onClick={() => openPermissionsModal(s)}
                       style={{ background: "var(--color-parchment)", border: "1px solid var(--color-bone)", borderRadius: 6, padding: "4px 8px", fontSize: "0.75rem", cursor: "pointer", fontWeight: 600 }}
                     >
                       Phân quyền
@@ -3995,50 +4332,110 @@ function StaffAccountsTab({ app }: { app: ReturnType<typeof useApp> }) {
       {/* Modal Phân quyền chi tiết (UC1.10) */}
       {permStaff && (
         <div role="dialog" aria-modal="true" className="modal-overlay">
-          <div className="modal-container" style={{ maxWidth: 480 }}>
+          <div className="modal-container" style={{ maxWidth: 560, maxHeight: "88vh", overflowY: "auto" }}>
             <div className="modal-header">
               <h3 className="modal-title">Cấu hình phân quyền: {permStaff.name} (UC1.10)</h3>
               <button onClick={() => setPermStaff(null)} className="btn btn-ghost btn-sm text-lg">×</button>
             </div>
             <div className="modal-body">
-              <p style={{ fontSize: "0.82rem", color: "#6B7280", marginBottom: 14 }}>
-                Chọn các quyền nghiệp vụ cho phép tài khoản <strong>@{permStaff.username}</strong> thực hiện:
+              <p style={{ fontSize: "0.82rem", color: "#6B7280", marginBottom: 12 }}>
+                Chọn vai trò và các quyền nghiệp vụ cho tài khoản <strong>@{permStaff.username}</strong>:
               </p>
-              <div className="flex flex-col gap-2.5 mb-5">
-                {[
-                  { key: "Quản lý kho thiết bị", desc: "Xem danh sách thiết bị, quét barcode, kiểm kê và lập phiếu bảo trì" },
-                  { key: "Bàn giao & Nhận trả", desc: "Thực hiện biên bản BBBG, checklist phụ kiện và nghiệm thu trả đồ" },
-                  { key: "Lập phụ phí & Đối soát", desc: "Đề xuất phụ phí bồi thường và lập phiếu thu/chi hoàn cọc" },
-                  { key: "Xem báo cáo doanh thu", desc: "Xem 4 trụ cột báo cáo tài chính và xuất dữ liệu thống kê" },
-                  { key: "Quản lý khuyến mãi", desc: "Tạo và tạm dừng các mã voucher giảm giá" },
-                ].map((p) => {
-                  const currentPerms = permStaff.permissions || [];
-                  const isChecked = currentPerms.includes(p.key);
-                  return (
-                    <label key={p.key} style={{ display: "flex", gap: 10, alignItems: "flex-start", padding: "8px 10px", borderRadius: 8, background: isChecked ? "#EFF6FF" : "#F9FAFB", border: `1px solid ${isChecked ? "#BFDBFE" : "#E5E7EB"}`, cursor: "pointer" }}>
-                      <input
-                        type="checkbox"
-                        checked={isChecked}
-                        onChange={(e) => {
-                          const next = e.target.checked
-                            ? [...currentPerms, p.key]
-                            : currentPerms.filter((k) => k !== p.key);
-                          setPermStaff({ ...permStaff, permissions: next });
-                        }}
-                        style={{ marginTop: 3 }}
-                      />
-                      <div>
-                        <strong style={{ fontSize: "0.85rem", color: "var(--color-bark)" }}>{p.key}</strong>
-                        <div style={{ fontSize: "0.72rem", color: "#6B7280" }}>{p.desc}</div>
+              {(app.realApi || isRealApiEnabled()) && (
+                <div className="mb-3">
+                  <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 700, marginBottom: 4 }}>Vai trò tài khoản</label>
+                  <select
+                    value={permRoleName}
+                    onChange={async (e) => {
+                      const nextRole = e.target.value as "NhanVien" | "QuanTriVien";
+                      setPermRoleName(nextRole);
+                      try {
+                        const rolePerms = await permissionApi.getRolePermissions(nextRole);
+                        setPermStaff((prev) => (prev ? { ...prev, permissions: rolePerms.quyenCoDuoc } : prev));
+                      } catch {
+                        // Ignore load error on role switch
+                      }
+                    }}
+                    style={fieldStyle}
+                  >
+                    <option value="NhanVien">Nhân viên vận hành (NhanVien)</option>
+                    <option value="QuanTriVien">Quản trị viên (QuanTriVien)</option>
+                  </select>
+                </div>
+              )}
+              {permLoading ? (
+                <div style={{ fontSize: "0.82rem", color: "#6B7280", padding: "12px 0" }}>Đang tải danh sách quyền từ máy chủ...</div>
+              ) : (app.realApi || isRealApiEnabled()) && permRoleName === "QuanTriVien" ? (
+                <div style={{ background: "#EFF6FF", border: "1px solid #BFDBFE", borderRadius: 8, padding: 12, fontSize: "0.8rem", color: "#1E40AF", marginBottom: 14 }}>
+                  <strong>Quản trị viên (QuanTriVien)</strong> mặc định có toàn bộ quyền hạn trong hệ thống.
+                </div>
+              ) : (app.realApi || isRealApiEnabled()) && permCatalog.length > 0 ? (
+                <div className="flex flex-col gap-3 mb-5">
+                  {permCatalog.map((group) => (
+                    <div key={group.nhom} style={{ border: "1px solid var(--color-bone)", borderRadius: 8, padding: 10, background: "#F9FAFB" }}>
+                      <div style={{ fontSize: "0.8rem", fontWeight: 700, color: "var(--color-bark)", marginBottom: 6 }}>{group.nhom}</div>
+                      <div className="flex flex-col gap-1.5">
+                        {group.quyen.map((q) => {
+                          const currentPerms = permStaff.permissions || [];
+                          const isChecked = currentPerms.includes(q.ma);
+                          return (
+                            <label key={q.ma} style={{ display: "flex", gap: 8, alignItems: "center", fontSize: "0.8rem", cursor: "pointer" }}>
+                              <input
+                                type="checkbox"
+                                checked={isChecked}
+                                onChange={(e) => {
+                                  const next = e.target.checked
+                                    ? [...currentPerms, q.ma]
+                                    : currentPerms.filter((k) => k !== q.ma);
+                                  setPermStaff({ ...permStaff, permissions: next });
+                                }}
+                              />
+                              <span>{q.tenHienThi}</span>
+                              <span style={{ marginLeft: "auto", fontSize: "0.7rem", color: "#9CA3AF", fontFamily: "var(--font-mono)" }}>{q.ma}</span>
+                            </label>
+                          );
+                        })}
                       </div>
-                    </label>
-                  );
-                })}
-              </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex flex-col gap-2.5 mb-5">
+                  {[
+                    { key: "Quản lý kho thiết bị", desc: "Xem danh sách thiết bị, quét barcode, kiểm kê và lập phiếu bảo trì" },
+                    { key: "Bàn giao & Nhận trả", desc: "Thực hiện biên bản BBBG, checklist phụ kiện và nghiệm thu trả đồ" },
+                    { key: "Lập phụ phí & Đối soát", desc: "Đề xuất phụ phí bồi thường và lập phiếu thu/chi hoàn cọc" },
+                    { key: "Xem báo cáo doanh thu", desc: "Xem 4 trụ cột báo cáo tài chính và xuất dữ liệu thống kê" },
+                    { key: "Quản lý khuyến mãi", desc: "Tạo và tạm dừng các mã voucher giảm giá" },
+                  ].map((p) => {
+                    const currentPerms = permStaff.permissions || [];
+                    const isChecked = currentPerms.includes(p.key);
+                    return (
+                      <label key={p.key} style={{ display: "flex", gap: 10, alignItems: "flex-start", padding: "8px 10px", borderRadius: 8, background: isChecked ? "#EFF6FF" : "#F9FAFB", border: `1px solid ${isChecked ? "#BFDBFE" : "#E5E7EB"}`, cursor: "pointer" }}>
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={(e) => {
+                            const next = e.target.checked
+                              ? [...currentPerms, p.key]
+                              : currentPerms.filter((k) => k !== p.key);
+                            setPermStaff({ ...permStaff, permissions: next });
+                          }}
+                          style={{ marginTop: 3 }}
+                        />
+                        <div>
+                          <strong style={{ fontSize: "0.85rem", color: "var(--color-bark)" }}>{p.key}</strong>
+                          <div style={{ fontSize: "0.72rem", color: "#6B7280" }}>{p.desc}</div>
+                        </div>
+                      </label>
+                    );
+                  })}
+                </div>
+              )}
               {modalError && <div role="alert" style={{ background: "#FEE2E2", color: "#B91C1C", padding: "8px 10px", borderRadius: 8, fontSize: "0.82rem", marginBottom: 12 }}>{modalError}</div>}
               <div className="flex gap-2">
                 <button disabled={submitting} onClick={() => setPermStaff(null)} className="btn btn-secondary btn-md" style={{ flex: 1 }}>Hủy</button>
-                <button disabled={submitting} onClick={() => handleSavePermissions(permStaff.permissions || [])} className="btn btn-primary btn-md" style={{ flex: 1 }}>{submitting ? "Đang lưu..." : "Lưu quyền hạn"}</button>
+                <button disabled={submitting || permLoading} onClick={() => handleSavePermissions(permStaff.permissions || [])} className="btn btn-primary btn-md" style={{ flex: 1 }}>{submitting ? "Đang lưu..." : "Lưu quyền hạn"}</button>
               </div>
             </div>
           </div>
@@ -4126,6 +4523,8 @@ function ReportsTab({ app }: { app: ReturnType<typeof useApp> }) {
   const [depositReport, setDepositReport] = useState<any>(null);
   const [pendingItemsReport, setPendingItemsReport] = useState<any>(null);
   const [importReport, setImportReport] = useState<any>(null);
+  const [importAdjReport, setImportAdjReport] = useState<any>(null);
+  const [priceHistoryReport, setPriceHistoryReport] = useState<any>(null);
 
   // State cho Drill-down cấu thành số liệu (UC10.1 bước 4 & UC10.2 bước 5)
   const [drilldownData, setDrilldownData] = useState<{
@@ -4162,10 +4561,12 @@ function ReportsTab({ app }: { app: ReturnType<typeof useApp> }) {
       reportApi.layCocChuaTatToan({ soMoiTrang: 50 }),
       reportApi.layKhoanCanXuLy(),
       reportApi.layNhapHang({ tuNgay, denNgay, maNhaCungCap, soMoiTrang: 50 }),
+      reportApi.layDieuChinhNhap({ tuNgay, denNgay, maNhaCungCap, soMoiTrang: 50 }),
+      reportApi.layLichSuDonGia({ tuNgay, denNgay, maNhaCungCap }),
     ])
       .then((results) => {
         if (!active) return;
-        const [ops, stk, mnt, rev, cxl, adj, csh, dep, pnd, imp] = results;
+        const [ops, stk, mnt, rev, cxl, adj, csh, dep, pnd, imp, impAdj, priceHist] = results;
         if (ops.status === "fulfilled") setOpsReport(ops.value);
         if (stk.status === "fulfilled") setStockReport(stk.value);
         if (mnt.status === "fulfilled") setMaintReport(mnt.value);
@@ -4176,6 +4577,8 @@ function ReportsTab({ app }: { app: ReturnType<typeof useApp> }) {
         if (dep.status === "fulfilled") setDepositReport(dep.value);
         if (pnd.status === "fulfilled") setPendingItemsReport(pnd.value);
         if (imp.status === "fulfilled") setImportReport(imp.value);
+        if (impAdj.status === "fulfilled") setImportAdjReport(impAdj.value);
+        if (priceHist.status === "fulfilled") setPriceHistoryReport(priceHist.value);
         const rejectedCount = results.filter((r) => r.status === "rejected").length;
         if (rejectedCount === results.length) {
           setReportError("Không thể tải dữ liệu báo cáo từ máy chủ.");
@@ -5023,6 +5426,97 @@ function ReportsTab({ app }: { app: ReturnType<typeof useApp> }) {
               })()}
             </div>
           </div>
+
+          {isRealApi && (
+            <div className="grid gap-6 mt-6" style={{ gridTemplateColumns: "1fr 1fr" }}>
+              <div style={{ background: "white", borderRadius: 12, padding: 20, border: "1px solid var(--color-bone)" }}>
+                <h3 style={{ fontWeight: 700, color: "var(--color-bark)", marginBottom: 8, fontSize: "0.95rem" }}>
+                  Điều chỉnh phiếu nhập đã áp dụng (UC10.3)
+                </h3>
+                <p style={{ fontSize: "0.78rem", color: "#6B7280", marginBottom: 12 }}>
+                  Tổng phiếu điều chỉnh: <strong>{importAdjReport?.soPhieuDieuChinh ?? 0}</strong> · Chênh lệch SL:{" "}
+                  <strong>{importAdjReport?.tongDeltaSoLuong ?? 0}</strong> · Chênh lệch giá trị:{" "}
+                  <strong style={{ fontFamily: "var(--font-mono)" }}>{fmt(Number(importAdjReport?.tongDeltaGiaTri ?? 0))}</strong>
+                </p>
+                {Array.isArray(importAdjReport?.items?.items) && importAdjReport.items.items.length > 0 ? (
+                  <div className="responsive-table" style={{ overflow: "auto" }}>
+                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.78rem" }}>
+                      <thead>
+                        <tr style={{ background: "var(--color-parchment)", color: "var(--color-bark)" }}>
+                          <th style={{ padding: "6px 8px", textAlign: "left" }}>Phiếu ĐC</th>
+                          <th style={{ padding: "6px 8px", textAlign: "left" }}>Phiếu nhập / Loại</th>
+                          <th style={{ padding: "6px 8px", textAlign: "right" }}>Δ SL</th>
+                          <th style={{ padding: "6px 8px", textAlign: "right" }}>Δ Giá trị</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(importAdjReport.items.items as any[]).map((item, idx) => (
+                          <tr key={item.maPhieuDieuChinh ?? idx} style={{ borderTop: "1px solid var(--color-bone)" }}>
+                            <td style={{ padding: "6px 8px", fontFamily: "var(--font-mono)", fontWeight: 700 }}>
+                              #{item.maPhieuDieuChinh ?? "—"}
+                            </td>
+                            <td style={{ padding: "6px 8px" }} title={item.lyDo ?? ""}>
+                              {item.maPhieuNhapHienThi || `PN #${item.maPhieuNhap ?? "—"}`}
+                              {item.loaiDieuChinh ? ` · ${item.loaiDieuChinh}` : ""}
+                            </td>
+                            <td style={{ padding: "6px 8px", textAlign: "right" }}>{item.deltaSoLuong ?? 0}</td>
+                            <td style={{ padding: "6px 8px", textAlign: "right", fontFamily: "var(--font-mono)" }}>
+                              {fmt(Number(item.deltaGiaTri ?? 0))}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div style={{ background: "var(--color-parchment)", borderRadius: 8, padding: 12, textAlign: "center", color: "#6B7280", fontSize: "0.8rem" }}>
+                    Không có điều chỉnh nhập nào trong kỳ.
+                  </div>
+                )}
+              </div>
+
+              <div style={{ background: "white", borderRadius: 12, padding: 20, border: "1px solid var(--color-bone)" }}>
+                <h3 style={{ fontWeight: 700, color: "var(--color-bark)", marginBottom: 8, fontSize: "0.95rem" }}>
+                  Lịch sử đơn giá nhập theo sản phẩm (UC10.3)
+                </h3>
+                <p style={{ fontSize: "0.78rem", color: "#6B7280", marginBottom: 12 }}>
+                  Đơn giá bình quân hiệu lực, giá thấp nhất và cao nhất theo từng sản phẩm nguồn trong kỳ.
+                </p>
+                {Array.isArray(priceHistoryReport?.sanPham) && priceHistoryReport.sanPham.length > 0 ? (
+                  <div className="responsive-table" style={{ overflow: "auto" }}>
+                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.78rem" }}>
+                      <thead>
+                        <tr style={{ background: "var(--color-parchment)", color: "var(--color-bark)" }}>
+                          <th style={{ padding: "6px 8px", textAlign: "left" }}>Sản phẩm</th>
+                          <th style={{ padding: "6px 8px", textAlign: "right" }}>Lần nhập</th>
+                          <th style={{ padding: "6px 8px", textAlign: "right" }}>ĐG BQ hiệu lực</th>
+                          <th style={{ padding: "6px 8px", textAlign: "right" }}>Thấp - Cao</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(priceHistoryReport.sanPham as any[]).map((sp) => (
+                          <tr key={sp.maSanPhamNguon} style={{ borderTop: "1px solid var(--color-bone)" }}>
+                            <td style={{ padding: "6px 8px", fontWeight: 600 }}>{sp.tenSanPham}</td>
+                            <td style={{ padding: "6px 8px", textAlign: "right" }}>{sp.soLanNhap ?? 0}</td>
+                            <td style={{ padding: "6px 8px", textAlign: "right", fontFamily: "var(--font-mono)", fontWeight: 700, color: "var(--color-forest)" }}>
+                              {sp.donGiaBinhQuanHieuLuc != null ? fmt(Number(sp.donGiaBinhQuanHieuLuc)) : "—"}
+                            </td>
+                            <td style={{ padding: "6px 8px", textAlign: "right", fontFamily: "var(--font-mono)", color: "#6B7280" }}>
+                              {sp.donGiaThapNhat != null ? fmt(Number(sp.donGiaThapNhat)) : "—"} – {sp.donGiaCaoNhat != null ? fmt(Number(sp.donGiaCaoNhat)) : "—"}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div style={{ background: "var(--color-parchment)", borderRadius: 8, padding: 12, textAlign: "center", color: "#6B7280", fontSize: "0.8rem" }}>
+                    Chưa có lịch sử biến động đơn giá trong kỳ.
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       )}
 

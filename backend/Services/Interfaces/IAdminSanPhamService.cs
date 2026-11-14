@@ -11,6 +11,7 @@ namespace GearGo.Services.Interfaces
         Task DoiTrangThaiAsync(long id, string trangThaiMoi);
         
         // Xử lý ảnh
+        Task<object> LayHinhAnhAsync(long maSanPham);
         Task<object> ThemHinhAnhAsync(long maSanPham, IFormFile file);
         Task XoaHinhAnhAsync(long maHinhAnh);
     }

@@ -394,7 +394,7 @@ export default function App() {
     try {
       const [eqRes, btRes, adjRes] = await Promise.all([
         equipmentApi.timKiemThietBi({ soMoiTrang: 100 }).catch(() => ({ items: [] })),
-        equipmentApi.timBaoTri({ soMoiTrang: 50 }).catch(() => ({ items: [] })),
+        equipmentApi.timKiemBaoTri({ soMoiTrang: 50 }).catch(() => ({ items: [] })),
         inventoryApi.timPhieu({ soMoiTrang: 50 }).catch(() => ({ items: [] })),
       ]);
       setEquipment((eqRes.items ?? []).map(mapThietBiToEquipment));
@@ -2588,30 +2588,47 @@ export default function App() {
   };
 
   // Cập nhật hồ sơ cá nhân của tài khoản đang đăng nhập (UC1.6)
-  const updateCurrentUserProfile = (info: { name: string; phone: string; email: string }): ActionResult => {
+  const updateCurrentUserProfile = async (info: { name: string; phone: string; email: string; otp?: string }): Promise<ActionResult> => {
     if (!currentUser) return { ok: false, message: "Chưa đăng nhập hệ thống." };
-    setCurrentUser((prev) => (prev ? { ...prev, ...info } : null));
 
     if (REAL_MODE && getAuthToken()) {
-      void profileApi.capNhatHoSoToi({
-        hoTen: info.name,
-        email: info.email,
-        soDienThoai: info.phone,
-        diaChi: currentUser.address ?? null,
-      }).catch((err) => {
-        console.warn("Cập nhật hồ sơ thất bại:", err);
-      });
-      return { ok: true };
+      try {
+        const updated = await profileApi.capNhatHoSoToi({
+          hoTen: info.name,
+          email: info.email,
+          soDienThoai: info.phone,
+          diaChi: currentUser.address ?? null,
+          maOtp: info.otp ?? null,
+        });
+        setCurrentUser((prev) =>
+          prev
+            ? {
+                ...prev,
+                name: updated.hoTen ?? info.name,
+                email: updated.email ?? info.email,
+                phone: updated.soDienThoai ?? info.phone,
+              }
+            : null
+        );
+        return { ok: true };
+      } catch (err) {
+        return {
+          ok: false,
+          message: err instanceof Error ? err.message : "Cập nhật hồ sơ thất bại.",
+        };
+      }
     }
+
+    setCurrentUser((prev) => (prev ? { ...prev, name: info.name, phone: info.phone, email: info.email } : null));
 
     // Cập nhật thông tin vào danh sách thực thể tương ứng (UC1.6 - Mock)
     if (role === "admin" || role === "staff") {
       setStaffAccounts((prev) =>
-        prev.map((s) => (s.id === currentUser.id || s.email === currentUser.email ? { ...s, ...info } : s))
+        prev.map((s) => (s.id === currentUser.id || s.email === currentUser.email ? { ...s, name: info.name, phone: info.phone, email: info.email } : s))
       );
     } else {
       setCustomers((prev) =>
-        prev.map((c) => (c.id === currentUser.id || c.email === currentUser.email ? { ...c, ...info } : c))
+        prev.map((c) => (c.id === currentUser.id || c.email === currentUser.email ? { ...c, name: info.name, phone: info.phone, email: info.email } : c))
       );
     }
 
@@ -2627,17 +2644,42 @@ export default function App() {
   };
 
   // Đổi mật khẩu tài khoản người dùng đang đăng nhập (UC1.12)
-  const changeCurrentUserPassword = (oldPass: string, newPass: string): ActionResult => {
+  const changeCurrentUserPassword = async (oldPass: string, newPass: string): Promise<ActionResult> => {
     if (!currentUser) return { ok: false, message: "Chưa đăng nhập hệ thống." };
-    if (REAL_MODE) {
-      if (newPass.length < 8) return { ok: false, message: "Mật khẩu mới tối thiểu 8 ký tự." };
-      void authApi.doiMatKhau({
-        matKhauHienTai: oldPass,
-        matKhauMoi: newPass,
-        xacNhanMatKhauMoi: newPass,
-      }).catch(() => {});
-      return { ok: true };
+    if (newPass.length < 8) {
+      return { ok: false, message: "Mật khẩu mới tối thiểu 8 ký tự." };
     }
+
+    if (REAL_MODE) {
+      try {
+        await authApi.doiMatKhau({
+          matKhauHienTai: oldPass,
+          matKhauMoi: newPass,
+          xacNhanMatKhauMoi: newPass,
+          xacNhanMatKhau: newPass,
+        } as Parameters<typeof authApi.doiMatKhau>[0]);
+        // UC1.12: Thu hồi phiên hiện tại & yêu cầu đăng nhập lại sau khi đổi mật khẩu
+        setOrders([]);
+        setCart([]);
+        setNotifications([]);
+        setUnreadNotificationCount(0);
+        setAuditLogs([]);
+        setStaffAccounts([]);
+        setCustomers([]);
+        setFinancialAdjustments([]);
+        setAuthToken(null);
+        setCurrentUser(null);
+        setRole("customer");
+        setPage("login");
+        return { ok: true };
+      } catch (err) {
+        return {
+          ok: false,
+          message: err instanceof Error ? err.message : "Đổi mật khẩu thất bại.",
+        };
+      }
+    }
+
     let currentStoredPass = "123456";
     if (role === "admin" || role === "staff") {
       const staff = staffAccounts.find((s) => s.id === currentUser.id || s.email === currentUser.email || s.username === currentUser.username);
@@ -2649,9 +2691,6 @@ export default function App() {
 
     if (oldPass !== currentStoredPass) {
       return { ok: false, message: "Mật khẩu hiện tại không chính xác." };
-    }
-    if (newPass.length < 6) {
-      return { ok: false, message: "Mật khẩu mới tối thiểu 6 ký tự." };
     }
 
     if (role === "admin" || role === "staff") {
@@ -2672,12 +2711,21 @@ export default function App() {
       targetId: currentUser.id || currentUser.email,
       detail: "Người dùng đổi mật khẩu bảo mật cá nhân thành công"
     });
+
+    // UC1.12: Yêu cầu đăng nhập lại sau khi đổi mật khẩu
+    setCurrentUser(null);
+    setRole("customer");
+    setPage("login");
     return { ok: true };
   };
 
-  const logout = () => {
+  const logout = async () => {
     if (REAL_MODE) {
-      void authApi.dangXuat().catch(() => {});
+      try {
+        await authApi.dangXuat();
+      } catch {
+        // Vẫn xóa phiên cục bộ nếu token hết hạn hoặc mất kết nối
+      }
       setOrders([]);
       setCart([]);
       setNotifications([]);
@@ -2865,7 +2913,7 @@ export default function App() {
           role="status"
           className="fixed bottom-4 right-4 z-[60] max-w-md rounded-2xl border border-amber-300 bg-[#FFFDF7] p-4 shadow-lg text-[#11231B] flex items-start gap-3"
         >
-          <Icon name="alert" className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+          <Icon name="alert-circle" className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
           <div className="flex-1 text-sm leading-relaxed">{permissionNotice}</div>
           <button
             type="button"

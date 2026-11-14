@@ -65,6 +65,7 @@ public class ApplicationDbContext : IdentityDbContext<IdentityUser<long>, Identi
     public DbSet<ThongBao> ThongBaos { get; set; }
     public DbSet<LichSuTinhTrangThietBi> LichSuTinhTrangThietBis { get; set; }
     public DbSet<NhatKyThaoTac> NhatKyThaoTacs { get; set; }
+    public DbSet<NhatKyLienHeQuaHan> NhatKyLienHeQuaHans { get; set; }
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
@@ -566,6 +567,28 @@ public class ApplicationDbContext : IdentityDbContext<IdentityUser<long>, Identi
                 .WithMany()
                 .HasForeignKey(n => n.MaTaiKhoan)
                 .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // ── NHẬT KÝ LIÊN HỆ QUÁ HẠN (UC4.4) ──
+        modelBuilder.Entity<NhatKyLienHeQuaHan>(e =>
+        {
+            e.HasIndex(n => new { n.MaDonThue, n.ThoiDiemLienHe });
+
+            e.HasOne(n => n.DonThue)
+                .WithMany()
+                .HasForeignKey(n => n.MaDonThue)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            e.HasOne(n => n.NguoiLienHe)
+                .WithMany()
+                .HasForeignKey(n => n.MaTaiKhoan)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // ── INDEX IDEMPOTENCY CHO ĐƠN THUÊ (UC3.2) ──
+        modelBuilder.Entity<DonThue>(e =>
+        {
+            e.HasIndex(d => new { d.MaKhachHang, d.IdempotencyKey });
         });
     }
 }

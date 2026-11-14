@@ -140,7 +140,7 @@ public class DanhGiaService : IDanhGiaService
         _context.DanhGias.Add(danhGia);
         await _context.SaveChangesAsync();
 
-        var response = MapToResponse(danhGia, chiTiet.SanPham.TenSanPham, chiTiet.DonThue.KhachHang.HoTen, chiTiet.MaSanPham);
+        var response = MapToResponse(danhGia, chiTiet.SanPham.TenSanPham, chiTiet.DonThue.KhachHang?.HoTen ?? "Khách hàng", chiTiet.MaSanPham);
         return Result<DanhGiaResponse>.Ok(response);
     }
 
@@ -170,7 +170,7 @@ public class DanhGiaService : IDanhGiaService
 
         var resItems = items.Select(d => MapToResponse(d, 
             d.ChiTietDonThue.SanPham.TenSanPham, 
-            d.ChiTietDonThue.DonThue.KhachHang.HoTen, 
+            d.ChiTietDonThue.DonThue.KhachHang?.HoTen ?? "Khách hàng", 
             d.ChiTietDonThue.MaSanPham)).ToList();
 
         return Result<PagedResult<DanhGiaResponse>>.Ok(new PagedResult<DanhGiaResponse>
@@ -225,7 +225,7 @@ public class DanhGiaService : IDanhGiaService
 
         var resItems = items.Select(d => MapToResponse(d, 
             d.ChiTietDonThue.SanPham.TenSanPham, 
-            AnDanhTen(d.ChiTietDonThue.DonThue.KhachHang.HoTen), 
+            AnDanhTen(d.ChiTietDonThue.DonThue.KhachHang?.HoTen ?? "Khách hàng"), 
             d.ChiTietDonThue.MaSanPham)).ToList();
 
         return Result<PagedResult<DanhGiaResponse>>.Ok(new PagedResult<DanhGiaResponse>
@@ -301,7 +301,7 @@ public class DanhGiaService : IDanhGiaService
 
         var resItems = items.Select(d => MapToResponse(d, 
             d.ChiTietDonThue.SanPham.TenSanPham, 
-            d.ChiTietDonThue.DonThue.KhachHang.HoTen, 
+            d.ChiTietDonThue.DonThue.KhachHang?.HoTen ?? "Khách hàng", 
             d.ChiTietDonThue.MaSanPham)).ToList();
 
         return Result<PagedResult<DanhGiaResponse>>.Ok(new PagedResult<DanhGiaResponse>
@@ -351,7 +351,7 @@ public class DanhGiaService : IDanhGiaService
 
         var response = MapToResponse(danhGia, 
             danhGia.ChiTietDonThue.SanPham.TenSanPham, 
-            danhGia.ChiTietDonThue.DonThue.KhachHang.HoTen, 
+            danhGia.ChiTietDonThue.DonThue.KhachHang?.HoTen ?? "Khách hàng", 
             danhGia.ChiTietDonThue.MaSanPham);
 
         return Result<DanhGiaResponse>.Ok(response);
@@ -392,7 +392,7 @@ public class DanhGiaService : IDanhGiaService
 
         var response = MapToResponse(danhGia, 
             danhGia.ChiTietDonThue.SanPham.TenSanPham, 
-            danhGia.ChiTietDonThue.DonThue.KhachHang.HoTen, 
+            danhGia.ChiTietDonThue.DonThue.KhachHang?.HoTen ?? "Khách hàng", 
             danhGia.ChiTietDonThue.MaSanPham);
 
         return Result<DanhGiaResponse>.Ok(response);
@@ -465,7 +465,7 @@ public class DanhGiaService : IDanhGiaService
 
         var response = MapToResponse(danhGia,
             danhGia.ChiTietDonThue.SanPham.TenSanPham,
-            danhGia.ChiTietDonThue.DonThue.KhachHang.HoTen,
+            danhGia.ChiTietDonThue.DonThue.KhachHang?.HoTen ?? "Khách hàng",
             danhGia.ChiTietDonThue.MaSanPham,
             tenNguoiPhanHoi);
 

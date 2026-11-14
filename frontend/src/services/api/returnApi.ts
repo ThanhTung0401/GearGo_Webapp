@@ -100,6 +100,25 @@ export interface QuaHanChiTietBackend {
   tongPhiTreDuKien: number;
 }
 
+export interface NhatKyLienHeQuaHanBackend {
+  maNhatKyLienHe: number;
+  maDonThue: number;
+  maTaiKhoan: number;
+  tenNguoiLienHe: string;
+  kenhLienHe: string;
+  ketQua: string;
+  noiDung: string;
+  henTraMoi?: string | null;
+  thoiDiemLienHe: string;
+}
+
+export interface TaoNhatKyLienHeQuaHanRequest {
+  kenhLienHe: string;
+  ketQua: string;
+  noiDung: string;
+  henTraMoi?: string | null;
+}
+
 export const returnApi = {
   // ─── Nhận trả (/api/v1/nhan-tra) ───
   async layDanhSachTheoDon(donId: number): Promise<NhanTraBackend[]> {
@@ -189,5 +208,18 @@ export const returnApi = {
     const q = buildQuery({ mocQuet });
     const res = await apiClient.post<unknown>(`/api/v1/qua-han/quet-nhac${q}`);
     return unwrapResult<unknown>(res.data);
+  },
+
+  async layNhatKyLienHe(donId: number): Promise<NhatKyLienHeQuaHanBackend[]> {
+    const res = await apiClient.get<unknown>(`/api/v1/qua-han/${donId}/nhat-ky-lien-he`);
+    return unwrapResult<NhatKyLienHeQuaHanBackend[]>(res.data);
+  },
+
+  async ghiNhatKyLienHe(
+    donId: number,
+    req: TaoNhatKyLienHeQuaHanRequest
+  ): Promise<NhatKyLienHeQuaHanBackend> {
+    const res = await apiClient.post<unknown>(`/api/v1/qua-han/${donId}/nhat-ky-lien-he`, req);
+    return unwrapResult<NhatKyLienHeQuaHanBackend>(res.data);
   },
 };

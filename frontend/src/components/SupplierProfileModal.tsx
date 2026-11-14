@@ -75,7 +75,7 @@ export default function SupplierProfileModal({ supplier, app, onClose, onOpenRec
   >();
 
   if (app.realApi && historyBackend) {
-    (historyBackend.phieuNhaps?.duLieu ?? []).forEach((pn) => {
+    (historyBackend.phieuNhaps?.items ?? []).forEach((pn) => {
       pn.chiTietSanPham.forEach((ct) => {
         const key = String(ct.maSanPham);
         const existing = importedProductMap.get(key);

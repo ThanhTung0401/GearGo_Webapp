@@ -97,28 +97,30 @@ public class DieuChinhKhoService : IDieuChinhKhoService
 
             if (request.LoaiDieuChinh == "SaiGiaNhap")
             {
-                if (!dong.MaChiTietPhieuNhap.HasValue)
+                if (!dong.MaChiTietPhieuNhap.HasValue || !request.MaPhieuNhapLienQuan.HasValue)
                     return Result<DieuChinhKhoResponse>.Loi(DomainConstants.Errors.InvalidData, "Dòng điều chỉnh sai giá phải gắn mã chi tiết phiếu nhập.");
 
+                var maPhieuNhapLienQuan = request.MaPhieuNhapLienQuan.Value;
                 var ctpn = await _context.ChiTietPhieuNhaps
                     .AsNoTracking()
-                    .FirstOrDefaultAsync(c => c.MaChiTietPhieuNhap == dong.MaChiTietPhieuNhap.Value && c.MaPhieuNhap == request.MaPhieuNhapLienQuan.Value);
+                    .FirstOrDefaultAsync(c => c.MaChiTietPhieuNhap == dong.MaChiTietPhieuNhap.Value && c.MaPhieuNhap == maPhieuNhapLienQuan);
 
                 if (ctpn == null)
                     return Result<DieuChinhKhoResponse>.Loi(DomainConstants.Errors.MismatchSourceReceipt, "Dòng chi tiết không thuộc phiếu nhập gốc đã chỉ định.");
 
                 // Lấy đơn giá hiệu lực gần nhất của dòng này
-                var hieuLuc = await GiaTriNhapHieuLucQuery.TinhGiaTriHieuLucPhieuNhapAsync(_context, request.MaPhieuNhapLienQuan.Value);
+                var hieuLuc = await GiaTriNhapHieuLucQuery.TinhGiaTriHieuLucPhieuNhapAsync(_context, maPhieuNhapLienQuan);
                 giaTriTruoc = JsonSerializer.Serialize(new { donGiaHieuLuc = ctpn.DonGiaNhap });
             }
             else if (request.LoaiDieuChinh == "KhaiBaoThieuThietBi")
             {
-                if (!dong.MaChiTietPhieuNhap.HasValue)
+                if (!dong.MaChiTietPhieuNhap.HasValue || !request.MaPhieuNhapLienQuan.HasValue)
                     return Result<DieuChinhKhoResponse>.Loi(DomainConstants.Errors.InvalidData, "Bổ sung thiết bị thiếu phải chỉ rõ dòng phiếu nhập gốc.");
 
+                var maPhieuNhapLienQuan = request.MaPhieuNhapLienQuan.Value;
                 var ctpn = await _context.ChiTietPhieuNhaps
                     .AsNoTracking()
-                    .FirstOrDefaultAsync(c => c.MaChiTietPhieuNhap == dong.MaChiTietPhieuNhap.Value && c.MaPhieuNhap == request.MaPhieuNhapLienQuan.Value);
+                    .FirstOrDefaultAsync(c => c.MaChiTietPhieuNhap == dong.MaChiTietPhieuNhap.Value && c.MaPhieuNhap == maPhieuNhapLienQuan);
 
                 if (ctpn == null)
                     return Result<DieuChinhKhoResponse>.Loi(DomainConstants.Errors.MismatchSourceReceipt, "Dòng chi tiết không thuộc phiếu nhập gốc đã chỉ định.");

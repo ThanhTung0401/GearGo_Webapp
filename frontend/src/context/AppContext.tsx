@@ -109,9 +109,9 @@ export interface AppState {
   addAuditLog: (entry: { actor: string; role: string; action: string; targetEntity: string; targetId: string; detail: string }) => void;
   saveFinancialAdjustment: (adj: Omit<FinancialAdjustment, "id" | "createdAt">) => ActionResult<FinancialAdjustment>;
   login: (user: { id?: string; username?: string; name: string; email: string; phone: string; role: Role; permissions?: string[]; address?: string }) => void;
-  logout: () => void;
-  updateCurrentUserProfile: (info: { name: string; phone: string; email: string }) => ActionResult;
-  changeCurrentUserPassword: (oldPass: string, newPass: string) => ActionResult;
+  logout: () => Promise<void> | void;
+  updateCurrentUserProfile: (info: { name: string; phone: string; email: string; otp?: string }) => Promise<ActionResult>;
+  changeCurrentUserPassword: (oldPass: string, newPass: string) => Promise<ActionResult>;
   createStockAdjustment: (receipt: { reason: string; createdBy: string; lines: StockAdjustmentLine[]; autoApprove?: boolean }) => ActionResult<StockAdjustmentReceipt>;
   approveStockAdjustment: (id: string, note?: string) => ActionResult;
   rejectStockAdjustment: (id: string, note?: string) => ActionResult;

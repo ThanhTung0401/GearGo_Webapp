@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useApp } from "../App";
 import Icon from "../components/Icon";
 import { ApiError, isRealApiEnabled } from "../services/apiClient";
-import { fakeApi } from "../services/fakeApi";
 import { authApi } from "../services/api/authApi";
 
 // ─── Đăng nhập (LoginView - UC1.2, UC1.2.1) ───────────────────────────────────

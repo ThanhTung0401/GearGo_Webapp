@@ -44,12 +44,12 @@ public class BaoTriController : BaseApiController
         => HandleResult(await _baoTriService.GuiKiemTraAsync(id, User.LayMaTaiKhoan()));
 
     [HttpPost("{id:long}/hoan-thanh")]
-    [Authorize(Policy = "AdminOnly")]
+    [Authorize(Policy = "StaffOrAdmin")]
     public async Task<IActionResult> XacNhanHoanThanh(long id, [FromBody] XacNhanBaoTriRequest request)
         => HandleResult(await _baoTriService.XacNhanHoanThanhAsync(id, request, User.LayMaTaiKhoan()));
 
     [HttpPost("{id:long}/ket-thuc-khong-dat")]
-    [Authorize(Policy = "AdminOnly")]
+    [Authorize(Policy = "StaffOrAdmin")]
     public async Task<IActionResult> KetThucKhongDat(long id, [FromBody] XacNhanBaoTriRequest request)
         => HandleResult(await _baoTriService.KetThucKhongDatAsync(id, request, User.LayMaTaiKhoan()));
 }

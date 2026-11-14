@@ -14,7 +14,21 @@ export interface TaoDonThueRequest {
   ghiChu?: string;
   diaChiNhanHang?: string;
   maKhuyenMai?: string;
+  idempotencyKey?: string;
+  giaTamTinhKyVong?: number;
+  hashBaoGia?: string;
+  dongYThayDoiGia?: boolean;
   chiTiet: Array<{ maSanPham: number; soLuong: number }>;
+}
+
+export interface BaoGiaThayDoiDetail {
+  soNgayThue: number;
+  tongTienThueTruocGiam: number;
+  tongTienGiam: number;
+  tongTienThueSauGiam: number;
+  tongTienCoc: number;
+  tongThanhToanDuKien: number;
+  hashBaoGia: string;
 }
 
 export interface DonThueCreatedBackend {

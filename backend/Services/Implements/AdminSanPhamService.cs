@@ -103,6 +103,23 @@ namespace GearGo.Services.Admin
             await _context.SaveChangesAsync();
         }
 
+        public async Task<object> LayHinhAnhAsync(long maSanPham)
+        {
+            return await _context.Set<HinhAnhSanPham>()
+                .AsNoTracking()
+                .Where(h => h.MaSanPham == maSanPham)
+                .OrderBy(h => h.ThuTu)
+                .Select(h => new
+                {
+                    h.MaHinhAnh,
+                    h.MaSanPham,
+                    h.DuongDan,
+                    h.LaAnhChinh,
+                    h.ThuTu
+                })
+                .ToListAsync();
+        }
+
         public async Task<object> ThemHinhAnhAsync(long maSanPham, IFormFile file)
         {
             var sp = await _context.Set<SanPham>().FindAsync(maSanPham);

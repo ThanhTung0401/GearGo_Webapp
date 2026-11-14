@@ -91,7 +91,7 @@ public class DonThueController : BaseApiController
         var result = await _donThueService.TaoDonThueAsync(request);
         if (!result.ThanhCong)
         {
-            return BadRequest(new { result.MaLoi, result.ThongDiep });
+            return BadRequest(new { result.MaLoi, result.ThongDiep, result.ChiTiet });
         }
 
         return Ok(result.DuLieu);

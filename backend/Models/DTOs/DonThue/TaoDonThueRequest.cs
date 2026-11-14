@@ -12,6 +12,10 @@ public record TaoDonThueRequest
     public string? GhiChu { get; init; }
     public string? DiaChiNhanHang { get; init; }
     public string? MaKhuyenMai { get; init; }
+    public string? IdempotencyKey { get; init; }
+    public decimal? GiaTamTinhKyVong { get; init; }
+    public string? HashBaoGia { get; init; }
+    public bool DongYThayDoiGia { get; init; } = false;
     public List<ChiTietDonThueDto> ChiTiet { get; init; } = new();
 }
 

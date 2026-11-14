@@ -79,6 +79,15 @@ export const reviewApi = {
     return unwrapResult<DanhGiaBackend>(res.data);
   },
 
+  async uploadHinhAnh(file: File): Promise<{ url: string; duongDan?: string }> {
+    const formData = new FormData();
+    formData.append("file", file);
+    const res = await apiClient.postFormData<{ url?: string; duongDan?: string }>("/api/v1/danh-gia/hinh-anh", formData);
+    const data = unwrapResult<{ url?: string; duongDan?: string }>(res.data);
+    const url = data?.url ?? data?.duongDan ?? "";
+    return { url, duongDan: url };
+  },
+
   // ─── Quản trị & Vận hành (/api/v1/admin/danh-gia) ───
   async adminTimKiem(params?: {
     trang?: number;

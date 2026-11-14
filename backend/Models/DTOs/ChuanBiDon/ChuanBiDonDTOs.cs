@@ -47,6 +47,30 @@ public class XacNhanSanSangRequest
     public string? GhiChu { get; set; }
 }
 
+/// <summary>
+/// Báo thiếu thiết bị trong quá trình chuẩn bị đơn (UC4.1)
+/// </summary>
+public class BaoThieuThietBiRequest
+{
+    public long? DongDonId { get; set; }
+    public int? SoLuongThieu { get; set; }
+    public string LyDo { get; set; } = string.Empty;
+    public string? GhiChu { get; set; }
+}
+
+public class BaoThieuThietBiResponse
+{
+    public long MaDonThue { get; set; }
+    public string MaDonHienThi { get; set; } = string.Empty;
+    public string TrangThaiDon { get; set; } = string.Empty;
+    public long? DongDonId { get; set; }
+    public int? SoLuongThieu { get; set; }
+    public string LyDo { get; set; } = string.Empty;
+    public string? GhiChu { get; set; }
+    public DateTime ThoiDiemBao { get; set; }
+    public int SoThongBaoDaGui { get; set; }
+}
+
 // ── RESPONSE DTOs ─────────────────────────────────────────────────────────────
 
 /// <summary>

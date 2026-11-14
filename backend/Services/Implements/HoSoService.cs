@@ -1,12 +1,16 @@
+using System.Security.Cryptography;
 using System.Text.RegularExpressions;
 using GearGo.Data;
 using GearGo.Exceptions;
 using GearGo.Helpers;
+using GearGo.Integrations.Notifications;
 using GearGo.Models.DTOs.HoSo;
 using GearGo.Models.DTOs.ThongBao;
 using GearGo.Models.Entities;
 using GearGo.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Logging;
 
 namespace GearGo.Services.Implements;
 
@@ -16,11 +20,22 @@ public class HoSoService : IHoSoService
 
     private readonly ApplicationDbContext _context;
     private readonly ILichSuNghiepVuService _lichSu;
+    private readonly IMemoryCache? _cache;
+    private readonly IEmailNotificationAdapter? _emailAdapter;
+    private readonly ILogger<HoSoService>? _logger;
 
-    public HoSoService(ApplicationDbContext context, ILichSuNghiepVuService lichSu)
+    public HoSoService(
+        ApplicationDbContext context,
+        ILichSuNghiepVuService lichSu,
+        IMemoryCache? cache = null,
+        IEmailNotificationAdapter? emailAdapter = null,
+        ILogger<HoSoService>? logger = null)
     {
         _context = context;
         _lichSu = lichSu;
+        _cache = cache;
+        _emailAdapter = emailAdapter;
+        _logger = logger;
     }
 
     public async Task<HoSoResponse> LayHoSoCuaToiAsync(long maTaiKhoan)
@@ -40,6 +55,69 @@ public class HoSoService : IHoSoService
         return new HoSoResponse(nv.MaNhanVien, nv.HoTen, nv.TaiKhoan.Email, nv.TaiKhoan.SoDienThoai, null, null, null);
     }
 
+    public async Task<GuiOtpDoiLienHeResponse> GuiOtpDoiLienHeAsync(GuiOtpDoiLienHeRequest request, long maTaiKhoan)
+    {
+        var tk = await ActorGuard.LayTaiKhoanHoatDongAsync(_context, maTaiKhoan);
+
+        var emailMoi = string.IsNullOrWhiteSpace(request.EmailMoi)
+            ? null
+            : request.EmailMoi.Trim().ToLowerInvariant();
+        var sdtMoi = string.IsNullOrWhiteSpace(request.SoDienThoaiMoi)
+            ? null
+            : request.SoDienThoaiMoi.Trim();
+
+        var emailThayDoi = emailMoi != null && !string.Equals(emailMoi, tk.Email, StringComparison.OrdinalIgnoreCase);
+        var sdtThayDoi = sdtMoi != null && !string.Equals(sdtMoi, tk.SoDienThoai, StringComparison.Ordinal);
+
+        if (!emailThayDoi && !sdtThayDoi)
+        {
+            throw new DuLieuKhongHopLeException("KHONG_CO_THAY_DOI_LIEN_HE",
+                "Email hoặc số điện thoại mới không thay đổi so với thông tin hiện tại.");
+        }
+
+        // Kiểm tra định dạng và tính duy nhất trước khi phát hành OTP
+        var loi = new Dictionary<string, string>();
+        if (emailThayDoi && (emailMoi!.Length > 255 || !new System.ComponentModel.DataAnnotations.EmailAddressAttribute().IsValid(emailMoi)))
+            loi["emailMoi"] = "Email mới không hợp lệ.";
+        if (sdtThayDoi && !SoDienThoaiRegex.IsMatch(sdtMoi!))
+            loi["soDienThoaiMoi"] = "Số điện thoại mới không hợp lệ.";
+        if (loi.Count > 0) throw new HoSoKhongHopLeException("Thông tin liên hệ mới không hợp lệ.", loi);
+
+        if (emailThayDoi && await _context.TaiKhoans.AnyAsync(t => t.MaTaiKhoan != maTaiKhoan && t.Email == emailMoi))
+            throw new LienHeDaTonTaiException("Email mới đã thuộc tài khoản khác.");
+        if (sdtThayDoi && await _context.TaiKhoans.AnyAsync(t => t.MaTaiKhoan != maTaiKhoan && t.SoDienThoai == sdtMoi))
+            throw new LienHeDaTonTaiException("Số điện thoại mới đã thuộc tài khoản khác.");
+
+        var otp = RandomNumberGenerator.GetInt32(100000, 1000000).ToString("D6");
+        var hetHanLuc = DateTime.UtcNow.AddMinutes(10);
+
+        if (_cache != null)
+        {
+            _cache.Set(
+                OtpCacheKey(maTaiKhoan),
+                new PendingContactOtp(otp, emailThayDoi ? emailMoi : null, sdtThayDoi ? sdtMoi : null),
+                TimeSpan.FromMinutes(10));
+        }
+
+        var emailNhan = emailThayDoi ? emailMoi! : (tk.Email ?? "");
+        if (!string.IsNullOrWhiteSpace(emailNhan) && _emailAdapter != null)
+        {
+            var noiDung = $@"
+                <div style='font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px;'>
+                    <h2 style='color: #2D6A4F; margin-top: 0;'>Xác minh thay đổi thông tin liên hệ - GearGo</h2>
+                    <p>Mã xác minh OTP để cập nhật Email/Số điện thoại của bạn là:</p>
+                    <div style='background: #F4F6F0; padding: 15px; border-radius: 6px; text-align: center; margin: 16px 0;'>
+                        <strong style='font-size: 28px; letter-spacing: 6px; color: #1B4332;'>{otp}</strong>
+                    </div>
+                    <p style='color: #666; font-size: 13px;'>Mã có hiệu lực trong <strong>10 phút</strong>.</p>
+                </div>";
+            await _emailAdapter.GuiEmailAsync(emailNhan, "GearGo - Mã OTP xác minh đổi thông tin liên hệ", noiDung, "PROFILE_CONTACT_OTP");
+        }
+
+        _logger?.LogInformation("[HoSo OTP] Đã phát hành OTP đổi liên hệ cho tài khoản {MaTaiKhoan}: {Otp}", maTaiKhoan, otp);
+        return new GuiOtpDoiLienHeResponse("Mã xác minh OTP đã được gửi tới email của bạn.", hetHanLuc);
+    }
+
     public async Task<HoSoResponse> CapNhatHoSoCuaToiAsync(CapNhatHoSoRequest request, long maTaiKhoan)
     {
         // Quy ước PUT thay thế toàn bộ: diaChi/ngaySinh/anhDaiDien null hoặc rỗng = xóa giá trị.
@@ -51,6 +129,38 @@ public class HoSoService : IHoSoService
         var diaChi = string.IsNullOrWhiteSpace(request.DiaChi) ? null : request.DiaChi.Trim();
         var anh = string.IsNullOrWhiteSpace(request.AnhDaiDien) ? null : request.AnhDaiDien.Trim();
         Validate(hoTen, email, sdt, request.NgaySinh, anh);
+
+        // UC1.6 Dòng phụ 4.2: Chỉ yêu cầu OTP khi Email hoặc Số điện thoại thực sự thay đổi
+        var emailThayDoi = !string.Equals(email, tk.Email, StringComparison.OrdinalIgnoreCase);
+        var sdtThayDoi = !string.Equals(sdt, tk.SoDienThoai, StringComparison.Ordinal);
+        if (emailThayDoi || sdtThayDoi)
+        {
+            var maOtp = request.MaOtp?.Trim();
+            if (string.IsNullOrWhiteSpace(maOtp))
+            {
+                throw new DuLieuKhongHopLeException("CAN_OTP_XAC_MINH",
+                    "Thay đổi Email hoặc Số điện thoại yêu cầu mã xác minh OTP.");
+            }
+
+            if (_cache != null)
+            {
+                if (!_cache.TryGetValue<PendingContactOtp>(OtpCacheKey(maTaiKhoan), out var pending) || pending == null)
+                {
+                    throw new DuLieuKhongHopLeException("OTP_HET_HAN",
+                        "Mã OTP chưa được yêu cầu hoặc đã hết hạn. Vui lòng gửi lại mã OTP.");
+                }
+
+                if (!string.Equals(pending.Otp, maOtp, StringComparison.Ordinal)
+                    || (emailThayDoi && !string.Equals(pending.EmailMoi, email, StringComparison.OrdinalIgnoreCase))
+                    || (sdtThayDoi && !string.Equals(pending.SoDienThoaiMoi, sdt, StringComparison.Ordinal)))
+                {
+                    throw new DuLieuKhongHopLeException("OTP_KHONG_HOP_LE",
+                        "Mã OTP không chính xác hoặc không khớp với Email/Số điện thoại mới.");
+                }
+
+                _cache.Remove(OtpCacheKey(maTaiKhoan));
+            }
+        }
 
         await using var tx = await _context.Database.BeginTransactionAsync();
 
@@ -133,4 +243,8 @@ public class HoSoService : IHoSoService
 
     private static HoSoResponse Map(KhachHang kh) => new(
         kh.MaKhachHang, kh.HoTen, kh.TaiKhoan.Email, kh.TaiKhoan.SoDienThoai, kh.DiaChi, kh.NgaySinh, kh.AnhDaiDien);
+
+    private static string OtpCacheKey(long maTaiKhoan) => $"hoso_otp:{maTaiKhoan}";
+
+    private sealed record PendingContactOtp(string Otp, string? EmailMoi, string? SoDienThoaiMoi);
 }

@@ -49,3 +49,23 @@ public class QuyenCuaToiResponse
     public long Version { get; set; }
     public List<string> Quyen { get; set; } = new();
 }
+
+/// <summary>Chi tiết quyền của một nhân viên (hỗ trợ phân quyền riêng theo tài khoản - UC1.10).</summary>
+public class QuyenCuaNhanVienResponse
+{
+    public long MaTaiKhoan { get; set; }
+    public long? MaNhanVien { get; set; }
+    public string HoTen { get; set; } = string.Empty;
+    public string Email { get; set; } = string.Empty;
+    public string RoleName { get; set; } = string.Empty;
+    public bool CoPhanQuyenRieng { get; set; }
+    public List<string> QuyenCoDuoc { get; set; } = new();
+    public List<string> QuyenTheoVaiTro { get; set; } = new();
+}
+
+/// <summary>Request cấp/thu quyền riêng cho từng nhân viên.</summary>
+public class CapNhatQuyenNhanVienRequest
+{
+    [Required]
+    public List<string> Quyen { get; set; } = new();
+}

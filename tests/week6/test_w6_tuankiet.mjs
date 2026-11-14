@@ -70,11 +70,11 @@ async function run() {
   });
   assert(customerRes.status === 403, 'Chặn khách hàng xem báo cáo vận hành (HTTP 403)');
 
-  // 2. Phân quyền: Nhân viên bị chặn 403 (AdminOnly policy)
+  // 2. Phân quyền: Nhân viên được phép truy cập báo cáo vận hành (StaffOrAdmin policy theo UC10.1 / UC96)
   const staffRes = await fetch(`${BASE_URL}/api/v1/admin/bao-cao-van-hanh`, {
     headers: { 'Authorization': `Bearer ${staffToken}` }
   });
-  assert(staffRes.status === 403, 'Chặn nhân viên xem báo cáo vận hành (HTTP 403 AdminOnly)');
+  assert(staffRes.status === 200, 'Nhân viên xem được báo cáo vận hành (HTTP 200 StaffOrAdmin)');
 
   // 3. Admin truy vấn thành công 200
   const adminRes = await fetch(`${BASE_URL}/api/v1/admin/bao-cao-van-hanh`, {

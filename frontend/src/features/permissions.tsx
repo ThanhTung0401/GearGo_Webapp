@@ -13,6 +13,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { API_BASE, isRealApiEnabled } from "../services/apiClient";
 
 export interface VaiTroResponse {
   roleName: string;
@@ -44,7 +45,6 @@ export interface QuyenCuaToiResponse {
   quyen: string[];
 }
 
-const API_BASE = (import.meta as unknown as { env?: { VITE_API_URL?: string } }).env?.VITE_API_URL ?? "";
 const TOKEN_KEY = "geargo-token";
 const MOCK_KEY = "geargo-permission-mock";
 
@@ -54,7 +54,7 @@ function authHeaders(): Record<string, string> {
 }
 
 async function apiGet<T>(path: string): Promise<T | null> {
-  if (!API_BASE) return null;
+  if (!isRealApiEnabled()) return null;
   try {
     const res = await fetch(`${API_BASE}${path}`, { headers: authHeaders(), credentials: "include" });
     if (!res.ok) return null;
@@ -65,7 +65,7 @@ async function apiGet<T>(path: string): Promise<T | null> {
 }
 
 async function apiPut<T>(path: string, body: unknown): Promise<T | null> {
-  if (!API_BASE) return null;
+  if (!isRealApiEnabled()) return null;
   try {
     const res = await fetch(`${API_BASE}${path}`, {
       method: "PUT",

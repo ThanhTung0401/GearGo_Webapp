@@ -1,5 +1,7 @@
 import React, { useState } from "react";
 import type { Role, ActionResult } from "../types";
+import { isRealApiEnabled } from "../services/apiClient";
+import { profileApi } from "../services/api/profileApi";
 
 export interface UserProfileModalProps {
   currentUser: {
@@ -14,8 +16,8 @@ export interface UserProfileModalProps {
   };
   role: Role;
   onClose: () => void;
-  onUpdateProfile: (info: { name: string; phone: string; email: string }) => ActionResult;
-  onChangePassword: (oldPass: string, newPass: string) => ActionResult;
+  onUpdateProfile: (info: { name: string; phone: string; email: string; otp?: string }) => Promise<ActionResult> | ActionResult;
+  onChangePassword: (oldPass: string, newPass: string) => Promise<ActionResult> | ActionResult;
 }
 
 export default function UserProfileModal({
@@ -31,14 +33,57 @@ export default function UserProfileModal({
   const [email, setEmail] = useState(currentUser.email);
   const [infoMsg, setInfoMsg] = useState("");
   const [infoError, setInfoError] = useState("");
+  const [infoSubmitting, setInfoSubmitting] = useState(false);
+
+  // UC1.6 Dòng phụ 4.2: Xác minh OTP khi thay đổi Email hoặc Số điện thoại
+  const [otp, setOtp] = useState("");
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpSending, setOtpSending] = useState(false);
 
   const [oldPass, setOldPass] = useState("");
   const [newPass, setNewPass] = useState("");
   const [confirmPass, setConfirmPass] = useState("");
   const [passMsg, setPassMsg] = useState("");
   const [passError, setPassError] = useState("");
+  const [passSubmitting, setPassSubmitting] = useState(false);
 
-  const handleSaveInfo = (e: React.FormEvent) => {
+  const contactChanged =
+    email.trim().toLowerCase() !== currentUser.email.trim().toLowerCase() ||
+    phone.trim() !== currentUser.phone.trim();
+
+  const handleSendContactOtp = async () => {
+    setInfoMsg("");
+    setInfoError("");
+    if (!phone.trim()) {
+      setInfoError("Vui lòng nhập số điện thoại.");
+      return;
+    }
+    if (!email.trim() || !email.includes("@")) {
+      setInfoError("Địa chỉ email không hợp lệ.");
+      return;
+    }
+
+    setOtpSending(true);
+    try {
+      if (isRealApiEnabled()) {
+        const res = await profileApi.guiOtpDoiLienHe({
+          emailMoi: email.trim(),
+          soDienThoaiMoi: phone.trim(),
+        });
+        setOtpSent(true);
+        setInfoMsg(res.thongDiep || "Đã gửi mã OTP xác minh tới email của bạn.");
+      } else {
+        setOtpSent(true);
+        setInfoMsg("Đã gửi mã OTP demo: 123456");
+      }
+    } catch (err) {
+      setInfoError(err instanceof Error ? err.message : "Không thể gửi mã OTP.");
+    } finally {
+      setOtpSending(false);
+    }
+  };
+
+  const handleSaveInfo = async (e: React.FormEvent) => {
     e.preventDefault();
     setInfoMsg("");
     setInfoError("");
@@ -54,15 +99,38 @@ export default function UserProfileModal({
       setInfoError("Địa chỉ email không hợp lệ.");
       return;
     }
-    const res = onUpdateProfile({ name: name.trim(), phone: phone.trim(), email: email.trim() });
-    if (res.ok) {
-      setInfoMsg("✓ Cập nhật thông tin cá nhân thành công!");
-    } else {
-      setInfoError(res.message);
+    if (contactChanged) {
+      if (!otp.trim()) {
+        setInfoError("Thay đổi Email hoặc Số điện thoại cần nhập mã xác minh OTP.");
+        return;
+      }
+      if (!isRealApiEnabled() && otp.trim() !== "123456") {
+        setInfoError("Mã OTP không chính xác (Mã demo: 123456).");
+        return;
+      }
+    }
+
+    setInfoSubmitting(true);
+    try {
+      const res = await onUpdateProfile({
+        name: name.trim(),
+        phone: phone.trim(),
+        email: email.trim(),
+        otp: contactChanged ? otp.trim() : undefined,
+      });
+      if (res.ok) {
+        setInfoMsg("✓ Cập nhật thông tin cá nhân thành công!");
+        setOtp("");
+        setOtpSent(false);
+      } else {
+        setInfoError(res.message);
+      }
+    } finally {
+      setInfoSubmitting(false);
     }
   };
 
-  const handleChangePass = (e: React.FormEvent) => {
+  const handleChangePass = async (e: React.FormEvent) => {
     e.preventDefault();
     setPassMsg("");
     setPassError("");
@@ -70,22 +138,28 @@ export default function UserProfileModal({
       setPassError("Vui lòng nhập mật khẩu hiện tại.");
       return;
     }
-    if (newPass.length < 6) {
-      setPassError("Mật khẩu mới tối thiểu 6 ký tự.");
+    if (newPass.length < 8) {
+      setPassError("Mật khẩu mới tối thiểu 8 ký tự.");
       return;
     }
     if (newPass !== confirmPass) {
       setPassError("Xác nhận mật khẩu mới không khớp.");
       return;
     }
-    const res = onChangePassword(oldPass, newPass);
-    if (res.ok) {
-      setPassMsg("✓ Đổi mật khẩu thành công!");
-      setOldPass("");
-      setNewPass("");
-      setConfirmPass("");
-    } else {
-      setPassError(res.message);
+
+    setPassSubmitting(true);
+    try {
+      const res = await onChangePassword(oldPass, newPass);
+      if (res.ok) {
+        setPassMsg("✓ Đổi mật khẩu thành công! Vui lòng đăng nhập lại.");
+        setOldPass("");
+        setNewPass("");
+        setConfirmPass("");
+      } else {
+        setPassError(res.message);
+      }
+    } finally {
+      setPassSubmitting(false);
     }
   };
 
@@ -229,18 +303,47 @@ export default function UserProfileModal({
                 </div>
               </div>
 
+              {contactChanged && (
+                <div style={{ background: "#FFFBEB", border: "1px solid #FCD34D", borderRadius: 8, padding: "10px 12px" }}>
+                  <div style={{ fontSize: "0.78rem", fontWeight: 700, color: "#92400E", marginBottom: 6 }}>
+                    Xác minh OTP khi đổi Email / Số điện thoại (UC1.6)
+                  </div>
+                  <div className="flex gap-2 items-center">
+                    <input
+                      type="text"
+                      maxLength={6}
+                      placeholder="Nhập mã OTP 6 số"
+                      value={otp}
+                      onChange={(e) => { setOtp(e.target.value.replace(/\D/g, "")); setInfoError(""); }}
+                      className="form-input"
+                      style={{ flex: 1, fontFamily: "var(--font-mono)", letterSpacing: "3px" }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => { void handleSendContactOtp(); }}
+                      disabled={otpSending}
+                      className="btn btn-secondary btn-sm"
+                    >
+                      {otpSending ? "Đang gửi..." : otpSent ? "Gửi lại OTP" : "Gửi mã OTP"}
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {infoMsg && <div className="badge badge-success" style={{ padding: 8, textAlign: "center" }}>{infoMsg}</div>}
               {infoError && <div className="form-error-msg">{infoError}</div>}
 
               <div className="flex gap-2 mt-2">
                 <button type="button" onClick={onClose} className="btn btn-secondary btn-md" style={{ flex: 1 }}>Đóng</button>
-                <button type="submit" className="btn btn-primary btn-md" style={{ flex: 1 }}>Lưu thông tin</button>
+                <button type="submit" disabled={infoSubmitting} className="btn btn-primary btn-md" style={{ flex: 1 }}>
+                  {infoSubmitting ? "Đang lưu..." : "Lưu thông tin"}
+                </button>
               </div>
             </form>
           ) : (
             <form onSubmit={handleChangePass} className="flex flex-col gap-3.5">
               <p style={{ fontSize: "0.8rem", color: "#6B7280", margin: 0 }}>
-                Nhập mật khẩu hiện tại và tạo mật khẩu mới an toàn tối thiểu 6 ký tự.
+                Nhập mật khẩu hiện tại và tạo mật khẩu mới an toàn tối thiểu 8 ký tự.
               </p>
 
               <div>
@@ -260,7 +363,7 @@ export default function UserProfileModal({
                 <input
                   type="password"
                   required
-                  placeholder="Tối thiểu 6 ký tự"
+                  placeholder="Tối thiểu 8 ký tự"
                   value={newPass}
                   onChange={(e) => { setNewPass(e.target.value); setPassMsg(""); setPassError(""); }}
                   className="form-input"
@@ -284,7 +387,9 @@ export default function UserProfileModal({
 
               <div className="flex gap-2 mt-2">
                 <button type="button" onClick={onClose} className="btn btn-secondary btn-md" style={{ flex: 1 }}>Hủy</button>
-                <button type="submit" className="btn btn-primary btn-md" style={{ flex: 1 }}>Xác nhận đổi mật khẩu</button>
+                <button type="submit" disabled={passSubmitting} className="btn btn-primary btn-md" style={{ flex: 1 }}>
+                  {passSubmitting ? "Đang xử lý..." : "Xác nhận đổi mật khẩu"}
+                </button>
               </div>
             </form>
           )}

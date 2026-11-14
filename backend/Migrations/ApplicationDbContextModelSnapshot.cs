@@ -17,7 +17,7 @@ namespace GearGo.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "9.0.22")
+                .HasAnnotation("ProductVersion", "9.0.23")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
@@ -630,6 +630,11 @@ namespace GearGo.Migrations
                         .HasColumnType("datetime2")
                         .HasColumnName("han_thanh_toan");
 
+                    b.Property<string>("IdempotencyKey")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("idempotency_key");
+
                     b.Property<string>("KhuyenMaiLucDat")
                         .HasColumnType("nvarchar(max)")
                         .HasColumnName("khuyen_mai_luc_dat");
@@ -710,9 +715,9 @@ namespace GearGo.Migrations
                     b.HasIndex("MaDonHienThi")
                         .IsUnique();
 
-                    b.HasIndex("MaKhachHang");
-
                     b.HasIndex("MaNguoiHuy");
+
+                    b.HasIndex("MaKhachHang", "IdempotencyKey");
 
                     b.ToTable("DON_THUE");
                 });
@@ -1334,6 +1339,57 @@ namespace GearGo.Migrations
                         .IsUnique();
 
                     b.ToTable("NHAN_VIEN");
+                });
+
+            modelBuilder.Entity("GearGo.Models.Entities.NhatKyLienHeQuaHan", b =>
+                {
+                    b.Property<long>("MaNhatKyLienHe")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("ma_nhat_ky_lien_he");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("MaNhatKyLienHe"));
+
+                    b.Property<DateTime?>("HenTraMoi")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("hen_tra_moi");
+
+                    b.Property<string>("KenhLienHe")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("kenh_lien_he");
+
+                    b.Property<string>("KetQua")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("ket_qua");
+
+                    b.Property<long>("MaDonThue")
+                        .HasColumnType("bigint")
+                        .HasColumnName("ma_don_thue");
+
+                    b.Property<long>("MaTaiKhoan")
+                        .HasColumnType("bigint")
+                        .HasColumnName("ma_tai_khoan");
+
+                    b.Property<string>("NoiDung")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("noi_dung");
+
+                    b.Property<DateTime>("ThoiDiemLienHe")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("thoi_diem_lien_he");
+
+                    b.HasKey("MaNhatKyLienHe");
+
+                    b.HasIndex("MaTaiKhoan");
+
+                    b.HasIndex("MaDonThue", "ThoiDiemLienHe");
+
+                    b.ToTable("NHAT_KY_LIEN_HE_QUA_HAN");
                 });
 
             modelBuilder.Entity("GearGo.Models.Entities.NhatKyThaoTac", b =>
@@ -2931,6 +2987,25 @@ namespace GearGo.Migrations
                         .IsRequired();
 
                     b.Navigation("TaiKhoan");
+                });
+
+            modelBuilder.Entity("GearGo.Models.Entities.NhatKyLienHeQuaHan", b =>
+                {
+                    b.HasOne("GearGo.Models.Entities.DonThue", "DonThue")
+                        .WithMany()
+                        .HasForeignKey("MaDonThue")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("GearGo.Models.Entities.TaiKhoan", "NguoiLienHe")
+                        .WithMany()
+                        .HasForeignKey("MaTaiKhoan")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("DonThue");
+
+                    b.Navigation("NguoiLienHe");
                 });
 
             modelBuilder.Entity("GearGo.Models.Entities.NhatKyThaoTac", b =>

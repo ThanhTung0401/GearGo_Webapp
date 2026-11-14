@@ -92,7 +92,7 @@ public class KhoService : IKhoService
         var spIds = nhomSanPham.Select(g => g.Key).ToList();
 
         Dictionary<long, int>? khaDungMap = null;
-        if (request.GioNhan.HasValue && request.GioTra.HasValue && spIds.Count > 0)
+        if (_khaDungService != null && request.GioNhan.HasValue && request.GioTra.HasValue && spIds.Count > 0)
         {
             khaDungMap = await _khaDungService.LayKhaDungNhieuAsync(spIds, request.GioNhan.Value, request.GioTra.Value);
             res.KhaDungTheoLich = khaDungMap.Values.Sum();
@@ -405,20 +405,23 @@ public class KhoService : IKhoService
                 .Distinct()
                 .ToListAsync();
 
-            foreach (var don in donTuongLai)
+            if (_khaDungService != null)
             {
-                var khaDungMap = await _khaDungService.LayKhaDungNhieuAsync(
-                    new List<long> { thietBi.MaSanPhamHienTai },
-                    don.GioNhanDuKien,
-                    don.GioTraDuKien);
-
-                int khaDungConLai = khaDungMap.TryGetValue(thietBi.MaSanPhamHienTai, out int sl) ? sl : 0;
-                // Nếu giảm 1 thiết bị mà khả dụng < 1 (tức hiện tại còn 0 chiếc dư) thì sẽ làm thiếu cam kết
-                if (khaDungConLai < 1)
+                foreach (var don in donTuongLai)
                 {
-                    res.CoTheApDungHienTai = false;
-                    res.ThieuSoLuongTheoLich.Add(
-                        $"Đơn {don.MaDonHienThi} ({don.GioNhanDuKien:yyyy-MM-dd} -> {don.GioTraDuKien:yyyy-MM-dd}) sẽ bị thiếu hàng nếu giảm nguồn sản phẩm #{thietBi.MaSanPhamHienTai}.");
+                    var khaDungMap = await _khaDungService.LayKhaDungNhieuAsync(
+                        new List<long> { thietBi.MaSanPhamHienTai },
+                        don.GioNhanDuKien,
+                        don.GioTraDuKien);
+
+                    int khaDungConLai = khaDungMap.TryGetValue(thietBi.MaSanPhamHienTai, out int sl) ? sl : 0;
+                    // Nếu giảm 1 thiết bị mà khả dụng < 1 (tức hiện tại còn 0 chiếc dư) thì sẽ làm thiếu cam kết
+                    if (khaDungConLai < 1)
+                    {
+                        res.CoTheApDungHienTai = false;
+                        res.ThieuSoLuongTheoLich.Add(
+                            $"Đơn {don.MaDonHienThi} ({don.GioNhanDuKien:yyyy-MM-dd} -> {don.GioTraDuKien:yyyy-MM-dd}) sẽ bị thiếu hàng nếu giảm nguồn sản phẩm #{thietBi.MaSanPhamHienTai}.");
+                    }
                 }
             }
         }

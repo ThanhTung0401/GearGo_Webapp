@@ -45,9 +45,9 @@ export const notificationApi = {
   },
 
   async demChuaDoc(): Promise<number> {
-    const res = await apiClient.get<{ soChuaDoc?: number }>("/api/v1/thong-bao/chua-doc/dem");
-    const data = unwrapResult<{ soChuaDoc?: number }>(res.data);
-    return Number(data?.soChuaDoc ?? 0);
+    const res = await apiClient.get<{ soLuongChuaDoc?: number; soChuaDoc?: number }>("/api/v1/thong-bao/chua-doc/dem");
+    const data = unwrapResult<{ soLuongChuaDoc?: number; soChuaDoc?: number }>(res.data);
+    return Number(data?.soLuongChuaDoc ?? data?.soChuaDoc ?? 0);
   },
 
   async danhDauDaDoc(id: number): Promise<void> {

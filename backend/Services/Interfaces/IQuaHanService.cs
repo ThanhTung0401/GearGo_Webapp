@@ -32,4 +32,14 @@ public interface IQuaHanService
     /// Quét các đơn quá hạn và gửi thông báo nhắc nhở (Idempotent theo mốc)
     /// </summary>
     Task<Result<KetQuaQuetNhacResponse>> QuetVaTaoNhacQuaHanAsync(DateTime? mocQuet);
+
+    /// <summary>
+    /// Lấy danh sách nhật ký liên hệ khách hàng cho đơn quá hạn (UC4.4)
+    /// </summary>
+    Task<Result<List<NhatKyLienHeQuaHanResponse>>> LayNhatKyLienHeAsync(long donId, long actorId);
+
+    /// <summary>
+    /// Ghi nhận nhật ký liên hệ khách hàng quá hạn (UC4.4)
+    /// </summary>
+    Task<Result<NhatKyLienHeQuaHanResponse>> GhiNhatKyLienHeAsync(long donId, TaoNhatKyLienHeQuaHanRequest request, long actorId);
 }

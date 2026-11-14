@@ -53,9 +53,45 @@ public class PhanQuyenController : ControllerBase
             : StatusCode(LayStatusCode(kq.MaLoi), new { kq.MaLoi, kq.ThongDiep, kq.ChiTiet });
     }
 
+    // UC1.10: Phân quyền chi tiết theo từng nhân viên (id có thể là MaTaiKhoan hoặc MaNhanVien)
+    [HttpGet("nhan-vien/{id:long}")]
+    public async Task<IActionResult> LayQuyenCuaNhanVien([FromRoute] long id, CancellationToken ct)
+    {
+        var kq = await _service.LayQuyenCuaNhanVienAsync(id, ct);
+        return kq.ThanhCong
+            ? Ok(kq.DuLieu)
+            : StatusCode(LayStatusCode(kq.MaLoi), new { kq.MaLoi, kq.ThongDiep });
+    }
+
+    [HttpPut("nhan-vien/{id:long}")]
+    public async Task<IActionResult> CapNhatQuyenNhanVien(
+        [FromRoute] long id,
+        [FromBody] CapNhatQuyenNhanVienRequest request,
+        CancellationToken ct)
+    {
+        if (!ModelState.IsValid) return BadRequest(ModelState);
+        var actorId = User.LayMaTaiKhoan();
+        var kq = await _service.CapNhatQuyenNhanVienAsync(id, request, actorId, ct);
+        return kq.ThanhCong
+            ? Ok(kq.DuLieu)
+            : StatusCode(LayStatusCode(kq.MaLoi), new { kq.MaLoi, kq.ThongDiep, kq.ChiTiet });
+    }
+
+    [HttpDelete("nhan-vien/{id:long}")]
+    public async Task<IActionResult> XoaPhanQuyenRiengNhanVien([FromRoute] long id, CancellationToken ct)
+    {
+        var actorId = User.LayMaTaiKhoan();
+        var kq = await _service.XoaPhanQuyenRiengNhanVienAsync(id, actorId, ct);
+        return kq.ThanhCong
+            ? Ok(kq.DuLieu)
+            : StatusCode(LayStatusCode(kq.MaLoi), new { kq.MaLoi, kq.ThongDiep });
+    }
+
     private static int LayStatusCode(string? maLoi) => maLoi switch
     {
         DomainConstants.Errors.RoleNotFound => 404,
+        DomainConstants.Errors.AccountNotFound => 404,
+        DomainConstants.Errors.StaffNotFound => 404,
         DomainConstants.Errors.PermissionNotFound => 400,
         DomainConstants.Errors.Forbidden => 403,
         "VAI_TRO_KHACH_KHONG_NHAN_QUYEN" => 400,

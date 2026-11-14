@@ -41,7 +41,12 @@ public class PermissionAuthorizationHandler : AuthorizationHandler<PermissionReq
 
         using var scope = _scopeFactory.CreateScope();
         var service = scope.ServiceProvider.GetRequiredService<IPermissionService>();
-        if (await service.KiemTraCoQuyenAsync(role, requirement.Permission))
+        var maTaiKhoanRaw = context.User.FindFirst("MaTaiKhoan")?.Value
+                            ?? context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        var coQuyen = long.TryParse(maTaiKhoanRaw, out var maTaiKhoan)
+            ? await service.KiemTraCoQuyenTaiKhoanAsync(maTaiKhoan, role, requirement.Permission)
+            : await service.KiemTraCoQuyenAsync(role, requirement.Permission);
+        if (coQuyen)
         {
             context.Succeed(requirement);
         }

@@ -33,6 +33,25 @@ export interface ChuanBiResponseBackend {
   lyDoChuaDuDieuKien: string[];
 }
 
+export interface BaoThieuThietBiRequest {
+  dongDonId?: number;
+  soLuongThieu?: number;
+  lyDo: string;
+  ghiChu?: string;
+}
+
+export interface BaoThieuThietBiResponse {
+  maDonThue: number;
+  maDonHienThi: string;
+  trangThaiDon: string;
+  dongDonId?: number | null;
+  soLuongThieu?: number | null;
+  lyDo: string;
+  ghiChu?: string | null;
+  thoiDiemBao: string;
+  soThongBaoDaGui: number;
+}
+
 export interface ChiTietBanGiaoBackend {
   maChiTietBanGiao: number;
   maPhanCong: number;
@@ -108,6 +127,11 @@ export const handoverApi = {
   async xacNhanSanSang(donId: number, ghiChu?: string): Promise<ChuanBiResponseBackend> {
     const res = await apiClient.post<unknown>(`/api/chuan-bi-don/${donId}/san-sang`, { ghiChu });
     return unwrapResult<ChuanBiResponseBackend>(res.data);
+  },
+
+  async baoThieuThietBi(donId: number, req: BaoThieuThietBiRequest): Promise<BaoThieuThietBiResponse> {
+    const res = await apiClient.post<unknown>(`/api/chuan-bi-don/${donId}/bao-thieu`, req);
+    return unwrapResult<BaoThieuThietBiResponse>(res.data);
   },
 
   // ─── Bàn giao BBBG (/api/v1/ban-giao) ───

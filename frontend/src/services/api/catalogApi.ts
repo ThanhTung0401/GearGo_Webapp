@@ -212,6 +212,11 @@ export const catalogApi = {
     return res.data;
   },
 
+  async adminLayHinhAnh(id: number): Promise<HinhAnhSanPhamBackend[]> {
+    const res = await apiClient.get<HinhAnhSanPhamBackend[]>(`/api/admin/san-pham/${id}/hinh-anh`);
+    return Array.isArray(res.data) ? res.data : [];
+  },
+
   /**
    * Upload hình ảnh sản phẩm dưới dạng Multipart Form Data (UC49)
    */

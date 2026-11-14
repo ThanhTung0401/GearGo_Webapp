@@ -1,7 +1,9 @@
 using GearGo.Data;
 using GearGo.Exceptions;
+using GearGo.Helpers;
 using GearGo.Models.Entities;
 using GearGo.Models.DTOs.GioThue;
+using GearGo.Models.Enums;
 using GearGo.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
@@ -11,17 +13,19 @@ namespace GearGo.Services.Implements
     {
         private readonly ApplicationDbContext _context;
         private readonly IBaoGiaService _baoGiaService;
-        
         private readonly IKhuyenMaiService _khuyenMaiService;
+        private readonly IKhaDungService _khaDungService;
 
         public GioThueService(
             ApplicationDbContext context, 
             IBaoGiaService baoGiaService,
-            IKhuyenMaiService khuyenMaiService)
+            IKhuyenMaiService khuyenMaiService,
+            IKhaDungService khaDungService)
         {
             _context = context;
             _baoGiaService = baoGiaService;
             _khuyenMaiService = khuyenMaiService;
+            _khaDungService = khaDungService;
         }
 
         // Chuyển đổi linh hoạt giữa MaTaiKhoan hoặc MaKhachHang để đảm bảo ràng buộc ngoại khóa KHACH_HANG
@@ -133,7 +137,11 @@ namespace GearGo.Services.Implements
             var baoGia = _baoGiaService.TinhBaoGia(gio.GioNhanDuKien.Value, gio.GioTraDuKien.Value, danhSachDong, tienGiamTuKhuyenMai);
             response.BaoGia = baoGia;
 
-            // 4. Map chi tiết giỏ thuê và cắm cờ Ngừng Kinh Doanh
+            // 4. Tính số lượng khả dụng thực tế qua IKhaDungService và map chi tiết giỏ thuê
+            var spIds = gio.ChiTietGioThues.Select(c => c.MaSanPham).Distinct().ToList();
+            var khaDungMap = await _khaDungService.LayKhaDungNhieuAsync(
+                spIds, gio.GioNhanDuKien.Value, gio.GioTraDuKien.Value);
+
             foreach (var ct in gio.ChiTietGioThues)
             {
                 var ctBaoGia = baoGia.ChiTiet.First(x => x.MaSanPham == ct.MaSanPham);
@@ -148,8 +156,8 @@ namespace GearGo.Services.Implements
                     TienThue = ctBaoGia.TienThue,
                     TienCoc = ctBaoGia.TienCoc,
                     TienGiam = ctBaoGia.TienGiam,
-                    NgungKinhDoanh = ct.SanPham.TrangThaiKinhDoanh.ToString() != "DangKinhDoanh",// Cắm cờ bắt khách xoá dòng
-                    SoLuongKhaDung = 999 // TODO: await _khaDungService.LayKhaDungAsync(...)
+                    NgungKinhDoanh = ct.SanPham.TrangThaiKinhDoanh != TrangThaiKinhDoanh.DangKinhDoanh, // Cắm cờ bắt khách xoá dòng
+                    SoLuongKhaDung = khaDungMap.TryGetValue(ct.MaSanPham, out var soKhaDung) ? soKhaDung : 0
                 });
             }
 
@@ -164,6 +172,19 @@ namespace GearGo.Services.Implements
 
         public async Task<GioThueResponse> ThemAsync(long maKhachHang, ThemVaoGioRequest req)
         {
+            if (req.SoLuong <= 0)
+            {
+                throw new DuLieuKhongHopLeException(DomainConstants.Errors.InvalidQuantity, "Số lượng thêm vào giỏ phải lớn hơn 0.");
+            }
+
+            var sp = await _context.Set<SanPham>().FindAsync(req.MaSanPham);
+            if (sp == null) throw new KhongTimThayException("Không tìm thấy sản phẩm");
+            if (sp.TrangThaiKinhDoanh != TrangThaiKinhDoanh.DangKinhDoanh)
+            {
+                throw new DuLieuKhongHopLeException(DomainConstants.Errors.ProductDiscontinued,
+                    "Sản phẩm đã ngừng kinh doanh hoặc tạm ngừng cho thuê, không thể thêm vào giỏ.");
+            }
+
             var gio = await GetOrCreateGioAsync(maKhachHang);
             var chiTiet = gio.ChiTietGioThues.FirstOrDefault(c => c.MaSanPham == req.MaSanPham);
 
@@ -173,9 +194,6 @@ namespace GearGo.Services.Implements
             }
             else
             {
-                var sp = await _context.Set<SanPham>().FindAsync(req.MaSanPham);
-                if (sp == null) throw new KhongTimThayException("Không tìm thấy sản phẩm");
-
                 gio.ChiTietGioThues.Add(new ChiTietGioThue
                 {
                     MaSanPham = req.MaSanPham,
@@ -190,6 +208,11 @@ namespace GearGo.Services.Implements
 
         public async Task<GioThueResponse> CapNhatSoLuongAsync(long maKhachHang, long maChiTiet, CapNhatSoLuongRequest req)
         {
+            if (req.SoLuongMoi <= 0)
+            {
+                throw new DuLieuKhongHopLeException(DomainConstants.Errors.InvalidQuantity, "Số lượng phải lớn hơn 0.");
+            }
+
             var gio = await GetOrCreateGioAsync(maKhachHang);
             var chiTiet = gio.ChiTietGioThues.FirstOrDefault(c => c.MaChiTietGio == maChiTiet);
             
@@ -217,6 +240,11 @@ namespace GearGo.Services.Implements
 
         public async Task<GioThueResponse> DatThoiGianAsync(long maKhachHang, DatThoiGianRequest req)
         {
+            if (req.GioNhan >= req.GioTra)
+            {
+                throw new DuLieuKhongHopLeException(DomainConstants.Errors.InvalidRentalPeriod, "Giờ trả phải sau giờ nhận.");
+            }
+
             var gio = await GetOrCreateGioAsync(maKhachHang);
             gio.GioNhanDuKien = req.GioNhan;
             gio.GioTraDuKien = req.GioTra;

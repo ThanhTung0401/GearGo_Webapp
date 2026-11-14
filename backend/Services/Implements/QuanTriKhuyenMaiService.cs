@@ -513,7 +513,7 @@ public class QuanTriKhuyenMaiService : IQuanTriKhuyenMaiService
             MaDonThue = l.MaDonThue,
             MaDonHienThi = l.DonThue.MaDonHienThi,
             MaKhachHang = l.DonThue.MaKhachHang,
-            TenKhachHang = l.DonThue.KhachHang?.HoTen ?? l.DonThue.TenNguoiNhan,
+            TenKhachHang = l.DonThue.KhachHang?.HoTen ?? l.DonThue.TenNguoiNhan ?? string.Empty,
             TrangThaiLuot = (l.TrangThai == "DangGiu" && l.ThoiDiemHetHan <= now) ? "HetHan" : l.TrangThai,
             ThoiDiemGiuLuot = l.ThoiDiemGiuLuot,
             ThoiDiemHetHan = l.ThoiDiemHetHan,

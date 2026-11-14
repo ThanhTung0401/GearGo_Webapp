@@ -176,8 +176,6 @@ builder.Services.AddScoped<IDonThueService, DonThueService>();
 builder.Services.AddScoped<IThanhToanService, ThanhToanService>();
 builder.Services.AddScoped<IQuaHanService, QuaHanService>();
 builder.Services.AddScoped<IKhuyenMaiService, KhuyenMaiService>();
-builder.Services.AddScoped<IInventoryService, InventoryService>();
-builder.Services.AddScoped<ICheckoutService, CheckoutService>();
 builder.Services.AddScoped<IBanGiaoService, BanGiaoService>();
 // W3 — Thanh Tùng: hồ sơ, truy vấn đơn, lịch sử, thông báo
 builder.Services.AddScoped<IHoSoService, HoSoService>();

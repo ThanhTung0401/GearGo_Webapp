@@ -1,5 +1,6 @@
 using GearGo.Data;
 using GearGo.Exceptions;
+using GearGo.Helpers;
 using GearGo.Integrations.AI;
 using GearGo.Models.DTOs.TuVan;
 using GearGo.Models.Entities;
@@ -199,8 +200,8 @@ public class TuVanAIService : ITuVanAIService
             throw new DuLieuKhongHopLeException("DAU_VAO_TU_VAN_KHONG_HOP_LE", "Danh sách sản phẩm thêm vào giỏ không được rỗng.");
         }
 
-        // 1. Tìm hoặc tạo giỏ hàng cho khách hàng
-        var trueKhId = await ResolveMaKhachHangAsync(maKhachHang);
+        // 1. Tìm hoặc tạo giỏ hàng cho khách hàng theo MaTaiKhoan đã xác thực (chống IDOR)
+        var trueKhId = await ActorGuard.LayMaKhachHangAsync(_context, maKhachHang, cancellationToken);
         var gio = await _context.GioThues
             .Include(g => g.ChiTietGioThues)
             .FirstOrDefaultAsync(g => g.MaKhachHang == trueKhId, cancellationToken);
@@ -352,32 +353,5 @@ public class TuVanAIService : ITuVanAIService
         }
 
         return candidates;
-    }
-
-    private async Task<long> ResolveMaKhachHangAsync(long actorId)
-    {
-        var khByMa = await _context.KhachHangs.FirstOrDefaultAsync(k => k.MaKhachHang == actorId);
-        if (khByMa != null) return khByMa.MaKhachHang;
-
-        var khByTk = await _context.KhachHangs.FirstOrDefaultAsync(k => k.MaTaiKhoan == actorId);
-        if (khByTk != null) return khByTk.MaKhachHang;
-
-        var tk = await _context.TaiKhoans.FirstOrDefaultAsync(t => t.MaTaiKhoan == actorId);
-        if (tk != null)
-        {
-            var newKh = new KhachHang
-            {
-                MaTaiKhoan = tk.MaTaiKhoan,
-                HoTen = tk.Email?.Split('@')[0] ?? "KhachHang"
-            };
-            _context.KhachHangs.Add(newKh);
-            await _context.SaveChangesAsync();
-            return newKh.MaKhachHang;
-        }
-
-        var firstKh = await _context.KhachHangs.FirstOrDefaultAsync();
-        if (firstKh != null) return firstKh.MaKhachHang;
-
-        return actorId;
     }
 }

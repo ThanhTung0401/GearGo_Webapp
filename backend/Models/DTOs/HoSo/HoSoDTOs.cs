@@ -9,7 +9,18 @@ public record CapNhatHoSoRequest(
     [Required, MaxLength(20)] string SoDienThoai,
     string? DiaChi,
     DateOnly? NgaySinh,
-    string? AnhDaiDien
+    string? AnhDaiDien,
+    [MaxLength(10)] string? MaOtp = null
+);
+
+public record GuiOtpDoiLienHeRequest(
+    [EmailAddress, MaxLength(255)] string? EmailMoi,
+    [MaxLength(20)] string? SoDienThoaiMoi
+);
+
+public record GuiOtpDoiLienHeResponse(
+    string ThongDiep,
+    DateTime HetHanLuc
 );
 
 public record HoSoResponse(

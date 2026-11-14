@@ -1,8 +1,14 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { type useApp } from "../App";
-import { type Equipment, type EquipmentStatus, type StockAdjustmentLine } from "../store";
+import { type EquipmentStatus, type StockAdjustmentLine } from "../store";
 import { isRealApiEnabled } from "../services/apiClient";
 import { inventoryApi } from "../services/api/inventoryApi";
+import {
+  warehouseApi,
+  type KhoTongQuanBackend,
+  type ThietBiKhoItemBackend,
+  type DoiChieuKiemKeBackend,
+} from "../services/api/warehouseApi";
 
 interface Props {
   app: ReturnType<typeof useApp>;
@@ -30,18 +36,93 @@ export default function InventoryAuditModal({ app, onClose, onAuditSubmitted }: 
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
+  // State dữ liệu kho thực tế từ Backend (UC6.10 / UC6.10.1)
+  const useRealBackend = app.realApi || isRealApiEnabled();
+  const [tongQuan, setTongQuan] = useState<KhoTongQuanBackend | null>(null);
+  const [khoItems, setKhoItems] = useState<ThietBiKhoItemBackend[]>([]);
+  const [loadingKho, setLoadingKho] = useState(false);
+  const [reconcileResult, setReconcileResult] = useState<DoiChieuKiemKeBackend | null>(null);
+  const [reconciling, setReconciling] = useState(false);
+
+  useEffect(() => {
+    if (!useRealBackend) return;
+    let cancelled = false;
+    setLoadingKho(true);
+    Promise.all([
+      warehouseApi.layTongQuan(),
+      warehouseApi.timThietBi({ trang: 1, soMoiTrang: 200 }),
+    ])
+      .then(([tq, paged]) => {
+        if (cancelled) return;
+        setTongQuan(tq);
+        setKhoItems(paged.items || []);
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setSubmitError(err instanceof Error ? err.message : "Không tải được dữ liệu tổng quan kho từ máy chủ.");
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingKho(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [useRealBackend]);
+
+  // Chuẩn hóa nguồn dữ liệu từ backend kho hoặc mock store
+  const sourceEquipments = useRealBackend
+    ? khoItems.map((k) => ({
+        id: String(k.maThietBi),
+        displayCode: k.maThietBiHienThi,
+        productId: String(k.maSanPhamHienTai),
+        productName: k.tenSanPhamHienTai,
+        equipmentStatus:
+          k.trangThaiSuDung === "DangThue"
+            ? "Đang thuê"
+            : k.trangThaiSuDung === "DangBaoTri"
+            ? "Đang bảo trì"
+            : k.trangThaiSuDung === "ThatLac"
+            ? "Thất lạc"
+            : k.trangThaiSuDung === "NgungSuDung"
+            ? "Ngừng sử dụng"
+            : "Sẵn sàng",
+      }))
+    : app.equipment.map((e) => ({
+        id: e.id,
+        displayCode: e.displayCode || e.id,
+        productId: e.productId,
+        productName: app.products.find((p) => p.id === e.productId)?.name || "",
+        equipmentStatus: e.equipmentStatus,
+      }));
+
   // Tách biệt danh sách: Đang cho thuê (vắng mặt hợp lệ) vs Đồ tại kho (phải có mặt)
-  const rentedEquipments = app.equipment.filter((e) => e.equipmentStatus === "Đang thuê");
-  const warehouseEquipments = app.equipment.filter((e) => e.equipmentStatus !== "Đang thuê");
+  const rentedEquipments = sourceEquipments.filter((e) => e.equipmentStatus === "Đang thuê");
+  const warehouseEquipments = sourceEquipments.filter((e) => e.equipmentStatus !== "Đang thuê");
 
   // State lưu kết quả kiểm kê từng thiết bị tại kho
-  const [auditStates, setAuditStates] = useState<Record<string, AuditItemState>>(() => {
-    const initial: Record<string, AuditItemState> = {};
-    warehouseEquipments.forEach((e) => {
-      initial[e.id] = { checkResult: "Khớp", note: "" };
-    });
-    return initial;
-  });
+  const [auditStates, setAuditStates] = useState<Record<string, AuditItemState>>({});
+
+  const handleDoiChieuServer = async () => {
+    if (!useRealBackend) return;
+    setReconciling(true);
+    setSubmitError(null);
+    try {
+      // Thu thập các mã thiết bị thực tế có mặt tại kho (không đánh dấu thất lạc) để đối chiếu với kỳ vọng hệ thống
+      const danhSachMaQuet = warehouseEquipments
+        .filter((e) => (auditStates[e.id]?.checkResult || "Khớp") !== "Thất lạc")
+        .map((e) => e.displayCode || e.id);
+      const res = await warehouseApi.doiChieuKiemKe({
+        danhSachMaQuet,
+        ghiChu: auditReason.trim() || "Kiểm kê đối chiếu kho",
+      });
+      setReconcileResult(res);
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : "Không thể đối chiếu kiểm kê với máy chủ.");
+    } finally {
+      setReconciling(false);
+    }
+  };
 
   const updateItemAudit = (id: string, update: Partial<AuditItemState>) => {
     setAuditStates((prev) => ({
@@ -53,7 +134,7 @@ export default function InventoryAuditModal({ app, onClose, onAuditSubmitted }: 
   // Lọc thiết bị tại kho theo từ khóa
   const filteredWarehouse = warehouseEquipments.filter((e) => {
     const prod = app.products.find((p) => p.id === e.productId);
-    const text = `${e.displayCode || e.id} ${e.id} ${prod?.name || ""}`.toLowerCase();
+    const text = `${e.displayCode || e.id} ${e.id} ${e.productName || prod?.name || ""}`.toLowerCase();
     return text.includes(searchTerm.toLowerCase());
   });
 
@@ -73,7 +154,7 @@ export default function InventoryAuditModal({ app, onClose, onAuditSubmitted }: 
     }
 
     // Đấu nối API Kiểm kê & Điều chỉnh kho Backend (DieuChinhKhoController)
-    if (app.realApi || isRealApiEnabled()) {
+    if (useRealBackend) {
       setSubmitting(true);
       try {
         const dto = {
@@ -120,7 +201,7 @@ export default function InventoryAuditModal({ app, onClose, onAuditSubmitted }: 
       const st = auditStates[e.id];
       return {
         equipmentId: e.id,
-        previousStatus: e.equipmentStatus,
+        previousStatus: e.equipmentStatus as EquipmentStatus,
         newStatus: st.checkResult as EquipmentStatus,
         reason: st.note.trim() || `Phát hiện sai lệch lúc kiểm kê (${st.checkResult})`,
       };
@@ -261,6 +342,31 @@ export default function InventoryAuditModal({ app, onClose, onAuditSubmitted }: 
 
         {/* Content Body */}
         <div style={{ padding: "16px 24px", overflowY: "auto", flex: 1 }}>
+          {useRealBackend && tongQuan && (
+            <div style={{ background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: 10, padding: "10px 14px", marginBottom: 12, fontSize: "0.78rem", display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center", justifyContent: "space-between" }}>
+              <div className="flex gap-3 flex-wrap">
+                <span>Tổng hồ sơ: <strong>{tongQuan.tongHoSoThietBi}</strong></span>
+                <span style={{ color: "#15803D" }}>Sẵn sàng tại kho: <strong>{tongQuan.sanSangTaiKho}</strong></span>
+                <span style={{ color: "#1D4ED8" }}>Đang thuê: <strong>{tongQuan.dangChoThue}</strong></span>
+                <span style={{ color: "#B45309" }}>Bảo trì: <strong>{tongQuan.dangBaoTri}</strong></span>
+                <span style={{ color: "#DC2626" }}>Thất lạc: <strong>{tongQuan.thatLac}</strong></span>
+              </div>
+              <button
+                type="button"
+                disabled={reconciling || loadingKho}
+                onClick={() => void handleDoiChieuServer()}
+                style={{ background: "#0F766E", color: "white", border: "none", borderRadius: 6, padding: "5px 10px", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer" }}
+              >
+                {reconciling ? "Đang đối chiếu..." : "🔍 Đối chiếu với máy chủ"}
+              </button>
+            </div>
+          )}
+          {reconcileResult && (
+            <div style={{ background: "#ECFDF5", border: "1px solid #A7F3D0", color: "#065F46", borderRadius: 8, padding: "8px 12px", marginBottom: 12, fontSize: "0.78rem" }}>
+              <strong>Kết quả đối chiếu ({new Date(reconcileResult.thoiDiemDoiChieu).toLocaleString("vi-VN")}):</strong>{" "}
+              Kỳ vọng tại kho: <strong>{reconcileResult.tongSoKyVongTaiKho}</strong> · Quét thực tế: <strong>{reconcileResult.tongSoQuetThucTe}</strong> · Khớp: <strong>{reconcileResult.danhSachKhop.length}</strong> · Thiếu: <strong style={{ color: "#DC2626" }}>{reconcileResult.danhSachThieu.length}</strong> · Ngoài kho hợp lệ: <strong>{reconcileResult.danhSachDangLuuHanhNgoaiKho.length}</strong>
+            </div>
+          )}
           {submitError && (
             <div style={{ background: "#FEF2F2", border: "1px solid #FECACA", color: "#B91C1C", borderRadius: 8, padding: "10px 14px", marginBottom: 12, fontSize: "0.82rem", fontWeight: 600 }}>
               {submitError}
@@ -319,7 +425,7 @@ export default function InventoryAuditModal({ app, onClose, onAuditSubmitted }: 
                             <td style={{ padding: "8px 12px", fontFamily: "monospace", fontWeight: 700, color: "#1D4ED8" }}>
                               {e.displayCode || e.id}
                             </td>
-                            <td style={{ padding: "8px 12px" }}>{prod?.name}</td>
+                            <td style={{ padding: "8px 12px" }}>{e.productName || prod?.name || "—"}</td>
                             <td style={{ padding: "8px 12px", fontFamily: "monospace" }}>
                               {ord?.displayCode || ord?.id || "Đang trong đơn"}
                             </td>
@@ -406,7 +512,7 @@ export default function InventoryAuditModal({ app, onClose, onAuditSubmitted }: 
                           <td style={{ padding: "8px 10px", fontFamily: "monospace", fontWeight: 700, color: "var(--color-forest, #15803D)" }}>
                             {e.displayCode || e.id}
                           </td>
-                          <td style={{ padding: "8px 10px" }}>{prod?.name}</td>
+                          <td style={{ padding: "8px 10px" }}>{e.productName || prod?.name || "—"}</td>
                           <td style={{ padding: "8px 10px", textAlign: "center" }}>
                             <span
                               style={{
@@ -520,6 +626,7 @@ export default function InventoryAuditModal({ app, onClose, onAuditSubmitted }: 
             {discrepancies.length > 0 ? (
               <button
                 type="button"
+                disabled={submitting}
                 onClick={handleSubmitAudit}
                 style={{
                   background: "var(--color-amber, #D97706)",
@@ -529,14 +636,15 @@ export default function InventoryAuditModal({ app, onClose, onAuditSubmitted }: 
                   borderRadius: 8,
                   fontSize: "0.82rem",
                   fontWeight: 700,
-                  cursor: "pointer",
+                  cursor: submitting ? "wait" : "pointer",
                 }}
               >
-                📤 Gửi Đề nghị điều chỉnh kho ({discrepancies.length} thiết bị - Chờ duyệt)
+                {submitting ? "Đang gửi..." : `📤 Gửi Đề nghị điều chỉnh kho (${discrepancies.length} thiết bị - Chờ duyệt)`}
               </button>
             ) : (
               <button
                 type="button"
+                disabled={submitting}
                 onClick={handleSubmitAudit}
                 style={{
                   background: "var(--color-forest, #15803D)",
@@ -546,7 +654,7 @@ export default function InventoryAuditModal({ app, onClose, onAuditSubmitted }: 
                   borderRadius: 8,
                   fontSize: "0.82rem",
                   fontWeight: 700,
-                  cursor: "pointer",
+                  cursor: submitting ? "wait" : "pointer",
                 }}
               >
                 ✓ Xác nhận kho khớp 100% (Hoàn tất kiểm kê)

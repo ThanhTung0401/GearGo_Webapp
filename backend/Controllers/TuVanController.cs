@@ -93,9 +93,9 @@ public class TuVanController : ControllerBase
             });
         }
 
-        var claim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value 
-                    ?? User.FindFirst("MaTaiKhoan")?.Value;
-        if (!long.TryParse(claim, out var maKhachHang))
+        var claim = User.FindFirst("MaTaiKhoan")?.Value
+                    ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (!long.TryParse(claim, out var maTaiKhoan))
         {
             return Unauthorized(new
             {
@@ -104,7 +104,8 @@ public class TuVanController : ControllerBase
             });
         }
 
-        await _tuVanService.ThemBoDoVaoGioAsync(maKhachHang, request, cancellationToken);
+        // Truyền MaTaiKhoan từ JWT; service dùng ActorGuard.LayMaKhachHangAsync để ánh xạ an toàn
+        await _tuVanService.ThemBoDoVaoGioAsync(maTaiKhoan, request, cancellationToken);
         return Ok(new
         {
             thanhCong = true,

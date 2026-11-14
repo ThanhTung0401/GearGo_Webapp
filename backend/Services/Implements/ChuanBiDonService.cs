@@ -9,6 +9,7 @@ using GearGo.Exceptions;
 using GearGo.Models.Common;
 using GearGo.Models.DTOs.ChuanBiDon;
 using GearGo.Models.DTOs.ThietBi;
+using GearGo.Models.DTOs.ThongBao;
 using GearGo.Models.Entities;
 using GearGo.Models.Enums;
 using GearGo.Services.Interfaces;
@@ -23,15 +24,19 @@ public class ChuanBiDonService : IChuanBiDonService
 {
     private readonly ApplicationDbContext _db;
     private readonly IThietBiService _thietBiService;
+    private readonly ILichSuNghiepVuService _lichSuService;
+    private readonly IThongBaoService _thongBaoService;
 
-    // TODO: Inject ILichSuNghiepVuService và IThongBaoService khi Thanh Tùng bàn giao interface
-    // private readonly ILichSuNghiepVuService _lichSuService;
-    // private readonly IThongBaoService _thongBaoService;
-
-    public ChuanBiDonService(ApplicationDbContext db, IThietBiService thietBiService)
+    public ChuanBiDonService(
+        ApplicationDbContext db,
+        IThietBiService thietBiService,
+        ILichSuNghiepVuService? lichSuService = null,
+        IThongBaoService? thongBaoService = null)
     {
         _db = db;
         _thietBiService = thietBiService;
+        _lichSuService = lichSuService ?? new LichSuNghiepVuService(db);
+        _thongBaoService = thongBaoService ?? new ThongBaoService(db);
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -77,16 +82,13 @@ public class ChuanBiDonService : IChuanBiDonService
 
             don.TrangThai = TrangThaiDonThue.DangChuanBi;
 
-            // Ghi lịch sử chuyển trạng thái đơn (Mục 10.0, W3-T2)
-            _db.LichSuTrangThaiDons.Add(new LichSuTrangThaiDon
-            {
-                MaDonThue = donId,
-                MaNguoiThucHien = maTaiKhoan,
-                TrangThaiTruoc = TrangThaiDonThue.DaXacNhan.ToString(),
-                TrangThaiSau = TrangThaiDonThue.DangChuanBi.ToString(),
-                ThoiDiem = DateTime.UtcNow,
-                LyDo = "Bắt đầu chuẩn bị đơn thuê"
-            });
+            // Ghi lịch sử chuyển trạng thái đơn qua ILichSuNghiepVuService
+            _lichSuService.GhiChuyenTrangThaiDon(new GhiLichSuDonCommand(
+                donId,
+                TrangThaiDonThue.DaXacNhan.ToString(),
+                TrangThaiDonThue.DangChuanBi.ToString(),
+                maTaiKhoan,
+                "Bắt đầu chuẩn bị đơn thuê"));
 
             await _db.SaveChangesAsync(ct);
             await tx.CommitAsync(ct);
@@ -196,7 +198,16 @@ public class ChuanBiDonService : IChuanBiDonService
             _db.PhanCongThietBis.AddRange(phanCongsMoi);
             await _db.SaveChangesAsync(ct);
 
-            // TODO: Ghi lịch sử khi Thanh Tùng bàn giao
+            // Ghi nhật ký thao tác phân công thiết bị qua ILichSuNghiepVuService
+            _lichSuService.GhiNhatKyThaoTac(new GhiNhatKyCommand(
+                maTaiKhoan,
+                "PhanCongThietBi",
+                "DonThue",
+                donId.ToString(),
+                null,
+                new { request.DongDonId, request.ThietBiIds },
+                $"Phân công {phanCongsMoi.Count} thiết bị cho dòng đơn #{request.DongDonId}"));
+            await _db.SaveChangesAsync(ct);
 
             await tx.CommitAsync(ct);
 
@@ -418,7 +429,16 @@ public class ChuanBiDonService : IChuanBiDonService
                 }
             }
 
-            // TODO: Ghi lịch sử khi Thanh Tùng bàn giao
+            // Ghi nhật ký thay thế thiết bị qua ILichSuNghiepVuService
+            _lichSuService.GhiNhatKyThaoTac(new GhiNhatKyCommand(
+                maTaiKhoan,
+                "ThayTheThietBi",
+                "PhanCongThietBi",
+                phanCongId.ToString(),
+                new { MaThietBiCu = phanCongCu.MaThietBi },
+                new { MaPhanCongMoi = phanCongMoi.MaPhanCong, MaThietBiMoi = request.ThietBiMoiId },
+                request.LyDo));
+            await _db.SaveChangesAsync(ct);
 
             await tx.CommitAsync(ct);
 
@@ -493,35 +513,20 @@ public class ChuanBiDonService : IChuanBiDonService
 
             don.TrangThai = TrangThaiDonThue.SanSangNhan;
 
-            // Ghi lịch sử chuyển trạng thái đơn (Mục 10.0)
-            _db.LichSuTrangThaiDons.Add(new LichSuTrangThaiDon
-            {
-                MaDonThue = donId,
-                MaNguoiThucHien = maTaiKhoan,
-                TrangThaiTruoc = TrangThaiDonThue.DangChuanBi.ToString(),
-                TrangThaiSau = TrangThaiDonThue.SanSangNhan.ToString(),
-                ThoiDiem = DateTime.UtcNow,
-                LyDo = request.GhiChu ?? "Đã chuẩn bị đủ thiết bị và sẵn sàng bàn giao"
-            });
+            // Ghi lịch sử chuyển trạng thái đơn qua ILichSuNghiepVuService
+            var lichSuSanSang = _lichSuService.GhiChuyenTrangThaiDon(new GhiLichSuDonCommand(
+                donId,
+                TrangThaiDonThue.DangChuanBi.ToString(),
+                TrangThaiDonThue.SanSangNhan.ToString(),
+                maTaiKhoan,
+                request.GhiChu ?? "Đã chuẩn bị đủ thiết bị và sẵn sàng bàn giao"));
 
-            // Ghi thông báo trong ứng dụng cho khách hàng (Mục 10.0, W3-T2)
-            var khachHang = await _db.KhachHangs.FirstOrDefaultAsync(k => k.MaKhachHang == don.MaKhachHang, ct);
-            if (khachHang != null)
-            {
-                _db.ThongBaos.Add(new ThongBao
-                {
-                    MaTaiKhoan = khachHang.MaTaiKhoan,
-                    MaDonThue = donId,
-                    MaSuKien = $"SAN_SANG_{donId}_{DateTime.UtcNow.Ticks}",
-                    LoaiSuKien = "DonThueSanSang",
-                    TieuDe = "Đơn thuê đã sẵn sàng nhận hàng",
-                    NoiDung = $"Đơn thuê #{don.MaDonHienThi} của bạn đã được chuẩn bị đầy đủ thiết bị và sẵn sàng bàn giao.",
-                    KenhGui = "InApp",
-                    TrangThaiGui = "DaGui",
-                    ThoiDiemTao = DateTime.UtcNow,
-                    ThoiDiemGui = DateTime.UtcNow
-                });
-            }
+            await _db.SaveChangesAsync(ct);
+
+            // Ghi thông báo "Sẵn sàng nhận" cho khách hàng qua IThongBaoService (chống trùng theo mã lịch sử)
+            await _thongBaoService.TaoThongBaoSanSangNhanAsync(
+                donId,
+                $"SAN_SANG_NHAN:{donId}:{lichSuSanSang.MaLichSuDon}");
 
             await _db.SaveChangesAsync(ct);
             await tx.CommitAsync(ct);
@@ -635,6 +640,88 @@ public class ChuanBiDonService : IChuanBiDonService
 
         await _db.SaveChangesAsync(ct);
         return Result.Ok();
+    }
+
+    /// <summary>
+    /// Báo thiếu thiết bị trong quá trình chuẩn bị đơn và gửi thông báo cho quản trị viên (UC4.1)
+    /// </summary>
+    public async Task<Result<BaoThieuThietBiResponse>> BaoThieuThietBiAsync(
+        long donId, BaoThieuThietBiRequest request, long maTaiKhoan, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(request.LyDo))
+            throw new DuLieuKhongHopLeException("DU_LIEU_KHONG_HOP_LE", "Lý do báo thiếu thiết bị là bắt buộc.");
+
+        var nhanVien = await LayNhanVienAsync(maTaiKhoan, ct);
+
+        var don = await _db.DonThues
+            .Include(d => d.ChiTietDonThues)
+            .FirstOrDefaultAsync(d => d.MaDonThue == donId, ct)
+            ?? throw new KhongTimThayException($"Không tìm thấy đơn thuê #{donId}.");
+
+        if (don.TrangThai != TrangThaiDonThue.DaXacNhan &&
+            don.TrangThai != TrangThaiDonThue.DangChuanBi &&
+            don.TrangThai != TrangThaiDonThue.SanSangNhan)
+        {
+            throw new TrangThaiKhongHopLeException(
+                $"Chỉ có thể báo thiếu thiết bị khi đơn ở trạng thái DaXacNhan, DangChuanBi hoặc SanSangNhan. Hiện tại: {don.TrangThai}.");
+        }
+
+        if (request.DongDonId.HasValue && !don.ChiTietDonThues.Any(c => c.MaChiTietDon == request.DongDonId.Value))
+            throw new KhongTimThayException($"Dòng đặt #{request.DongDonId.Value} không thuộc đơn #{donId}.");
+
+        var now = DateTime.UtcNow;
+
+        // Ghi nhật ký thao tác báo thiếu thiết bị
+        _lichSuService.GhiNhatKyThaoTac(new GhiNhatKyCommand(
+            maTaiKhoan,
+            "BaoThieuThietBi",
+            "DonThue",
+            donId.ToString(),
+            null,
+            new
+            {
+                request.DongDonId,
+                request.SoLuongThieu,
+                request.LyDo,
+                request.GhiChu,
+                MaNhanVien = nhanVien.MaNhanVien
+            },
+            request.LyDo));
+
+        // Gửi thông báo trong ứng dụng cho các tài khoản Quản trị viên đang hoạt động
+        var adminIds = await _db.TaiKhoans
+            .Where(t => t.VaiTro == "QuanTriVien" && t.TrangThai == "HoatDong")
+            .Select(t => t.MaTaiKhoan)
+            .ToListAsync(ct);
+
+        int soThongBao = 0;
+        var suKienKey = $"BAO_THIEU:{donId}:{now.Ticks}";
+        foreach (var adminId in adminIds)
+        {
+            await _thongBaoService.TaoThongBaoSuKienAsync(new SuKienThongBaoCommand(
+                donId,
+                "BaoThieuThietBi",
+                suKienKey,
+                $"Cảnh báo thiếu thiết bị - Đơn #{don.MaDonHienThi}",
+                $"Nhân viên {nhanVien.HoTen} báo thiếu thiết bị cho đơn #{don.MaDonHienThi}. Lý do: {request.LyDo}",
+                adminId));
+            soThongBao++;
+        }
+
+        await _db.SaveChangesAsync(ct);
+
+        return Result<BaoThieuThietBiResponse>.Ok(new BaoThieuThietBiResponse
+        {
+            MaDonThue = don.MaDonThue,
+            MaDonHienThi = don.MaDonHienThi,
+            TrangThaiDon = don.TrangThai.ToString(),
+            DongDonId = request.DongDonId,
+            SoLuongThieu = request.SoLuongThieu,
+            LyDo = request.LyDo.Trim(),
+            GhiChu = request.GhiChu,
+            ThoiDiemBao = now,
+            SoThongBaoDaGui = soThongBao
+        });
     }
 }
 
