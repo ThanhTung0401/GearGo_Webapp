@@ -1,0 +1,178 @@
+/* ==========================================================================
+   GearGo Button & Form Controls
+   ========================================================================== */
+
+/* ─── Nút bấm (Buttons) ─────────────────────────────────────────────────── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-family: var(--font-body);
+  font-weight: 600;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  text-decoration: none;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.btn:active {
+  transform: scale(0.98);
+}
+
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Nút chính: Xanh rừng thám hiểm */
+.btn-primary {
+  background: var(--color-forest);
+  color: #ffffff;
+  border-color: var(--color-forest);
+  box-shadow: 0 2px 6px rgba(27, 63, 47, 0.18);
+}
+.btn-primary:hover:not(:disabled) {
+  background: var(--color-moss);
+  border-color: var(--color-moss);
+  box-shadow: 0 4px 12px rgba(27, 63, 47, 0.25);
+}
+
+/* Nút phụ: Trắng viền cát tự nhiên */
+.btn-secondary {
+  background: #ffffff;
+  color: var(--color-bark);
+  border-color: var(--color-bone);
+  box-shadow: 0 1px 3px rgba(17, 35, 27, 0.04);
+}
+.btn-secondary:hover:not(:disabled) {
+  background: var(--color-parchment);
+  border-color: #D2C9B8;
+  color: var(--color-forest);
+}
+
+/* Nút điểm nhấn: Ánh lửa trại ấm áp */
+.btn-accent {
+  background: var(--color-amber);
+  color: #ffffff;
+  border-color: var(--color-amber);
+  box-shadow: 0 2px 8px rgba(224, 122, 67, 0.28);
+}
+.btn-accent:hover:not(:disabled) {
+  background: var(--color-amber-hover);
+  border-color: var(--color-amber-hover);
+  box-shadow: 0 4px 14px rgba(224, 122, 67, 0.35);
+}
+
+/* Nút cảnh báo / Nguy hiểm */
+.btn-danger {
+  background: #DC2626;
+  color: #ffffff;
+  border-color: #DC2626;
+}
+.btn-danger:hover:not(:disabled) {
+  background: #B91C1C;
+  border-color: #B91C1C;
+}
+
+/* Nút trong suốt nhẹ nhàng */
+.btn-ghost {
+  background: transparent;
+  color: var(--color-bark);
+  border-color: transparent;
+}
+.btn-ghost:hover:not(:disabled) {
+  background: var(--color-parchment);
+  color: var(--color-forest);
+}
+
+/* Kích cỡ nút bấm */
+.btn-sm {
+  padding: 6px 12px;
+  font-size: 0.8rem;
+  border-radius: 8px;
+}
+.btn-md {
+  padding: 10px 18px;
+  font-size: 0.9rem;
+}
+.btn-lg {
+  padding: 13px 26px;
+  font-size: 1rem;
+  border-radius: 12px;
+}
+.btn-full {
+  width: 100%;
+}
+
+/* ─── Trường nhập liệu Form ──────────────────────────────────────────────── */
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-bark);
+}
+
+.form-input,
+.form-select,
+.form-textarea {
+  width: 100%;
+  background: #ffffff;
+  border: 1px solid var(--color-bone);
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 0.92rem;
+  color: var(--color-charcoal);
+  font-family: var(--font-body);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.form-input::placeholder,
+.form-textarea::placeholder {
+  color: #9CA3AF;
+  font-size: 0.88rem;
+}
+
+.form-input:hover,
+.form-select:hover,
+.form-textarea:hover {
+  border-color: #D2C9B8;
+}
+
+.form-input:focus,
+.form-select:focus,
+.form-textarea:focus {
+  outline: none;
+  border-color: var(--color-forest);
+  box-shadow: 0 0 0 3px rgba(27, 63, 47, 0.12);
+}
+
+.form-input-error {
+  border-color: #EF4444 !important;
+}
+.form-input-error:focus {
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15) !important;
+}
+
+.form-error-msg {
+  font-size: 0.78rem;
+  color: #EF4444;
+  margin-top: 2px;
+}
+
+.form-hint {
+  font-size: 0.75rem;
+  color: #6B7280;
+}

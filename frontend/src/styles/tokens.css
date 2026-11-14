@@ -1,0 +1,70 @@
+/* ==========================================================================
+   GearGo Design Tokens & Base Reset
+   ========================================================================== */
+
+@theme {
+  --font-display: 'Outfit', system-ui, sans-serif;
+  --font-body: 'Be Vietnam Pro', system-ui, sans-serif;
+  --font-mono: 'Outfit', monospace;
+
+  --color-bark: #11231B;
+  --color-forest: #1B3F2F;
+  --color-moss: #285A41;
+  --color-fern: #3A6475;
+  --color-sage: #6B8B7B;
+  --color-amber: #E07A43;
+  --color-amber-hover: #D46931;
+  --color-clay: #BD4337;
+  --color-cream: #F8F6F0;
+  --color-parchment: #F1ECE2;
+  --color-bone: #E2DDD1;
+  --color-charcoal: #14261C;
+  --color-warning: #D97736;
+  --color-info: #356276;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-body);
+  background-color: var(--color-cream);
+  color: var(--color-charcoal);
+}
+
+body.menu-open {
+  overflow: hidden;
+}
+
+h1, h2, h3 {
+  font-family: var(--font-display);
+  letter-spacing: -0.015em;
+}
+
+button, input, select, textarea {
+  font: inherit;
+}
+
+button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible,
+a:focus-visible, summary:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--color-amber) 60%, white);
+  outline-offset: 2px;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--color-bone); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-sage); }

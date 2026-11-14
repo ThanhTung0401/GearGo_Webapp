@@ -19,6 +19,10 @@ import {
   type MoneyTransaction,
   type ReturnReceipt,
 } from "../store";
+import { CollectSurchargeModal } from "./reconciliation/CollectSurchargeModal";
+import { RefundDepositModal } from "./reconciliation/RefundDepositModal";
+import { ReconciliationTraceModals } from "./reconciliation/ReconciliationTraceModals";
+import { FinancialAdjustmentModal } from "./reconciliation/FinancialAdjustmentModal";
 
 interface ReconciliationSheetProps {
   order: Order;
@@ -881,810 +885,103 @@ export default function ReconciliationSheet({ order, app, userRole = "staff", on
           </div>
         )}
       </div>
-
-      {/* ─── MODAL UC5.5: THU THÊM TIỀN TẠI QUẦY (TIỀN MẶT, POS, QR) ─────────── */}
       {showCollectModal && (
-        <div role="dialog" aria-modal="true" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 9999, display: "grid", placeItems: "center", padding: 20 }}>
-          <div style={{ background: "white", borderRadius: 16, maxWidth: 520, width: "100%", padding: 24, boxShadow: "0 8px 30px rgba(0,0,0,0.2)" }}>
-            <div className="flex justify-between items-start mb-3">
-              <div>
-                <span style={{ fontSize: "0.72rem", background: "#FEE2E2", color: "#DC2626", padding: "2px 8px", borderRadius: 6, fontWeight: 700 }}>
-                  EP5.4-THU → GỌI UC5.5
-                </span>
-                <h3 style={{ fontFamily: "var(--font-display)", fontSize: "1.25rem", color: "var(--color-bark)", marginTop: 4 }}>
-                  Thu Tiền Bổ Sung: Đơn {order.id}
-                </h3>
-              </div>
-              <button type="button" onClick={() => setShowCollectModal(false)} style={{ border: "none", background: "none", fontSize: "1.2rem", cursor: "pointer" }}>✕</button>
-            </div>
-
-            <div style={{ background: "var(--color-parchment)", borderRadius: 10, padding: 12, marginBottom: 16, border: "1px solid var(--color-bone)" }}>
-              <div className="flex justify-between items-center">
-                <span style={{ fontSize: "0.85rem", color: "#4B5563" }}>Số tiền cần thu thêm:</span>
-                <strong style={{ fontFamily: "var(--font-mono)", fontSize: "1.3rem", color: "#DC2626" }}>{fmt(extraAmount)}</strong>
-              </div>
-              <div style={{ fontSize: "0.75rem", color: "#6B7280", marginTop: 4 }}>
-                Khách hàng: <strong>{order.customerName}</strong> ({order.customerPhone})
-              </div>
-            </div>
-
-            {/* Chọn kênh thu tiền */}
-            <div style={{ marginBottom: 14 }}>
-              <label style={{ fontSize: "0.8rem", fontWeight: 700, display: "block", marginBottom: 6 }}>Phương thức thanh toán:</label>
-              <div className="grid grid-cols-3 gap-2">
-                {[
-                  { key: "cash", label: "💵 Tiền mặt" },
-                  { key: "pos", label: "💳 Thẻ POS" },
-                  { key: "qr", label: "📱 VietQR" },
-                ].map((m) => (
-                  <button
-                    key={m.key}
-                    type="button"
-                    onClick={() => setCollectMethod(m.key as typeof collectMethod)}
-                    style={{
-                      padding: "8px 6px",
-                      borderRadius: 8,
-                      border: collectMethod === m.key ? "2px solid var(--color-forest)" : "1px solid var(--color-bone)",
-                      background: collectMethod === m.key ? "#F0FDF4" : "white",
-                      fontWeight: collectMethod === m.key ? 700 : 500,
-                      fontSize: "0.8rem",
-                      cursor: "pointer",
-                    }}
-                  >
-                    {m.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {collectMethod === "cash" && (
-              <div style={{ background: "#F9FAFB", borderRadius: 8, padding: 12, border: "1px solid var(--color-bone)", marginBottom: 14 }}>
-                <label style={{ fontSize: "0.78rem", fontWeight: 600, display: "block", marginBottom: 4 }}>Số tiền khách đưa (đ):</label>
-                <input
-                  type="number"
-                  value={cashTendered}
-                  onChange={(e) => setCashTendered(Number(e.target.value))}
-                  style={{ width: "100%", padding: "8px 10px", borderRadius: 6, border: "1px solid var(--color-bone)", fontFamily: "var(--font-mono)", fontSize: "0.95rem", fontWeight: 700, marginBottom: 8 }}
-                />
-                <div className="flex justify-between text-xs pt-1 border-t border-gray-200">
-                  <span style={{ color: "#6B7280" }}>Tiền thối lại cho khách:</span>
-                  <strong style={{ fontFamily: "var(--font-mono)", color: cashTendered >= extraAmount ? "var(--color-forest)" : "#DC2626" }}>
-                    {cashTendered >= extraAmount ? fmt(cashTendered - extraAmount) : "Chưa đủ tiền (Dòng 5.2)"}
-                  </strong>
-                </div>
-              </div>
-            )}
-
-            {collectMethod === "pos" && (
-              <div style={{ background: "#F9FAFB", borderRadius: 8, padding: 12, border: "1px solid var(--color-bone)", marginBottom: 14 }}>
-                <div className="grid grid-cols-2 gap-2 mb-2">
-                  <div>
-                    <label style={{ fontSize: "0.75rem", color: "#6B7280", display: "block" }}>Mã máy POS:</label>
-                    <input
-                      value={posTerminalCode}
-                      onChange={(e) => setPosTerminalCode(e.target.value)}
-                      style={{ width: "100%", padding: "6px 8px", borderRadius: 6, border: "1px solid var(--color-bone)", fontSize: "0.82rem" }}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ fontSize: "0.75rem", color: "#6B7280", display: "block" }}>Mã chuẩn chi (Auth Code):</label>
-                    <input
-                      value={posAuthCode}
-                      onChange={(e) => setPosAuthCode(e.target.value)}
-                      style={{ width: "100%", padding: "6px 8px", borderRadius: 6, border: "1px solid var(--color-bone)", fontSize: "0.82rem" }}
-                    />
-                  </div>
-                </div>
-                <div style={{ fontSize: "0.75rem", color: "#15803D" }}>✓ Đã kết nối POS tại quầy tiếp tân</div>
-              </div>
-            )}
-
-            {collectMethod === "qr" && (
-              <div style={{ background: "#F9FAFB", borderRadius: 8, padding: 14, border: "1px solid var(--color-bone)", marginBottom: 14, textAlign: "center" }}>
-                <div style={{ width: 110, height: 110, margin: "0 auto 8px", background: "white", border: "1px solid var(--color-bone)", borderRadius: 8, display: "grid", placeItems: "center", fontSize: "2rem" }}>
-                  📱
-                </div>
-                <div style={{ fontSize: "0.8rem", fontWeight: 700, color: "var(--color-bark)" }}>Quét mã VietQR chuyển khoản nhanh</div>
-                <div style={{ fontSize: "0.72rem", color: "#6B7280", fontFamily: "var(--font-mono)" }}>Nội dung: GG {order.id} THUTHEM</div>
-              </div>
-            )}
-
-            <div style={{ marginBottom: 16 }}>
-              <label style={{ fontSize: "0.78rem", fontWeight: 600, display: "block", marginBottom: 4 }}>Ghi chú chứng từ thu:</label>
-              <input
-                placeholder="Ví dụ: Khách thanh toán phụ phí hỏng thiết bị tại quầy..."
-                value={collectNote}
-                onChange={(e) => setCollectNote(e.target.value)}
-                style={{ width: "100%", padding: "8px 10px", borderRadius: 6, border: "1px solid var(--color-bone)", fontSize: "0.82rem" }}
-              />
-            </div>
-
-            {pendingCollectReq && (
-              <div style={{ background: "#EFF6FF", border: "1px solid #BFDBFE", borderRadius: 8, padding: 12, marginBottom: 14, fontSize: "0.8rem" }}>
-                <div className="flex justify-between items-center mb-1">
-                  <strong>Mã yêu cầu thu bổ sung: {pendingCollectReq.maYeuCau}</strong>
-                  <span style={{ fontWeight: 700, color: pendingCollectReq.trangThai === "ThanhCong" ? "#15803D" : "#B45309" }}>
-                    {pendingCollectReq.trangThai}
-                  </span>
-                </div>
-                {pendingCollectReq.paymentUrl && (
-                  <div style={{ marginTop: 6 }}>
-                    <a href={pendingCollectReq.paymentUrl} target="_blank" rel="noreferrer" style={{ color: "#1D4ED8", textDecoration: "underline", fontWeight: 600 }}>
-                      Mở cổng thanh toán VNPAY →
-                    </a>
-                  </div>
-                )}
-                <div className="flex gap-2 mt-2">
-                  <button
-                    type="button"
-                    disabled={reconBusy}
-                    onClick={async () => {
-                      setReconBusy(true);
-                      setReconError(null);
-                      try {
-                        const updated = await paymentApi.layTrangThaiGiaoDich(pendingCollectReq.maYeuCau);
-                        setPendingCollectReq(updated);
-                        if (updated.trangThai === "ThanhCong" && doiSoatBackend) {
-                          await reconciliationApi.chotDoiSoat(doiSoatBackend.maDoiSoat);
-                          setReconSuccess("Giao dịch thu bổ sung thành công và đã chốt đối soát.");
-                          setShowCollectModal(false);
-                          await syncAfterMutation();
-                        }
-                      } catch (err) {
-                        setReconError(err instanceof Error ? err.message : "Không kiểm tra được trạng thái giao dịch.");
-                      } finally {
-                        setReconBusy(false);
-                      }
-                    }}
-                    style={{ background: "var(--color-forest)", color: "white", border: "none", borderRadius: 6, padding: "5px 10px", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer" }}
-                  >
-                    Kiểm tra trạng thái GD
-                  </button>
-                </div>
-              </div>
-            )}
-
-            <div className="flex justify-end gap-2">
-              <button type="button" onClick={() => setShowCollectModal(false)} style={{ background: "white", border: "1px solid var(--color-bone)", borderRadius: 8, padding: "8px 16px", cursor: "pointer", fontSize: "0.85rem" }}>
-                Hủy
-              </button>
-              <button
-                type="button"
-                disabled={(collectMethod === "cash" && cashTendered < extraAmount) || reconBusy}
-                onClick={async () => {
-                  const methodStr = collectMethod === "cash" ? "Tiền mặt tại quầy" : collectMethod === "pos" ? `Thẻ POS (${posTerminalCode}/${posAuthCode})` : "Quét VietQR";
-                  if (app.realApi) {
-                    setReconBusy(true);
-                    setReconError(null);
-                    try {
-                      let ds = await ensureConfirmedDoiSoat();
-                      if (ds.trangThai === "DaXacNhan") {
-                        ds = await reconciliationApi.yeuCauXuLyTien(ds.maDoiSoat);
-                      }
-                      const reqThu = await paymentApi.taoThuBoSung(
-                        ds.maDoiSoat,
-                        collectMethod === "cash" ? "TienMat" : collectMethod === "qr" ? "VietQR" : "VNPAY"
-                      );
-                      setPendingCollectReq(reqThu);
-                      if (reqThu.trangThai === "ThanhCong") {
-                        await reconciliationApi.chotDoiSoat(ds.maDoiSoat);
-                        setReconSuccess(`Đã thu bổ sung ${fmt(extraAmount)} và chốt đối soát đơn ${order.displayCode || order.id}.`);
-                        setShowCollectModal(false);
-                        await syncAfterMutation();
-                      } else {
-                        setReconSuccess(`Đã tạo yêu cầu thu bổ sung ${reqThu.maYeuCau} (${reqThu.trangThai}).`);
-                        await syncAfterMutation();
-                      }
-                    } catch (err) {
-                      setReconError(err instanceof Error ? err.message : "Không thể lập yêu cầu thu bổ sung.");
-                    } finally {
-                      setReconBusy(false);
-                    }
-                    return;
-                  }
-
-                  app.settleOrder(order.id, true, {
-                    method: methodStr,
-                    amount: extraAmount,
-                    note: collectNote || `Thu thêm tại quầy qua ${methodStr}`,
-                  });
-                  setShowCollectModal(false);
-                }}
-                style={{
-                  background: (collectMethod === "cash" && cashTendered < extraAmount) || reconBusy ? "#9CA3AF" : "var(--color-forest)",
-                  color: "white",
-                  border: "none",
-                  borderRadius: 8,
-                  padding: "8px 20px",
-                  fontWeight: 700,
-                  fontSize: "0.85rem",
-                  cursor: (collectMethod === "cash" && cashTendered < extraAmount) || reconBusy ? "not-allowed" : "pointer",
-                }}
-              >
-                {reconBusy ? "Đang xử lý..." : "✓ Xác nhận thu bổ sung → Khóa & Hoàn tất"}
-              </button>
-            </div>
-          </div>
-        </div>
+        <CollectSurchargeModal
+          order={order}
+          app={app}
+          donId={donId}
+          extraAmount={extraAmount}
+          collectMethod={collectMethod}
+          setCollectMethod={setCollectMethod}
+          cashTendered={cashTendered}
+          setCashTendered={setCashTendered}
+          posTerminalCode={posTerminalCode}
+          setPosTerminalCode={setPosTerminalCode}
+          posAuthCode={posAuthCode}
+          setPosAuthCode={setPosAuthCode}
+          collectNote={collectNote}
+          setCollectNote={setCollectNote}
+          pendingCollectReq={pendingCollectReq}
+          setPendingCollectReq={setPendingCollectReq}
+          doiSoatBackend={doiSoatBackend}
+          ensureConfirmedDoiSoat={ensureConfirmedDoiSoat}
+          syncAfterMutation={syncAfterMutation}
+          reconBusy={reconBusy}
+          setReconBusy={setReconBusy}
+          setReconError={setReconError}
+          setReconSuccess={setReconSuccess}
+          onClose={() => setShowCollectModal(false)}
+        />
       )}
-
-      {/* ─── MODAL UC5.6: HOÀN TIỀN CỌC (NGÂN HÀNG / TIỀN MẶT) ───────────────── */}
       {showRefundModal && (
-        <div role="dialog" aria-modal="true" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 9999, display: "grid", placeItems: "center", padding: 20 }}>
-          <div style={{ background: "white", borderRadius: 16, maxWidth: 520, width: "100%", padding: 24, boxShadow: "0 8px 30px rgba(0,0,0,0.2)" }}>
-            <div className="flex justify-between items-start mb-3">
-              <div>
-                <span style={{ fontSize: "0.72rem", background: "#DCFCE7", color: "#15803D", padding: "2px 8px", borderRadius: 6, fontWeight: 700 }}>
-                  EP5.4-HOAN → GỌI UC5.6
-                </span>
-                <h3 style={{ fontFamily: "var(--font-display)", fontSize: "1.25rem", color: "var(--color-bark)", marginTop: 4 }}>
-                  Lập Lệnh Hoàn Tiền Cọc: Đơn {order.id}
-                </h3>
-              </div>
-              <button type="button" onClick={() => setShowRefundModal(false)} style={{ border: "none", background: "none", fontSize: "1.2rem", cursor: "pointer" }}>✕</button>
-            </div>
-
-            <div style={{ background: "var(--color-parchment)", borderRadius: 10, padding: 12, marginBottom: 16, border: "1px solid var(--color-bone)" }}>
-              <div className="flex justify-between items-center">
-                <span style={{ fontSize: "0.85rem", color: "#4B5563" }}>Số tiền hoàn cọc cho khách:</span>
-                <strong style={{ fontFamily: "var(--font-mono)", fontSize: "1.3rem", color: "var(--color-forest)" }}>{fmt(refundAmount)}</strong>
-              </div>
-              <div style={{ fontSize: "0.75rem", color: "#6B7280", marginTop: 4 }}>
-                Khách thụ hưởng: <strong>{order.customerName}</strong> ({order.customerPhone})
-              </div>
-            </div>
-
-            {/* Kênh hoàn tiền */}
-            <div style={{ marginBottom: 14 }}>
-              <label style={{ fontSize: "0.8rem", fontWeight: 700, display: "block", marginBottom: 6 }}>Kênh hoàn tiền:</label>
-              <div className="grid grid-cols-2 gap-2">
-                {[
-                  { key: "bank", label: "🏦 Chuyển khoản ngân hàng" },
-                  { key: "cash", label: "💵 Tiền mặt tại quầy" },
-                ].map((m) => (
-                  <button
-                    key={m.key}
-                    type="button"
-                    onClick={() => setRefundMethod(m.key as typeof refundMethod)}
-                    style={{
-                      padding: "8px 6px",
-                      borderRadius: 8,
-                      border: refundMethod === m.key ? "2px solid var(--color-forest)" : "1px solid var(--color-bone)",
-                      background: refundMethod === m.key ? "#F0FDF4" : "white",
-                      fontWeight: refundMethod === m.key ? 700 : 500,
-                      fontSize: "0.8rem",
-                      cursor: "pointer",
-                    }}
-                  >
-                    {m.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {refundMethod === "bank" && (
-              <div style={{ background: "#F9FAFB", borderRadius: 8, padding: 12, border: "1px solid var(--color-bone)", marginBottom: 14 }}>
-                <div style={{ marginBottom: 8 }}>
-                  <label style={{ fontSize: "0.75rem", color: "#6B7280", display: "block", marginBottom: 2 }}>Ngân hàng thụ hưởng:</label>
-                  <select
-                    value={bankName}
-                    onChange={(e) => setBankName(e.target.value)}
-                    style={{ width: "100%", padding: "7px 10px", borderRadius: 6, border: "1px solid var(--color-bone)", fontSize: "0.82rem", background: "white" }}
-                  >
-                    {["Vietcombank", "MB Bank", "Techcombank", "ACB", "VPBank", "Vietinbank", "BIDV"].map((b) => (
-                      <option key={b}>{b}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label style={{ fontSize: "0.75rem", color: "#6B7280", display: "block", marginBottom: 2 }}>Số tài khoản:</label>
-                    <input
-                      value={bankAccount}
-                      onChange={(e) => setBankAccount(e.target.value)}
-                      style={{ width: "100%", padding: "7px 10px", borderRadius: 6, border: "1px solid var(--color-bone)", fontSize: "0.85rem", fontFamily: "var(--font-mono)" }}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ fontSize: "0.75rem", color: "#6B7280", display: "block", marginBottom: 2 }}>Tên chủ tài khoản:</label>
-                    <input
-                      value={bankHolder}
-                      onChange={(e) => setBankHolder(e.target.value)}
-                      style={{ width: "100%", padding: "7px 10px", borderRadius: 6, border: "1px solid var(--color-bone)", fontSize: "0.85rem", textTransform: "uppercase" }}
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {refundMethod === "cash" && (
-              <div style={{ background: "#F9FAFB", borderRadius: 8, padding: 12, border: "1px solid var(--color-bone)", marginBottom: 14, fontSize: "0.8rem", color: "#4B5563" }}>
-                Khách hàng nhận <strong>{fmt(refundAmount)}</strong> tiền mặt tại quầy và ký vào Phiếu chi hoàn cọc.
-              </div>
-            )}
-
-            <div style={{ marginBottom: 16 }}>
-              <label style={{ fontSize: "0.78rem", fontWeight: 600, display: "block", marginBottom: 4 }}>Ghi chú hoàn cọc:</label>
-              <input
-                placeholder="Ví dụ: Hoàn cọc đơn thuê sau khi đối soát đầy đủ..."
-                value={refundNote}
-                onChange={(e) => setRefundNote(e.target.value)}
-                style={{ width: "100%", padding: "8px 10px", borderRadius: 6, border: "1px solid var(--color-bone)", fontSize: "0.82rem" }}
-              />
-            </div>
-
-            <div className="flex justify-end gap-2">
-              <button type="button" onClick={() => setShowRefundModal(false)} style={{ background: "white", border: "1px solid var(--color-bone)", borderRadius: 8, padding: "8px 16px", cursor: "pointer", fontSize: "0.85rem" }}>
-                Hủy
-              </button>
-              <button
-                type="button"
-                disabled={reconBusy}
-                onClick={async () => {
-                  const methodStr = refundMethod === "bank" ? `Chuyển khoản ${bankName} (${bankAccount} - ${bankHolder})` : "Tiền mặt tại quầy";
-                  if (app.realApi) {
-                    setReconBusy(true);
-                    setReconError(null);
-                    try {
-                      let ds = await ensureConfirmedDoiSoat();
-                      if (ds.trangThai === "DaXacNhan") {
-                        ds = await reconciliationApi.yeuCauXuLyTien(ds.maDoiSoat);
-                      }
-                      const hoanData = await refundApi.layTheoDon(donId);
-                      for (const ht of hoanData.items.filter((x) => x.trangThai !== "ThanhCong")) {
-                        await refundApi.xuLyHoan(ht.maHoanTien, refundNote || methodStr);
-                      }
-                      // Thử chốt đối soát nếu toàn bộ nghĩa vụ hoàn tiền đã thành công
-                      try {
-                        await reconciliationApi.chotDoiSoat(ds.maDoiSoat);
-                        setReconSuccess(`Đã hoàn cọc ${fmt(refundAmount)} và khóa đối soát đơn ${order.displayCode || order.id}.`);
-                      } catch {
-                        setReconSuccess(`Đã gửi lệnh xử lý hoàn tiền cọc ${fmt(refundAmount)}. Kiểm tra trạng thái lệnh hoàn ở bảng trên để chốt đối soát.`);
-                      }
-                      setShowRefundModal(false);
-                      await syncAfterMutation();
-                    } catch (err) {
-                      setReconError(err instanceof Error ? err.message : "Không thể thực hiện lệnh hoàn tiền cọc.");
-                    } finally {
-                      setReconBusy(false);
-                    }
-                    return;
-                  }
-
-                  app.settleOrder(order.id, true, {
-                    method: methodStr,
-                    amount: refundAmount,
-                    note: refundNote || `Hoàn cọc đơn thuê ${order.id} qua ${methodStr}`,
-                  });
-                  setShowRefundModal(false);
-                }}
-                style={{
-                  background: reconBusy ? "#9CA3AF" : "var(--color-forest)",
-                  color: "white",
-                  border: "none",
-                  borderRadius: 8,
-                  padding: "8px 20px",
-                  fontWeight: 700,
-                  fontSize: "0.85rem",
-                  cursor: reconBusy ? "not-allowed" : "pointer",
-                }}
-              >
-                {reconBusy ? "Đang xử lý..." : "✓ Xác nhận hoàn cọc → Khóa & Hoàn tất"}
-              </button>
-            </div>
-          </div>
-        </div>
+        <RefundDepositModal
+          order={order}
+          app={app}
+          donId={donId}
+          refundAmount={refundAmount}
+          refundMethod={refundMethod}
+          setRefundMethod={setRefundMethod}
+          bankName={bankName}
+          setBankName={setBankName}
+          bankAccount={bankAccount}
+          setBankAccount={setBankAccount}
+          bankHolder={bankHolder}
+          setBankHolder={setBankHolder}
+          refundNote={refundNote}
+          setRefundNote={setRefundNote}
+          ensureConfirmedDoiSoat={ensureConfirmedDoiSoat}
+          syncAfterMutation={syncAfterMutation}
+          reconBusy={reconBusy}
+          setReconBusy={setReconBusy}
+          setReconError={setReconError}
+          setReconSuccess={setReconSuccess}
+          onClose={() => setShowRefundModal(false)}
+        />
       )}
-
-      {/* ─── DÒNG 3: MODAL TRUY VẾT GIAO DỊCH THU CỌC BAN ĐẦU ─────────────────── */}
-      {viewingTx && (
-        <div role="dialog" aria-modal="true" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 9999, display: "grid", placeItems: "center", padding: 20 }}>
-          <div style={{ background: "white", borderRadius: 16, maxWidth: 480, width: "100%", padding: 24 }}>
-            <div className="flex justify-between items-start mb-3">
-              <div>
-                <span style={{ fontSize: "0.72rem", background: "var(--color-forest)", color: "white", padding: "2px 8px", borderRadius: 6, fontWeight: 700 }}>
-                  CHỨNG TỪ THU BAN ĐẦU (DÒNG 3)
-                </span>
-                <h3 style={{ fontFamily: "var(--font-display)", fontSize: "1.2rem", color: "var(--color-bark)", marginTop: 4 }}>
-                  Mã giao dịch: {viewingTx.id}
-                </h3>
-              </div>
-              <button type="button" onClick={() => setViewingTx(null)} style={{ border: "none", background: "none", fontSize: "1.2rem", cursor: "pointer" }}>✕</button>
-            </div>
-
-            <div style={{ background: "var(--color-parchment)", borderRadius: 10, padding: 14, fontSize: "0.84rem", display: "flex", flexDirection: "column", gap: 8, border: "1px solid var(--color-bone)" }}>
-              <div className="flex justify-between"><span style={{ color: "#6B7280" }}>Loại giao dịch:</span><strong>{viewingTx.type}</strong></div>
-              <div className="flex justify-between"><span style={{ color: "#6B7280" }}>Thời gian thực hiện:</span><strong>{viewingTx.createdAt}</strong></div>
-              <div className="flex justify-between"><span style={{ color: "#6B7280" }}>Số tiền giao dịch:</span><strong style={{ fontFamily: "var(--font-mono)", color: "var(--color-forest)" }}>{fmt(viewingTx.amount)}</strong></div>
-              <div className="flex justify-between"><span style={{ color: "#6B7280" }}>Trạng thái:</span><span style={{ background: "#DCFCE7", color: "#15803D", padding: "2px 8px", borderRadius: 6, fontWeight: 700 }}>{viewingTx.status}</span></div>
-              <div className="flex justify-between"><span style={{ color: "#6B7280" }}>Nội dung / Ghi chú:</span><span>{viewingTx.note || "Thanh toán thành công"}</span></div>
-            </div>
-
-            <div className="flex justify-end mt-4">
-              <button type="button" onClick={() => setViewingTx(null)} style={{ background: "var(--color-forest)", color: "white", border: "none", borderRadius: 8, padding: "8px 18px", fontWeight: 700, fontSize: "0.82rem", cursor: "pointer" }}>
-                Đóng
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ─── DÒNG 3: MODAL TRUY VẾT PHIẾU NHẬN TRẢ (PNT) ───────────────────────── */}
-      {viewingReturnReceipt && (
-        <div role="dialog" aria-modal="true" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 9999, display: "grid", placeItems: "center", padding: 20 }}>
-          <div style={{ background: "white", borderRadius: 16, maxWidth: 580, width: "100%", padding: 24 }}>
-            <div className="flex justify-between items-start mb-4">
-              <div>
-                <span style={{ fontSize: "0.72rem", background: viewingReturnReceipt.isFinalReturn ? "#DCFCE7" : "#FFF7ED", color: viewingReturnReceipt.isFinalReturn ? "#15803D" : "#C2410C", padding: "3px 8px", borderRadius: 6, fontWeight: 700 }}>
-                  CHỨNG TỪ GỐC: {viewingReturnReceipt.isFinalReturn ? "PHIẾU TRẢ CUỐI CÙNG" : `PHIẾU TRẢ ĐỢT ${viewingReturnReceipt.returnRound}`}
-                </span>
-                <h3 style={{ fontFamily: "var(--font-display)", fontSize: "1.25rem", color: "var(--color-bark)", marginTop: 4 }}>
-                  Phiếu Nhận Trả: {viewingReturnReceipt.id}
-                </h3>
-              </div>
-              <button type="button" onClick={() => setViewingReturnReceipt(null)} style={{ border: "none", background: "none", fontSize: "1.2rem", cursor: "pointer" }}>✕</button>
-            </div>
-
-            <div style={{ background: "var(--color-parchment)", borderRadius: 10, padding: 12, fontSize: "0.82rem", marginBottom: 14 }}>
-              <div><strong>Đơn hàng:</strong> {viewingReturnReceipt.orderId} · <strong>Ngày nhận:</strong> {viewingReturnReceipt.returnedAt}</div>
-              <div><strong>Nhân viên nghiệm thu:</strong> {viewingReturnReceipt.staffName} · <strong>Ghi chú:</strong> {viewingReturnReceipt.note || "Không có"}</div>
-            </div>
-
-            <strong style={{ fontSize: "0.85rem", color: "var(--color-bark)" }}>Chi tiết thiết bị trong biên bản:</strong>
-            <div className="flex flex-col gap-2 mt-2 mb-4">
-              {viewingReturnReceipt.items.map((it) => (
-                <div key={it.equipmentId} style={{ background: "#F9FAFB", border: "1px solid var(--color-bone)", borderRadius: 8, padding: "8px 12px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <div>
-                    <strong style={{ fontFamily: "var(--font-mono)", color: "var(--color-forest)" }}>{it.equipmentId}</strong>
-                    <div style={{ fontSize: "0.75rem", color: "#6B7280" }}>Tình trạng: <strong>{it.condition}</strong> {it.note ? `— ${it.note}` : ""}</div>
-                  </div>
-                  {it.surchargeAmount > 0 && (
-                    <span style={{ fontFamily: "var(--font-mono)", fontWeight: 700, color: "#DC2626", fontSize: "0.85rem" }}>
-                      +{fmt(it.surchargeAmount)}
-                    </span>
-                  )}
-                </div>
-              ))}
-            </div>
-
-            <div className="flex justify-end gap-2">
-              <button type="button" onClick={() => window.print()} style={{ background: "white", border: "1px solid var(--color-bone)", borderRadius: 8, padding: "8px 16px", cursor: "pointer", fontWeight: 600, fontSize: "0.82rem" }}>
-                🖨 In phiếu PNT
-              </button>
-              <button type="button" onClick={() => setViewingReturnReceipt(null)} style={{ background: "var(--color-forest)", color: "white", border: "none", borderRadius: 8, padding: "8px 20px", cursor: "pointer", fontWeight: 700, fontSize: "0.82rem" }}>
-                Đóng
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ─── DÒNG 3: MODAL TRUY VẾT PHIẾU PHỤ PHÍ ─────────────────────────────── */}
-      {viewingSurcharge && (
-        <div role="dialog" aria-modal="true" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 9999, display: "grid", placeItems: "center", padding: 20 }}>
-          <div style={{ background: "white", borderRadius: 16, maxWidth: 480, width: "100%", padding: 24 }}>
-            <div className="flex justify-between items-start mb-3">
-              <div>
-                <span style={{ fontSize: "0.72rem", background: "#FEE2E2", color: "#DC2626", padding: "2px 8px", borderRadius: 6, fontWeight: 700 }}>
-                  CHỨNG TỪ PHỤ PHÍ (DÒNG 3)
-                </span>
-                <h3 style={{ fontFamily: "var(--font-display)", fontSize: "1.2rem", color: "var(--color-bark)", marginTop: 4 }}>
-                  Phiếu Phụ Phí: {viewingSurcharge.id}
-                </h3>
-              </div>
-              <button type="button" onClick={() => setViewingSurcharge(null)} style={{ border: "none", background: "none", fontSize: "1.2rem", cursor: "pointer" }}>✕</button>
-            </div>
-
-            <div style={{ background: "var(--color-parchment)", borderRadius: 10, padding: 14, fontSize: "0.84rem", display: "flex", flexDirection: "column", gap: 8, border: "1px solid var(--color-bone)" }}>
-              <div className="flex justify-between"><span style={{ color: "#6B7280" }}>Loại phụ phí:</span><strong>{viewingSurcharge.type}</strong></div>
-              <div className="flex justify-between"><span style={{ color: "#6B7280" }}>Mã thiết bị:</span><strong style={{ fontFamily: "var(--font-mono)" }}>{viewingSurcharge.equipmentId}</strong></div>
-              <div className="flex justify-between"><span style={{ color: "#6B7280" }}>Số tiền phạt/bồi thường:</span><strong style={{ fontFamily: "var(--font-mono)", color: "#DC2626" }}>{fmt(viewingSurcharge.amount)}</strong></div>
-              <div className="flex justify-between"><span style={{ color: "#6B7280" }}>Lý do & Tình trạng:</span><span>{viewingSurcharge.reason}</span></div>
-              <div className="flex justify-between"><span style={{ color: "#6B7280" }}>Người đề xuất:</span><strong>{viewingSurcharge.createdBy}</strong></div>
-              <div className="flex justify-between"><span style={{ color: "#6B7280" }}>Trạng thái duyệt:</span><span style={{ background: "#DCFCE7", color: "#15803D", padding: "2px 8px", borderRadius: 6, fontWeight: 700 }}>{viewingSurcharge.status}</span></div>
-            </div>
-
-            <div className="flex justify-end mt-4">
-              <button type="button" onClick={() => setViewingSurcharge(null)} style={{ background: "var(--color-forest)", color: "white", border: "none", borderRadius: 8, padding: "8px 18px", fontWeight: 700, fontSize: "0.82rem", cursor: "pointer" }}>
-                Đóng
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ─── DÒNG 7: MODAL IN BIÊN BẢN ĐỐI SOÁT CHUẨN A4 ──────────────────────── */}
-      {showPrintModal && (
-        <div role="dialog" aria-modal="true" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 9999, display: "grid", placeItems: "center", padding: 20, overflowY: "auto" }}>
-          <div style={{ background: "white", borderRadius: 16, maxWidth: 680, width: "100%", padding: 36, boxShadow: "0 10px 40px rgba(0,0,0,0.3)" }}>
-            {/* Header Biên bản in */}
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", borderBottom: "2px solid var(--color-forest)", paddingBottom: 16, marginBottom: 20 }}>
-              <div>
-                <h2 style={{ fontFamily: "var(--font-display)", fontSize: "1.4rem", color: "var(--color-forest)", margin: 0 }}>
-                  GEARGO OUTDOOR RENTALS
-                </h2>
-                <div style={{ fontSize: "0.78rem", color: "#6B7280" }}>Hệ thống cho thuê thiết bị cắm trại & dã ngoại chuyên nghiệp</div>
-                <div style={{ fontSize: "0.75rem", color: "#6B7280" }}>Hotline: 1900-GEARGO · Website: geargo.vn</div>
-              </div>
-              <div style={{ textAlign: "right" }}>
-                <div style={{ fontSize: "0.8rem", fontWeight: 700, color: "var(--color-bark)" }}>BIÊN BẢN ĐỐI SOÁT CỌC</div>
-                <div style={{ fontFamily: "var(--font-mono)", fontSize: "0.75rem", color: "var(--color-moss)" }}>BBDS-{order.id}</div>
-                <div style={{ fontSize: "0.72rem", color: "#6B7280" }}>Ngày lập: {order.reconciledAt || new Date().toLocaleString("vi-VN")}</div>
-              </div>
-            </div>
-
-            {/* Thông tin đơn và khách hàng */}
-            <div style={{ background: "#F9FAFB", borderRadius: 8, padding: 14, fontSize: "0.82rem", marginBottom: 20 }}>
-              <div className="grid grid-cols-2 gap-2">
-                <div><strong>Mã đơn thuê:</strong> {order.id}</div>
-                <div><strong>Khách hàng:</strong> {order.customerName}</div>
-                <div><strong>Số điện thoại:</strong> {order.customerPhone}</div>
-                <div><strong>Kỳ thuê:</strong> {order.pickupTime} → {order.returnTime}</div>
-              </div>
-            </div>
-
-            {/* Bảng số liệu quyết toán chi tiết */}
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.82rem", marginBottom: 20 }}>
-              <thead>
-                <tr style={{ background: "var(--color-parchment)", textAlign: "left" }}>
-                  <th style={{ padding: "8px 12px", border: "1px solid var(--color-bone)" }}>Hạng mục tài chính</th>
-                  <th style={{ padding: "8px 12px", border: "1px solid var(--color-bone)" }}>Căn cứ chứng từ</th>
-                  <th style={{ padding: "8px 12px", border: "1px solid var(--color-bone)", textAlign: "right" }}>Số tiền (VNĐ)</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td style={{ padding: "8px 12px", border: "1px solid var(--color-bone)" }}><strong>1. Tiền cọc ban đầu</strong></td>
-                  <td style={{ padding: "8px 12px", border: "1px solid var(--color-bone)", color: "#6B7280" }}>{initialTransaction ? initialTransaction.id : "Đã thanh toán"}</td>
-                  <td style={{ padding: "8px 12px", border: "1px solid var(--color-bone)", textAlign: "right", fontFamily: "var(--font-mono)", fontWeight: 700 }}>+{fmt(depositCollected)}</td>
-                </tr>
-                {approvedSurcharges.map((s) => (
-                  <tr key={s.id}>
-                    <td style={{ padding: "8px 12px", border: "1px solid var(--color-bone)" }}>
-                      2. Phụ phí: {s.type} ({s.equipmentId})
-                      <div style={{ fontSize: "0.72rem", color: "#6B7280" }}>{s.reason}</div>
-                    </td>
-                    <td style={{ padding: "8px 12px", border: "1px solid var(--color-bone)", color: "#6B7280" }}>Phiếu duyệt {s.id}</td>
-                    <td style={{ padding: "8px 12px", border: "1px solid var(--color-bone)", textAlign: "right", fontFamily: "var(--font-mono)", color: "#DC2626" }}>−{fmt(s.amount)}</td>
-                  </tr>
-                ))}
-                {priorSettled !== 0 && (
-                  <tr>
-                    <td style={{ padding: "8px 12px", border: "1px solid var(--color-bone)" }}>3. Khoản đã thu/hoàn trước</td>
-                    <td style={{ padding: "8px 12px", border: "1px solid var(--color-bone)", color: "#6B7280" }}>Giao dịch đối soát trước</td>
-                    <td style={{ padding: "8px 12px", border: "1px solid var(--color-bone)", textAlign: "right", fontFamily: "var(--font-mono)" }}>
-                      {priorSettled > 0 ? `+${fmt(priorSettled)}` : `−${fmt(Math.abs(priorSettled))}`}
-                    </td>
-                  </tr>
-                )}
-                <tr style={{ background: "#F0FDF4", fontWeight: 800 }}>
-                  <td colSpan={2} style={{ padding: "10px 12px", border: "1px solid var(--color-bone)" }}>
-                    SỐ DƯ QUYẾT TOÁN CUỐI CÙNG (
-                    {isBalanced ? "CÂN BẰNG 0 Đ" : netDifference > 0 ? "HOÀN TRẢ KHÁCH" : "THU THÊM"}
-                    )
-                  </td>
-                  <td style={{ padding: "10px 12px", border: "1px solid var(--color-bone)", textAlign: "right", fontFamily: "var(--font-mono)", fontSize: "1.05rem", color: isBalanced ? "#15803D" : netDifference > 0 ? "var(--color-forest)" : "#DC2626" }}>
-                    {fmt(Math.abs(netDifference))}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-
-            {/* Chữ ký hai bên */}
-            <div className="grid grid-cols-2 gap-8 text-center pt-6" style={{ fontSize: "0.82rem" }}>
-              <div>
-                <strong>ĐẠI DIỆN KHÁCH HÀNG</strong>
-                <div style={{ fontSize: "0.72rem", color: "#6B7280" }}>(Ký và ghi rõ họ tên)</div>
-                <div style={{ height: 60 }} />
-                <strong>{order.customerName}</strong>
-              </div>
-              <div>
-                <strong>ĐẠI DIỆN GEARGO</strong>
-                <div style={{ fontSize: "0.72rem", color: "#6B7280" }}>(Người chốt đối soát)</div>
-                <div style={{ height: 60 }} />
-                <strong>{order.reconciliation?.lockedBy || "NV Kho Mai"}</strong>
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-2 mt-8 pt-4 border-t border-gray-200">
-              <button type="button" onClick={() => window.print()} style={{ background: "var(--color-forest)", color: "white", border: "none", borderRadius: 8, padding: "8px 20px", fontWeight: 700, cursor: "pointer", fontSize: "0.85rem" }}>
-                🖨 Xác nhận In / Xuất PDF
-              </button>
-              <button type="button" onClick={() => setShowPrintModal(false)} style={{ background: "white", border: "1px solid var(--color-bone)", borderRadius: 8, padding: "8px 16px", cursor: "pointer", fontSize: "0.85rem" }}>
-                Đóng
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ─── MODAL UC5.7: ĐIỀU CHỈNH TÀI CHÍNH SAU CHỐT ────────────────────────── */}
+      <ReconciliationTraceModals
+        order={order}
+        viewingTx={viewingTx}
+        setViewingTx={setViewingTx}
+        viewingReturnReceipt={viewingReturnReceipt}
+        setViewingReturnReceipt={setViewingReturnReceipt}
+        viewingSurcharge={viewingSurcharge}
+        setViewingSurcharge={setViewingSurcharge}
+        showPrintModal={showPrintModal}
+        setShowPrintModal={setShowPrintModal}
+        depositCollected={depositCollected}
+        totalApprovedSurcharges={totalApprovedSurcharges}
+        approvedSurcharges={approvedSurcharges}
+        priorSettled={priorSettled}
+        netDifference={netDifference}
+        refundAmount={refundAmount}
+        extraAmount={extraAmount}
+        isBalanced={isBalanced}
+        initialTransaction={initialTransaction}
+      />
       {showAdjustmentModal && (
-        <div role="dialog" aria-modal="true" className="modal-overlay" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10000, display: "grid", placeItems: "center", padding: 16 }}>
-          <div className="modal-container" style={{ background: "white", borderRadius: 16, maxWidth: 540, width: "100%", padding: 24, boxShadow: "0 10px 30px rgba(0,0,0,0.2)" }}>
-            <div className="modal-header flex justify-between items-center mb-4 pb-3 border-b border-bone">
-              <div>
-                <span style={{ fontSize: "0.72rem", background: "#FEF3C7", color: "#B45309", padding: "2px 8px", borderRadius: 6, fontWeight: 700 }}>
-                  UC5.7: ĐIỀU CHỈNH TÀI CHÍNH SAU CHỐT
-                </span>
-                <h3 className="modal-title font-bold text-base text-bark mt-1">
-                  Lập hồ sơ sửa sai tài chính cho Đơn {order.id}
-                </h3>
-              </div>
-              <button onClick={() => setShowAdjustmentModal(false)} className="btn btn-ghost btn-sm text-lg" style={{ border: "none", background: "none", cursor: "pointer" }}>×</button>
-            </div>
-
-            <div style={{ background: "var(--color-parchment)", borderRadius: 8, padding: 12, marginBottom: 14, fontSize: "0.8rem" }}>
-              <div className="grid grid-cols-2 gap-2 mb-2">
-                <div>Chứng từ gốc: <strong>{order.id} (Đã khóa)</strong></div>
-                <div>Khách hàng: <strong>{order.customerName}</strong></div>
-                <div>Cọc ban đầu: <strong>{fmt(depositCollected)}</strong></div>
-                <div>Phụ phí đã chốt: <strong>{fmt(totalApprovedSurcharges)}</strong></div>
-              </div>
-              <div style={{ color: "#4B5563", fontSize: "0.75rem", borderTop: "1px dashed var(--color-bone)", paddingTop: 6 }}>
-                💡 <em>Quy tắc bất biến: Hệ thống tạo chứng từ điều chỉnh bù trừ mới, KHÔNG ghi đè hoặc xóa số liệu đối soát gốc.</em>
-              </div>
-            </div>
-
-            {adjMessage ? (
-              <div style={{ background: "#F0FDF4", border: "1px solid #BBF7D0", borderRadius: 8, padding: 16, textAlign: "center", marginBottom: 12 }}>
-                <div style={{ fontSize: "1.4rem", color: "#16A34A", marginBottom: 6 }}>✓</div>
-                <strong style={{ color: "#15803D", fontSize: "0.9rem" }}>{adjMessage}</strong>
-                <div style={{ marginTop: 12 }}>
-                  <button
-                    type="button"
-                    onClick={() => setShowAdjustmentModal(false)}
-                    className="btn btn-primary btn-sm"
-                  >
-                    Đóng cửa sổ
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <form
-                onSubmit={async (e) => {
-                  e.preventDefault();
-                  if (!adjReason.trim() || adjAmount <= 0) return;
-                  if (app.realApi) {
-                    setReconBusy(true);
-                    setReconError(null);
-                    try {
-                      let createdAdjSurchargeId: number | undefined;
-                      if (adjSurchargeId) {
-                        const origId = Number(adjSurchargeId);
-                        if (Number.isFinite(origId)) {
-                          const signedAmount =
-                            adjType === "Hoàn trả" || adjType === "Bù trừ chiết khấu"
-                              ? -Math.abs(adjAmount)
-                              : Math.abs(adjAmount);
-                          const resFee = await surchargeApi.lapDieuChinhPhi(origId, {
-                            soTienDieuChinhCoDau: signedAmount,
-                            lyDo: adjReason.trim(),
-                          });
-                          createdAdjSurchargeId = resFee.maPhuPhi;
-                        }
-                      }
-                      if (doiSoatBackend?.maDoiSoat) {
-                        await reconciliationApi.lapDieuChinh(doiSoatBackend.maDoiSoat, {
-                          lyDoDieuChinh: adjReason.trim(),
-                          danhSachMaPhuPhiDieuChinh: createdAdjSurchargeId ? [createdAdjSurchargeId] : undefined,
-                          ghiChu: `${adjType}: ${fmt(adjAmount)}`,
-                        });
-                      }
-                      setAdjMessage(
-                        `Đã lập chứng từ điều chỉnh bù trừ ${fmt(adjAmount)} cho đơn ${order.displayCode || order.id} trên máy chủ.`
-                      );
-                      await syncAfterMutation();
-                    } catch (err) {
-                      setReconError(err instanceof Error ? err.message : "Không thể lập chứng từ điều chỉnh sau chốt.");
-                    } finally {
-                      setReconBusy(false);
-                    }
-                    return;
-                  }
-
-                  app.saveFinancialAdjustment({
-                    orderId: order.id,
-                    type: adjType,
-                    amount: adjAmount,
-                    reason: adjReason,
-                    status: "Đã duyệt",
-                    createdBy: "Quản trị viên",
-                    approvedBy: "Quản trị viên",
-                  });
-                  setAdjMessage(`Đã lập thành công chứng từ điều chỉnh bù trừ ${fmt(adjAmount)} cho đơn ${order.displayCode || order.id}.`);
-                }}
-                className="flex flex-col gap-3"
-              >
-                {app.realApi && approvedSurcharges.some((s) => s.backendId) && (
-                  <div>
-                    <label style={{ fontSize: "0.8rem", fontWeight: 700, display: "block", marginBottom: 4 }}>
-                      Phụ phí gốc cần điều chỉnh (tùy chọn):
-                    </label>
-                    <select
-                      value={adjSurchargeId}
-                      onChange={(e) => setAdjSurchargeId(e.target.value)}
-                      className="form-select"
-                      style={{ width: "100%", padding: 8, borderRadius: 6, border: "1px solid var(--color-bone)", fontSize: "0.82rem" }}
-                    >
-                      <option value="">-- Lập đối soát điều chỉnh tổng hợp --</option>
-                      {approvedSurcharges
-                        .filter((s) => s.backendId)
-                        .map((s) => (
-                          <option key={s.id} value={String(s.backendId)}>
-                            {s.type} ({fmt(s.amount)}) - {s.reason}
-                          </option>
-                        ))}
-                    </select>
-                  </div>
-                )}
-                <div>
-                  <label style={{ fontSize: "0.8rem", fontWeight: 700, display: "block", marginBottom: 4 }}>
-                    Nghiệp vụ điều chỉnh bù trừ:
-                  </label>
-                  <select
-                    value={adjType}
-                    onChange={(e) => setAdjType(e.target.value as typeof adjType)}
-                    className="form-select"
-                    style={{ width: "100%", padding: 8, borderRadius: 6, border: "1px solid var(--color-bone)", fontSize: "0.82rem" }}
-                  >
-                    <option value="Hoàn trả">Hoàn trả thêm cho khách (Phát hiện trừ cọc thừa/đồ tìm thấy)</option>
-                    <option value="Thu bù">Thu bù thêm tiền (Phát hiện hư hại phát sinh chưa tính đủ)</option>
-                    <option value="Bù trừ chiết khấu">Bù trừ sai sót mã giảm giá/chính sách</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label style={{ fontSize: "0.8rem", fontWeight: 700, display: "block", marginBottom: 4 }}>
-                    Số tiền chênh lệch cần điều chỉnh (đ): *
-                  </label>
-                  <input
-                    type="number"
-                    min={1000}
-                    step={1000}
-                    value={adjAmount}
-                    onChange={(e) => setAdjAmount(Number(e.target.value))}
-                    required
-                    className="form-input"
-                    style={{ width: "100%", padding: 8, borderRadius: 6, border: "1px solid var(--color-bone)", fontSize: "0.85rem", fontFamily: "var(--font-mono)", fontWeight: 700 }}
-                  />
-                </div>
-
-                <div>
-                  <label style={{ fontSize: "0.8rem", fontWeight: 700, display: "block", marginBottom: 4 }}>
-                    Lý do sai lệch & Căn cứ điều chỉnh: *
-                  </label>
-                  <textarea
-                    required
-                    rows={3}
-                    value={adjReason}
-                    onChange={(e) => setAdjReason(e.target.value)}
-                    placeholder="Ví dụ: Khách tìm thấy cọc lều bị sót và đem gửi trả lại vào ngày hôm sau, cửa hàng hoàn lại 50.000đ tiền phụ phí đã trừ..."
-                    className="form-textarea"
-                    style={{ width: "100%", padding: 8, borderRadius: 6, border: "1px solid var(--color-bone)", fontSize: "0.8rem" }}
-                  />
-                </div>
-
-                <div className="flex justify-end gap-2 mt-2 pt-2 border-t border-bone">
-                  <button
-                    type="button"
-                    onClick={() => setShowAdjustmentModal(false)}
-                    className="btn btn-secondary btn-sm"
-                  >
-                    Hủy
-                  </button>
-                  <button
-                    type="submit"
-                    className="btn btn-primary btn-sm"
-                    style={{ background: "#B45309", borderColor: "#B45309", color: "white", fontWeight: 700 }}
-                  >
-                    Lưu chứng từ điều chỉnh (UC5.7)
-                  </button>
-                </div>
-              </form>
-            )}
-          </div>
-        </div>
+        <FinancialAdjustmentModal
+          order={order}
+          app={app}
+          userRole={userRole}
+          depositCollected={depositCollected}
+          totalApprovedSurcharges={totalApprovedSurcharges}
+          approvedSurcharges={approvedSurcharges}
+          doiSoatBackend={doiSoatBackend}
+          syncAfterMutation={syncAfterMutation}
+          setReconBusy={setReconBusy}
+          setReconError={setReconError}
+          adjType={adjType}
+          setAdjType={setAdjType}
+          adjAmount={adjAmount}
+          setAdjAmount={setAdjAmount}
+          adjReason={adjReason}
+          setAdjReason={setAdjReason}
+          adjMessage={adjMessage}
+          setAdjMessage={setAdjMessage}
+          adjSurchargeId={adjSurchargeId}
+          setAdjSurchargeId={setAdjSurchargeId}
+          onClose={() => setShowAdjustmentModal(false)}
+        />
       )}
     </div>
   );
