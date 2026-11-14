@@ -1,6 +1,11 @@
 using GearGo.Models.Entities;
 using GearGo.Models.Enums;
-using GearGo.Services.Implements;
+using GearGo.Services.Implements.DonThue;
+using GearGo.Services.Implements.HeThong;
+using GearGo.Services.Implements.Kho;
+using GearGo.Services.Implements.KhuyenMai;
+using GearGo.Services.Implements.NoiDung;
+using GearGo.Services.Implements.TaiChinh;
 using GearGo.Tests.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Xunit;

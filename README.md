@@ -92,7 +92,9 @@ GearGo_Webapp/
 │   │   ├── SanPhamController.cs
 │   │   └── ThanhToanController.cs
 │   ├── Data/
-│   │   └── ApplicationDbContext.cs
+│   │   ├── ApplicationDbContext.cs
+│   │   ├── DbSeeder.cs
+│   │   └── Seeders/ (6 domain seeders: HeThong, NoiDung, KhuyenMai, Kho, DonThue, TaiChinh)
 │   ├── Models/
 │   │   ├── Entities/ (26 class Entity khớp 100% ERD)
 │   │   ├── DTOs/
@@ -106,8 +108,12 @@ GearGo_Webapp/
 │   │   │   ├── IKhoService.cs
 │   │   │   └── IDieuChinhKhoService.cs
 │   │   ├── Implements/
-│   │   │   ├── KhoService.cs
-│   │   │   └── DieuChinhKhoService.cs
+│   │   │   ├── DonThue/
+│   │   │   ├── HeThong/
+│   │   │   ├── Kho/
+│   │   │   ├── KhuyenMai/
+│   │   │   ├── NoiDung/
+│   │   │   └── TaiChinh/
 │   │   └── Queries/
 │   │       └── GiaTriNhapHieuLucQuery.cs
 │   ├── Program.cs

@@ -5,7 +5,12 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using System.Text;
 using GearGo.BackgroundJobs;
-using GearGo.Services.Implements;
+using GearGo.Services.Implements.DonThue;
+using GearGo.Services.Implements.HeThong;
+using GearGo.Services.Implements.Kho;
+using GearGo.Services.Implements.KhuyenMai;
+using GearGo.Services.Implements.NoiDung;
+using GearGo.Services.Implements.TaiChinh;
 using GearGo.Services.Interfaces;
 using GearGo.Services.Strategies;
 
@@ -195,22 +200,22 @@ builder.Services.AddScoped<IHuyDonService, HuyDonService>();
 builder.Services.AddHostedService<HoanTienDoiChieuJob>();
 
 builder.Services.AddHostedService<DonThueExpirationJob>();
-builder.Services.AddScoped<GearGo.Services.Interfaces.IBaoGiaService, GearGo.Services.BaoGiaService>();
+builder.Services.AddScoped<IBaoGiaService, BaoGiaService>();
 // Bật lại khi thêm AutoMapper package
 // builder.Services.AddAutoMapper(typeof(Program));
 
 // ==============================================================================
 builder.Services.AddMemoryCache();
-builder.Services.AddScoped<GearGo.Services.Interfaces.IJwtService, GearGo.Services.Implements.JwtService>();
-builder.Services.AddScoped<GearGo.Services.Interfaces.IXacThucService, GearGo.Services.Implements.XacThucService>();
+builder.Services.AddScoped<IJwtService, JwtService>();
+builder.Services.AddScoped<IXacThucService, XacThucService>();
 builder.Services.AddScoped<INhaCungCapService, NhaCungCapService>();
 builder.Services.AddScoped<IPhieuNhapService, PhieuNhapService>();
 builder.Services.AddScoped<INhapKhoService, NhapKhoService>();
 builder.Services.AddScoped<IThietBiService, ThietBiService>();
 builder.Services.AddScoped<IChuanBiDonService, ChuanBiDonService>(); // W3-T7 Kim Xuyến
 builder.Services.AddScoped<IPhanCongThietBiService, PhanCongThietBiService>();
-builder.Services.AddScoped<GearGo.Services.Interfaces.IAdminSanPhamService, GearGo.Services.Admin.AdminSanPhamService>();
-builder.Services.AddScoped<GearGo.Services.Interfaces.IAdminDanhMucService, GearGo.Services.Admin.AdminDanhMucService>();
+builder.Services.AddScoped<IAdminSanPhamService, AdminSanPhamService>();
+builder.Services.AddScoped<IAdminDanhMucService, AdminDanhMucService>();
 builder.Services.AddScoped<IBaoTriService, BaoTriService>();
 builder.Services.AddScoped<INhanTraService, NhanTraService>();
 builder.Services.AddScoped<ITruyVanNhanTraService, TruyVanNhanTraService>();
@@ -244,8 +249,8 @@ builder.Services.AddHttpClient();
 builder.Services.AddHttpContextAccessor();
 builder.Services.Configure<GearGo.Configuration.TuVanOptions>(builder.Configuration.GetSection(GearGo.Configuration.TuVanOptions.Section));
 builder.Services.AddScoped<GearGo.Integrations.AI.IAIProvider, GearGo.Integrations.AI.AIProviderAdapter>();
-builder.Services.AddScoped<GearGo.Services.Interfaces.IGoiYBoDoService, GearGo.Services.Implements.GoiYBoDoService>();
-builder.Services.AddScoped<GearGo.Services.Interfaces.ITuVanAIService, GearGo.Services.Implements.TuVanAIService>();
+builder.Services.AddScoped<IGoiYBoDoService, GoiYBoDoService>();
+builder.Services.AddScoped<ITuVanAIService, TuVanAIService>();
 
 // ── W5-T1 (Thanh Tùng): Quản trị tài khoản & nhân viên ──
 builder.Services.AddScoped<IQuanTriTaiKhoanService, QuanTriTaiKhoanService>();
