@@ -2,37 +2,10 @@
  * orderMapper.ts - Ánh xạ DTO Đơn thuê, Bàn giao BBBG, Nhận trả PNT, Phụ phí, Thanh toán & Đối soát 7 bước
  */
 
-import type {
-  AssignedEquipment,
-  HandoverRecord,
-  MoneyTransaction,
-  Order,
-  OrderItem,
-  OrderStatus,
-  ReconciliationStatement,
-  ReturnReceipt,
-  Surcharge,
-  TransactionStatus,
-  TransactionType,
-} from "../../types";
-import type {
-  DonChiTietBackend,
-  DonTomTatBackend,
-  DonVanHanhChiTietBackend,
-  DonVanHanhTomTatBackend,
-  PhuPhiKhachBackend,
-  ThanhToanDonBackend,
-} from "../api/orderApi";
-import type { DoiSoatBackend } from "../api/reconciliationApi";
-import type { PhuPhiBackend } from "../api/surchargeApi";
+import type { AssignedEquipment, HandoverRecord, MoneyTransaction, Order, OrderItem, OrderStatus, ReconciliationStatement, ReturnReceipt, Surcharge, TransactionStatus, TransactionType } from "../../types";
+import type { DonChiTietBackend, DonTomTatBackend, DonVanHanhChiTietBackend, DonVanHanhTomTatBackend, PhuPhiKhachBackend, ThanhToanDonBackend } from "../api/orderApi";
 
-import {
-  mapOrderStatusFromBackend,
-  mapOrderStatusToBackend,
-  mapTransactionStatus,
-  mapPhuPhiToSurcharge,
-  mapDoiSoatToReconciliationStatement,
-} from "./orderStatusMapper";
+import { mapOrderStatusFromBackend, mapOrderStatusToBackend, mapTransactionStatus, mapPhuPhiToSurcharge, mapDoiSoatToReconciliationStatement } from "./orderStatusMapper";
 
 export {
   mapOrderStatusFromBackend,

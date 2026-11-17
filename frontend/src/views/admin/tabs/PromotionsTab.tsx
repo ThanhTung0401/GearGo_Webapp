@@ -1,31 +1,13 @@
 ﻿import { useState, useEffect } from "react";
 import { useApp } from "../../../context/AppContext";
 import { isRealApiEnabled } from "../../../services/apiClient";
-import { staffApi } from "../../../services/api/staffApi";
-import { catalogApi, type HinhAnhSanPhamBackend } from "../../../services/api/catalogApi";
-import { equipmentApi } from "../../../services/api/equipmentApi";
-import { inventoryApi } from "../../../services/api/inventoryApi";
-import { orderApi, type XemTruocHuyBackend } from "../../../services/api/orderApi";
-import { warehouseApi, type PhanTichAnhHuongBackend } from "../../../services/api/warehouseApi";
-import { supplierApi } from "../../../services/api/supplierApi";
-import { importReceiptApi } from "../../../services/api/importReceiptApi";
+
 import { promotionApi } from "../../../services/api/promotionApi";
-import { surchargeApi } from "../../../services/api/surchargeApi";
-import { reportApi, type BaoCaoVanHanhBackend } from "../../../services/api/reportApi";
-import { mapDieuChinhKhoToReceipt, mapEquipmentStatusToBackend } from "../../../services/mappers/catalogEquipmentMapper";
-import {
-  fmt, statusColors, type Category, type Product, type Supplier, type Promotion, type ImportReceipt,
-  type StaffAccount, type StockAdjustmentReceipt, type StockAdjustmentLine, type EquipmentStatus, type Order,
-  type Equipment, type Surcharge
-} from "../../../store";
-import Icon from "../../../components/Icon";
-import { FormModal, FormActions, fieldStyle, labelStyle } from "../forms/FormModal";
-import ReconciliationSheet from "../../ReconciliationSheet";
-import EquipmentLifecycleModal from "../../../components/EquipmentLifecycleModal";
-import InventoryAuditModal from "../../../components/InventoryAuditModal";
-import SupplierProfileModal from "../../../components/SupplierProfileModal";
-import GoodsReceivingModal from "../../../components/GoodsReceivingModal";
-import ImportAdjustmentModal from "../../../components/ImportAdjustmentModal";
+
+import { fmt, type Promotion } from "../../../store";
+
+import { FormModal, fieldStyle, labelStyle } from "../forms/FormModal";
+
 import PromotionDetailModal from "../../../components/PromotionDetailModal";
 import { PromotionForm } from "../forms/PromotionForm";
 

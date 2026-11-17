@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { useApp, type Page } from "../../context/AppContext";
 import Icon from "../../components/Icon";
 import { notificationApi } from "../../services/api";

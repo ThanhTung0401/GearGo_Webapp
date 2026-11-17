@@ -1,26 +1,8 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
 import { useApp } from "../../App";
-import { fmt, statusColors } from "../../store";
 import Icon from "../../components/Icon";
 import { ApiError } from "../../services/apiClient";
-import {
-  rentalCartApi,
-  orderApi,
-  paymentApi,
-  surchargeApi,
-  aiAdvisorApi,
-  profileApi,
-  authApi,
-  reviewApi,
-  type GioThueBackend,
-  type DonChiTietBackend,
-  type PhieuBanGiaoKhachBackend,
-  type XemTruocHuyBackend,
-  type TuVanBoDoBackend,
-  type SanPhamDuDieuKienDanhGiaBackend,
-  type BaoGiaThayDoiDetail,
-} from "../../services/api";
-import { mapDonChiTietToOrder, mapDanhGiaToReview } from "../../services/mappers";
+import { aiAdvisorApi, type TuVanBoDoBackend } from "../../services/api";
 import { toIsoDateTime } from "./customerUtils";
 import { AIAdvisorResultPanel } from "./AIAdvisorResultPanel";
 import { PRESET_COMBOS, type SuggestedItem } from "./aiAdvisorPresets";

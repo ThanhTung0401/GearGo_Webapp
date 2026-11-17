@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { type useApp } from "../App";
 import { promotionApi, type SuDungKhuyenMaiBackend } from "../services/api";
 import { fmt, type Promotion } from "../store";

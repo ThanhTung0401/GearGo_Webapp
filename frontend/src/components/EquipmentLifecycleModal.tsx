@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { type useApp } from "../App";
 import { fmt, type Equipment } from "../store";
 import { isRealApiEnabled } from "../services/apiClient";

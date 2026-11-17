@@ -1,47 +1,12 @@
 ﻿import { useState, useEffect, useCallback } from "react";
 import { useApp } from "../../../context/AppContext";
-import { isRealApiEnabled } from "../../../services/apiClient";
-import {
-  equipmentApi,
-  orderApi,
-  handoverApi,
-  returnApi,
-  surchargeApi,
-  reportApi,
-  auditApi,
-  type ChuanBiResponseBackend,
-  type PhieuBanGiaoBackend,
-  type NhanTraBackend,
-  type ChiTietNhanTraBackend,
-  type ThietBiConNoBackend,
-  type QuaHanChiTietBackend,
-  type BaoCaoVanHanhBackend,
-  type XemTruocHuyBackend,
-  type DonQuaHanBackend,
-  type NhatKyLienHeQuaHanBackend,
-  type ThietBiBackend,
-  type PhanCongLichThietBiBackend,
-} from "../../../services/api";
-import { mapDonVanHanhChiTietToOrder, mapPhuPhiToSurcharge, mapNhatKyToAuditLog, type AuditLogEntryWithRef } from "../../../services/mappers";
-import type { Surcharge } from "../../../types";
-import {
-  fmt,
-  statusColors,
-  Order,
-  ReturnReceipt,
-  ReturnReceiptItem,
-  MaintenanceReceipt,
-  Equipment,
-  ImportReceipt,
-  Supplier,
-} from "../../../store";
+
+import { reportApi, auditApi, type BaoCaoVanHanhBackend } from "../../../services/api";
+import { mapNhatKyToAuditLog, type AuditLogEntryWithRef } from "../../../services/mappers";
+
 import Icon from "../../../components/Icon";
-import ReconciliationSheet from "../../ReconciliationSheet";
-import EquipmentLifecycleModal from "../../../components/EquipmentLifecycleModal";
-import InventoryAuditModal from "../../../components/InventoryAuditModal";
-import SupplierProfileModal from "../../../components/SupplierProfileModal";
-import GoodsReceivingModal from "../../../components/GoodsReceivingModal";
-import { mapReturnCondToBackend, mapReturnCondToSurchargeType, type StaffTab } from "../returnMapping";
+
+import { type StaffTab } from "../returnMapping";
 export function StaffReportsTab({ app, openOrder }: { app: ReturnType<typeof useApp>; openOrder: (id: string, tab: StaffTab) => void }) {
   const [subTab, setSubTab] = useState<"shift" | "audit">("shift");
   const [searchAudit, setSearchAudit] = useState("");

@@ -1,21 +1,12 @@
 ﻿import { useState, useEffect, useCallback } from "react";
 import { useApp } from "../../../App";
 import { isRealApiEnabled } from "../../../services/apiClient";
-import { staffApi } from "../../../services/api/staffApi";
-import { reviewApi } from "../../../services/api/reviewApi";
-import { policyApi, type KiemTraChinhSachBackend } from "../../../services/api/policyApi";
-import { notificationApi, type ThongBaoGuiLoiBackend } from "../../../services/api/notificationApi";
+
 import { paymentApi, type GiaoDichCanDoiChieuBackend } from "../../../services/api/paymentApi";
 import { reconciliationApi, type DoiSoatBackend } from "../../../services/api/reconciliationApi";
 import { surchargeApi } from "../../../services/api/surchargeApi";
-import { auditApi } from "../../../services/api/auditApi";
-import {
-  mapDanhGiaToReview,
-  mapNhatKyToAuditLog,
-  type AuditLogEntryWithRef,
-} from "../../../services/mappers/reviewNotifAuditMapper";
-import { buildTaoChinhSachRequestFromConfig } from "../../../services/mappers/policyPromoMapper";
-import { fmt, statusColors, type CustomerAccount, type Review, type RentalPolicyConfig, type PolicyVersion, type FinancialAdjustment, type AppNotification } from "../../../store";
+
+import { fmt, type FinancialAdjustment } from "../../../store";
 import Icon from "../../../components/Icon";
 export function AdjustmentsTab({ app }: { app: ReturnType<typeof useApp> }) {
   const realApi = app.realApi || isRealApiEnabled();

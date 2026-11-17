@@ -1,4 +1,4 @@
-import { fmt, statusColors, type MoneyTransaction, type Order, type ReturnReceipt, type Surcharge } from "../../store";
+import { fmt, type MoneyTransaction, type Order, type ReturnReceipt, type Surcharge } from "../../store";
 
 interface Props {
   order: Order;

@@ -3,12 +3,7 @@ import { type useApp } from "../App";
 import { type EquipmentStatus, type StockAdjustmentLine } from "../store";
 import { isRealApiEnabled } from "../services/apiClient";
 import { inventoryApi } from "../services/api/inventoryApi";
-import {
-  warehouseApi,
-  type KhoTongQuanBackend,
-  type ThietBiKhoItemBackend,
-  type DoiChieuKiemKeBackend,
-} from "../services/api/warehouseApi";
+import { warehouseApi, type KhoTongQuanBackend, type ThietBiKhoItemBackend, type DoiChieuKiemKeBackend } from "../services/api/warehouseApi";
 
 interface Props {
   app: ReturnType<typeof useApp>;

@@ -1,7 +1,7 @@
 ﻿import { useState } from "react";
 import { useApp } from "../../App";
 import Icon from "../../components/Icon";
-import { ApiError, isRealApiEnabled } from "../../services/apiClient";
+import { isRealApiEnabled } from "../../services/apiClient";
 import { authApi } from "../../services/api/authApi";
 // ─── Quên mật khẩu & Xác minh OTP (ForgotPasswordView - UC1.4) ─────────────────
 export function ForgotPasswordView() {

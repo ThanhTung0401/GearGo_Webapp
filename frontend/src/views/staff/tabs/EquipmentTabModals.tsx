@@ -1,9 +1,8 @@
 ﻿import { useApp } from "../../../context/AppContext";
 import { isRealApiEnabled } from "../../../services/apiClient";
 import { equipmentApi, type ThietBiBackend, type PhanCongLichThietBiBackend } from "../../../services/api";
-import { fmt, statusColors, Equipment, ImportReceipt, MaintenanceReceipt, Supplier } from "../../../store";
-import EquipmentLifecycleModal from "../../../components/EquipmentLifecycleModal";
-import InventoryAuditModal from "../../../components/InventoryAuditModal";
+import { fmt, Equipment, ImportReceipt, MaintenanceReceipt, Supplier } from "../../../store";
+
 import SupplierProfileModal from "../../../components/SupplierProfileModal";
 import GoodsReceivingModal from "../../../components/GoodsReceivingModal";
 

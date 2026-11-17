@@ -1,4 +1,3 @@
-import React from "react";
 import type { IconName } from "../Icon";
 import Icon from "../Icon";
 

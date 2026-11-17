@@ -1,5 +1,4 @@
 import React from "react";
-import Icon from "../../../components/Icon";
 
 export function FormModal({ title, description, onClose, children }: { title: string; description: string; onClose: () => void; children: React.ReactNode }) {
   return (

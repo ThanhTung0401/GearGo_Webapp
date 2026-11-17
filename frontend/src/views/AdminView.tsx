@@ -2,7 +2,7 @@
 import { useApp } from "../context/AppContext";
 import { type IconName } from "../components/Icon";
 import DashboardLayout from "../layouts/DashboardLayout";
-import { PermissionsTab, usePermissions } from "../features/permissions";
+import { PermissionsTab } from "../features/permissions";
 import { DashboardTab } from "./admin/tabs/DashboardTab";
 import { CategoriesTab } from "./admin/tabs/CategoriesTab";
 import { ProductsTab } from "./admin/tabs/ProductsTab";
@@ -13,14 +13,7 @@ import { PromotionsTab } from "./admin/tabs/PromotionsTab";
 import { StockAdjustTab } from "./admin/tabs/StockAdjustTab";
 import { StaffAccountsTab } from "./admin/tabs/StaffAccountsTab";
 import { ReportsTab } from "./admin/tabs/ReportsTab";
-import {
-  CustomersTab,
-  ReviewsTab,
-  PoliciesTab,
-  NotificationsTab,
-  AdjustmentsTab,
-  AuditLogTab,
-} from "./AdminExtendedTabs";
+import { CustomersTab, ReviewsTab, PoliciesTab, NotificationsTab, AdjustmentsTab, AuditLogTab } from "./AdminExtendedTabs";
 type AdminTab =
   | "dashboard"
   | "categories"
@@ -39,7 +32,6 @@ type AdminTab =
   | "reports"
   | "audit-log"
   | "permissions";
-
 
 export default function AdminView() {
   const app = useApp();

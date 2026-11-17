@@ -1,47 +1,9 @@
-import { useState, useEffect, useCallback } from "react";
 import { useApp } from "../../../context/AppContext";
-import { isRealApiEnabled } from "../../../services/apiClient";
-import {
-  equipmentApi,
-  orderApi,
-  handoverApi,
-  returnApi,
-  surchargeApi,
-  reportApi,
-  auditApi,
-  type ChuanBiResponseBackend,
-  type PhieuBanGiaoBackend,
-  type NhanTraBackend,
-  type ChiTietNhanTraBackend,
-  type ThietBiConNoBackend,
-  type QuaHanChiTietBackend,
-  type BaoCaoVanHanhBackend,
-  type XemTruocHuyBackend,
-  type DonQuaHanBackend,
-  type NhatKyLienHeQuaHanBackend,
-  type ThietBiBackend,
-  type PhanCongLichThietBiBackend,
-} from "../../../services/api";
-import { mapDonVanHanhChiTietToOrder, mapPhuPhiToSurcharge, mapNhatKyToAuditLog, type AuditLogEntryWithRef } from "../../../services/mappers";
-import type { Surcharge } from "../../../types";
-import {
-  fmt,
-  statusColors,
-  Order,
-  ReturnReceipt,
-  ReturnReceiptItem,
-  MaintenanceReceipt,
-  Equipment,
-  ImportReceipt,
-  Supplier,
-} from "../../../store";
+
+import { fmt, statusColors } from "../../../store";
 import Icon, { type IconName } from "../../../components/Icon";
-import ReconciliationSheet from "../../ReconciliationSheet";
-import EquipmentLifecycleModal from "../../../components/EquipmentLifecycleModal";
-import InventoryAuditModal from "../../../components/InventoryAuditModal";
-import SupplierProfileModal from "../../../components/SupplierProfileModal";
-import GoodsReceivingModal from "../../../components/GoodsReceivingModal";
-import { mapReturnCondToBackend, mapReturnCondToSurchargeType, type StaffTab } from "../returnMapping";
+
+import { type StaffTab } from "../returnMapping";
 export function OverviewTab({ app, openOrder }: { app: ReturnType<typeof useApp>; openOrder: (id: string, tab: StaffTab) => void }) {
   const preparing = app.orders.filter((o) => ["Đã xác nhận", "Đang chuẩn bị"].includes(o.status));
   const readyToHandover = app.orders.filter((o) => o.status === "Sẵn sàng nhận");

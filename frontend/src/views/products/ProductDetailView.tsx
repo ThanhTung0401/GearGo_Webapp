@@ -2,7 +2,7 @@ import type React from "react";
 import { useApp } from "../../App";
 import { fmt, type Product } from "../../store";
 import type { Review } from "../../types";
-import Icon from "../../components/Icon";
+
 import { type TongHopDiemBackend } from "../../services/api";
 
 interface ProductDetailViewProps {

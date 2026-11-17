@@ -1,27 +1,11 @@
 ﻿import { useState, useEffect, useCallback } from "react";
 import { useApp } from "../../App";
-import { fmt, statusColors } from "../../store";
+import { fmt } from "../../store";
 import Icon from "../../components/Icon";
-import { ApiError } from "../../services/apiClient";
-import {
-  rentalCartApi,
-  orderApi,
-  paymentApi,
-  surchargeApi,
-  aiAdvisorApi,
-  profileApi,
-  authApi,
-  reviewApi,
-  type GioThueBackend,
-  type DonChiTietBackend,
-  type PhieuBanGiaoKhachBackend,
-  type XemTruocHuyBackend,
-  type TuVanBoDoBackend,
-  type SanPhamDuDieuKienDanhGiaBackend,
-  type BaoGiaThayDoiDetail,
-} from "../../services/api";
-import { mapDonChiTietToOrder, mapDanhGiaToReview } from "../../services/mappers";
-import { toIsoDateTime } from "./customerUtils";
+
+import { orderApi, paymentApi } from "../../services/api";
+import { mapDonChiTietToOrder } from "../../services/mappers";
+
 export function OrderConfirmedView() {
   const app = useApp();
   const [seconds, setSeconds] = useState(0);
