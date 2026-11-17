@@ -1,12 +1,7 @@
-using System;
-using System.IO;
-using System.Threading.Tasks;
 using GearGo.Helpers;
 using GearGo.Models.DTOs.DanhGia;
 using GearGo.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
 namespace GearGo.Controllers;
@@ -14,7 +9,7 @@ namespace GearGo.Controllers;
 [ApiController]
 [Route("api/danh-gia")]
 [Route("api/v1/danh-gia")]
-public class DanhGiaController : ControllerBase
+public class DanhGiaController : BaseApiController
 {
     private readonly IDanhGiaService _danhGiaService;
     private readonly IWebHostEnvironment _env;
@@ -25,68 +20,29 @@ public class DanhGiaController : ControllerBase
         _env = env;
     }
 
-    /// <summary>
-    /// Lấy danh sách đánh giá công khai của sản phẩm (chỉ hiển thị các đánh giá hợp lệ)
-    /// </summary>
     [HttpGet("san-pham/{sanPhamId:long}")]
     [AllowAnonymous]
-    public async Task<IActionResult> LayDanhGiaSanPham(long sanPhamId, [FromQuery] int? soSao, [FromQuery] int trang = 1, [FromQuery] int soMoiTrang = 10, [FromQuery] string? thuTu = "MoiNhat")
-    {
-        var request = new LocDanhGiaRequest
+    public async Task<IActionResult> LayDanhGiaSanPham(
+        long sanPhamId, [FromQuery] int? soSao, [FromQuery] int trang = 1, [FromQuery] int soMoiTrang = 10, [FromQuery] string? thuTu = "MoiNhat")
+        => HandleResult(await _danhGiaService.LayDanhGiaSanPhamAsync(new LocDanhGiaRequest
         {
-            SanPhamId = sanPhamId,
-            SoSao = soSao,
-            Trang = trang,
-            SoMoiTrang = soMoiTrang,
-            ThuTu = thuTu
-        };
+            SanPhamId = sanPhamId, SoSao = soSao, Trang = trang, SoMoiTrang = soMoiTrang, ThuTu = thuTu
+        }), LayStatusCode);
 
-        var result = await _danhGiaService.LayDanhGiaSanPhamAsync(request);
-        if (!result.ThanhCong)
-            return StatusCode(LayStatusCode(result.MaLoi), new { result.MaLoi, result.ThongDiep });
-        return Ok(result.DuLieu);
-    }
-
-    /// <summary>
-    /// Lấy điểm trung bình, số lượt đánh giá và biểu đồ phân bố 1-5 sao của sản phẩm
-    /// </summary>
     [HttpGet("san-pham/{sanPhamId:long}/tong-hop")]
     [AllowAnonymous]
     public async Task<IActionResult> LayTongHopDiem(long sanPhamId)
-    {
-        var result = await _danhGiaService.LayTongHopDiemAsync(sanPhamId);
-        if (!result.ThanhCong)
-            return StatusCode(LayStatusCode(result.MaLoi), new { result.MaLoi, result.ThongDiep });
-        return Ok(result.DuLieu);
-    }
+        => HandleResult(await _danhGiaService.LayTongHopDiemAsync(sanPhamId), LayStatusCode);
 
-    /// <summary>
-    /// Lấy các sản phẩm trong các đơn đã hoàn tất đủ điều kiện đánh giá của khách
-    /// </summary>
     [HttpGet("du-dieu-kien")]
     [Authorize]
     public async Task<IActionResult> LaySanPhamDuDieuKien()
-    {
-        var maTaiKhoan = User.LayMaTaiKhoan();
-        var result = await _danhGiaService.LaySanPhamDuDieuKienDanhGiaAsync(maTaiKhoan);
-        if (!result.ThanhCong)
-            return StatusCode(LayStatusCode(result.MaLoi), new { result.MaLoi, result.ThongDiep });
-        return Ok(result.DuLieu);
-    }
+        => HandleResult(await _danhGiaService.LaySanPhamDuDieuKienDanhGiaAsync(MaTaiKhoanHienTai), LayStatusCode);
 
-    /// <summary>
-    /// Lấy danh sách các đánh giá do chính khách hàng đã viết
-    /// </summary>
     [HttpGet("cua-toi")]
     [Authorize]
     public async Task<IActionResult> LayDanhGiaCuaToi([FromQuery] int trang = 1, [FromQuery] int soMoiTrang = 10)
-    {
-        var maTaiKhoan = User.LayMaTaiKhoan();
-        var result = await _danhGiaService.LayDanhGiaCuaToiAsync(trang, soMoiTrang, maTaiKhoan);
-        if (!result.ThanhCong)
-            return StatusCode(LayStatusCode(result.MaLoi), new { result.MaLoi, result.ThongDiep });
-        return Ok(result.DuLieu);
-    }
+        => HandleResult(await _danhGiaService.LayDanhGiaCuaToiAsync(trang, soMoiTrang, MaTaiKhoanHienTai), LayStatusCode);
 
     /// <summary>
     /// Khách hàng tải lên hình ảnh đính kèm đánh giá (UC9.1.2 - Hỗ trợ .jpg, .jpeg, .png, .webp <= 5MB)
@@ -100,35 +56,20 @@ public class DanhGiaController : ControllerBase
 
         var webRoot = _env.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
         var uploadsFolder = Path.Combine(webRoot, "uploads", "reviews");
-        if (!Directory.Exists(uploadsFolder))
-            Directory.CreateDirectory(uploadsFolder);
+        Directory.CreateDirectory(uploadsFolder);
 
-        var ext = Path.GetExtension(file.FileName).ToLowerInvariant();
-        var uniqueFileName = $"{Guid.NewGuid():N}{ext}";
-        var filePath = Path.Combine(uploadsFolder, uniqueFileName);
-
-        using (var stream = new FileStream(filePath, FileMode.Create))
-        {
+        var uniqueFileName = $"{Guid.NewGuid():N}{Path.GetExtension(file.FileName).ToLowerInvariant()}";
+        await using (var stream = new FileStream(Path.Combine(uploadsFolder, uniqueFileName), FileMode.Create))
             await file.CopyToAsync(stream);
-        }
 
         var relativeUrl = $"/uploads/reviews/{uniqueFileName}";
         return StatusCode(201, new { url = relativeUrl, duongDan = relativeUrl });
     }
 
-    /// <summary>
-    /// Khách hàng gửi đánh giá mới cho sản phẩm đã thuê trong đơn hoàn tất
-    /// </summary>
     [HttpPost]
     [Authorize]
     public async Task<IActionResult> TaoDanhGia([FromBody] TaoDanhGiaRequest request)
-    {
-        var maTaiKhoan = User.LayMaTaiKhoan();
-        var result = await _danhGiaService.TaoDanhGiaAsync(request, maTaiKhoan);
-        if (!result.ThanhCong)
-            return StatusCode(LayStatusCode(result.MaLoi), new { result.MaLoi, result.ThongDiep });
-        return StatusCode(201, result.DuLieu);
-    }
+        => HandleCreatedResult(await _danhGiaService.TaoDanhGiaAsync(request, MaTaiKhoanHienTai), LayStatusCode);
 
     private static int LayStatusCode(string? maLoi) => maLoi switch
     {

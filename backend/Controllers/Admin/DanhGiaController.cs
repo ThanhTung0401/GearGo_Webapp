@@ -1,4 +1,3 @@
-using System.Threading.Tasks;
 using GearGo.Helpers;
 using GearGo.Models.DTOs.DanhGia;
 using GearGo.Services.Interfaces;
@@ -14,67 +13,29 @@ namespace GearGo.Controllers.Admin;
 [Authorize(Policy = "StaffOrAdmin")]
 [Route("api/admin/danh-gia")]
 [Route("api/v1/admin/danh-gia")]
-public class DanhGiaController : ControllerBase
+public class DanhGiaController : BaseApiController
 {
     private readonly IDanhGiaService _danhGiaService;
 
-    public DanhGiaController(IDanhGiaService danhGiaService)
-    {
-        _danhGiaService = danhGiaService;
-    }
+    public DanhGiaController(IDanhGiaService danhGiaService) => _danhGiaService = danhGiaService;
 
-    /// <summary>
-    /// Admin / Nhân viên CSKH tra cứu danh sách toàn bộ đánh giá (kèm bộ lọc trạng thái và phân trang)
-    /// </summary>
     [HttpGet]
     public async Task<IActionResult> LayDanhSach([FromQuery] int trang = 1, [FromQuery] int soMoiTrang = 10, [FromQuery] string? trangThai = null)
-    {
-        var result = await _danhGiaService.AdminLayDanhSachDanhGiaAsync(trang, soMoiTrang, trangThai);
-        if (!result.ThanhCong)
-            return StatusCode(LayStatusCode(result.MaLoi), new { result.MaLoi, result.ThongDiep });
-        return Ok(result.DuLieu);
-    }
+        => HandleResult(await _danhGiaService.AdminLayDanhSachDanhGiaAsync(trang, soMoiTrang, trangThai), LayStatusCode);
 
-    /// <summary>
-    /// Admin ẩn đánh giá vi phạm kèm theo lý do
-    /// </summary>
     [HttpPost("{id:long}/an")]
     [Authorize(Policy = "AdminOnly")]
     public async Task<IActionResult> AnDanhGia([FromRoute] long id, [FromBody] AnDanhGiaRequest request)
-    {
-        var maTaiKhoan = User.LayMaTaiKhoan();
-        var result = await _danhGiaService.AnDanhGiaAsync(id, request, maTaiKhoan);
-        if (!result.ThanhCong)
-            return StatusCode(LayStatusCode(result.MaLoi), new { result.MaLoi, result.ThongDiep });
-        return Ok(result.DuLieu);
-    }
+        => HandleResult(await _danhGiaService.AnDanhGiaAsync(id, request, MaTaiKhoanHienTai), LayStatusCode);
 
-    /// <summary>
-    /// Admin khôi phục hiển thị đánh giá đã bị ẩn
-    /// </summary>
     [HttpPost("{id:long}/khoi-phuc")]
     [Authorize(Policy = "AdminOnly")]
     public async Task<IActionResult> KhoiPhucDanhGia([FromRoute] long id, [FromBody] KhoiPhucDanhGiaRequest request)
-    {
-        var maTaiKhoan = User.LayMaTaiKhoan();
-        var result = await _danhGiaService.KhoiPhucDanhGiaAsync(id, request, maTaiKhoan);
-        if (!result.ThanhCong)
-            return StatusCode(LayStatusCode(result.MaLoi), new { result.MaLoi, result.ThongDiep });
-        return Ok(result.DuLieu);
-    }
+        => HandleResult(await _danhGiaService.KhoiPhucDanhGiaAsync(id, request, MaTaiKhoanHienTai), LayStatusCode);
 
-    /// <summary>
-    /// Cửa hàng phản hồi đánh giá của khách hàng (Admin hoặc Nhân viên CSKH)
-    /// </summary>
     [HttpPost("{id:long}/phan-hoi")]
     public async Task<IActionResult> PhanHoiDanhGia([FromRoute] long id, [FromBody] PhanHoiDanhGiaRequest request)
-    {
-        var maTaiKhoan = User.LayMaTaiKhoan();
-        var result = await _danhGiaService.PhanHoiDanhGiaAsync(id, request, maTaiKhoan);
-        if (!result.ThanhCong)
-            return StatusCode(LayStatusCode(result.MaLoi), new { result.MaLoi, result.ThongDiep });
-        return Ok(result.DuLieu);
-    }
+        => HandleResult(await _danhGiaService.PhanHoiDanhGiaAsync(id, request, MaTaiKhoanHienTai), LayStatusCode);
 
     private static int LayStatusCode(string? maLoi) => maLoi switch
     {

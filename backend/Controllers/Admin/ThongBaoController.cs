@@ -1,4 +1,3 @@
-using System.Threading.Tasks;
 using GearGo.Helpers;
 using GearGo.Models.DTOs.ThongBao;
 using GearGo.Services.Interfaces;
@@ -14,7 +13,7 @@ namespace GearGo.Controllers.Admin;
 [Authorize(Policy = "AdminOnly")]
 [Route("api/admin/thong-bao")]
 [Route("api/v1/admin/thong-bao")]
-public class ThongBaoController : ControllerBase
+public class ThongBaoController : BaseApiController
 {
     private readonly IGuiThongBaoService _guiThongBaoService;
     private readonly IThongBaoService _thongBaoService;
@@ -25,43 +24,17 @@ public class ThongBaoController : ControllerBase
         _thongBaoService = thongBaoService;
     }
 
-    /// <summary>
-    /// UC9.4: Admin soạn và gửi thông báo chủ động cho một tài khoản hoặc toàn bộ hệ thống.
-    /// </summary>
     [HttpPost]
     public async Task<IActionResult> GuiThongBaoThuCong([FromBody] GuiThongBaoAdminRequest request)
-    {
-        var maTaiKhoan = User.LayMaTaiKhoan();
-        var result = await _thongBaoService.GuiThongBaoThuCongAsync(request, maTaiKhoan);
-        if (!result.ThanhCong)
-            return StatusCode(LayStatusCode(result.MaLoi), new { result.MaLoi, result.ThongDiep });
-        return StatusCode(201, result.DuLieu);
-    }
+        => HandleCreatedResult(await _thongBaoService.GuiThongBaoThuCongAsync(request, MaTaiKhoanHienTai), LayStatusCode);
 
-    /// <summary>
-    /// Admin tra cứu danh sách các thông báo gửi lỗi (hàng chờ email thất bại)
-    /// </summary>
     [HttpGet("gui-loi")]
     public async Task<IActionResult> LayThongBaoGuiLoi([FromQuery] int trang = 1, [FromQuery] int soMoiTrang = 20)
-    {
-        var result = await _guiThongBaoService.LayThongBaoGuiLoiAsync(trang, soMoiTrang);
-        if (!result.ThanhCong)
-            return StatusCode(LayStatusCode(result.MaLoi), new { result.MaLoi, result.ThongDiep });
-        return Ok(result.DuLieu);
-    }
+        => HandleResult(await _guiThongBaoService.LayThongBaoGuiLoiAsync(trang, soMoiTrang), LayStatusCode);
 
-    /// <summary>
-    /// Admin kích hoạt thử lại gửi một thông báo bị lỗi
-    /// </summary>
     [HttpPost("{id:long}/thu-lai")]
     public async Task<IActionResult> ThuLai([FromRoute] long id, [FromBody] ThuLaiThongBaoRequest request)
-    {
-        var maTaiKhoan = User.LayMaTaiKhoan();
-        var result = await _guiThongBaoService.ThuLaiAsync(id, request, maTaiKhoan);
-        if (!result.ThanhCong)
-            return StatusCode(LayStatusCode(result.MaLoi), new { result.MaLoi, result.ThongDiep });
-        return Ok(result.DuLieu);
-    }
+        => HandleResult(await _guiThongBaoService.ThuLaiAsync(id, request, MaTaiKhoanHienTai), LayStatusCode);
 
     private static int LayStatusCode(string? maLoi) => maLoi switch
     {

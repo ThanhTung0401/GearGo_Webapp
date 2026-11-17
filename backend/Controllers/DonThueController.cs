@@ -1,6 +1,4 @@
 using System.Text.Json;
-using System.Threading;
-using GearGo.Data;
 using GearGo.Helpers;
 using GearGo.Models.DTOs.DonThue;
 using GearGo.Models.DTOs.HuyDon;
@@ -8,7 +6,6 @@ using GearGo.Models.Enums;
 using GearGo.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace GearGo.Controllers;
 
@@ -22,138 +19,86 @@ public class DonThueController : BaseApiController
     private readonly ITruyVanDonThueService _truyVanService;
     private readonly IHuyDonService _huyDonService;
     private readonly IChinhSachService _chinhSachService;
-    private readonly ApplicationDbContext _context;
 
     public DonThueController(
         IDonThueService donThueService,
         ITruyVanDonThueService truyVanService,
         IHuyDonService huyDonService,
-        IChinhSachService chinhSachService,
-        ApplicationDbContext context)
+        IChinhSachService chinhSachService)
     {
         _donThueService = donThueService;
         _truyVanService = truyVanService;
         _huyDonService = huyDonService;
         _chinhSachService = chinhSachService;
-        _context = context;
     }
 
     // ── W6-T1 (UC26 - Thanh Tùng): chính sách gắn với đơn ──
     [HttpGet("{id:long}/chinh-sach")]
     public async Task<IActionResult> LayChinhSachCuaDon([FromRoute] long id, CancellationToken ct)
-    {
-        var actorId = User.LayMaTaiKhoan();
-        var kq = await _chinhSachService.LayChinhSachCuaDonAsync(id, actorId, ct);
-        if (!kq.ThanhCong)
-        {
-            var code = kq.MaLoi switch
-            {
-                "DON_THUE_NOT_FOUND" => 404,
-                "KHONG_CO_QUYEN" => 403,
-                _ => 400
-            };
-            return StatusCode(code, new { kq.MaLoi, kq.ThongDiep });
-        }
-        return Ok(kq.DuLieu);
-    }
+        => HandleResult(
+            await _chinhSachService.LayChinhSachCuaDonAsync(id, MaTaiKhoanHienTai, ct),
+            maLoi => maLoi switch { "DON_THUE_NOT_FOUND" => 404, "KHONG_CO_QUYEN" => 403, _ => 400 });
 
-    // ── W3-T1: truy vấn đơn của khách (mã khách lấy từ JWT, không nhận từ request) ──
-
+    // ── W3-T1: truy vấn đơn của khách (mã khách lấy từ JWT) ──
     [HttpGet]
     [Authorize(Policy = "CustomerOnly")]
     public async Task<IActionResult> LayDonCuaToi([FromQuery] TimDonRequest filter)
-        => Ok(await _truyVanService.LayDonCuaToiAsync(filter, User.LayMaTaiKhoan()));
+        => Ok(await _truyVanService.LayDonCuaToiAsync(filter, MaTaiKhoanHienTai));
 
     [HttpGet("{id:long}")]
     [Authorize(Policy = "CustomerOnly")]
     public async Task<IActionResult> LayChiTiet(long id)
-        => Ok(await _truyVanService.LayChiTietDonCuaToiAsync(id, User.LayMaTaiKhoan()));
+        => Ok(await _truyVanService.LayChiTietDonCuaToiAsync(id, MaTaiKhoanHienTai));
 
     [HttpGet("{id:long}/lich-su")]
     [Authorize(Policy = "CustomerOnly")]
     public async Task<IActionResult> LayLichSu(long id)
-        => Ok(await _truyVanService.LayLichSuDonCuaToiAsync(id, User.LayMaTaiKhoan()));
+        => Ok(await _truyVanService.LayLichSuDonCuaToiAsync(id, MaTaiKhoanHienTai));
 
     [HttpGet("{id:long}/ban-giao")]
     [Authorize(Policy = "CustomerOnly")]
     public async Task<IActionResult> LayBienBanBanGiao(long id)
-        => Ok(await _truyVanService.LayBienBanBanGiaoCuaKhachAsync(id, User.LayMaTaiKhoan()));
+        => Ok(await _truyVanService.LayBienBanBanGiaoCuaKhachAsync(id, MaTaiKhoanHienTai));
 
     // ── W2-UC05: Tạo đơn an toàn, chống IDOR ──
-
     [HttpPost]
     [Authorize(Policy = "CustomerOnly")]
     public async Task<IActionResult> TaoDonThue([FromBody] TaoDonThueRequest request)
     {
-        // 🔒 BẢO MẬT: Bắt buộc lấy MaTaiKhoan từ JWT, Service sẽ phân giải và ghi đè MaKhachHang
-        request.MaTaiKhoan = User.LayMaTaiKhoan();
-
-        var result = await _donThueService.TaoDonThueAsync(request);
-        if (!result.ThanhCong)
-        {
-            return BadRequest(new { result.MaLoi, result.ThongDiep, result.ChiTiet });
-        }
-
-        return Ok(result.DuLieu);
+        request.MaTaiKhoan = MaTaiKhoanHienTai;
+        return HandleResult(await _donThueService.TaoDonThueAsync(request), _ => 400);
     }
 
-    // ── W4-T7: hủy đơn của khách (chủ đơn lấy từ JWT) ──
-
+    // ── W4-T7: hủy đơn của khách ──
     [HttpGet("{id:long}/huy/xem-truoc")]
     [Authorize(Policy = "CustomerOnly")]
     public async Task<IActionResult> XemTruocHuy(long id, CancellationToken ct)
-        => Ok(await _huyDonService.XemTruocHuyAsync(id, User.LayMaTaiKhoan(), LoaiHuyDon.KhachHuy, ct));
+        => Ok(await _huyDonService.XemTruocHuyAsync(id, MaTaiKhoanHienTai, LoaiHuyDon.KhachHuy, ct));
 
     [HttpPost("{id:long}/huy")]
     [Authorize(Policy = "CustomerOnly")]
     public async Task<IActionResult> HuyDon(long id, [FromBody] HuyDonRequest request, CancellationToken ct)
-        => Ok(await _huyDonService.KhachHuyAsync(id, request, User.LayMaTaiKhoan(), ct));
+        => Ok(await _huyDonService.KhachHuyAsync(id, request, MaTaiKhoanHienTai, ct));
 
-    /// <summary>
-    /// Endpoint PUT hủy đơn (hỗ trợ tương thích ngược Tuần 2 & 3).
-    /// Nhận lý do hủy từ JSON object { lyDo: "..." } hoặc raw string.
-    /// Nếu đơn chưa thanh toán (ChoThanhToan) hoặc đã hủy: xử lý qua DonThueService (giải phóng giữ chỗ, kiểm tra IDOR).
-    /// Nếu đơn đã thanh toán: đi qua HuyDonService theo chính sách hủy Week 4 (yêu cầu xem trước bảng phí).
-    /// </summary>
     [HttpPut("{id:long}/huy")]
     [Authorize]
     public async Task<IActionResult> HuyDonThue(long id, [FromBody] JsonElement body, CancellationToken ct)
     {
-        string lyDo = "Khách hàng hủy đơn";
+        string lyDo = TrichXuatLyDoHuy(body);
+        return HandleResult(
+            await _donThueService.HuyDonTuongThichAsync(id, lyDo, MaTaiKhoanHienTai, _huyDonService, ct),
+            maLoi => maLoi == DomainConstants.Errors.NotFound ? 404 : 400);
+    }
+
+    private static string TrichXuatLyDoHuy(JsonElement body)
+    {
         if (body.ValueKind == JsonValueKind.String)
-        {
-            lyDo = body.GetString() ?? lyDo;
-        }
-        else if (body.ValueKind == JsonValueKind.Object)
-        {
-            if (body.TryGetProperty("lyDo", out var prop) || body.TryGetProperty("LyDo", out prop))
-            {
-                lyDo = prop.GetString() ?? lyDo;
-            }
-        }
+            return body.GetString() ?? "Khách hàng hủy đơn";
 
-        long maTaiKhoan = User.LayMaTaiKhoan();
+        if (body.ValueKind == JsonValueKind.Object &&
+            (body.TryGetProperty("lyDo", out var prop) || body.TryGetProperty("LyDo", out prop)))
+            return prop.GetString() ?? "Khách hàng hủy đơn";
 
-        // Kiểm tra sự tồn tại của đơn trước
-        var don = await _context.DonThues.AsNoTracking().FirstOrDefaultAsync(d => d.MaDonThue == id, ct);
-        if (don == null)
-        {
-            return NotFound(new { maLoi = "NOT_FOUND", thongDiep = "Không tìm thấy đơn thuê." });
-        }
-
-        // Đơn đã thanh toán: chuyển sang HuyDonService theo quy trình Week 4
-        if (don.TrangThai == TrangThaiDonThue.DaXacNhan || don.TrangThai == TrangThaiDonThue.DangThue)
-        {
-            return Ok(await _huyDonService.KhachHuyAsync(id, new HuyDonRequest(lyDo), maTaiKhoan, ct));
-        }
-
-        // Đơn chưa thanh toán hoặc đang ở trạng thái khác: xử lý qua DonThueService
-        var result = await _donThueService.HuyDonAsync(id, lyDo, maTaiKhoan);
-        if (!result.ThanhCong)
-        {
-            return BadRequest(new { result.MaLoi, result.ThongDiep });
-        }
-
-        return Ok(new { message = "Đã hủy đơn thành công!", result.DuLieu });
+        return "Khách hàng hủy đơn";
     }
 }

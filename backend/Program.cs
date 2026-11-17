@@ -188,6 +188,7 @@ builder.Services.AddScoped<ITruyVanDonThueService, TruyVanDonThueService>();
 builder.Services.AddScoped<IPhuPhiService, PhuPhiService>(); // W4-T3 Kiện Minh
 builder.Services.AddScoped<IDoiSoatService, DoiSoatService>(); // W4-T4 Kim Xuyến
 builder.Services.AddScoped<ILichSuNghiepVuService, LichSuNghiepVuService>();
+builder.Services.AddScoped<INhatKyService, NhatKyService>();
 builder.Services.AddScoped<IThongBaoService, ThongBaoService>();
 // W4 — Thanh Tùng: hoàn tiền dùng chung, hủy đơn
 builder.Services.AddSingleton(TimeProvider.System);

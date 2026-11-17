@@ -137,4 +137,31 @@ public partial class DonThueService : IDonThueService
             return Result<bool>.Ok(true);
         }, _logger);
     }
+
+    /// <summary>
+    /// Điều phối hủy đơn tương thích ngược: đơn đã xác nhận/đang thuê đi qua quy trình hoàn tiền Week 4, còn lại đi qua HuyDonAsync.
+    /// </summary>
+    public async Task<Result<object>> HuyDonTuongThichAsync(
+        long maDonThue,
+        string lyDo,
+        long maTaiKhoan,
+        IHuyDonService huyDonService,
+        CancellationToken ct = default)
+    {
+        var don = await _context.DonThues.AsNoTracking().FirstOrDefaultAsync(d => d.MaDonThue == maDonThue, ct);
+        if (don == null)
+            return Result<object>.Loi(DomainConstants.Errors.NotFound, "Không tìm thấy đơn thuê.");
+
+        if (don.TrangThai == TrangThaiDonThue.DaXacNhan || don.TrangThai == TrangThaiDonThue.DangThue)
+        {
+            var kqWeek4 = await huyDonService.KhachHuyAsync(maDonThue, new Models.DTOs.HuyDon.HuyDonRequest(lyDo), maTaiKhoan, ct);
+            return Result<object>.Ok(kqWeek4);
+        }
+
+        var result = await HuyDonAsync(maDonThue, lyDo, maTaiKhoan);
+        if (!result.ThanhCong)
+            return Result<object>.Loi(result.MaLoi ?? "BAD_REQUEST", result.ThongDiep ?? "Không thể hủy đơn.");
+
+        return Result<object>.Ok(new { message = "Đã hủy đơn thành công!", result.DuLieu });
+    }
 }

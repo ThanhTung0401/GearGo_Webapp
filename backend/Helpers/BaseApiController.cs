@@ -5,26 +5,31 @@ namespace GearGo.Helpers;
 
 public abstract class BaseApiController : ControllerBase
 {
-    protected IActionResult HandleResult<T>(Result<T> result)
+    /// <summary>Lấy mã tài khoản hiện tại từ JWT claims.</summary>
+    protected long MaTaiKhoanHienTai => User.LayMaTaiKhoan();
+
+    protected IActionResult HandleResult<T>(Result<T> result, Func<string?, int>? statusResolver = null)
+        => result.ThanhCong
+            ? Ok(result.DuLieu)
+            : LoiActionResult(result.MaLoi, result.ThongDiep, result.ChiTiet, statusResolver);
+
+    protected IActionResult HandleCreatedResult<T>(Result<T> result, Func<string?, int>? statusResolver = null)
+        => result.ThanhCong
+            ? StatusCode(201, result.DuLieu)
+            : LoiActionResult(result.MaLoi, result.ThongDiep, result.ChiTiet, statusResolver);
+
+    protected IActionResult HandleVoidResult(Result result, Func<string?, int>? statusResolver = null)
+        => result.ThanhCong
+            ? Ok(new { thongDiep = result.ThongDiep ?? "Thành công." })
+            : LoiActionResult(result.MaLoi, result.ThongDiep, result.ChiTiet, statusResolver);
+
+    private IActionResult LoiActionResult(string? maLoi, string? thongDiep, object? chiTiet, Func<string?, int>? statusResolver)
     {
-        if (result.ThanhCong)
-        {
-            return Ok(result.DuLieu);
-        }
-
-        int statusCode = ResolveStatusCode(result.MaLoi);
-        return StatusCode(statusCode, new { result.MaLoi, result.ThongDiep });
-    }
-
-    protected IActionResult HandleCreatedResult<T>(Result<T> result)
-    {
-        if (result.ThanhCong)
-        {
-            return StatusCode(201, result.DuLieu);
-        }
-
-        int statusCode = ResolveStatusCode(result.MaLoi);
-        return StatusCode(statusCode, new { result.MaLoi, result.ThongDiep });
+        int statusCode = statusResolver != null ? statusResolver(maLoi) : ResolveStatusCode(maLoi);
+        object payload = chiTiet != null
+            ? new { maLoi, thongDiep, chiTiet }
+            : new { maLoi, thongDiep };
+        return StatusCode(statusCode, payload);
     }
 
     public static int ResolveStatusCode(string? maLoi) => maLoi switch
