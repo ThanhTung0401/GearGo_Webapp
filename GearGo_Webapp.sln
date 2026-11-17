@@ -8,7 +8,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GearGo", "backend\GearGo.cs
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{EB7F0879-21AF-48C0-877B-33BCA59EA9C0}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GearGo.Tests", "tests\GearGo.Tests\GearGo.Tests.csproj", "{82A527DE-37AE-4693-9429-D1953ED0F76A}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GearGo.Tests", "backend\test\GearGo.Tests\GearGo.Tests.csproj", "{82A527DE-37AE-4693-9429-D1953ED0F76A}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
