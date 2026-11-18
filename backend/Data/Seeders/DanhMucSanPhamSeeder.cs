@@ -75,7 +75,8 @@ internal static class DanhMucSanPhamSeeder
     {
         var dm = await context.DanhMucSanPhams.FirstOrDefaultAsync(d => d.TenDanhMuc == ten);
         if (dm != null) return dm;
-        dm = new DanhMucSanPham { TenDanhMuc = ten, MoTa = moTa, ThuTuHienThi = thuTu, TrangThai = "HoatDong" };
+        // Dùng chuẩn "HienThi" để đồng bộ với bộ lọc công khai của DanhMucService và SanPhamService
+        dm = new DanhMucSanPham { TenDanhMuc = ten, MoTa = moTa, ThuTuHienThi = thuTu, TrangThai = "HienThi" };
         context.DanhMucSanPhams.Add(dm);
         return dm;
     }

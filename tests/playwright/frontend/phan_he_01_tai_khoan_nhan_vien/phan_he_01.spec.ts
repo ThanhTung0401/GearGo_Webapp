@@ -79,6 +79,9 @@ test.describe.serial("Frontend PH1: Quản lý Tài khoản & Nhân viên (UC1.1
     await loginUi(page, "customer");
     await page.getByRole("button", { name: "Tài khoản" }).first().click();
     await expect(page.getByRole("heading", { name: /Hồ sơ cá nhân/i })).toBeVisible();
+    // Đợi API layHoSoToi() tải xong hoàn toàn trước khi sửa địa chỉ và bấm Lưu
+    await expect(page.getByText(/Đang tải hồ sơ cá nhân/i)).not.toBeVisible({ timeout: 10_000 });
+    await expect(page.getByRole("button", { name: "Lưu thay đổi" })).toBeEnabled({ timeout: 10_000 });
     await pauseForViewer(page);
 
     // Cập nhật địa chỉ liên hệ và bấm Lưu thay đổi
