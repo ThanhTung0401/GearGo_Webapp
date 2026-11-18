@@ -957,7 +957,10 @@
 }
 
 /* === ProductDetailView: Tổng quan & Đặt thuê === */
+/* width: 100% + min-width: 0 giữ khung chi tiết nằm gọn trong <main> flex-col trên mobile 390px */
 .lp-detail-container {
+  width: 100%;
+  min-width: 0;
   max-width: 1280px;
   margin: 0 auto;
   padding: 24px;
@@ -1195,7 +1198,10 @@
 }
 
 /* === ProductDetailView: Khối Tabs Thông số, Phụ kiện & Chính sách === */
+/* Ràng buộc max-width/min-width để thanh tab cuộn ngang nội bộ thay vì làm tràn trang */
 .lp-tabs-card {
+  max-width: 100%;
+  min-width: 0;
   margin-top: 32px;
   background: #ffffff;
   border-radius: 16px;
@@ -1204,6 +1210,8 @@
 }
 
 .lp-tabs-bar {
+  max-width: 100%;
+  min-width: 0;
   background: var(--color-parchment);
   padding: 0 16px;
   overflow-x: auto;

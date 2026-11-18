@@ -390,6 +390,8 @@
   border-radius: 12px;
   border: 1px solid var(--color-bone);
   overflow: hidden;
+  /* Cho phép card co về 0 trong grid track dù biến thể padded đặt overflow: visible */
+  min-width: 0;
 }
 
 .adm-card--padded {
@@ -538,6 +540,18 @@
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 16px;
+}
+
+/* Giới hạn chiều rộng tối thiểu của phần tử con trong Grid để tránh bảng cuộn ngang kéo giãn track quá 390px trên mobile */
+.adm-split-detail > *,
+.adm-inventory-grid > *,
+.adm-notif-layout > *,
+.adm-revenue-grid > *,
+.adm-import-grid > *,
+.adm-grid-2-lg > *,
+.adm-grid-2 > *,
+.adm-grid-3 > * {
+  min-width: 0;
 }
 
 .adm-detail-panel {
@@ -731,6 +745,12 @@
 .adm-pill--xs {
   padding: 1px 6px;
   font-size: 0.68rem;
+}
+
+/* Cho phép .adm-pill xuống dòng khi kết hợp với lớp whitespace-normal (ưu tiên cao hơn @layer utilities của Tailwind v4) */
+.adm-pill.whitespace-normal {
+  white-space: normal;
+  line-height: 1.35;
 }
 
 .adm-pill.is-success {
@@ -1485,6 +1505,9 @@
   border: 1px solid var(--color-bone);
   max-height: 180px;
   overflow-y: auto;
+  /* Cho phép cuộn ngang nội dung đối chiếu khi bảng diff vượt quá chiều rộng modal trên mobile */
+  overflow-x: auto;
+  max-width: 100%;
 }
 
 .adm-notif-preview-wrap {
@@ -1736,6 +1759,8 @@
   gap: 8px;
 }
 
+/* Bổ sung biến thể kích thước is-xs đồng bộ với .adm-modal-dialog.is-xs cho modal khóa nhân viên */
+.modal-container.is-xs { max-width: 420px; }
 .modal-container.is-sm { max-width: 440px; }
 .modal-container.is-md { max-width: 480px; }
 .modal-container.is-520 { max-width: 520px; }
@@ -1803,5 +1828,22 @@
 
   .adm-modal-body-scroll {
     padding: 14px;
+  }
+
+  /* Cho phép nút bấm và huy hiệu dài xuống dòng trong modal/card Admin trên mobile 390px */
+  .adm-modal-dialog .btn,
+  .modal-container .btn,
+  .adm-card .btn,
+  .adm-card .badge,
+  .adm-modal-dialog .adm-pill,
+  .adm-notif-preview-card .adm-pill {
+    max-width: 100%;
+    white-space: normal;
+    text-align: center;
+    line-height: 1.35;
+  }
+
+  .adm-modal-footer-clean {
+    flex-wrap: wrap;
   }
 }

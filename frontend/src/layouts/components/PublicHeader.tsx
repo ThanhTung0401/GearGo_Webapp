@@ -72,25 +72,27 @@ export default function PublicHeader({
 
   return (
     <header className="sticky top-0 z-40 bg-[rgba(22,53,40,0.94)] backdrop-blur-md border-b border-white/10 shadow-lg">
-      <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
+      {/* Thu gọn khoảng cách/padding trên < sm để khi đã đăng nhập vẫn vừa khung 390px */}
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 py-3 flex items-center justify-between gap-2 sm:gap-3">
         {/* Left: Brand Logo */}
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-4 lg:gap-6 min-w-0">
           <button
             onClick={() => {
               setRole("customer");
               setPage("landing");
             }}
-            className="flex items-center gap-2.5 bg-transparent border-0 cursor-pointer p-0 text-left select-none"
+            className="flex items-center gap-2 sm:gap-2.5 bg-transparent border-0 cursor-pointer p-0 text-left select-none min-w-0"
             aria-label="Về trang chủ GearGo"
           >
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[var(--color-amber)] to-[#D46931] text-white flex items-center justify-center shadow-md">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[var(--color-amber)] to-[#D46931] text-white flex items-center justify-center shadow-md shrink-0">
               <Icon name="tent" size={22} />
             </div>
             <div className="min-w-0">
               <div className="font-[family-name:var(--font-display)] text-white text-lg sm:text-xl font-extrabold leading-none tracking-tight whitespace-nowrap">
                 GearGo
               </div>
-              <div className="text-[0.62rem] sm:text-[0.65rem] text-[#D1DDD5] font-medium mt-0.5 whitespace-nowrap">
+              {/* Ẩn phụ đề trên màn hình < sm để tránh tràn ngang header mobile 390px khi đã đăng nhập */}
+              <div className="hidden sm:block text-[0.62rem] sm:text-[0.65rem] text-[#D1DDD5] font-medium mt-0.5 whitespace-nowrap">
                 Outdoor Rental & Gear
               </div>
             </div>
@@ -118,7 +120,7 @@ export default function PublicHeader({
         </div>
 
         {/* Right: Actions & User Menu */}
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
           {/* Notification Bell */}
           <div className="relative">
             <button
@@ -129,7 +131,7 @@ export default function PublicHeader({
                   void app.refreshNotifications?.();
                 }
               }}
-              className="relative w-9 h-9 rounded-xl border border-white/15 bg-white/5 hover:bg-white/10 flex items-center justify-center text-white transition-colors cursor-pointer"
+              className="relative w-8 h-8 sm:w-9 sm:h-9 rounded-xl border border-white/15 bg-white/5 hover:bg-white/10 flex items-center justify-center text-white transition-colors cursor-pointer"
               aria-label="Thông báo"
             >
               <Icon name="bell" size={17} />
@@ -140,9 +142,12 @@ export default function PublicHeader({
               )}
             </button>
 
-            {/* Notification Popover Dropdown */}
+            {/* Notification Popover Dropdown — trên mobile (<640px) ghim fixed 12px hai bên để không bị tràn cạnh trái theo nút chuông */}
             {notifDropdownOpen && (
-              <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-2xl shadow-2xl border border-[var(--color-bone)] z-50 overflow-hidden animate-in fade-in duration-200">
+              <div
+                id="notif-pop"
+                className="fixed left-3 right-3 top-14 mt-2 sm:top-auto sm:left-auto sm:right-0 sm:absolute sm:w-96 bg-white rounded-2xl shadow-2xl border border-[var(--color-bone)] z-50 overflow-hidden animate-in fade-in duration-200"
+              >
                 <div className="p-3 bg-[var(--color-parchment)] border-b border-[var(--color-bone)] flex items-center justify-between">
                   <span className="text-xs font-bold text-[var(--color-bark)]">
                     Thông báo ({userNotifs.length})
@@ -162,7 +167,7 @@ export default function PublicHeader({
                 </div>
 
                 {/* Filter Pills */}
-                <div className="p-2 border-b border-[var(--color-bone)] flex gap-1 bg-gray-50/50">
+                <div className="p-2 border-b border-[var(--color-bone)] flex flex-wrap gap-1 bg-gray-50/50">
                   {(["all", "unread", "order", "system"] as const).map((f) => (
                     <button
                       key={f}
@@ -216,7 +221,7 @@ export default function PublicHeader({
             <button
               onClick={() => setPage("cart")}
               aria-label="Giỏ thuê"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-[var(--color-amber)] to-[#D46931] text-white font-bold text-xs shadow-md cursor-pointer hover:brightness-105 active:scale-95 transition-all"
+              className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 rounded-xl bg-gradient-to-r from-[var(--color-amber)] to-[#D46931] text-white font-bold text-xs shadow-md cursor-pointer hover:brightness-105 active:scale-95 transition-all whitespace-nowrap"
             >
               <Icon name="cart" size={16} />
               <span>{totalCartQty}</span>
@@ -225,13 +230,13 @@ export default function PublicHeader({
 
           {/* User Profile or Auth Login */}
           {currentUser ? (
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
               <button
                 onClick={onOpenUserProfile}
-                className="flex items-center gap-2 px-2.5 py-1 rounded-xl bg-white/10 hover:bg-white/15 border border-white/15 text-white cursor-pointer transition-colors"
+                className="flex items-center gap-2 px-1.5 sm:px-2.5 py-1 rounded-xl bg-white/10 hover:bg-white/15 border border-white/15 text-white cursor-pointer transition-colors"
                 title="Hồ sơ cá nhân & Đổi mật khẩu"
               >
-                <div className="w-6 h-6 rounded-full bg-[var(--color-amber)] text-white font-bold text-[0.7rem] flex items-center justify-center">
+                <div className="w-6 h-6 rounded-full bg-[var(--color-amber)] text-white font-bold text-[0.7rem] flex items-center justify-center shrink-0">
                   {currentUser.name.charAt(0)}
                 </div>
                 <span className="text-xs font-bold hidden md:inline max-w-[100px] truncate">
@@ -240,7 +245,7 @@ export default function PublicHeader({
               </button>
               <button
                 onClick={() => logout()}
-                className="text-[0.72rem] font-semibold text-rose-300 hover:text-rose-200 px-2 py-1 rounded-lg hover:bg-rose-500/10 transition-colors cursor-pointer"
+                className="text-[0.72rem] font-semibold text-rose-300 hover:text-rose-200 px-1.5 sm:px-2 py-1 rounded-lg hover:bg-rose-500/10 transition-colors cursor-pointer whitespace-nowrap"
                 title="Đăng xuất"
               >
                 Thoát
@@ -279,7 +284,7 @@ export default function PublicHeader({
           <button
             type="button"
             onClick={onOpenMobileMenu}
-            className="lg:hidden w-9 h-9 rounded-xl border border-white/15 bg-white/5 flex items-center justify-center text-white cursor-pointer"
+            className="lg:hidden w-8 h-8 sm:w-9 sm:h-9 rounded-xl border border-white/15 bg-white/5 flex items-center justify-center text-white cursor-pointer shrink-0"
             aria-label="Mở menu"
           >
             <Icon name="menu" size={18} />

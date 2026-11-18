@@ -395,6 +395,11 @@
   align-items: start;
 }
 
+/* Cho phép các cột con thu nhỏ trong grid 1fr trên mobile 390px */
+.cp-cart-grid > * {
+  min-width: 0;
+}
+
 .cp-cart-item-card {
   background: #ffffff;
   border-radius: 14px;
@@ -541,6 +546,7 @@
   position: sticky;
   top: 24px;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.04);
+  min-width: 0;
 }
 
 .cp-summary-title {
@@ -1993,11 +1999,15 @@
   color: #4B5563;
 }
 
+/* Cho phép xuống dòng trên màn hình hẹp để nút không kéo tràn .cp-card */
 .cp-ai-analyze-btn {
   padding: 14px 28px;
   font-size: 0.95rem;
   font-weight: 700;
   border-radius: 10px;
+  max-width: 100%;
+  white-space: normal;
+  text-align: center;
 }
 
 .cp-ai-presets-desc {
@@ -2367,6 +2377,16 @@
   font-weight: 600;
 }
 
+/* Ghi đè white-space: nowrap của .badge (unlayered trong surfaces.css) vì @layer utilities không thắng unlayered CSS ở Tailwind v4 */
+.cp-badge-wrap,
+.badge.whitespace-normal {
+  white-space: normal;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  max-width: 100%;
+  line-height: 1.35;
+}
+
 .cp-review-img-thumb {
   width: 56px;
   height: 56px;
@@ -2530,6 +2550,34 @@
     min-width: 0;
     width: 100%;
     flex: 1 1 100%;
+  }
+
+  /* Thu gọn và cho phép xuống dòng các nút dài trong .cp-card / checkout / confirmed ở mobile 390px */
+  .cp-ai-analyze-btn {
+    width: 100%;
+    padding: 12px 16px;
+  }
+
+  .cp-btn-checkout,
+  .cp-gateway-btn,
+  .cp-confirmed-pay-btn,
+  .cp-confirmed-fail-btn,
+  .cp-confirmed-orders-btn,
+  .cp-ai-goto-cart-btn,
+  .cp-ai-reset-btn,
+  .cp-quote-btn-confirm,
+  .cp-quote-btn-cancel,
+  .cp-modal-btn-primary,
+  .cp-modal-btn-secondary,
+  .cp-dispute-submit-btn,
+  .cp-btn-cancel-close,
+  .cp-btn-cancel-submit,
+  .cp-modal-box .modal-footer .btn,
+  .cp-modal-box form .btn {
+    /* Ghi đè white-space: nowrap của .btn để nút trong modal không tràn khung 390px */
+    max-width: 100%;
+    white-space: normal;
+    text-align: center;
   }
 
   .cp-confirmed-actions {

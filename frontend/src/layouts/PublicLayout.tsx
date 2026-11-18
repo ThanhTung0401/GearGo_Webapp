@@ -179,8 +179,8 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
           document.body
         )}
 
-      {/* 4. Page Main Content */}
-      <main className="flex-1 flex flex-col">
+      {/* 4. Page Main Content — min-w-0 ngăn flex column cho phép nội dung con kéo giãn chiều ngang trên mobile */}
+      <main className="flex-1 flex flex-col min-w-0">
         {children}
       </main>
 

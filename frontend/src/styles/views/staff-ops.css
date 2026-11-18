@@ -3236,4 +3236,12 @@
   .so-table-compact td {
     padding: 8px 10px;
   }
+
+  /* Cho phép nút dài trong modal vận hành tự xuống dòng trên mobile 390px */
+  .so-modal-card-lg .btn,
+  .so-modal-card-460 .btn {
+    max-width: 100%;
+    white-space: normal;
+    text-align: center;
+  }
 }
