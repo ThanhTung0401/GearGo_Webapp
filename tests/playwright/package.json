@@ -1,0 +1,15 @@
+{
+  "name": "geargo-playwright-suite",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "test": "node run_all_playwright.mjs",
+    "test:all": "node run_all_playwright.mjs",
+    "test:frontend": "node frontend/run_all_frontend.mjs",
+    "test:backend": "node backend/run_all_backend.mjs"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.52.0"
+  }
+}
