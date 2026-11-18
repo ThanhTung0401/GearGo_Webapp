@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useApp } from "../../../context/AppContext";
 import { isRealApiEnabled } from "../../../services/apiClient";
 
@@ -8,7 +8,7 @@ import { importReceiptApi } from "../../../services/api/importReceiptApi";
 
 import { fmt, type ImportReceipt } from "../../../store";
 
-import { FormModal, FormActions, fieldStyle, labelStyle } from "../forms/FormModal";
+import { FormModal, FormActions } from "../forms/FormModal";
 
 import GoodsReceivingModal from "../../../components/GoodsReceivingModal";
 import ImportAdjustmentModal from "../../../components/ImportAdjustmentModal";
@@ -134,29 +134,29 @@ export function InventoryTab({ app }: { app: ReturnType<typeof useApp> }) {
     <div>
       <div className="flex justify-between items-center mb-4 flex-wrap gap-2">
         <div>
-          <h2 style={{ fontFamily: "var(--font-display)", fontSize: "1.4rem", color: "var(--color-bark)" }}>Phiếu nhập hàng</h2>
-          <p style={{ color: "#6B7280", fontSize: "0.8rem" }}>Phiếu nháp không làm thay đổi tồn kho cho đến khi được kiểm nhận và xác nhận (UC7.7).</p>
+          <h2 className="adm-page-title adm-page-title--compact">Phiếu nhập hàng</h2>
+          <p className="adm-page-subtitle adm-page-subtitle--sm">Phiếu nháp không làm thay đổi tồn kho cho đến khi được kiểm nhận và xác nhận (UC7.7).</p>
         </div>
-        <button onClick={() => setEditing("new")} style={{ background: "var(--color-forest)", color: "white", padding: "9px 16px", borderRadius: "8px", border: "none", cursor: "pointer", fontWeight: 600, fontSize: "0.85rem" }}>+ Tạo phiếu nháp</button>
+        <button onClick={() => setEditing("new")} className="adm-btn-primary">+ Tạo phiếu nháp</button>
       </div>
       {message && (
-        <div role="status" style={{ background: message.type === "success" ? "#DCFCE7" : "#FEE2E2", color: message.type === "success" ? "#15803D" : "#B91C1C", border: `1px solid ${message.type === "success" ? "#A7F3D0" : "#FECACA"}`, borderRadius: "9px", padding: "10px 14px", marginBottom: "14px", fontSize: "0.82rem" }}>{message.text}</div>
+        <div role="status" className={`adm-alert ${message.type === "success" ? "is-success" : "is-error-solid"}`}>{message.text}</div>
       )}
 
       {/* UC7.8: Bộ lọc Nhà cung cấp, Trạng thái & Khoảng ngày */}
-      <div className="flex gap-3 mb-4 flex-wrap items-center" style={{ background: "white", padding: "12px 14px", borderRadius: "10px", border: "1px solid var(--color-bone)" }}>
+      <div className="adm-toolbar">
         <input
           type="text"
           placeholder="🔍 Tìm mã phiếu, NCC, người lập..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          style={{ flex: 1, minWidth: 200, border: "1px solid var(--color-bone)", borderRadius: "8px", padding: "7px 10px", fontSize: "0.82rem" }}
+          className="adm-search-input"
         />
         <select
           value={supplierFilter}
           onChange={(e) => setSupplierFilter(e.target.value)}
           aria-label="Lọc theo nhà cung cấp"
-          style={{ border: "1px solid var(--color-bone)", borderRadius: "8px", padding: "7px 10px", fontSize: "0.82rem", background: "white" }}
+          className="adm-select adm-select--sm"
         >
           {supplierOptions.map((s) => <option key={s} value={s}>{s === "Tất cả" ? "Tất cả NCC" : s}</option>)}
         </select>
@@ -164,26 +164,26 @@ export function InventoryTab({ app }: { app: ReturnType<typeof useApp> }) {
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
           aria-label="Lọc theo trạng thái phiếu"
-          style={{ border: "1px solid var(--color-bone)", borderRadius: "8px", padding: "7px 10px", fontSize: "0.82rem", background: "white" }}
+          className="adm-select adm-select--sm"
         >
           {statusOptions.map((s) => <option key={s} value={s}>{s}</option>)}
         </select>
         <div className="flex items-center gap-1">
-          <span style={{ fontSize: "0.75rem", color: "#6B7280" }}>Từ:</span>
+          <span className="adm-count-text text-xs">Từ:</span>
           <input
             type="date"
             value={fromDate}
             onChange={(e) => setFromDate(e.target.value)}
-            style={{ border: "1px solid var(--color-bone)", borderRadius: "8px", padding: "6px 8px", fontSize: "0.78rem" }}
+            className="adm-date-input"
           />
         </div>
         <div className="flex items-center gap-1">
-          <span style={{ fontSize: "0.75rem", color: "#6B7280" }}>Đến:</span>
+          <span className="adm-count-text text-xs">Đến:</span>
           <input
             type="date"
             value={toDate}
             onChange={(e) => setToDate(e.target.value)}
-            style={{ border: "1px solid var(--color-bone)", borderRadius: "8px", padding: "6px 8px", fontSize: "0.78rem" }}
+            className="adm-date-input"
           />
         </div>
         {(supplierFilter !== "Tất cả" || statusFilter !== "Tất cả" || fromDate || toDate || searchQuery) && (
@@ -196,70 +196,69 @@ export function InventoryTab({ app }: { app: ReturnType<typeof useApp> }) {
               setToDate("");
               setSearchQuery("");
             }}
-            style={{ background: "none", border: "none", color: "#DC2626", fontSize: "0.78rem", cursor: "pointer", fontWeight: 600 }}
+            className="adm-clear-filter-btn"
           >
             ✕ Xóa lọc
           </button>
         )}
       </div>
 
-      <div className="responsive-two-column grid gap-5" style={{ gridTemplateColumns: "minmax(280px, 0.8fr) minmax(0, 1.4fr)" }}>
+      <div className="responsive-two-column adm-inventory-grid">
         <div className="flex flex-col gap-3">
           {filteredReceipts.map((receipt) => {
             const quantity = receipt.lines.reduce((sum, line) => sum + line.quantity, 0);
+            const pillClass = receipt.status === "Đã nhập kho" ? "is-success" : receipt.status === "Đã hủy" ? "is-neutral" : "is-warning";
             return (
-              <button key={receipt.id} onClick={() => { setSelectedId(receipt.id); setMessage(null); }} style={{ background: "white", borderRadius: "10px", padding: "14px 16px", border: `1px solid ${selectedId === receipt.id ? "var(--color-forest)" : "var(--color-bone)"}`, display: "block", cursor: "pointer", textAlign: "left" }}>
+              <button
+                key={receipt.id}
+                onClick={() => { setSelectedId(receipt.id); setMessage(null); }}
+                className={`adm-receipt-card ${selectedId === receipt.id ? "is-selected" : ""}`}
+              >
                 <div className="flex items-center gap-2 mb-1 flex-wrap">
-                  <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.8rem", fontWeight: 700, color: "var(--color-forest)" }}>{receipt.displayCode ?? receipt.id}</span>
-                  <span style={{
-                    background: receipt.status === "Đã nhập kho" ? "#DCFCE7" : receipt.status === "Đã hủy" ? "#F3F4F6" : "#FEF3C7",
-                    color: receipt.status === "Đã nhập kho" ? "#15803D" : receipt.status === "Đã hủy" ? "#6B7280" : "#B45309",
-                    padding: "2px 8px", borderRadius: "999px", fontSize: "0.7rem", fontWeight: 600
-                  }}>
+                  <span className="adm-cell-code">{receipt.displayCode ?? receipt.id}</span>
+                  <span className={`adm-pill adm-pill--round adm-pill--xs ${pillClass}`}>
                     {receipt.status}
                   </span>
                   {receipt.adjustments && receipt.adjustments.length > 0 && (
-                    <span style={{ background: "#FEF3C7", color: "#D97706", fontSize: "0.68rem", padding: "1px 6px", borderRadius: 4, fontWeight: 700 }}>
+                    <span className="adm-pill is-warning adm-pill--xs">
                       ⚡ {receipt.adjustments.filter((a) => a.status === "Chờ duyệt").length > 0 ? "Chờ duyệt điều chỉnh" : "Đã có điều chỉnh"}
                     </span>
                   )}
                 </div>
-                <div style={{ fontWeight: 600, fontSize: "0.86rem" }}>{receipt.supplierName}</div>
-                <div style={{ fontSize: "0.72rem", color: "#6B7280", marginTop: "3px" }}>{receipt.lines.length} loại · {quantity} thiết bị · {receipt.createdBy}</div>
-                <div style={{ fontWeight: 700, marginTop: "8px" }}>{fmt(receiptTotal(receipt))}</div>
+                <div className="font-semibold text-[0.86rem]">{receipt.supplierName}</div>
+                <div className="adm-hint-text mt-1">{receipt.lines.length} loại · {quantity} thiết bị · {receipt.createdBy}</div>
+                <div className="font-bold mt-2">{fmt(receiptTotal(receipt))}</div>
               </button>
             );
           })}
           {filteredReceipts.length === 0 && (
-            <div style={{ background: "white", borderRadius: 10, padding: 24, textAlign: "center", color: "#9CA3AF", border: "1px dashed var(--color-bone)" }}>
+            <div className="adm-empty-box p-6">
               Không tìm thấy phiếu nhập nào phù hợp tiêu chí lọc.
             </div>
           )}
         </div>
 
         {selected && (
-          <div style={{ background: "white", border: "1px solid var(--color-bone)", borderRadius: "14px", overflow: "hidden", alignSelf: "start" }}>
-            <div className="flex justify-between items-start" style={{ background: "var(--color-parchment)", padding: "16px 18px" }}>
+          <div className="adm-card self-start">
+            <div className="adm-card-header flex justify-between items-start gap-2">
               <div>
-                <div style={{ fontFamily: "var(--font-mono)", color: "var(--color-forest)", fontWeight: 700 }}>{selected.displayCode ?? selected.id}</div>
-                <div style={{ fontWeight: 700 }}>{selected.supplierName}</div>
-                <div style={{ color: "#6B7280", fontSize: "0.72rem" }}>Lập lúc {selected.createdAt} · {selected.createdBy}</div>
+                <div className="adm-cell-code text-sm">{selected.displayCode ?? selected.id}</div>
+                <div className="font-bold">{selected.supplierName}</div>
+                <div className="adm-hint-text font-normal">Lập lúc {selected.createdAt} · {selected.createdBy}</div>
                 {selected.supplierDocumentNumber && (
-                  <div style={{ color: "#4B5563", fontSize: "0.72rem" }}>Số chứng từ NCC: <strong>{selected.supplierDocumentNumber}</strong></div>
+                  <div className="text-[0.72rem] text-[#4B5563] font-normal">Số chứng từ NCC: <strong>{selected.supplierDocumentNumber}</strong></div>
                 )}
               </div>
-              <span style={{
-                background: selected.status === "Đã nhập kho" ? "#DCFCE7" : selected.status === "Đã hủy" ? "#F3F4F6" : "#FEF3C7",
-                color: selected.status === "Đã nhập kho" ? "#15803D" : selected.status === "Đã hủy" ? "#6B7280" : "#B45309",
-                borderRadius: "999px", padding: "4px 10px", fontSize: "0.72rem", fontWeight: 700
-              }}>
+              <span className={`adm-pill adm-pill--round ${selected.status === "Đã nhập kho" ? "is-success" : selected.status === "Đã hủy" ? "is-neutral" : "is-warning"}`}>
                 {selected.status}
               </span>
             </div>
             <div className="responsive-table">
-              <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 580 }}>
-                <thead><tr style={{ color: "#6B7280", fontSize: "0.72rem" }}>
-                  {["Sản phẩm", "Số lượng", "Đơn giá", "Kiểm nhận / Phân loại", "Thành tiền"].map((heading) => <th key={heading} style={{ textAlign: heading === "Sản phẩm" || heading === "Kiểm nhận / Phân loại" ? "left" : "right", padding: "10px 14px" }}>{heading}</th>)}
+              <table className="adm-table adm-table--min adm-table--md">
+                <thead><tr>
+                  {["Sản phẩm", "Số lượng", "Đơn giá", "Kiểm nhận / Phân loại", "Thành tiền"].map((heading) => (
+                    <th key={heading} className={heading === "Sản phẩm" || heading === "Kiểm nhận / Phân loại" ? "" : "adm-cell-right"}>{heading}</th>
+                  ))}
                 </tr></thead>
                 <tbody>{selected.lines.map((line) => {
                   const product = app.products.find((item) => item.id === line.productId);
@@ -271,36 +270,36 @@ export function InventoryTab({ app }: { app: ReturnType<typeof useApp> }) {
                   const billedCount = (line.acceptedQty !== undefined || line.damagedQty !== undefined) ? (acceptedCount + damagedCount) : line.quantity;
 
                   return (
-                    <tr key={line.productId} style={{ borderTop: "1px solid var(--color-bone)", fontSize: "0.8rem" }}>
-                      <td style={{ padding: "12px 14px" }}>
-                        <div style={{ fontWeight: 600 }}>{product?.name}</div>
+                    <tr key={line.productId}>
+                      <td>
+                        <div className="font-semibold">{product?.name}</div>
                         {isZeroPrice && (
-                          <div style={{ fontSize: "0.7rem", color: "#D97706", marginTop: 2, background: "#FEF3C7", padding: "1px 6px", borderRadius: 4, display: "inline-block" }}>
+                          <div className="adm-pill is-warning adm-pill--xs mt-0.5 font-normal">
                             🎁 Hàng tặng/KM: {line.priceZeroReason || "Quà tặng kèm đơn"}
                           </div>
                         )}
                       </td>
-                      <td style={{ padding: "12px 14px", textAlign: "right" }}>{line.quantity}</td>
-                      <td style={{ padding: "12px 14px", textAlign: "right" }}>{isZeroPrice ? "0 đ (Tặng)" : fmt(line.unitPrice)}</td>
-                      <td style={{ padding: "12px 14px", fontSize: "0.72rem" }}>
+                      <td className="adm-cell-right">{line.quantity}</td>
+                      <td className="adm-cell-right">{isZeroPrice ? "0 đ (Tặng)" : fmt(line.unitPrice)}</td>
+                      <td className="text-[0.72rem]">
                         {hasInspection ? (
                           <div className="flex flex-col gap-1">
-                            <span style={{ color: "#15803D", fontWeight: 600 }}>✓ Đạt: {acceptedCount} thiết bị {line.acceptedCodes && line.acceptedCodes.length > 0 ? `(${line.acceptedCodes.join(", ")})` : ""}</span>
+                            <span className="text-[#15803D] font-semibold">✓ Đạt: {acceptedCount} thiết bị {line.acceptedCodes && line.acceptedCodes.length > 0 ? `(${line.acceptedCodes.join(", ")})` : ""}</span>
                             {damagedCount > 0 && (
-                              <span style={{ color: "#B45309", fontWeight: 600 }}>⚠️ Lỗi nhận sửa: {damagedCount} ({line.damageNotes || "Chờ bảo trì"})</span>
+                              <span className="text-[#B45309] font-semibold">⚠️ Lỗi nhận sửa: {damagedCount} ({line.damageNotes || "Chờ bảo trì"})</span>
                             )}
                             {rejectedCount > 0 && (
-                              <span style={{ color: "#DC2626", fontWeight: 600 }}>✕ Từ chối trả NCC: {rejectedCount} ({line.rejectionReason || "Không đạt"})</span>
+                              <span className="text-[#DC2626] font-semibold">✕ Từ chối trả NCC: {rejectedCount} ({line.rejectionReason || "Không đạt"})</span>
                             )}
                           </div>
                         ) : (
-                          <span style={{ color: "#6B7280" }}>Mã dự kiến: {line.equipmentCodes.join(", ") || "Chưa tạo mã"}</span>
+                          <span className="text-[#6B7280]">Mã dự kiến: {line.equipmentCodes.join(", ") || "Chưa tạo mã"}</span>
                         )}
                       </td>
-                      <td style={{ padding: "12px 14px", textAlign: "right", fontWeight: 700 }}>
+                      <td className="adm-cell-right font-bold">
                         {fmt(billedCount * line.unitPrice)}
                         {rejectedCount > 0 && (
-                          <div style={{ fontSize: "0.68rem", color: "#DC2626", fontWeight: 400 }}>- Đã trừ {rejectedCount} cái từ chối</div>
+                          <div className="text-[0.68rem] text-[#DC2626] font-normal">- Đã trừ {rejectedCount} cái từ chối</div>
                         )}
                       </td>
                     </tr>
@@ -308,80 +307,76 @@ export function InventoryTab({ app }: { app: ReturnType<typeof useApp> }) {
                 })}</tbody>
               </table>
             </div>
-            <div style={{ padding: "16px 18px", borderTop: "1px solid var(--color-bone)" }}>
-              <div className="flex justify-between" style={{ fontWeight: 800, fontSize: "1rem", marginBottom: "12px" }}>
+            <div className="adm-receipt-footer">
+              <div className="adm-receipt-total">
                 <span>Tổng tiền thanh toán</span>
-                <span style={{ color: "var(--color-forest)" }}>{fmt(receiptTotal(selected))}</span>
+                <span className="text-[var(--color-forest)]">{fmt(receiptTotal(selected))}</span>
               </div>
 
               {selected.status === "Nháp" ? (
                 <div className="flex gap-2 flex-wrap">
-                  <button onClick={() => setEditing(selected)} style={{ flex: 1, minWidth: 100, background: "white", color: "var(--color-forest)", border: "1px solid var(--color-forest)", borderRadius: "9px", padding: "11px", cursor: "pointer", fontWeight: 700 }}>
+                  <button onClick={() => setEditing(selected)} className="adm-btn-forest-outline flex-1 min-w-[100px] py-2.5">
                     ✏️ Sửa nháp (UC7.6)
                   </button>
                   <button onClick={() => {
                     setCancellingReceipt(selected);
                     setCancelReason("");
                     setCancelError("");
-                  }} style={{ background: "white", color: "#B91C1C", border: "1px solid #FECACA", borderRadius: "9px", padding: "11px 16px", cursor: "pointer", fontWeight: 700 }}>
+                  }} className="adm-btn-danger-outline px-4 py-2.5 font-bold">
                     ✕ Hủy nháp (UC7.9)
                   </button>
-                  <button onClick={() => setInspectingReceipt(selected)} style={{ flex: 1.6, minWidth: 200, background: "var(--color-forest)", color: "white", border: "none", borderRadius: "9px", padding: "11px 18px", cursor: "pointer", fontWeight: 700, fontSize: "0.88rem", boxShadow: "0 2px 8px rgba(34, 197, 94, 0.25)" }}>
+                  <button onClick={() => setInspectingReceipt(selected)} className="adm-btn-primary flex-[1.6] min-w-[200px] py-2.5 font-bold shadow-sm">
                     📦 Kiểm nhận & Chốt kho (UC7.7)
                   </button>
                 </div>
               ) : selected.status === "Đã hủy" ? (
-                <div style={{ background: "#F3F4F6", color: "#6B7280", borderRadius: "8px", padding: "10px", fontSize: "0.8rem", textAlign: "center", fontWeight: 600 }}>
+                <div className="adm-pill is-neutral w-full justify-center py-2.5 text-[0.8rem] whitespace-normal text-center">
                   Phiếu đã hủy lúc {selected.cancelledAt ?? "trước đó"}. Lý do: {selected.cancelReason ?? "Không có"}. Tồn kho không thay đổi.
                 </div>
               ) : (
                 <div>
-                  <div style={{ background: "#DCFCE7", color: "#15803D", borderRadius: "8px", padding: "10px 14px", fontSize: "0.8rem", fontWeight: 600, marginBottom: "12px" }}>
+                  <div className="adm-alert is-success mb-3 font-semibold">
                     ✓ Đã nhập kho lúc {selected.confirmedAt}. Người kiểm: {selected.inspectedBy ?? selected.createdBy}. Phiếu gốc đã được khóa chỉnh sửa.
                   </div>
 
                   {/* UC7.10: Xử lý sai lệch sau chốt */}
-                  <div className="flex justify-between items-center mb-2 flex-wrap gap-2" style={{ borderTop: "1px dashed var(--color-bone)", paddingTop: 12 }}>
+                  <div className="flex justify-between items-center mb-2 flex-wrap gap-2 border-t border-dashed border-[var(--color-bone)] pt-3">
                     <div>
-                      <span style={{ fontSize: "0.82rem", fontWeight: 700, color: "var(--color-bark)" }}>Xử lý sai lệch phiếu nhập sau chốt (UC7.10)</span>
-                      <p style={{ fontSize: "0.72rem", color: "#6B7280", margin: 0 }}>Ghi nhận sai sót số lượng, mã thiết bị hoặc giá vốn. Quản trị viên duyệt an toàn lịch thuê.</p>
+                      <span className="text-[0.82rem] font-bold text-[var(--color-bark)]">Xử lý sai lệch phiếu nhập sau chốt (UC7.10)</span>
+                      <p className="adm-hint-text m-0">Ghi nhận sai sót số lượng, mã thiết bị hoặc giá vốn. Quản trị viên duyệt an toàn lịch thuê.</p>
                     </div>
                     <button
                       onClick={() => setAdjustingReceipt(selected)}
-                      style={{ background: "#F59E0B", color: "white", border: "none", borderRadius: "8px", padding: "7px 14px", cursor: "pointer", fontWeight: 700, fontSize: "0.78rem" }}
+                      className="adm-btn-amber-sm px-3.5 py-2"
                     >
                       ⚡ Đề nghị điều chỉnh
                     </button>
                   </div>
 
                   {(isRealApi ? serverAdjustments : (selected.adjustments ?? [])).length > 0 && (
-                    <div style={{ background: "var(--color-parchment)", borderRadius: "8px", padding: "10px", marginTop: "8px", border: "1px solid var(--color-bone)" }}>
-                      <div style={{ fontSize: "0.75rem", fontWeight: 700, marginBottom: "6px", color: "#374151" }}>Lịch sử đề nghị điều chỉnh ({(isRealApi ? serverAdjustments : (selected.adjustments ?? [])).length}):</div>
+                    <div className="adm-adj-box">
+                      <div className="text-[0.75rem] font-bold mb-1.5 text-[#374151]">Lịch sử đề nghị điều chỉnh ({(isRealApi ? serverAdjustments : (selected.adjustments ?? [])).length}):</div>
                       <div className="flex flex-col gap-2">
                         {(isRealApi ? serverAdjustments : (selected.adjustments ?? [])).map((adj) => (
-                          <div key={adj.id} style={{ background: "white", padding: "9px 12px", borderRadius: "6px", fontSize: "0.76rem", border: "1px solid var(--color-bone)" }}>
+                          <div key={adj.id} className="adm-adj-item">
                             <div className="flex justify-between items-center mb-1">
-                              <span style={{ fontWeight: 700, color: "var(--color-forest)" }}>{adj.type}</span>
-                              <span style={{
-                                background: adj.status === "Đã duyệt" ? "#DCFCE7" : adj.status === "Từ chối" ? "#FEE2E2" : "#FEF3C7",
-                                color: adj.status === "Đã duyệt" ? "#15803D" : adj.status === "Từ chối" ? "#DC2626" : "#B45309",
-                                padding: "2px 7px", borderRadius: "4px", fontWeight: 700, fontSize: "0.68rem"
-                              }}>
+                              <span className="font-bold text-[var(--color-forest)]">{adj.type}</span>
+                              <span className={`adm-pill adm-pill--xs ${adj.status === "Đã duyệt" ? "is-success" : adj.status === "Từ chối" ? "is-danger" : "is-warning"}`}>
                                 {adj.status}
                               </span>
                             </div>
-                            <div style={{ color: "#374151" }}>
-                              Giá trị: <span style={{ textDecoration: "line-through", color: "#9CA3AF" }}>{adj.previousValue}</span> → <strong>{adj.newValue}</strong>
+                            <div className="text-[#374151]">
+                              Giá trị: <span className="line-through text-[#9CA3AF]">{adj.previousValue}</span> → <strong>{adj.newValue}</strong>
                             </div>
-                            <div style={{ color: "#6B7280", marginTop: "2px" }}>
+                            <div className="text-[#6B7280] mt-0.5">
                               Lý do: <em>{adj.reason}</em> (Người lập: {adj.createdBy} lúc {adj.createdAt})
                             </div>
                             {adj.evidence && (
-                              <div style={{ color: "#6B7280", fontSize: "0.7rem", marginTop: "1px" }}>Chứng từ kèm: {adj.evidence}</div>
+                              <div className="text-[#6B7280] text-[0.7rem] mt-0.5">Chứng từ kèm: {adj.evidence}</div>
                             )}
 
                             {adj.status === "Chờ duyệt" && (
-                              <div className="flex gap-2 mt-2 pt-2" style={{ borderTop: "1px dashed var(--color-bone)" }}>
+                              <div className="flex gap-2 mt-2 pt-2 border-t border-dashed border-[var(--color-bone)]">
                                 <button
                                   disabled={adjLoadingId === adj.id}
                                   onClick={async () => {
@@ -410,7 +405,7 @@ export function InventoryTab({ app }: { app: ReturnType<typeof useApp> }) {
                                     const res = app.approveImportAdjustment(selected.id, adj.id, "Quản trị viên");
                                     setMessage(res.ok ? { type: "success", text: "Đã duyệt và áp dụng điều chỉnh phiếu nhập thành công (UC7.10)!" } : { type: "error", text: res.message });
                                   }}
-                                  style={{ background: "var(--color-forest)", color: "white", border: "none", borderRadius: "5px", padding: "5px 12px", fontSize: "0.72rem", fontWeight: 700, cursor: "pointer" }}
+                                  className="adm-btn-forest-solid adm-btn-xs"
                                 >
                                   {adjLoadingId === adj.id ? "Đang duyệt..." : "✓ Duyệt (UC7.10)"}
                                 </button>
@@ -420,19 +415,19 @@ export function InventoryTab({ app }: { app: ReturnType<typeof useApp> }) {
                                     setRejectingAdj({ receiptId: selected.id, adjId: adj.id });
                                     setRejectAdjReason("");
                                   }}
-                                  style={{ background: "white", color: "#DC2626", border: "1px solid #FECACA", borderRadius: "5px", padding: "5px 12px", fontSize: "0.72rem", fontWeight: 700, cursor: "pointer" }}
+                                  className="adm-btn-danger-outline adm-btn-xs"
                                 >
                                   ✕ Từ chối
                                 </button>
                               </div>
                             )}
                             {adj.status === "Đã duyệt" && (
-                              <div style={{ fontSize: "0.7rem", color: "#15803D", marginTop: "4px", fontWeight: 600 }}>
+                              <div className="text-[0.7rem] text-[#15803D] mt-1 font-semibold">
                                 ✓ Đã duyệt bởi {adj.reviewedBy} lúc {adj.reviewedAt}
                               </div>
                             )}
                             {adj.status === "Từ chối" && (
-                              <div style={{ fontSize: "0.7rem", color: "#DC2626", marginTop: "4px", fontWeight: 600 }}>
+                              <div className="text-[0.7rem] text-[#DC2626] mt-1 font-semibold">
                                 ✕ Từ chối bởi {adj.reviewedBy}: {adj.reviewNotes}
                               </div>
                             )}
@@ -486,11 +481,11 @@ export function InventoryTab({ app }: { app: ReturnType<typeof useApp> }) {
             }}
             className="grid gap-4 mt-4"
           >
-            <label style={labelStyle}>
+            <label className="adm-label">
               Lý do hủy phiếu (Bắt buộc)
-              <textarea rows={3} value={cancelReason} onChange={(e) => setCancelReason(e.target.value)} placeholder="VD: Nhà cung cấp báo hết hàng / Lập nhầm sản phẩm..." style={fieldStyle} />
+              <textarea rows={3} value={cancelReason} onChange={(e) => setCancelReason(e.target.value)} placeholder="VD: Nhà cung cấp báo hết hàng / Lập nhầm sản phẩm..." className="adm-field" />
             </label>
-            {cancelError && <div role="alert" style={{ color: "#B91C1C", background: "#FEE2E2", padding: 10, borderRadius: 8 }}>{cancelError}</div>}
+            {cancelError && <div role="alert" className="adm-alert is-error-solid adm-alert--block mb-0">{cancelError}</div>}
             <FormActions onClose={() => setCancellingReceipt(null)} loading={cancelLoading} submitLabel="Xác nhận hủy phiếu" />
           </form>
         </FormModal>
@@ -532,9 +527,9 @@ export function InventoryTab({ app }: { app: ReturnType<typeof useApp> }) {
             }}
             className="grid gap-4 mt-4"
           >
-            <label style={labelStyle}>
+            <label className="adm-label">
               Lý do từ chối
-              <textarea rows={2} value={rejectAdjReason} onChange={(e) => setRejectAdjReason(e.target.value)} placeholder="Không đủ căn cứ chứng từ..." style={fieldStyle} />
+              <textarea rows={2} value={rejectAdjReason} onChange={(e) => setRejectAdjReason(e.target.value)} placeholder="Không đủ căn cứ chứng từ..." className="adm-field" />
             </label>
             <FormActions onClose={() => setRejectingAdj(null)} loading={adjLoadingId === rejectingAdj.adjId} submitLabel="Xác nhận từ chối" />
           </form>

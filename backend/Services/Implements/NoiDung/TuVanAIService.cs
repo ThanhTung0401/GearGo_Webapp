@@ -1,5 +1,6 @@
 using GearGo.Data;
 using GearGo.Exceptions;
+using GearGo.Helpers;
 using GearGo.Integrations.AI;
 using GearGo.Models.DTOs.TuVan;
 using GearGo.Models.Enums;
@@ -30,7 +31,7 @@ public partial class TuVanAIService : ITuVanAIService
 
         var coNgayThue = request.GioNhan.HasValue && request.GioTra.HasValue;
         int thoiGianThueNgay = coNgayThue
-            ? Math.Max(1, (int)Math.Ceiling((request.GioTra!.Value - request.GioNhan!.Value).TotalDays))
+            ? CalculationHelpers.TinhSoNgayThue(request.GioNhan!.Value, request.GioTra!.Value)
             : 1;
 
         var candidates = await LayDanhSachUngVienAsync(request, cancellationToken);

@@ -93,7 +93,7 @@ export function OrdersTab({ app, openOrder, hydrateOperationalOrder }: { app: Re
     <div>
       {/* UC4.5: Thanh lọc nhanh vận hành trong ca */}
       <div className="flex gap-2 mb-3 flex-wrap items-center">
-        <span style={{ fontSize: "0.78rem", fontWeight: 700, color: "var(--color-bark)" }}>Bộ lọc ca trực:</span>
+        <span className="so-filter-label">Bộ lọc ca trực:</span>
         {[
           { key: "all", label: `Tất cả (${app.orders.length})` },
           { key: "delivery_today", label: `🚚 Cần giao hôm nay (${deliveryTodayCount})` },
@@ -105,17 +105,8 @@ export function OrdersTab({ app, openOrder, hydrateOperationalOrder }: { app: Re
             key={btn.key}
             type="button"
             onClick={() => { setQuickFilter(btn.key as typeof quickFilter); setFilter("Tất cả"); }}
-            style={{
-              padding: "5px 12px",
-              borderRadius: "20px",
-              border: quickFilter === btn.key ? "1px solid var(--color-forest)" : "1px solid var(--color-bone)",
-              background: quickFilter === btn.key ? "var(--color-forest)" : "white",
-              color: quickFilter === btn.key ? "white" : "var(--color-bark)",
-              fontWeight: quickFilter === btn.key ? 700 : 500,
-              fontSize: "0.78rem",
-              cursor: "pointer",
-              transition: "all 0.15s ease",
-            }}
+            /* Kích hoạt trạng thái lọc nhanh hiện tại qua modifier .is-active */
+            className={`so-pill-btn ${quickFilter === btn.key ? "is-active" : ""}`}
           >
             {btn.label}
           </button>
@@ -139,121 +130,125 @@ export function OrdersTab({ app, openOrder, hydrateOperationalOrder }: { app: Re
         </select>
       </div>
 
+      {/* Bọc bảng bằng .responsive-table bên trong .staff-table-wrap để cuộn ngang mượt trên màn hình 390px */}
       <div className="staff-table-wrap">
-        <table className="staff-table">
-          <thead>
-            <tr>
-              {["Mã đơn", "Khách hàng", "Sản phẩm", "Lịch thuê", "Tổng thu", "Trạng thái", "Thao tác"].map((h) => (
-                <th key={h}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map((o, i) => {
-              const sc = statusColors[o.status] || { bg: "#F3F4F6", text: "#374151" };
-              const isOverdue = app.checkOrderOverdue(o).isOverdue;
-              const returnedCnt = o.assignedEquipment.filter((ae) => ae.returnedAt).length;
-              const isPartial = o.status === "Đang thuê" && returnedCnt > 0 && returnedCnt < o.assignedEquipment.length;
-              const canReportNoShow = ["Sẵn sàng nhận", "Đang chuẩn bị", "Đã xác nhận"].includes(o.status);
+        <div className="responsive-table">
+          <table className="staff-table so-zebra-table so-table-compact">
+            <thead>
+              <tr>
+                {["Mã đơn", "Khách hàng", "Sản phẩm", "Lịch thuê", "Tổng thu", "Trạng thái", "Thao tác"].map((h) => (
+                  <th key={h}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((o) => {
+                const sc = statusColors[o.status] || { bg: "#F3F4F6", text: "#374151" };
+                const isOverdue = app.checkOrderOverdue(o).isOverdue;
+                const returnedCnt = o.assignedEquipment.filter((ae) => ae.returnedAt).length;
+                const isPartial = o.status === "Đang thuê" && returnedCnt > 0 && returnedCnt < o.assignedEquipment.length;
+                const canReportNoShow = ["Sẵn sàng nhận", "Đang chuẩn bị", "Đã xác nhận"].includes(o.status);
 
-              return (
-                <tr key={o.id} style={{ borderTop: "1px solid var(--color-bone)", background: i % 2 === 0 ? "white" : "var(--color-cream)" }}>
-                  <td style={{ padding: "11px 14px", fontFamily: "var(--font-mono)", fontSize: "0.78rem", color: "var(--color-forest)", fontWeight: 700 }}>
-                    <button onClick={() => handleOpenDetail(o)} style={{ background: "none", border: "none", padding: 0, color: "var(--color-forest)", fontWeight: 700, cursor: "pointer", textDecoration: "underline" }}>
-                      {o.displayCode || o.id}
-                    </button>
-                    {o.noShowReported && (
-                      <div style={{ fontSize: "0.65rem", color: "#DC2626", fontWeight: 700, marginTop: 2 }}>
-                        ⚠️ Khách vắng mặt
+                return (
+                  <tr key={o.id}>
+                    <td className="so-td-mono">
+                      <button onClick={() => handleOpenDetail(o)} className="so-link-btn">
+                        {o.displayCode || o.id}
+                      </button>
+                      {o.noShowReported && (
+                        <div className="so-noshow-tag">
+                          ⚠️ Khách vắng mặt
+                        </div>
+                      )}
+                    </td>
+                    <td>
+                      <div className="so-customer-name">{o.customerName}</div>
+                      <div className="so-customer-phone">{o.customerPhone}</div>
+                    </td>
+                    <td className="so-td-muted">
+                      {/* Bảo vệ an toàn khi API chi tiết chưa trả về tên sản phẩm trên dòng đơn */}
+                      {o.items.length > 0 ? o.items.map((it) => `${(it.productName || "Thiết bị").split("–")[0].trim()} ×${it.qty}`).join(", ") : `${o.assignedEquipment.length} thiết bị đã gán`}
+                    </td>
+                    <td className="so-td-schedule">
+                      <div>📤 {o.pickupTime ? o.pickupTime.replace("T", " ").slice(0, 16) : "—"}</div>
+                      <div className={`so-schedule-return ${isOverdue ? "is-overdue" : ""}`}>📥 {o.returnTime ? o.returnTime.replace("T", " ").slice(0, 16) : "—"}</div>
+                    </td>
+                    <td className="so-td-amount">
+                      {fmt(o.rental - o.discount + o.depositTotal)}
+                    </td>
+                    <td>
+                      <div className="flex flex-col gap-1 items-start">
+                        {/* Màu trạng thái lấy động từ statusColors */}
+                        <span className="so-status-pill" style={{ background: sc.bg, color: sc.text }}>{o.status}</span>
+                        {isPartial && <span className="so-badge-partial-sm">Trả {returnedCnt}/{o.assignedEquipment.length} món</span>}
+                        {isOverdue && <span className="so-badge-overdue-sm">Quá hạn</span>}
                       </div>
-                    )}
-                  </td>
-                  <td style={{ padding: "11px 14px" }}>
-                    <div style={{ fontWeight: 600, fontSize: "0.88rem" }}>{o.customerName}</div>
-                    <div style={{ fontSize: "0.72rem", color: "#9CA3AF" }}>{o.customerPhone}</div>
-                  </td>
-                  <td style={{ padding: "11px 14px", fontSize: "0.8rem", color: "#6B7280" }}>
-                    {/* Bảo vệ an toàn khi API chi tiết chưa trả về tên sản phẩm trên dòng đơn */}
-                    {o.items.length > 0 ? o.items.map((it) => `${(it.productName || "Thiết bị").split("–")[0].trim()} ×${it.qty}`).join(", ") : `${o.assignedEquipment.length} thiết bị đã gán`}
-                  </td>
-                  <td style={{ padding: "11px 14px", fontSize: "0.75rem", color: "#6B7280", whiteSpace: "nowrap" }}>
-                    <div>📤 {o.pickupTime ? o.pickupTime.replace("T", " ").slice(0, 16) : "—"}</div>
-                    <div style={{ color: isOverdue ? "#DC2626" : "#6B7280", fontWeight: isOverdue ? 700 : 400 }}>📥 {o.returnTime ? o.returnTime.replace("T", " ").slice(0, 16) : "—"}</div>
-                  </td>
-                  <td style={{ padding: "11px 14px", fontFamily: "var(--font-mono)", fontSize: "0.85rem", fontWeight: 700 }}>
-                    {fmt(o.rental - o.discount + o.depositTotal)}
-                  </td>
-                  <td style={{ padding: "11px 14px" }}>
-                    <div className="flex flex-col gap-1 items-start">
-                      <span style={{ background: sc.bg, color: sc.text, padding: "2px 8px", borderRadius: "10px", fontSize: "0.7rem", fontWeight: 600 }}>{o.status}</span>
-                      {isPartial && <span style={{ background: "#FFF7ED", color: "#C2410C", padding: "2px 6px", borderRadius: 6, fontSize: "0.65rem", fontWeight: 700 }}>Trả {returnedCnt}/{o.assignedEquipment.length} món</span>}
-                      {isOverdue && <span style={{ background: "#FEE2E2", color: "#DC2626", padding: "2px 6px", borderRadius: 6, fontSize: "0.65rem", fontWeight: 700 }}>Quá hạn</span>}
-                    </div>
-                  </td>
-                  <td style={{ padding: "11px 14px" }}>
-                    <div className="flex items-center gap-1 flex-wrap">
-                      <button
-                        onClick={() => openOrder(o.id, o.status === "Đang thuê" || o.status === "Chờ đối soát" ? "return" : "handover")}
-                        className="btn btn-primary btn-sm"
-                      >
-                        {o.status === "Đang thuê" ? "Nhận trả" : o.status === "Chờ đối soát" ? "Đối soát" : o.status === "Sẵn sàng nhận" ? "Bàn giao" : "Chuẩn bị"}
-                      </button>
+                    </td>
+                    <td>
+                      <div className="flex items-center gap-1 flex-wrap">
+                        <button
+                          onClick={() => openOrder(o.id, o.status === "Đang thuê" || o.status === "Chờ đối soát" ? "return" : "handover")}
+                          className="btn btn-primary btn-sm"
+                        >
+                          {o.status === "Đang thuê" ? "Nhận trả" : o.status === "Chờ đối soát" ? "Đối soát" : o.status === "Sẵn sàng nhận" ? "Bàn giao" : "Chuẩn bị"}
+                        </button>
 
-                      <button
-                        type="button"
-                        onClick={() => handleOpenDetail(o)}
-                        style={{ background: "#F3F4F6", border: "1px solid var(--color-bone)", borderRadius: 6, padding: "5px 8px", fontSize: "0.72rem", cursor: "pointer", fontWeight: 600 }}
-                      >
-                        Hồ sơ
-                      </button>
-
-                      {canReportNoShow && !o.noShowReported && (
                         <button
                           type="button"
-                          onClick={() => {
-                            setNoShowTarget(o);
-                            setNoShowError("");
-                            setNoShowPreview(null);
-                            setNoShowNote("Đã gọi điện nhắc 2 lần nhưng không nghe máy / Khách không đến quầy");
-                            if (app.realApi || isRealApiEnabled()) {
-                              void orderApi
-                                .xemTruocKhongDenNhan(Number(o.backendId ?? o.id))
-                                .then(setNoShowPreview)
-                                .catch(() => {});
-                            }
-                          }}
-                          style={{ background: "#FEF2F2", color: "#DC2626", border: "1px solid #FECACA", borderRadius: 6, padding: "5px 6px", fontSize: "0.68rem", cursor: "pointer", fontWeight: 700 }}
-                          title="Ghi nhận khách không đến nhận đồ theo UC4.5 Dòng 836"
+                          onClick={() => handleOpenDetail(o)}
+                          className="so-btn-soft"
                         >
-                          No-show
+                          Hồ sơ
                         </button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+
+                        {canReportNoShow && !o.noShowReported && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setNoShowTarget(o);
+                              setNoShowError("");
+                              setNoShowPreview(null);
+                              setNoShowNote("Đã gọi điện nhắc 2 lần nhưng không nghe máy / Khách không đến quầy");
+                              if (app.realApi || isRealApiEnabled()) {
+                                void orderApi
+                                  .xemTruocKhongDenNhan(Number(o.backendId ?? o.id))
+                                  .then(setNoShowPreview)
+                                  .catch(() => {});
+                              }
+                            }}
+                            className="so-btn-noshow"
+                            title="Ghi nhận khách không đến nhận đồ theo UC4.5 Dòng 836"
+                          >
+                            No-show
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* UC4.5 Bước 3: Modal Xem Toàn Diện Hồ Sơ Vận Hành Đơn Hàng */}
       {viewingDetailOrder && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 9999, display: "grid", placeItems: "center", padding: 20 }}>
-          <div style={{ background: "white", borderRadius: 16, maxWidth: 750, width: "100%", maxHeight: "90vh", overflowY: "auto", padding: 24, boxShadow: "0 25px 50px -12px rgba(0,0,0,0.25)" }}>
+        <div className="so-modal-overlay">
+          <div className="so-modal-card-lg">
             <div className="flex justify-between items-start mb-4 border-b border-bone pb-3">
               <div>
-                <span style={{ fontSize: "0.72rem", background: "var(--color-parchment)", color: "var(--color-moss)", padding: "2px 8px", borderRadius: 6, fontWeight: 700 }}>
+                <span className="so-modal-tag is-parchment">
                   HỒ SƠ VẬN HÀNH ĐƠN HÀNG (UC4.5)
                 </span>
-                <h3 style={{ fontFamily: "var(--font-display)", fontSize: "1.3rem", color: "var(--color-bark)", marginTop: 4 }}>
+                <h3 className="so-modal-title">
                   Chi tiết đơn #{viewingDetailOrder.displayCode || viewingDetailOrder.id} — {viewingDetailOrder.customerName}
                 </h3>
-                <div style={{ fontSize: "0.82rem", color: "#6B7280" }}>
+                <div className="so-modal-sub">
                   SĐT: <strong>{viewingDetailOrder.customerPhone}</strong> · Trạng thái: <strong>{viewingDetailOrder.status}</strong>
                 </div>
               </div>
-              <button onClick={() => setViewingDetailOrderId(null)} style={{ border: "none", background: "none", fontSize: "1.3rem", cursor: "pointer" }}>✕</button>
+              <button onClick={() => setViewingDetailOrderId(null)} className="so-modal-close">✕</button>
             </div>
 
             {/* Thông tin lịch trình & tài chính */}
@@ -278,15 +273,15 @@ export function OrdersTab({ app, openOrder, hydrateOperationalOrder }: { app: Re
 
             {/* Cảnh báo No-Show hoặc Thiếu đồ nếu có */}
             {viewingDetailOrder.noShowReported && (
-              <div style={{ background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: 8, padding: "8px 12px", marginBottom: 14, color: "#991B1B", fontSize: "0.8rem" }}>
+              <div className="so-alert-danger-sm">
                 <strong>⚠️ BIÊN BẢN KHÁCH VẮNG MẶT (No-Show):</strong> {viewingDetailOrder.noShowReported.note}
-                <div style={{ fontSize: "0.72rem", color: "#B91C1C" }}>Ghi nhận lúc: {viewingDetailOrder.noShowReported.reportedAt} bởi {viewingDetailOrder.noShowReported.staffName}</div>
+                <div className="so-alert-danger-sm-sub">Ghi nhận lúc: {viewingDetailOrder.noShowReported.reportedAt} bởi {viewingDetailOrder.noShowReported.staffName}</div>
               </div>
             )}
 
             {/* Danh sách thiết bị phân công & Biên bản bàn giao */}
             <div className="mb-4">
-              <h4 style={{ fontWeight: 700, fontSize: "0.9rem", color: "var(--color-bark)", marginBottom: 6 }}>
+              <h4 className="so-sub-heading-sm">
                 1. Thiết bị phân công ({viewingDetailOrder.assignedEquipment.length} serial):
               </h4>
               <div className="flex flex-col gap-1">
@@ -323,7 +318,7 @@ export function OrdersTab({ app, openOrder, hydrateOperationalOrder }: { app: Re
             {/* Lịch sử các đợt nhận trả PNT */}
             {(viewingDetailOrder.returnReceipts?.length || 0) > 0 && (
               <div className="mb-4">
-                <h4 style={{ fontWeight: 700, fontSize: "0.9rem", color: "var(--color-bark)", marginBottom: 6 }}>
+                <h4 className="so-sub-heading-sm">
                   2. Lịch sử nhận trả ({viewingDetailOrder.returnReceipts?.length} phiếu):
                 </h4>
                 <div className="flex flex-col gap-1">
@@ -342,7 +337,7 @@ export function OrdersTab({ app, openOrder, hydrateOperationalOrder }: { app: Re
 
             {/* Lịch sử trạng thái */}
             <div className="mb-4">
-              <h4 style={{ fontWeight: 700, fontSize: "0.9rem", color: "var(--color-bark)", marginBottom: 6 }}>
+              <h4 className="so-sub-heading-sm">
                 3. Nhật ký chuyển trạng thái (Audit timeline):
               </h4>
               <div className="flex flex-col gap-1 text-xs text-gray-600">
@@ -377,20 +372,20 @@ export function OrdersTab({ app, openOrder, hydrateOperationalOrder }: { app: Re
 
       {/* Modal Ghi nhận khách không đến nhận đồ (UC4.5 No-Show) */}
       {noShowTarget && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 9999, display: "grid", placeItems: "center", padding: 20 }}>
-          <div style={{ background: "white", borderRadius: 16, maxWidth: 460, width: "100%", padding: 22 }}>
-            <h3 style={{ fontFamily: "var(--font-display)", fontSize: "1.15rem", color: "#B91C1C", marginBottom: 8 }}>
+        <div className="so-modal-overlay">
+          <div className="so-modal-card-460">
+            <h3 className="so-modal-title-danger">
               Ghi nhận khách không đến nhận (No-Show)
             </h3>
-            <p style={{ fontSize: "0.82rem", color: "#4B5563", marginBottom: 12 }}>
+            <p className="so-modal-desc-dark">
               Đơn <strong>#{noShowTarget.displayCode || noShowTarget.id}</strong> — {noShowTarget.customerName} ({noShowTarget.customerPhone})
             </p>
             {noShowPreview && (
-              <div style={{ background: "#FFFBEB", border: "1px solid #FDE68A", borderRadius: 8, padding: "8px 10px", fontSize: "0.75rem", color: "#92400E", marginBottom: 10 }}>
+              <div className="so-preview-warn">
                 <div>Nhánh chính sách: <strong>{noShowPreview.nhanhChinhSach}</strong></div>
                 <div>Dự kiến giữ lại: <strong>{fmt(noShowPreview.tienThueGiuLai)}</strong> · Dự kiến hoàn: <strong>{fmt(noShowPreview.tongHoan)}</strong></div>
                 {noShowPreview.canhBao?.length > 0 && (
-                  <div style={{ color: "#B91C1C", marginTop: 2 }}>{noShowPreview.canhBao.join(" | ")}</div>
+                  <div className="so-preview-warn-alert">{noShowPreview.canhBao.join(" | ")}</div>
                 )}
               </div>
             )}
@@ -399,10 +394,10 @@ export function OrdersTab({ app, openOrder, hydrateOperationalOrder }: { app: Re
               value={noShowNote}
               onChange={(e) => setNoShowNote(e.target.value)}
               placeholder="Ghi chú số lần gọi nhắc / lý do khách không đến..."
-              style={{ width: "100%", border: "1px solid var(--color-bone)", borderRadius: 8, padding: 10, fontSize: "0.84rem", marginBottom: 10 }}
+              className="so-textarea"
             />
             {noShowError && (
-              <div role="alert" style={{ fontSize: "0.78rem", color: "#B91C1C", background: "#FEF2F2", padding: "6px 10px", borderRadius: 6, marginBottom: 10 }}>
+              <div role="alert" className="so-form-error">
                 {noShowError}
               </div>
             )}

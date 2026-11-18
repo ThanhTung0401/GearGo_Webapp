@@ -15,7 +15,7 @@ public class CleaningInspectionStrategy : IInspectionStrategy
     }
 
     public bool CanHandle(string ketLuan)
-        => ketLuan == KietDomainConstants.KetLuanKiemTra.CanVeSinh;
+        => ketLuan == DomainConstants.InspectionConclusions.NeedsCleaning;
 
     public async Task XuLySauKiemTraAsync(
         ChiTietNhanTra chiTiet,
@@ -30,8 +30,8 @@ public class CleaningInspectionStrategy : IInspectionStrategy
             thietBi.MaThietBi,
             maDonThue,
             nhanVien.MaNhanVien,
-            KietDomainConstants.BaoTriConfig.LoaiVeSinh,
+            DomainConstants.Maintenance.TypeCleaning,
             $"Cần vệ sinh sau thuê: {chiTiet.TinhTrangSauThue}",
-            KietDomainConstants.BaoTriConfig.MucDoNhe);
+            DomainConstants.Maintenance.LevelMinor);
     }
 }

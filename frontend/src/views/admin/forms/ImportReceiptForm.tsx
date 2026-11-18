@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useApp } from "../../../context/AppContext";
 import { isRealApiEnabled } from "../../../services/apiClient";
 
@@ -6,7 +6,7 @@ import { importReceiptApi } from "../../../services/api/importReceiptApi";
 
 import { fmt, type ImportReceipt } from "../../../store";
 
-import { FormModal, FormActions, fieldStyle, labelStyle } from "./FormModal";
+import { FormModal, FormActions } from "./FormModal";
 
 export function ImportReceiptForm({ app, receipt, onClose }: { app: ReturnType<typeof useApp>; receipt?: ImportReceipt; onClose: () => void }) {
   const isRealApi = app.realApi || isRealApiEnabled();
@@ -133,32 +133,32 @@ export function ImportReceiptForm({ app, receipt, onClose }: { app: ReturnType<t
 
   return <FormModal title={receipt ? "Sửa phiếu nhập nháp" : "Tạo phiếu nhập nháp"} description="Lưu nháp không tăng kho. Chỉ khi xác nhận hợp lệ, hệ thống mới tạo thiết bị." onClose={onClose}>
     <form onSubmit={handleSubmit} className="grid gap-4 mt-5">
-      <div className="responsive-two-column grid gap-4" style={{ gridTemplateColumns: "1fr 1fr" }}>
-        <label style={labelStyle}>Mã phiếu nhập<input value={isRealApi && !receipt ? "(Tự sinh khi lưu)" : (form.displayCode ?? form.id)} disabled={isRealApi} onChange={(e) => setForm({ ...form, displayCode: e.target.value })} style={{ ...fieldStyle, background: isRealApi ? "var(--color-parchment)" : "white" }} /></label>
-        <label style={labelStyle}>Nhà cung cấp<select value={form.supplierId} onChange={(e) => setForm({ ...form, supplierId: e.target.value })} style={fieldStyle}><option value="">Chọn nhà cung cấp</option>{app.suppliers.filter((item) => item.cooperationStatus === "active" || item.id === form.supplierId).map((item) => <option key={item.id} value={item.id}>{item.displayCode} · {item.name}</option>)}</select></label>
-        <label style={labelStyle}>Số chứng từ NCC<input value={form.supplierDocumentNumber ?? ""} onChange={(e) => setForm({ ...form, supplierDocumentNumber: e.target.value })} style={fieldStyle} /></label>
-        <label style={labelStyle}>Ngày nhập dự kiến<input type="date" value={form.expectedAt ?? ""} onChange={(e) => setForm({ ...form, expectedAt: e.target.value })} style={fieldStyle} /></label>
+      <div className="responsive-two-column adm-grid-2">
+        <label className="adm-label">Mã phiếu nhập<input value={isRealApi && !receipt ? "(Tự sinh khi lưu)" : (form.displayCode ?? form.id)} disabled={isRealApi} onChange={(e) => setForm({ ...form, displayCode: e.target.value })} className={`adm-field ${isRealApi ? "adm-field--readonly" : ""}`} /></label>
+        <label className="adm-label">Nhà cung cấp<select value={form.supplierId} onChange={(e) => setForm({ ...form, supplierId: e.target.value })} className="adm-field"><option value="">Chọn nhà cung cấp</option>{app.suppliers.filter((item) => item.cooperationStatus === "active" || item.id === form.supplierId).map((item) => <option key={item.id} value={item.id}>{item.displayCode} · {item.name}</option>)}</select></label>
+        <label className="adm-label">Số chứng từ NCC<input value={form.supplierDocumentNumber ?? ""} onChange={(e) => setForm({ ...form, supplierDocumentNumber: e.target.value })} className="adm-field" /></label>
+        <label className="adm-label">Ngày nhập dự kiến<input type="date" value={form.expectedAt ?? ""} onChange={(e) => setForm({ ...form, expectedAt: e.target.value })} className="adm-field" /></label>
       </div>
-      <label style={labelStyle}>Ghi chú phiếu<textarea rows={2} value={form.note ?? ""} onChange={(e) => setForm({ ...form, note: e.target.value })} style={fieldStyle} /></label>
-      <div className="flex justify-between items-center"><strong style={{ color: "var(--color-bark)" }}>Chi tiết nhập hàng</strong><button type="button" onClick={() => setForm({ ...form, lines: [...form.lines, { id: "", productId: app.products[0]?.id ?? "", quantity: 1, unitPrice: 0, equipmentCodes: [""], receivingCondition: "Mới", note: "" }] })} style={{ border: "1px solid var(--color-bone)", borderRadius: 8, background: "white", padding: "7px 10px", cursor: "pointer", fontWeight: 600 }}>+ Thêm dòng</button></div>
-      {form.lines.map((line, index) => <div key={line.id || index} style={{ border: "1px solid var(--color-bone)", borderRadius: 12, padding: 14, background: "var(--color-cream)" }}>
-        <div className="responsive-two-column grid gap-3" style={{ gridTemplateColumns: "2fr 1fr 1fr" }}>
-          <label style={labelStyle}>Sản phẩm<select value={line.productId} onChange={(e) => updateLine(index, { productId: e.target.value })} style={fieldStyle}>{app.products.map((item) => <option key={item.id} value={item.id}>{item.displayCode ?? item.id} · {item.name}</option>)}</select></label>
-          <label style={labelStyle}>Số lượng<input type="number" min="1" value={line.quantity} onChange={(e) => setQuantity(index, Number(e.target.value))} style={fieldStyle} /></label>
-          <label style={labelStyle}>Đơn giá nhập<input type="number" min="0" value={line.unitPrice} onChange={(e) => updateLine(index, { unitPrice: Number(e.target.value) })} style={fieldStyle} /></label>
+      <label className="adm-label">Ghi chú phiếu<textarea rows={2} value={form.note ?? ""} onChange={(e) => setForm({ ...form, note: e.target.value })} className="adm-field" /></label>
+      <div className="flex justify-between items-center"><strong className="adm-cell-title">Chi tiết nhập hàng</strong><button type="button" onClick={() => setForm({ ...form, lines: [...form.lines, { id: "", productId: app.products[0]?.id ?? "", quantity: 1, unitPrice: 0, equipmentCodes: [""], receivingCondition: "Mới", note: "" }] })} className="adm-btn-outline">+ Thêm dòng</button></div>
+      {form.lines.map((line, index) => <div key={line.id || index} className="adm-import-line-box">
+        <div className="responsive-two-column adm-grid-2-1-1">
+          <label className="adm-label">Sản phẩm<select value={line.productId} onChange={(e) => updateLine(index, { productId: e.target.value })} className="adm-field">{app.products.map((item) => <option key={item.id} value={item.id}>{item.displayCode ?? item.id} · {item.name}</option>)}</select></label>
+          <label className="adm-label">Số lượng<input type="number" min="1" value={line.quantity} onChange={(e) => setQuantity(index, Number(e.target.value))} className="adm-field" /></label>
+          <label className="adm-label">Đơn giá nhập<input type="number" min="0" value={line.unitPrice} onChange={(e) => updateLine(index, { unitPrice: Number(e.target.value) })} className="adm-field" /></label>
         </div>
         {isRealApi ? (
-          <div style={{ marginTop: 10, fontSize: "0.78rem", color: "#4B5563" }}>
+          <div className="adm-hint-text mt-2.5">
             Mã định danh thiết bị sẽ được máy chủ tự động cấp phát cho {line.quantity} đơn vị khi xác nhận nhập kho.
           </div>
         ) : (
-          <label style={{ ...labelStyle, marginTop: 10 }}>Mã thiết bị ({line.equipmentCodes.length}/{line.quantity})<div className="flex flex-wrap gap-2">{line.equipmentCodes.map((code, codeIndex) => <input key={codeIndex} value={code} onChange={(e) => updateLine(index, { equipmentCodes: line.equipmentCodes.map((item, itemIndex) => itemIndex === codeIndex ? e.target.value : item) })} placeholder={`Mã ${codeIndex + 1}`} style={{ ...fieldStyle, width: 120 }} />)}</div></label>
+          <label className="adm-label mt-2.5">Mã thiết bị ({line.equipmentCodes.length}/{line.quantity})<div className="flex flex-wrap gap-2">{line.equipmentCodes.map((code, codeIndex) => <input key={codeIndex} value={code} onChange={(e) => updateLine(index, { equipmentCodes: line.equipmentCodes.map((item, itemIndex) => itemIndex === codeIndex ? e.target.value : item) })} placeholder={`Mã ${codeIndex + 1}`} className="adm-field adm-field--code" />)}</div></label>
         )}
-        <div className="responsive-two-column grid gap-3 mt-3" style={{ gridTemplateColumns: "1fr 2fr" }}><label style={labelStyle}>Tình trạng khi nhập<input value={line.receivingCondition ?? ""} onChange={(e) => updateLine(index, { receivingCondition: e.target.value })} style={fieldStyle} /></label><label style={labelStyle}>Ghi chú dòng<input value={line.note ?? ""} onChange={(e) => updateLine(index, { note: e.target.value })} style={fieldStyle} /></label></div>
-        <div className="flex justify-between items-center mt-3"><span style={{ fontSize: "0.8rem" }}>Thành tiền: <strong>{fmt(line.quantity * line.unitPrice)}</strong></span>{form.lines.length > 1 && <button type="button" onClick={() => setForm({ ...form, lines: form.lines.filter((_, lineIndex) => lineIndex !== index) })} style={{ border: 0, background: "transparent", color: "#B91C1C", cursor: "pointer" }}>Xóa dòng</button>}</div>
+        <div className="responsive-two-column adm-grid-1-2 mt-3"><label className="adm-label">Tình trạng khi nhập<input value={line.receivingCondition ?? ""} onChange={(e) => updateLine(index, { receivingCondition: e.target.value })} className="adm-field" /></label><label className="adm-label">Ghi chú dòng<input value={line.note ?? ""} onChange={(e) => updateLine(index, { note: e.target.value })} className="adm-field" /></label></div>
+        <div className="flex justify-between items-center mt-3"><span className="adm-page-subtitle--sm">Thành tiền: <strong>{fmt(line.quantity * line.unitPrice)}</strong></span>{form.lines.length > 1 && <button type="button" onClick={() => setForm({ ...form, lines: form.lines.filter((_, lineIndex) => lineIndex !== index) })} className="adm-clear-filter-btn">Xóa dòng</button>}</div>
       </div>)}
-      <div className="flex justify-between" style={{ background: "var(--color-parchment)", borderRadius: 10, padding: 13, fontWeight: 800 }}><span>Tổng phiếu nhập</span><span>{fmt(total)}</span></div>
-      {error && <div role="alert" style={{ color: "#B91C1C", background: "#FEE2E2", padding: 10, borderRadius: 8 }}>{error}</div>}
+      <div className="adm-import-total-box"><span>Tổng phiếu nhập</span><span>{fmt(total)}</span></div>
+      {error && <div role="alert" className="adm-alert is-error-solid adm-alert--block mb-0">{error}</div>}
       <FormActions onClose={onClose} loading={loading} />
     </form>
   </FormModal>;

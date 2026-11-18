@@ -6,12 +6,12 @@ public class InspectionStrategyFactory : IInspectionStrategyFactory
 {
     private static readonly HashSet<string> ValidConclusions = new(StringComparer.OrdinalIgnoreCase)
     {
-        KietDomainConstants.KetLuanKiemTra.Dat,
-        KietDomainConstants.KetLuanKiemTra.CanVeSinh,
-        KietDomainConstants.KetLuanKiemTra.HongNhe,
-        KietDomainConstants.KetLuanKiemTra.HongNang,
-        KietDomainConstants.KetLuanKiemTra.ThieuPhuKien,
-        KietDomainConstants.KetLuanKiemTra.MatThietBi
+        DomainConstants.InspectionConclusions.Pass,
+        DomainConstants.InspectionConclusions.NeedsCleaning,
+        DomainConstants.InspectionConclusions.MinorDamage,
+        DomainConstants.InspectionConclusions.MajorDamage,
+        DomainConstants.InspectionConclusions.MissingAccessories,
+        DomainConstants.InspectionConclusions.Lost
     };
 
     private readonly IEnumerable<IInspectionStrategy> _strategies;

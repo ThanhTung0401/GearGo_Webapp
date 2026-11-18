@@ -30,14 +30,14 @@ public class BaoCaoTaiChinhController : BaseApiController
     /// </summary>
     [HttpGet("doanh-thu-hoan-tat")]
     public async Task<IActionResult> LayDoanhThuHoanTat([FromQuery] LocTaiChinhRequest filter)
-        => HandleResult(await _baoCaoTaiChinhService.LayDoanhThuHoanTatAsync(filter, User.LayMaTaiKhoan()));
+        => HandleResult(await _baoCaoTaiChinhService.LayDoanhThuHoanTatAsync(filter, MaTaiKhoanHienTai));
 
     /// <summary>
     /// Phí hủy giữ lại từ tiền thuê thực thu theo quy tắc hủy.
     /// </summary>
     [HttpGet("phi-huy")]
     public async Task<IActionResult> LayPhiHuy([FromQuery] LocTaiChinhRequest filter)
-        => HandleResult(await _baoCaoTaiChinhService.LayPhiHuyAsync(filter, User.LayMaTaiKhoan()));
+        => HandleResult(await _baoCaoTaiChinhService.LayPhiHuyAsync(filter, MaTaiKhoanHienTai));
 
     /// <summary>
     /// Khoản tăng/giảm điều chỉnh doanh thu từ đối soát sau chốt.
@@ -45,7 +45,7 @@ public class BaoCaoTaiChinhController : BaseApiController
     [HttpGet("dieu-chinh")]
     [HttpGet("dieu-chinh-doanh-thu")]
     public async Task<IActionResult> LayDieuChinhDoanhThu([FromQuery] LocTaiChinhRequest filter)
-        => HandleResult(await _baoCaoTaiChinhService.LayDieuChinhDoanhThuAsync(filter, User.LayMaTaiKhoan()));
+        => HandleResult(await _baoCaoTaiChinhService.LayDieuChinhDoanhThuAsync(filter, MaTaiKhoanHienTai));
 
     /// <summary>
     /// Dòng tiền thực tế: tổng thu/hoàn thành công và phân loại nguồn.
@@ -53,21 +53,21 @@ public class BaoCaoTaiChinhController : BaseApiController
     [HttpGet("thu-hoan")]
     [HttpGet("dong-tien")]
     public async Task<IActionResult> LayThuHoan([FromQuery] LocTaiChinhRequest filter)
-        => HandleResult(await _baoCaoTaiChinhService.LayThuHoanAsync(filter, User.LayMaTaiKhoan()));
+        => HandleResult(await _baoCaoTaiChinhService.LayThuHoanAsync(filter, MaTaiKhoanHienTai));
 
     /// <summary>
     /// Số dư cọc hiện tại còn phải xử lý (xét cọc thực thu - hoàn cọc - cọc đã bù phụ phí).
     /// </summary>
     [HttpGet("coc-chua-tat-toan")]
     public async Task<IActionResult> LayCocChuaTatToan([FromQuery] LocTaiChinhRequest filter)
-        => HandleResult(await _baoCaoTaiChinhService.LayCocChuaTatToanAsync(filter, User.LayMaTaiKhoan()));
+        => HandleResult(await _baoCaoTaiChinhService.LayCocChuaTatToanAsync(filter, MaTaiKhoanHienTai));
 
     /// <summary>
     /// Danh sách các khoản pending / cần đối chiếu / chưa phân loại / chênh lệch chứng từ.
     /// </summary>
     [HttpGet("can-xu-ly")]
     public async Task<IActionResult> LayKhoanCanXuLy([FromQuery] LocTaiChinhRequest filter)
-        => HandleResult(await _baoCaoTaiChinhService.LayKhoanCanXuLyAsync(filter, User.LayMaTaiKhoan()));
+        => HandleResult(await _baoCaoTaiChinhService.LayKhoanCanXuLyAsync(filter, MaTaiKhoanHienTai));
 
     /// <summary>
     /// Xuất CSV UTF-8 BOM, an toàn chống CSV injection theo cùng bộ lọc và quyền.
@@ -75,7 +75,7 @@ public class BaoCaoTaiChinhController : BaseApiController
     [HttpGet("xuat-csv")]
     public async Task<IActionResult> XuatCsv([FromQuery] XuatCsvTaiChinhRequest request)
     {
-        var result = await _baoCaoTaiChinhService.XuatCsvAsync(request, User.LayMaTaiKhoan());
+        var result = await _baoCaoTaiChinhService.XuatCsvAsync(request, MaTaiKhoanHienTai);
         if (!result.ThanhCong)
             return HandleResult(result);
 

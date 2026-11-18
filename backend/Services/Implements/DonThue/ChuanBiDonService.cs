@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using GearGo.Data;
 using GearGo.Exceptions;
+using GearGo.Helpers;
 using GearGo.Models.Common;
 using GearGo.Models.DTOs.ChuanBiDon;
 using GearGo.Models.DTOs.ThongBao;
@@ -52,7 +53,7 @@ public partial class ChuanBiDonService : IChuanBiDonService
 
     public async Task<Result<ChuanBiResponse>> BatDauChuanBiAsync(long donId, long maTaiKhoan, CancellationToken ct = default)
     {
-        await LayNhanVienAsync(maTaiKhoan, ct);
+        await ActorGuard.LayNhanVienDangLamViecAsync(_db, maTaiKhoan, ct);
         await using var tx = await _db.Database.BeginTransactionAsync(IsolationLevel.RepeatableRead, ct);
         try
         {
@@ -79,7 +80,7 @@ public partial class ChuanBiDonService : IChuanBiDonService
     public async Task<Result<ChuanBiResponse>> XacNhanSanSangAsync(
         long donId, XacNhanSanSangRequest request, long maTaiKhoan, CancellationToken ct = default)
     {
-        await LayNhanVienAsync(maTaiKhoan, ct);
+        await ActorGuard.LayNhanVienDangLamViecAsync(_db, maTaiKhoan, ct);
         await using var tx = await _db.Database.BeginTransactionAsync(IsolationLevel.RepeatableRead, ct);
         try
         {
@@ -127,7 +128,7 @@ public partial class ChuanBiDonService : IChuanBiDonService
             .Select(ctbg => ctbg.MaPhanCong).ToListAsync(ct);
 
         long? maNhanVien = null;
-        try { maNhanVien = (await LayNhanVienAsync(maTaiKhoan, ct)).MaNhanVien; }
+        try { maNhanVien = (await ActorGuard.LayNhanVienDangLamViecAsync(_db, maTaiKhoan, ct)).MaNhanVien; }
         catch { /* Tài khoản khách hàng hoặc hệ thống hủy */ }
 
         foreach (var pc in phanCongs.Where(p => !daBanGiaoPcIds.Contains(p.MaPhanCong)))
@@ -170,10 +171,6 @@ public partial class ChuanBiDonService : IChuanBiDonService
         _db.PhanCongThietBis.Include(pc => pc.ThietBi)
             .Where(pc => pc.ChiTietDon.MaDonThue == donId && pc.TrangThai == "DaPhanCong")
             .ToListAsync(ct);
-
-    private async Task<NhanVien> LayNhanVienAsync(long maTaiKhoan, CancellationToken ct) =>
-        await _db.NhanViens.FirstOrDefaultAsync(nv => nv.MaTaiKhoan == maTaiKhoan && nv.TrangThaiLamViec == "DangLamViec", ct)
-        ?? throw new KhongCoQuyenException("Tài khoản không liên kết với nhân viên đang làm việc.");
 
     private static ChuanBiResponse XayDungResponse(Models.Entities.DonThue don, List<PhanCongThietBi> phanCongs)
     {

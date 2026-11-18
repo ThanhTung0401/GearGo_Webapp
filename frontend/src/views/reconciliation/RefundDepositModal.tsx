@@ -39,34 +39,34 @@ export function RefundDepositModal(props: Props) {
     <>
       {/* ─── MODAL UC5.6: HOÀN TIỀN CỌC (NGÂN HÀNG / TIỀN MẶT) ───────────────── */}
       {showRefundModal && (
-        <div role="dialog" aria-modal="true" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 9999, display: "grid", placeItems: "center", padding: 20 }}>
-          <div style={{ background: "white", borderRadius: 16, maxWidth: 520, width: "100%", padding: 24, boxShadow: "0 8px 30px rgba(0,0,0,0.2)" }}>
+        <div role="dialog" aria-modal="true" className="recon-modal-backdrop">
+          <div className="recon-modal-card">
             <div className="flex justify-between items-start mb-3">
               <div>
-                <span style={{ fontSize: "0.72rem", background: "#DCFCE7", color: "#15803D", padding: "2px 8px", borderRadius: 6, fontWeight: 700 }}>
+                <span className="recon-modal-badge-success">
                   EP5.4-HOAN → GỌI UC5.6
                 </span>
-                <h3 style={{ fontFamily: "var(--font-display)", fontSize: "1.25rem", color: "var(--color-bark)", marginTop: 4 }}>
+                <h3 className="recon-modal-title">
                   Lập Lệnh Hoàn Tiền Cọc: Đơn {order.id}
                 </h3>
               </div>
-              <button type="button" onClick={() => setShowRefundModal(false)} style={{ border: "none", background: "none", fontSize: "1.2rem", cursor: "pointer" }}>✕</button>
+              <button type="button" onClick={() => setShowRefundModal(false)} className="recon-modal-close-icon">✕</button>
             </div>
 
-            <div style={{ background: "var(--color-parchment)", borderRadius: 10, padding: 12, marginBottom: 16, border: "1px solid var(--color-bone)" }}>
-              <div className="flex justify-between items-center">
-                <span style={{ fontSize: "0.85rem", color: "#4B5563" }}>Số tiền hoàn cọc cho khách:</span>
-                <strong style={{ fontFamily: "var(--font-mono)", fontSize: "1.3rem", color: "var(--color-forest)" }}>{fmt(refundAmount)}</strong>
+            <div className="recon-modal-summary">
+              <div className="flex justify-between items-center gap-2 flex-wrap">
+                <span className="recon-modal-summary-label">Số tiền hoàn cọc cho khách:</span>
+                <strong className="recon-modal-amount-forest">{fmt(refundAmount)}</strong>
               </div>
-              <div style={{ fontSize: "0.75rem", color: "#6B7280", marginTop: 4 }}>
+              <div className="recon-modal-subtext">
                 Khách thụ hưởng: <strong>{order.customerName}</strong> ({order.customerPhone})
               </div>
             </div>
 
             {/* Kênh hoàn tiền */}
-            <div style={{ marginBottom: 14 }}>
-              <label style={{ fontSize: "0.8rem", fontWeight: 700, display: "block", marginBottom: 6 }}>Kênh hoàn tiền:</label>
-              <div className="grid grid-cols-2 gap-2">
+            <div className="recon-field-group">
+              <label className="recon-field-label-bold">Kênh hoàn tiền:</label>
+              <div className="grid grid-cols-2 gap-2 recon-method-grid-2">
                 {[
                   { key: "bank", label: "🏦 Chuyển khoản ngân hàng" },
                   { key: "cash", label: "💵 Tiền mặt tại quầy" },
@@ -75,15 +75,7 @@ export function RefundDepositModal(props: Props) {
                     key={m.key}
                     type="button"
                     onClick={() => setRefundMethod(m.key as typeof refundMethod)}
-                    style={{
-                      padding: "8px 6px",
-                      borderRadius: 8,
-                      border: refundMethod === m.key ? "2px solid var(--color-forest)" : "1px solid var(--color-bone)",
-                      background: refundMethod === m.key ? "#F0FDF4" : "white",
-                      fontWeight: refundMethod === m.key ? 700 : 500,
-                      fontSize: "0.8rem",
-                      cursor: "pointer",
-                    }}
+                    className={`recon-method-btn ${refundMethod === m.key ? "is-active" : ""}`}
                   >
                     {m.label}
                   </button>
@@ -92,34 +84,34 @@ export function RefundDepositModal(props: Props) {
             </div>
 
             {refundMethod === "bank" && (
-              <div style={{ background: "#F9FAFB", borderRadius: 8, padding: 12, border: "1px solid var(--color-bone)", marginBottom: 14 }}>
-                <div style={{ marginBottom: 8 }}>
-                  <label style={{ fontSize: "0.75rem", color: "#6B7280", display: "block", marginBottom: 2 }}>Ngân hàng thụ hưởng:</label>
+              <div className="recon-method-panel">
+                <div className="recon-bank-field">
+                  <label className="recon-field-label-xs-mb">Ngân hàng thụ hưởng:</label>
                   <select
                     value={bankName}
                     onChange={(e) => setBankName(e.target.value)}
-                    style={{ width: "100%", padding: "7px 10px", borderRadius: 6, border: "1px solid var(--color-bone)", fontSize: "0.82rem", background: "white" }}
+                    className="recon-select-bank"
                   >
                     {["Vietcombank", "MB Bank", "Techcombank", "ACB", "VPBank", "Vietinbank", "BIDV"].map((b) => (
                       <option key={b}>{b}</option>
                     ))}
                   </select>
                 </div>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-2 gap-2 recon-bank-grid">
                   <div>
-                    <label style={{ fontSize: "0.75rem", color: "#6B7280", display: "block", marginBottom: 2 }}>Số tài khoản:</label>
+                    <label className="recon-field-label-xs-mb">Số tài khoản:</label>
                     <input
                       value={bankAccount}
                       onChange={(e) => setBankAccount(e.target.value)}
-                      style={{ width: "100%", padding: "7px 10px", borderRadius: 6, border: "1px solid var(--color-bone)", fontSize: "0.85rem", fontFamily: "var(--font-mono)" }}
+                      className="recon-input-bank-acc"
                     />
                   </div>
                   <div>
-                    <label style={{ fontSize: "0.75rem", color: "#6B7280", display: "block", marginBottom: 2 }}>Tên chủ tài khoản:</label>
+                    <label className="recon-field-label-xs-mb">Tên chủ tài khoản:</label>
                     <input
                       value={bankHolder}
                       onChange={(e) => setBankHolder(e.target.value)}
-                      style={{ width: "100%", padding: "7px 10px", borderRadius: 6, border: "1px solid var(--color-bone)", fontSize: "0.85rem", textTransform: "uppercase" }}
+                      className="recon-input-bank-holder"
                     />
                   </div>
                 </div>
@@ -127,23 +119,23 @@ export function RefundDepositModal(props: Props) {
             )}
 
             {refundMethod === "cash" && (
-              <div style={{ background: "#F9FAFB", borderRadius: 8, padding: 12, border: "1px solid var(--color-bone)", marginBottom: 14, fontSize: "0.8rem", color: "#4B5563" }}>
+              <div className="recon-method-panel is-cash-note">
                 Khách hàng nhận <strong>{fmt(refundAmount)}</strong> tiền mặt tại quầy và ký vào Phiếu chi hoàn cọc.
               </div>
             )}
 
-            <div style={{ marginBottom: 16 }}>
-              <label style={{ fontSize: "0.78rem", fontWeight: 600, display: "block", marginBottom: 4 }}>Ghi chú hoàn cọc:</label>
+            <div className="recon-field-group-lg">
+              <label className="recon-field-label-sm">Ghi chú hoàn cọc:</label>
               <input
                 placeholder="Ví dụ: Hoàn cọc đơn thuê sau khi đối soát đầy đủ..."
                 value={refundNote}
                 onChange={(e) => setRefundNote(e.target.value)}
-                style={{ width: "100%", padding: "8px 10px", borderRadius: 6, border: "1px solid var(--color-bone)", fontSize: "0.82rem" }}
+                className="recon-input-note"
               />
             </div>
 
-            <div className="flex justify-end gap-2">
-              <button type="button" onClick={() => setShowRefundModal(false)} style={{ background: "white", border: "1px solid var(--color-bone)", borderRadius: 8, padding: "8px 16px", cursor: "pointer", fontSize: "0.85rem" }}>
+            <div className="flex justify-end gap-2 flex-wrap">
+              <button type="button" onClick={() => setShowRefundModal(false)} className="recon-modal-btn-cancel">
                 Hủy
               </button>
               <button
@@ -187,16 +179,7 @@ export function RefundDepositModal(props: Props) {
                   });
                   setShowRefundModal(false);
                 }}
-                style={{
-                  background: reconBusy ? "#9CA3AF" : "var(--color-forest)",
-                  color: "white",
-                  border: "none",
-                  borderRadius: 8,
-                  padding: "8px 20px",
-                  fontWeight: 700,
-                  fontSize: "0.85rem",
-                  cursor: reconBusy ? "not-allowed" : "pointer",
-                }}
+                className={`recon-modal-btn-submit ${reconBusy ? "is-disabled" : ""}`}
               >
                 {reconBusy ? "Đang xử lý..." : "✓ Xác nhận hoàn cọc → Khóa & Hoàn tất"}
               </button>

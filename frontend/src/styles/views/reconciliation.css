@@ -1,0 +1,1583 @@
+/* ==========================================================================
+   GearGo Views: Đối soát cọc & Quyết toán đơn thuê (UC5.4 – UC5.7)
+   Tách style tĩnh từ ReconciliationSheet.tsx và reconciliation/*Modals
+   Kế thừa token từ tokens.css và tái sử dụng .reconcile-* / .locked-seal từ staff.css
+   ========================================================================== */
+
+/* === 1. Khung chính & Tiêu đề bảng đối soát === */
+.recon-sheet {
+  background: #ffffff;
+  border-radius: 16px;
+  border: 1px solid var(--color-bone);
+  overflow: hidden;
+  box-shadow: 0 2px 12px rgba(17, 35, 27, 0.04);
+}
+
+.recon-header {
+  background: var(--color-parchment);
+  padding: 18px 24px;
+  border-bottom: 1px solid var(--color-bone);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.recon-uc-badge {
+  font-size: 0.72rem;
+  background: var(--color-forest);
+  color: #ffffff;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-weight: 700;
+}
+
+.recon-uc-badge.is-completed {
+  background: #DCFCE7;
+  color: #15803D;
+}
+
+.recon-role-meta {
+  font-size: 0.75rem;
+  color: #6B7280;
+}
+
+.recon-header-title {
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  color: var(--color-bark);
+  margin: 4px 0 2px;
+}
+
+.recon-header-sub {
+  font-size: 0.82rem;
+  color: #4B5563;
+}
+
+.recon-status-pill {
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.recon-close-btn {
+  border: 1px solid var(--color-bone);
+  background: #ffffff;
+  border-radius: 8px;
+  padding: 6px 12px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.recon-close-btn:hover {
+  background: var(--color-cream);
+}
+
+.recon-body {
+  padding: 24px;
+}
+
+/* === 2. Thông báo trạng thái & Tiến trình 3 bước === */
+.recon-alert-error {
+  background: #FEF2F2;
+  border: 1px solid #FECACA;
+  color: #B91C1C;
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin-bottom: 14px;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.recon-alert-success {
+  background: #F0FDF4;
+  border: 1px solid #BBF7D0;
+  color: #15803D;
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin-bottom: 14px;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.recon-loading-note {
+  font-size: 0.78rem;
+  color: #6B7280;
+  margin-bottom: 10px;
+}
+
+.recon-step-arrow {
+  color: var(--color-bone);
+}
+
+/* === 3. Kiểm tra tiền điều kiện (Dòng sự kiện phụ 1.1) === */
+.recon-blocker-box {
+  background: #FEF2F2;
+  border: 1px solid #FECACA;
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin-bottom: 20px;
+}
+
+.recon-blocker-icon {
+  font-size: 1.2rem;
+}
+
+.recon-blocker-title {
+  color: #DC2626;
+  font-size: 0.95rem;
+}
+
+.recon-blocker-desc {
+  font-size: 0.82rem;
+  color: #991B1B;
+  margin-bottom: 12px;
+}
+
+.recon-blocker-item {
+  background: #ffffff;
+  border: 1px solid #FCA5A5;
+  border-radius: 8px;
+  padding: 10px 14px;
+}
+
+.recon-blocker-item-row {
+  background: #ffffff;
+  border: 1px solid #FCA5A5;
+  border-radius: 8px;
+  padding: 10px 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.recon-blocker-item-title {
+  color: #B91C1C;
+  font-size: 0.84rem;
+}
+
+.recon-blocker-item-heading {
+  color: #B91C1C;
+  font-size: 0.85rem;
+}
+
+.recon-blocker-list {
+  margin: 4px 0 0;
+  padding-left: 18px;
+  font-size: 0.78rem;
+  color: #7F1D1D;
+}
+
+.recon-muted-xs {
+  font-size: 0.75rem;
+  color: #6B7280;
+}
+
+.recon-pill-danger {
+  font-size: 0.75rem;
+  background: #FEE2E2;
+  color: #991B1B;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-weight: 700;
+}
+
+.recon-pill-warning-sm {
+  background: #FEF3C7;
+  color: #B45309;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.recon-pill-warning {
+  font-size: 0.75rem;
+  background: #FEF3C7;
+  color: #B45309;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-weight: 700;
+}
+
+.recon-surcharge-name {
+  font-size: 0.85rem;
+}
+
+.recon-dispute-title {
+  color: #B45309;
+  font-size: 0.85rem;
+}
+
+.recon-btn-approve-inline {
+  background: var(--color-forest);
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  padding: 5px 12px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.recon-btn-reject-inline {
+  background: #ffffff;
+  color: #DC2626;
+  border: 1px solid #FCA5A5;
+  border-radius: 6px;
+  padding: 5px 12px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.recon-ready-box {
+  background: #F0FDF4;
+  border: 1px solid #BBF7D0;
+  border-radius: 10px;
+  padding: 10px 16px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.recon-ready-icon {
+  font-size: 1.1rem;
+  color: #16A34A;
+}
+
+.recon-ready-text {
+  font-size: 0.82rem;
+  color: #15803D;
+}
+
+/* === 4. Bảng kê quyết toán đối soát cọc === */
+.recon-sheet-heading {
+  font-size: 0.95rem;
+  color: var(--color-bark);
+}
+
+.recon-print-btn {
+  background: #ffffff;
+  border: 1px solid var(--color-bone);
+  border-radius: 8px;
+  padding: 5px 12px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.recon-row-subtle {
+  background: #FAFAFA;
+}
+
+.recon-amount-positive {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--color-forest);
+}
+
+.recon-surcharges-section {
+  padding: 12px 18px;
+  border-bottom: 1px solid #F3F4F6;
+}
+
+.recon-row-label {
+  font-size: 0.86rem;
+  color: var(--color-bark);
+}
+
+.recon-surcharge-total {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  color: #6B7280;
+}
+
+.recon-surcharge-total.has-amount {
+  color: #DC2626;
+}
+
+.recon-empty-surcharge {
+  font-size: 0.78rem;
+  color: #9CA3AF;
+  font-style: italic;
+  padding-left: 12px;
+}
+
+.recon-surcharge-list {
+  padding-left: 12px;
+}
+
+.recon-surcharge-item {
+  background: #FFF7ED;
+  border: 1px solid #FED7AA;
+  border-radius: 6px;
+  padding: 6px 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.8rem;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.recon-surcharge-type {
+  font-weight: 600;
+}
+
+.recon-surcharge-reason {
+  color: #6B7280;
+  margin-left: 6px;
+}
+
+.recon-prior-amount {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: #4B5563;
+}
+
+/* Khối tổng kết chênh lệch đối soát (Dòng 4) */
+.recon-net-box {
+  background: #F0FDF4;
+  padding: 16px 20px;
+  border-top: 2px solid var(--color-bone);
+}
+
+.recon-net-box.is-collect {
+  background: #FEF2F2;
+}
+
+.recon-net-eyebrow {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: #6B7280;
+}
+
+.recon-net-title {
+  font-size: 1.1rem;
+  font-weight: 800;
+  margin-top: 2px;
+  color: #15803D;
+}
+
+.recon-net-title.is-refund {
+  color: var(--color-forest);
+}
+
+.recon-net-title.is-collect {
+  color: #DC2626;
+}
+
+.recon-net-formula {
+  font-size: 0.75rem;
+  color: #6B7280;
+  margin-top: 4px;
+}
+
+.recon-net-right {
+  text-align: right;
+}
+
+.recon-net-value {
+  font-family: var(--font-mono);
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: #15803D;
+}
+
+.recon-net-value.is-refund {
+  color: var(--color-forest);
+}
+
+.recon-net-value.is-collect {
+  color: #DC2626;
+}
+
+.recon-net-code {
+  font-size: 0.72rem;
+  background: #ffffff;
+  padding: 2px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--color-bone);
+  font-weight: 600;
+  display: inline-block;
+}
+
+/* === 5. Khu vực thao tác chốt, lệnh hoàn tiền & hoàn tất (Dòng 4 & Dòng 7) === */
+.recon-action-panel {
+  background: var(--color-parchment);
+  border-radius: 12px;
+  padding: 18px 20px;
+  border: 1px solid var(--color-bone);
+  margin-top: 16px;
+}
+
+.recon-action-heading {
+  font-size: 0.9rem;
+  color: var(--color-bark);
+}
+
+.recon-status-confirmed {
+  font-size: 0.78rem;
+  color: #15803D;
+  margin-top: 2px;
+}
+
+.recon-status-pending {
+  font-size: 0.78rem;
+  color: #6B7280;
+  margin-top: 2px;
+}
+
+.recon-confirm-btn {
+  background: var(--color-moss);
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-weight: 700;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
+.recon-confirm-btn.is-disabled,
+.recon-confirm-btn:disabled {
+  background: #E5E7EB;
+  color: #9CA3AF;
+  cursor: not-allowed;
+}
+
+.recon-refunds-box {
+  background: #ffffff;
+  border: 1px solid var(--color-bone);
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-bottom: 12px;
+}
+
+.recon-refunds-title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--color-bark);
+  margin-bottom: 8px;
+}
+
+.recon-refund-row {
+  background: #F9FAFB;
+  border: 1px solid var(--color-bone);
+  border-radius: 8px;
+  padding: 8px 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 0.78rem;
+}
+
+.recon-refund-label {
+  margin-left: 8px;
+}
+
+.recon-refund-amt {
+  margin-left: 8px;
+  font-family: var(--font-mono);
+  font-weight: 700;
+}
+
+.recon-tx-badge {
+  background: #FEF3C7;
+  color: #B45309;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-weight: 700;
+  font-size: 0.7rem;
+}
+
+.recon-tx-badge.is-success {
+  background: #DCFCE7;
+  color: #15803D;
+}
+
+.recon-tx-badge.is-failed {
+  background: #FEE2E2;
+  color: #DC2626;
+}
+
+.recon-btn-process-refund {
+  background: var(--color-forest);
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.recon-btn-check-refund {
+  background: #ffffff;
+  color: var(--color-bark);
+  border: 1px solid var(--color-bone);
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.recon-btn-settle {
+  background: var(--color-forest);
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 22px;
+  font-weight: 700;
+  font-size: 0.88rem;
+  cursor: pointer;
+}
+
+.recon-btn-settle.is-balanced {
+  padding: 10px 24px;
+}
+
+.recon-btn-settle.is-collect {
+  background: #DC2626;
+}
+
+.recon-btn-settle.is-disabled,
+.recon-btn-settle:disabled {
+  background: #9CA3AF;
+  cursor: not-allowed;
+}
+
+.recon-btn-lock {
+  background: var(--color-bark);
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 18px;
+  font-weight: 700;
+  font-size: 0.84rem;
+  cursor: pointer;
+}
+
+.recon-btn-lock:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.recon-btn-sim-fail {
+  background: #ffffff;
+  color: #B91C1C;
+  border: 1px solid #FECACA;
+  border-radius: 8px;
+  padding: 10px 16px;
+  font-weight: 600;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
+/* Khối đơn đã khóa & hoàn tất (Dòng 7) */
+.recon-completed-box {
+  background: #F0FDF4;
+  border: 1.5px solid #86EFAC;
+  border-radius: 12px;
+  padding: 20px 24px;
+  margin-top: 18px;
+}
+
+.recon-completed-icon {
+  font-size: 1.4rem;
+}
+
+.recon-completed-title {
+  font-size: 1.15rem;
+  color: var(--color-forest);
+}
+
+.recon-completed-meta {
+  font-size: 0.84rem;
+  color: #166534;
+  margin-top: 4px;
+}
+
+.recon-completed-desc {
+  font-size: 0.78rem;
+  color: #6B7280;
+  margin-top: 4px;
+}
+
+.recon-btn-print-a4 {
+  background: var(--color-forest);
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 18px;
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.recon-btn-adjust {
+  background: #FFFBEB;
+  border: 1px solid #FCD34D;
+  color: #B45309;
+  border-radius: 8px;
+  padding: 10px 16px;
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.recon-tx-history {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px dashed #86EFAC;
+}
+
+.recon-tx-history-title {
+  font-size: 0.82rem;
+  color: #166534;
+}
+
+.recon-tx-row {
+  background: #ffffff;
+  border: 1px solid #BBF7D0;
+  border-radius: 6px;
+  padding: 6px 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.78rem;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.recon-tx-type {
+  font-weight: 600;
+}
+
+.recon-tx-note {
+  color: #6B7280;
+}
+
+.recon-tx-amount {
+  font-family: var(--font-mono);
+  font-weight: 700;
+}
+
+.recon-tx-amount.is-refund {
+  color: var(--color-forest);
+}
+
+.recon-tx-amount.is-collect {
+  color: #DC2626;
+}
+
+.recon-tx-status-pill {
+  background: #FEE2E2;
+  color: #DC2626;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.recon-tx-status-pill.is-success {
+  background: #DCFCE7;
+  color: #15803D;
+}
+
+/* Tiện ích chữ mono dùng chung */
+.recon-mono-bold {
+  font-family: var(--font-mono);
+  font-weight: 700;
+}
+
+.recon-mono-forest {
+  font-family: var(--font-mono);
+  color: var(--color-forest);
+}
+
+.recon-mono-forest-bold {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  color: var(--color-forest);
+}
+
+.recon-mono-danger {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  color: #DC2626;
+}
+
+/* === 6. Modal Thu bổ sung, Hoàn cọc & Truy vết (UC5.5, UC5.6, Dòng 3) === */
+.recon-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 9999;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  overflow-y: auto;
+}
+
+.recon-modal-backdrop.is-print {
+  background: rgba(0, 0, 0, 0.7);
+}
+
+.recon-modal-card {
+  background: #ffffff;
+  border-radius: 16px;
+  max-width: 520px;
+  width: 100%;
+  padding: 24px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+}
+
+.recon-modal-card.is-sm {
+  max-width: 480px;
+  box-shadow: none;
+}
+
+.recon-modal-card.is-md {
+  max-width: 580px;
+  box-shadow: none;
+}
+
+.recon-modal-badge-danger {
+  font-size: 0.72rem;
+  background: #FEE2E2;
+  color: #DC2626;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-weight: 700;
+}
+
+.recon-modal-badge-success {
+  font-size: 0.72rem;
+  background: #DCFCE7;
+  color: #15803D;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-weight: 700;
+}
+
+.recon-modal-badge-warning {
+  font-size: 0.72rem;
+  background: #FEF3C7;
+  color: #B45309;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-weight: 700;
+}
+
+.recon-modal-badge-forest {
+  font-size: 0.72rem;
+  background: var(--color-forest);
+  color: #ffffff;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-weight: 700;
+}
+
+.recon-modal-title {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  color: var(--color-bark);
+  margin-top: 4px;
+}
+
+.recon-modal-title-sm {
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  color: var(--color-bark);
+  margin-top: 4px;
+}
+
+.recon-modal-close-icon {
+  border: none;
+  background: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+}
+
+.recon-modal-summary {
+  background: var(--color-parchment);
+  border-radius: 10px;
+  padding: 12px;
+  margin-bottom: 16px;
+  border: 1px solid var(--color-bone);
+}
+
+.recon-modal-summary-label {
+  font-size: 0.85rem;
+  color: #4B5563;
+}
+
+.recon-modal-amount-danger {
+  font-family: var(--font-mono);
+  font-size: 1.3rem;
+  color: #DC2626;
+}
+
+.recon-modal-amount-forest {
+  font-family: var(--font-mono);
+  font-size: 1.3rem;
+  color: var(--color-forest);
+}
+
+.recon-modal-subtext {
+  font-size: 0.75rem;
+  color: #6B7280;
+  margin-top: 4px;
+}
+
+.recon-field-group {
+  margin-bottom: 14px;
+}
+
+.recon-field-group-lg {
+  margin-bottom: 16px;
+}
+
+.recon-field-label-bold {
+  font-size: 0.8rem;
+  font-weight: 700;
+  display: block;
+  margin-bottom: 6px;
+}
+
+.recon-field-label-sm {
+  font-size: 0.78rem;
+  font-weight: 600;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.recon-field-label-xs {
+  font-size: 0.75rem;
+  color: #6B7280;
+  display: block;
+}
+
+.recon-field-label-xs-mb {
+  font-size: 0.75rem;
+  color: #6B7280;
+  display: block;
+  margin-bottom: 2px;
+}
+
+.recon-method-btn {
+  padding: 8px 6px;
+  border-radius: 8px;
+  border: 1px solid var(--color-bone);
+  background: #ffffff;
+  font-weight: 500;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.recon-method-btn.is-active {
+  border: 2px solid var(--color-forest);
+  background: #F0FDF4;
+  font-weight: 700;
+}
+
+.recon-method-panel {
+  background: #F9FAFB;
+  border-radius: 8px;
+  padding: 12px;
+  border: 1px solid var(--color-bone);
+  margin-bottom: 14px;
+}
+
+.recon-method-panel.is-qr {
+  padding: 14px;
+  text-align: center;
+}
+
+.recon-method-panel.is-cash-note {
+  font-size: 0.8rem;
+  color: #4B5563;
+}
+
+.recon-input-cash {
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--color-bone);
+  font-family: var(--font-mono);
+  font-size: 0.95rem;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.recon-input-sm {
+  width: 100%;
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--color-bone);
+  font-size: 0.82rem;
+}
+
+.recon-input-note {
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--color-bone);
+  font-size: 0.82rem;
+}
+
+.recon-bank-field {
+  margin-bottom: 8px;
+}
+
+.recon-select-bank {
+  width: 100%;
+  padding: 7px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--color-bone);
+  font-size: 0.82rem;
+  background: #ffffff;
+}
+
+.recon-input-bank-acc {
+  width: 100%;
+  padding: 7px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--color-bone);
+  font-size: 0.85rem;
+  font-family: var(--font-mono);
+}
+
+.recon-input-bank-holder {
+  width: 100%;
+  padding: 7px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--color-bone);
+  font-size: 0.85rem;
+  text-transform: uppercase;
+}
+
+.recon-text-muted {
+  color: #6B7280;
+}
+
+.recon-change-val {
+  font-family: var(--font-mono);
+  color: #DC2626;
+}
+
+.recon-change-val.is-enough {
+  color: var(--color-forest);
+}
+
+.recon-pos-status {
+  font-size: 0.75rem;
+  color: #15803D;
+}
+
+.recon-qr-box {
+  width: 110px;
+  height: 110px;
+  margin: 0 auto 8px;
+  background: #ffffff;
+  border: 1px solid var(--color-bone);
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  font-size: 2rem;
+}
+
+.recon-qr-title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--color-bark);
+}
+
+.recon-qr-code {
+  font-size: 0.72rem;
+  color: #6B7280;
+  font-family: var(--font-mono);
+}
+
+.recon-pending-req-box {
+  background: #EFF6FF;
+  border: 1px solid #BFDBFE;
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 14px;
+  font-size: 0.8rem;
+}
+
+.recon-req-status {
+  font-weight: 700;
+  color: #B45309;
+}
+
+.recon-req-status.is-success {
+  color: #15803D;
+}
+
+.recon-vnpay-wrap {
+  margin-top: 6px;
+}
+
+.recon-vnpay-link {
+  color: #1D4ED8;
+  text-decoration: underline;
+  font-weight: 600;
+}
+
+.recon-btn-check-tx {
+  background: var(--color-forest);
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  padding: 5px 10px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.recon-modal-btn-cancel {
+  background: #ffffff;
+  border: 1px solid var(--color-bone);
+  border-radius: 8px;
+  padding: 8px 16px;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.recon-modal-btn-submit {
+  background: var(--color-forest);
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 20px;
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.recon-modal-btn-submit.is-disabled,
+.recon-modal-btn-submit:disabled {
+  background: #9CA3AF;
+  cursor: not-allowed;
+}
+
+.recon-modal-btn-primary {
+  background: var(--color-forest);
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 18px;
+  font-weight: 700;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
+.recon-modal-btn-primary-wide {
+  background: var(--color-forest);
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 20px;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 0.82rem;
+}
+
+.recon-modal-btn-secondary {
+  background: #ffffff;
+  border: 1px solid var(--color-bone);
+  border-radius: 8px;
+  padding: 8px 16px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.82rem;
+}
+
+/* Modal truy vết chứng từ & PNT */
+.recon-trace-card {
+  background: var(--color-parchment);
+  border-radius: 10px;
+  padding: 14px;
+  font-size: 0.84rem;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border: 1px solid var(--color-bone);
+}
+
+.recon-trace-label {
+  color: #6B7280;
+}
+
+.recon-trace-status-pill {
+  background: #DCFCE7;
+  color: #15803D;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-weight: 700;
+}
+
+.recon-pnt-badge {
+  font-size: 0.72rem;
+  background: #FFF7ED;
+  color: #C2410C;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-weight: 700;
+}
+
+.recon-pnt-badge.is-final {
+  background: #DCFCE7;
+  color: #15803D;
+}
+
+.recon-pnt-meta {
+  background: var(--color-parchment);
+  border-radius: 10px;
+  padding: 12px;
+  font-size: 0.82rem;
+  margin-bottom: 14px;
+}
+
+.recon-pnt-section-title {
+  font-size: 0.85rem;
+  color: var(--color-bark);
+}
+
+.recon-pnt-item {
+  background: #F9FAFB;
+  border: 1px solid var(--color-bone);
+  border-radius: 8px;
+  padding: 8px 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.recon-pnt-item-cond {
+  font-size: 0.75rem;
+  color: #6B7280;
+}
+
+.recon-pnt-item-fee {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  color: #DC2626;
+  font-size: 0.85rem;
+}
+
+/* === 7. Modal điều chỉnh tài chính sau chốt (UC5.7) === */
+.modal-overlay.recon-adj-overlay {
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 10000;
+  padding: 16px;
+}
+
+.modal-container.recon-adj-container {
+  max-width: 540px;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+}
+
+.recon-adj-summary {
+  background: var(--color-parchment);
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 14px;
+  font-size: 0.8rem;
+}
+
+.recon-adj-immutable-note {
+  color: #4B5563;
+  font-size: 0.75rem;
+  border-top: 1px dashed var(--color-bone);
+  padding-top: 6px;
+}
+
+.recon-adj-success-box {
+  background: #F0FDF4;
+  border: 1px solid #BBF7D0;
+  border-radius: 8px;
+  padding: 16px;
+  text-align: center;
+  margin-bottom: 12px;
+}
+
+.recon-adj-success-icon {
+  font-size: 1.4rem;
+  color: #16A34A;
+  margin-bottom: 6px;
+}
+
+.recon-adj-success-msg {
+  color: #15803D;
+  font-size: 0.9rem;
+}
+
+.recon-adj-success-actions {
+  margin-top: 12px;
+}
+
+.recon-adj-label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.recon-adj-select {
+  width: 100%;
+  padding: 8px;
+  border-radius: 6px;
+  border: 1px solid var(--color-bone);
+  font-size: 0.82rem;
+}
+
+.recon-adj-input-amount {
+  width: 100%;
+  padding: 8px;
+  border-radius: 6px;
+  border: 1px solid var(--color-bone);
+  font-size: 0.85rem;
+  font-family: var(--font-mono);
+  font-weight: 700;
+}
+
+.recon-adj-textarea {
+  width: 100%;
+  padding: 8px;
+  border-radius: 6px;
+  border: 1px solid var(--color-bone);
+  font-size: 0.8rem;
+}
+
+.recon-adj-submit-btn {
+  background: #B45309;
+  border-color: #B45309;
+  color: #ffffff;
+  font-weight: 700;
+}
+
+/* === 8. Modal in biên bản đối soát A4 === */
+.recon-print-sheet {
+  background: #ffffff;
+  border-radius: 16px;
+  max-width: 680px;
+  width: 100%;
+  padding: 36px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+}
+
+.recon-print-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  border-bottom: 2px solid var(--color-forest);
+  padding-bottom: 16px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.recon-print-brand {
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+  color: var(--color-forest);
+  margin: 0;
+}
+
+.recon-print-tagline {
+  font-size: 0.78rem;
+  color: #6B7280;
+}
+
+.recon-print-contact {
+  font-size: 0.75rem;
+  color: #6B7280;
+}
+
+.recon-print-doc-meta {
+  text-align: right;
+}
+
+.recon-print-doc-title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--color-bark);
+}
+
+.recon-print-doc-code {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--color-moss);
+}
+
+.recon-print-doc-date {
+  font-size: 0.72rem;
+  color: #6B7280;
+}
+
+.recon-print-info-box {
+  background: #F9FAFB;
+  border-radius: 8px;
+  padding: 14px;
+  font-size: 0.82rem;
+  margin-bottom: 20px;
+}
+
+.recon-print-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  margin-bottom: 20px;
+}
+
+.recon-print-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+
+.recon-print-table thead tr {
+  background: var(--color-parchment);
+  text-align: left;
+}
+
+.recon-print-table th,
+.recon-print-table td {
+  padding: 8px 12px;
+  border: 1px solid var(--color-bone);
+}
+
+.recon-print-cell-right {
+  text-align: right;
+}
+
+.recon-print-cell-muted {
+  color: #6B7280;
+}
+
+.recon-print-cell-mono {
+  text-align: right;
+  font-family: var(--font-mono);
+}
+
+.recon-print-cell-mono-bold {
+  text-align: right;
+  font-family: var(--font-mono);
+  font-weight: 700;
+}
+
+.recon-print-cell-reason {
+  font-size: 0.72rem;
+  color: #6B7280;
+}
+
+.recon-print-cell-danger {
+  text-align: right;
+  font-family: var(--font-mono);
+  color: #DC2626;
+}
+
+.recon-print-total-row {
+  background: #F0FDF4;
+  font-weight: 800;
+}
+
+.recon-print-total-row td {
+  padding: 10px 12px;
+}
+
+.recon-print-total-val {
+  text-align: right;
+  font-family: var(--font-mono);
+  font-size: 1.05rem;
+  color: #15803D;
+}
+
+.recon-print-total-val.is-refund {
+  color: var(--color-forest);
+}
+
+.recon-print-total-val.is-collect {
+  color: #DC2626;
+}
+
+.recon-print-sign-grid {
+  font-size: 0.82rem;
+}
+
+.recon-print-sign-note {
+  font-size: 0.72rem;
+  color: #6B7280;
+}
+
+.recon-print-sign-space {
+  height: 60px;
+}
+
+.recon-print-btn-confirm {
+  background: var(--color-forest);
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 20px;
+  font-weight: 700;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.recon-print-btn-close {
+  background: #ffffff;
+  border: 1px solid var(--color-bone);
+  border-radius: 8px;
+  padding: 8px 16px;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+/* === 9. Quy tắc Responsive (<= 900px & <= 640px) === */
+@media (max-width: 900px) {
+  .recon-header {
+    padding: 14px 16px;
+  }
+
+  .recon-body {
+    padding: 16px;
+  }
+
+  .recon-step-flow {
+    flex-wrap: wrap;
+    gap: 6px 10px;
+  }
+
+  .recon-print-sheet {
+    padding: 24px;
+  }
+}
+
+@media (max-width: 640px) {
+  .recon-header {
+    padding: 12px 14px;
+  }
+
+  .recon-header-title {
+    font-size: 1.15rem;
+  }
+
+  .recon-body {
+    padding: 12px;
+  }
+
+  .recon-sheet-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .recon-sheet-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    padding: 12px 14px;
+  }
+
+  .recon-surcharges-section {
+    padding: 12px 14px;
+  }
+
+  .recon-surcharge-list {
+    padding-left: 0;
+  }
+
+  .recon-net-box {
+    padding: 14px;
+  }
+
+  .recon-net-right {
+    text-align: left;
+  }
+
+  .recon-net-value {
+    font-size: 1.35rem;
+  }
+
+  .recon-action-panel {
+    padding: 14px;
+  }
+
+  .recon-completed-box {
+    padding: 14px;
+  }
+
+  .recon-btn-settle,
+  .recon-btn-lock,
+  .recon-btn-sim-fail,
+  .recon-btn-print-a4,
+  .recon-btn-adjust {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .recon-modal-backdrop {
+    padding: 12px;
+  }
+
+  .recon-modal-card {
+    padding: 16px;
+  }
+
+  .modal-container.recon-adj-container {
+    padding: 16px;
+  }
+
+  .recon-method-grid-3,
+  .recon-method-grid-2,
+  .recon-pos-grid,
+  .recon-bank-grid,
+  .recon-adj-grid,
+  .recon-print-info-grid,
+  .recon-print-sign-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .recon-print-sheet {
+    padding: 16px;
+  }
+
+  .recon-print-doc-meta {
+    text-align: left;
+  }
+
+  .recon-print-sign-space {
+    height: 40px;
+  }
+}

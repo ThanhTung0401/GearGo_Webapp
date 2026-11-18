@@ -1,5 +1,6 @@
 using GearGo.Data;
 using GearGo.Exceptions;
+using GearGo.Helpers;
 using GearGo.Models.DTOs.Admin;
 using GearGo.Models.Entities;
 using GearGo.Models.Enums;
@@ -106,19 +107,12 @@ public class AdminSanPhamService : IAdminSanPhamService
         return hinhAnhDb;
     }
 
+    // Ủy quyền kiểm tra định dạng, dung lượng (<= 5MB) và magic bytes (kể cả WEBP) cho FileValidator dùng chung
     private static string ValidateAnhUpload(IFormFile file)
     {
-        if (file == null || file.Length == 0) throw new Exception("File tải lên không hợp lệ.");
-        if (file.Length > 5 * 1024 * 1024) throw new Exception("Dung lượng file vượt quá giới hạn 5MB.");
-
-        var ext = Path.GetExtension(file.FileName).ToLowerInvariant();
-        if (ext is not (".jpg" or ".jpeg" or ".png" or ".webp"))
-            throw new Exception("Định dạng file không được hỗ trợ. Chỉ chấp nhận .jpg, .jpeg, .png, .webp.");
-
-        using var streamCheck = file.OpenReadStream();
-        if (!KiemTraMagicBytes(streamCheck, ext))
-            throw new Exception("Nội dung file không hợp lệ hoặc không đúng định dạng ảnh.");
-        return ext;
+        if (!FileValidator.IsValidImage(file, out var errorMessage))
+            throw new Exception(errorMessage);
+        return Path.GetExtension(file.FileName).ToLowerInvariant();
     }
 
     public async Task XoaHinhAnhAsync(long maHinhAnh)
@@ -132,23 +126,5 @@ public class AdminSanPhamService : IAdminSanPhamService
 
         _context.Remove(hinhAnh);
         await _context.SaveChangesAsync();
-    }
-
-    private static bool KiemTraMagicBytes(Stream stream, string extension)
-    {
-        stream.Position = 0;
-        using var reader = new BinaryReader(stream, System.Text.Encoding.UTF8, leaveOpen: true);
-        var h = reader.ReadBytes(12);
-        stream.Position = 0;
-        if (h.Length < 4) return false;
-
-        return extension switch
-        {
-            ".jpg" or ".jpeg" => h[0] == 0xFF && h[1] == 0xD8 && h[2] == 0xFF,
-            ".png" => h[0] == 0x89 && h[1] == 0x50 && h[2] == 0x4E && h[3] == 0x47,
-            ".webp" => h.Length >= 12 && h[0] == 0x52 && h[1] == 0x49 && h[2] == 0x46 && h[3] == 0x46
-                       && h[8] == 0x57 && h[9] == 0x45 && h[10] == 0x42 && h[11] == 0x50,
-            _ => false
-        };
     }
 }

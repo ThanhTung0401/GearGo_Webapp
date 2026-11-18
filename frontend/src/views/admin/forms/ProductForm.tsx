@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useApp } from "../../../context/AppContext";
 import { isRealApiEnabled } from "../../../services/apiClient";
 
@@ -6,7 +6,7 @@ import { catalogApi, type HinhAnhSanPhamBackend } from "../../../services/api/ca
 
 import { fmt, type Product } from "../../../store";
 
-import { FormModal, FormActions, fieldStyle, labelStyle } from "./FormModal";
+import { FormModal, FormActions } from "./FormModal";
 
 export function ProductForm({ app, product, onClose }: { app: ReturnType<typeof useApp>; product?: Product; onClose: () => void }) {
   const [form, setForm] = useState<Product>(product ?? {
@@ -131,23 +131,23 @@ export function ProductForm({ app, product, onClose }: { app: ReturnType<typeof 
 
   return <FormModal title={product ? "Sửa sản phẩm" : "Thêm sản phẩm"} description="Giá thuê, cọc và bồi thường là ba giá trị riêng theo ERD. Giá nhập chỉ được ghi ở phiếu nhập." onClose={onClose}>
     <form onSubmit={submit} className="grid gap-4 mt-5">
-      <div className="responsive-two-column grid gap-4" style={{ gridTemplateColumns: "1fr 1fr" }}>
-        <label style={labelStyle}>Mã sản phẩm<input value={form.displayCode ?? ""} onChange={(e) => set("displayCode", e.target.value)} placeholder="SP-L001" style={fieldStyle} /></label>
-        <label style={labelStyle}>Danh mục<select value={form.categoryId ?? ""} onChange={(e) => set("categoryId", e.target.value)} style={fieldStyle}><option value="">Chọn danh mục</option>{app.categories.map((item) => <option key={item.id} value={item.id}>{item.name}{item.status === "inactive" ? " (tạm ẩn)" : ""}</option>)}</select></label>
-        <label style={labelStyle}>Tên sản phẩm<input value={form.name} onChange={(e) => set("name", e.target.value)} style={fieldStyle} /></label>
-        <label style={labelStyle}>Thương hiệu<input value={form.brand} onChange={(e) => set("brand", e.target.value)} style={fieldStyle} /></label>
-        <label style={labelStyle}>Sức chứa<input value={form.capacity} onChange={(e) => set("capacity", e.target.value)} placeholder="4 người" style={fieldStyle} /></label>
-        <label style={labelStyle}>Kích thước<input value={form.dimensions ?? ""} onChange={(e) => set("dimensions", e.target.value)} placeholder="210 × 240 × 130 cm" style={fieldStyle} /></label>
-        <label style={labelStyle}>Giá thuê/ngày (đ)<input type="number" min="0" value={form.pricePerDay} onChange={(e) => set("pricePerDay", Number(e.target.value))} style={fieldStyle} /></label>
-        <label style={labelStyle}>Mức cọc/thiết bị (đ)<input type="number" min="0" value={form.deposit} onChange={(e) => set("deposit", Number(e.target.value))} style={fieldStyle} /></label>
-        <label style={labelStyle}>Giá trị bồi thường (đ)<input type="number" min="0" value={form.compensation} onChange={(e) => set("compensation", Number(e.target.value))} style={fieldStyle} /></label>
-        <label style={labelStyle}>Trạng thái<select value={form.status} onChange={(e) => set("status", e.target.value as Product["status"])} style={fieldStyle}><option value="active">Đang kinh doanh</option><option value="inactive">Tạm dừng</option></select></label>
+      <div className="responsive-two-column adm-grid-2">
+        <label className="adm-label">Mã sản phẩm<input value={form.displayCode ?? ""} onChange={(e) => set("displayCode", e.target.value)} placeholder="SP-L001" className="adm-field" /></label>
+        <label className="adm-label">Danh mục<select value={form.categoryId ?? ""} onChange={(e) => set("categoryId", e.target.value)} className="adm-field"><option value="">Chọn danh mục</option>{app.categories.map((item) => <option key={item.id} value={item.id}>{item.name}{item.status === "inactive" ? " (tạm ẩn)" : ""}</option>)}</select></label>
+        <label className="adm-label">Tên sản phẩm<input value={form.name} onChange={(e) => set("name", e.target.value)} className="adm-field" /></label>
+        <label className="adm-label">Thương hiệu<input value={form.brand} onChange={(e) => set("brand", e.target.value)} className="adm-field" /></label>
+        <label className="adm-label">Sức chứa<input value={form.capacity} onChange={(e) => set("capacity", e.target.value)} placeholder="4 người" className="adm-field" /></label>
+        <label className="adm-label">Kích thước<input value={form.dimensions ?? ""} onChange={(e) => set("dimensions", e.target.value)} placeholder="210 × 240 × 130 cm" className="adm-field" /></label>
+        <label className="adm-label">Giá thuê/ngày (đ)<input type="number" min="0" value={form.pricePerDay} onChange={(e) => set("pricePerDay", Number(e.target.value))} className="adm-field" /></label>
+        <label className="adm-label">Mức cọc/thiết bị (đ)<input type="number" min="0" value={form.deposit} onChange={(e) => set("deposit", Number(e.target.value))} className="adm-field" /></label>
+        <label className="adm-label">Giá trị bồi thường (đ)<input type="number" min="0" value={form.compensation} onChange={(e) => set("compensation", Number(e.target.value))} className="adm-field" /></label>
+        <label className="adm-label">Trạng thái<select value={form.status} onChange={(e) => set("status", e.target.value as Product["status"])} className="adm-field"><option value="active">Đang kinh doanh</option><option value="inactive">Tạm dừng</option></select></label>
       </div>
-      <label style={labelStyle}>Mô tả<textarea rows={3} value={form.description} onChange={(e) => set("description", e.target.value)} style={fieldStyle} /></label>
-      <label style={labelStyle}>Thông số kỹ thuật <span style={{ color: "#6B7280", fontWeight: 400 }}>Mỗi dòng theo mẫu: Chống nước: IPX4</span><textarea rows={3} value={specText} onChange={(e) => setSpecText(e.target.value)} style={fieldStyle} /></label>
+      <label className="adm-label">Mô tả<textarea rows={3} value={form.description} onChange={(e) => set("description", e.target.value)} className="adm-field" /></label>
+      <label className="adm-label">Thông số kỹ thuật <span className="adm-label-note">Mỗi dòng theo mẫu: Chống nước: IPX4</span><textarea rows={3} value={specText} onChange={(e) => setSpecText(e.target.value)} className="adm-field" /></label>
       
       {/* Upload file hình ảnh Multipart Form Data (UC49) */}
-      <label style={labelStyle}>
+      <label className="adm-label">
         Tải ảnh từ máy tính (Multipart Form Data - UC49)
         <input
           type="file"
@@ -162,22 +162,22 @@ export function ProductForm({ app, product, onClose }: { app: ReturnType<typeof 
               setUploadFile(file);
             }
           }}
-          style={fieldStyle}
+          className="adm-field"
         />
-        {uploadFile && <span style={{ fontSize: "0.75rem", color: "var(--color-forest)", fontWeight: 600 }}>✓ Đã chọn file: {uploadFile.name} ({(uploadFile.size / 1024).toFixed(1)} KB)</span>}
+        {uploadFile && <span className="adm-hint-text font-semibold text-[var(--color-forest)]">✓ Đã chọn file: {uploadFile.name} ({(uploadFile.size / 1024).toFixed(1)} KB)</span>}
       </label>
 
       {serverImages.length > 0 && (
         <div>
-          <div style={{ fontSize: "0.8rem", fontWeight: 600, color: "var(--color-bark)", marginBottom: 6 }}>
+          <div className="adm-label mb-1.5">
             Hình ảnh hiện có trên máy chủ (UC6.6):
           </div>
           <div className="flex flex-wrap gap-2">
             {serverImages.map((img) => (
-              <div key={img.maHinhAnh} style={{ position: "relative", border: "1px solid var(--color-bone)", borderRadius: 8, padding: 4, background: "white" }}>
-                <img src={img.duongDan} alt="Ảnh sản phẩm" style={{ width: 92, height: 68, objectFit: "cover", borderRadius: 6 }} />
+              <div key={img.maHinhAnh} className="adm-prod-server-img-card">
+                <img src={img.duongDan} alt="Ảnh sản phẩm" className="adm-prod-server-img" />
                 {img.laAnhChinh && (
-                  <span style={{ position: "absolute", top: 6, left: 6, background: "var(--color-forest)", color: "white", fontSize: "0.65rem", padding: "1px 5px", borderRadius: 4, fontWeight: 700 }}>
+                  <span className="adm-prod-primary-tag">
                     Chính
                   </span>
                 )}
@@ -185,7 +185,7 @@ export function ProductForm({ app, product, onClose }: { app: ReturnType<typeof 
                   type="button"
                   disabled={deletingImgId === img.maHinhAnh}
                   onClick={() => handleDeleteServerImage(img.maHinhAnh, img.duongDan)}
-                  style={{ display: "block", width: "100%", marginTop: 4, border: "1px solid #FECACA", background: "#FEF2F2", color: "#B91C1C", borderRadius: 6, fontSize: "0.7rem", fontWeight: 700, padding: "2px 6px", cursor: "pointer" }}
+                  className="adm-prod-del-img-btn"
                 >
                   {deletingImgId === img.maHinhAnh ? "Đang xóa..." : "Xóa ảnh"}
                 </button>
@@ -195,10 +195,10 @@ export function ProductForm({ app, product, onClose }: { app: ReturnType<typeof 
         </div>
       )}
 
-      <label style={labelStyle}>URL hình ảnh <span style={{ color: "#6B7280", fontWeight: 400 }}>Mỗi dòng một URL; dòng đầu là ảnh chính.</span><textarea rows={3} value={imageText} onChange={(e) => setImageText(e.target.value)} placeholder="https://..." style={fieldStyle} /></label>
-      {imageText.split("\n")[0]?.trim() && <img src={imageText.split("\n")[0].trim()} alt="Xem trước sản phẩm" style={{ width: 180, height: 120, objectFit: "cover", borderRadius: 10, border: "1px solid var(--color-bone)" }} />}
-      <div style={{ background: "var(--color-parchment)", borderRadius: 10, padding: 12, fontSize: "0.8rem" }}>Giá thuê: <strong>{fmt(form.pricePerDay)}</strong> · Cọc: <strong>{fmt(form.deposit)}</strong> · Bồi thường: <strong>{fmt(form.compensation)}</strong></div>
-      {error && <div role="alert" style={{ color: "#B91C1C", background: "#FEE2E2", padding: "10px 12px", borderRadius: 8, fontSize: "0.8rem" }}>{error}</div>}
+      <label className="adm-label">URL hình ảnh <span className="adm-label-note">Mỗi dòng một URL; dòng đầu là ảnh chính.</span><textarea rows={3} value={imageText} onChange={(e) => setImageText(e.target.value)} placeholder="https://..." className="adm-field" /></label>
+      {imageText.split("\n")[0]?.trim() && <img src={imageText.split("\n")[0].trim()} alt="Xem trước sản phẩm" className="adm-prod-preview-img" />}
+      <div className="adm-card--parchment text-xs">Giá thuê: <strong>{fmt(form.pricePerDay)}</strong> · Cọc: <strong>{fmt(form.deposit)}</strong> · Bồi thường: <strong>{fmt(form.compensation)}</strong></div>
+      {error && <div role="alert" className="adm-alert is-error-solid adm-alert--block mb-0">{error}</div>}
       <FormActions onClose={onClose} loading={loading} />
     </form>
   </FormModal>;

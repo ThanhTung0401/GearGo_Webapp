@@ -229,7 +229,7 @@ export function RegisterView() {
             {errors.agree && <div className="form-error-msg">{errors.agree}</div>}
 
             {errors.general && (
-              <div role="alert" className="form-error-msg text-center p-2 rounded" style={{ background: "#FEE2E2", color: "#B91C1C", fontSize: "0.82rem" }}>
+              <div role="alert" className="form-error-msg text-center p-2 rounded auth-general-error">
                 {errors.general}
               </div>
             )}

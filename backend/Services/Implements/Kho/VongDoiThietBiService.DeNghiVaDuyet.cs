@@ -66,7 +66,7 @@ public partial class VongDoiThietBiService
             var chiTiet = phieu.ChiTietDieuChinhKhos.FirstOrDefault();
             if (chiTiet == null || !chiTiet.MaThietBi.HasValue)
                 return Result<DeNghiVongDoiResponse>.Loi(DomainConstants.Errors.InvalidData, "Phiếu điều chỉnh không gắn thiết bị hợp lệ.");
-            if (phieu.TrangThai == KietDomainConstants.PhieuStatus.DaApDung)
+            if (phieu.TrangThai == DomainConstants.Status.Applied)
                 return Result<DeNghiVongDoiResponse>.Ok(MapDeNghiResponse(phieu, chiTiet.MaThietBi.Value));
 
             var thietBi = await _context.ThietBis.FirstOrDefaultAsync(tb => tb.MaThietBi == chiTiet.MaThietBi.Value);
@@ -75,7 +75,7 @@ public partial class VongDoiThietBiService
             if (thietBi.TrangThaiSuDung == TrangThaiThietBi.DangThue)
                 return Result<DeNghiVongDoiResponse>.Loi(DomainConstants.Errors.EquipmentNotRecovered, "Thiết bị đang phục vụ khách, không thể duyệt áp dụng.");
 
-            var anhHuong = await PhanTichCamKetThietBiAsync(thietBi, phieu.LoaiDieuChinh ?? KietDomainConstants.VongDoiConfig.LoaiGiangCap);
+            var anhHuong = await PhanTichCamKetThietBiAsync(thietBi, phieu.LoaiDieuChinh ?? DomainConstants.Lifecycle.Downgrade);
             if (!anhHuong.CoTheApDungHienTai || anhHuong.CamKetCuThe.Count > 0 || anhHuong.ThieuSoLuongTheoLich.Count > 0)
                 return Result<DeNghiVongDoiResponse>.Loi(DomainConstants.Errors.ChangeViolatesCommitment,
                     $"Không thể duyệt áp dụng do phát sinh thiếu cam kết: {string.Join("; ", anhHuong.VuongMac.Concat(anhHuong.ThieuSoLuongTheoLich))}");
@@ -96,7 +96,7 @@ public partial class VongDoiThietBiService
         var trangThaiCu = thietBi.TrangThaiSuDung;
         var tinhTrangCu = thietBi.TinhTrang;
 
-        if (phieu.LoaiDieuChinh == KietDomainConstants.VongDoiConfig.LoaiGiangCap && !string.IsNullOrWhiteSpace(chiTiet.GiaTriSau))
+        if (phieu.LoaiDieuChinh == DomainConstants.Lifecycle.Downgrade && !string.IsNullOrWhiteSpace(chiTiet.GiaTriSau))
         {
             using var doc = JsonDocument.Parse(chiTiet.GiaTriSau);
             if (doc.RootElement.TryGetProperty("MaSanPhamHienTai", out var spProp))
@@ -104,7 +104,7 @@ public partial class VongDoiThietBiService
             if (doc.RootElement.TryGetProperty("TinhTrang", out var ttProp) && ttProp.ValueKind == JsonValueKind.String)
                 thietBi.TinhTrang = ttProp.GetString();
         }
-        else if (phieu.LoaiDieuChinh == KietDomainConstants.VongDoiConfig.LoaiNgungSuDung)
+        else if (phieu.LoaiDieuChinh == DomainConstants.Lifecycle.Decommission)
         {
             thietBi.TrangThaiSuDung = TrangThaiThietBi.NgungSuDung;
         }
@@ -113,7 +113,7 @@ public partial class VongDoiThietBiService
         phieu.TenNguoiDuyetLucDuyet = nhanVien.HoTen;
         phieu.ThoiDiemDuyet = DateTime.UtcNow;
         phieu.ThoiDiemApDung = DateTime.UtcNow;
-        phieu.TrangThai = KietDomainConstants.PhieuStatus.DaApDung;
+        phieu.TrangThai = DomainConstants.Status.Applied;
 
         AuditLogHelper.GhiLichSuThietBi(_context, thietBi.MaThietBi, actorId, trangThaiCu.ToString(),
             thietBi.TrangThaiSuDung.ToString(), tinhTrangCu, thietBi.TinhTrang,

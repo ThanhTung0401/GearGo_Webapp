@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useApp } from "../../../context/AppContext";
 import { isRealApiEnabled } from "../../../services/apiClient";
 
@@ -8,7 +8,7 @@ import { inventoryApi } from "../../../services/api/inventoryApi";
 import { mapEquipmentStatusToBackend } from "../../../services/mappers/catalogEquipmentMapper";
 import { fmt } from "../../../store";
 
-import { FormModal, FormActions, fieldStyle, labelStyle } from "./FormModal";
+import { FormModal, FormActions } from "./FormModal";
 
 export function EquipmentForm({ app, equipment, onClose }: { app: ReturnType<typeof useApp>; equipment: ReturnType<typeof useApp>["equipment"][number]; onClose: () => void }) {
   const [form, setForm] = useState(equipment);
@@ -80,14 +80,14 @@ export function EquipmentForm({ app, equipment, onClose }: { app: ReturnType<typ
 
   return <FormModal title={`Cập nhật thiết bị ${equipment.displayCode ?? equipment.id}`} description="Nguồn nhập và giá nhập được khóa; chỉ tình trạng vận hành, phụ kiện và ghi chú được cập nhật." onClose={onClose}>
     <form onSubmit={handleSubmit} className="grid gap-4 mt-5">
-      <div style={{ background: "var(--color-parchment)", borderRadius: 10, padding: 12, fontSize: "0.8rem" }}><strong>{product?.name}</strong><br />Nguồn nhập: {sourceReceipt?.displayCode ?? form.importReceiptId} / {form.importReceiptLineId ?? "chưa có mã dòng"} · Giá nhập: {fmt(form.importPrice)} · Ngày nhập: {form.importDate}</div>
-      <div className="responsive-two-column grid gap-4" style={{ gridTemplateColumns: "1fr 1fr" }}>
-        <label style={labelStyle}>Tình trạng<input value={form.condition} onChange={(e) => setForm({ ...form, condition: e.target.value })} style={fieldStyle} /></label>
-        <label style={labelStyle}>Trạng thái sử dụng<select value={form.equipmentStatus} onChange={(e) => setForm({ ...form, equipmentStatus: e.target.value as typeof form.equipmentStatus })} style={fieldStyle}>{["Sẵn sàng", "Đang thuê", "Đang bảo trì", "Thất lạc", "Ngừng sử dụng"].map((item) => <option key={item}>{item}</option>)}</select></label>
+      <div className="adm-card--parchment text-xs"><strong>{product?.name}</strong><br />Nguồn nhập: {sourceReceipt?.displayCode ?? form.importReceiptId} / {form.importReceiptLineId ?? "chưa có mã dòng"} · Giá nhập: {fmt(form.importPrice)} · Ngày nhập: {form.importDate}</div>
+      <div className="responsive-two-column adm-grid-2">
+        <label className="adm-label">Tình trạng<input value={form.condition} onChange={(e) => setForm({ ...form, condition: e.target.value })} className="adm-field" /></label>
+        <label className="adm-label">Trạng thái sử dụng<select value={form.equipmentStatus} onChange={(e) => setForm({ ...form, equipmentStatus: e.target.value as typeof form.equipmentStatus })} className="adm-field">{["Sẵn sàng", "Đang thuê", "Đang bảo trì", "Thất lạc", "Ngừng sử dụng"].map((item) => <option key={item}>{item}</option>)}</select></label>
       </div>
-      <label style={labelStyle}>Phụ kiện đi kèm<input value={accessories} onChange={(e) => setAccessories(e.target.value)} placeholder="Túi đựng, cọc, dây chằng" style={fieldStyle} /></label>
-      <label style={labelStyle}>Ghi chú<textarea rows={3} value={form.note ?? ""} onChange={(e) => setForm({ ...form, note: e.target.value })} style={fieldStyle} /></label>
-      {error && <div role="alert" style={{ color: "#B91C1C", background: "#FEE2E2", padding: 10, borderRadius: 8 }}>{error}</div>}
+      <label className="adm-label">Phụ kiện đi kèm<input value={accessories} onChange={(e) => setAccessories(e.target.value)} placeholder="Túi đựng, cọc, dây chằng" className="adm-field" /></label>
+      <label className="adm-label">Ghi chú<textarea rows={3} value={form.note ?? ""} onChange={(e) => setForm({ ...form, note: e.target.value })} className="adm-field" /></label>
+      {error && <div role="alert" className="adm-alert is-error-solid adm-alert--block mb-0">{error}</div>}
       <FormActions onClose={onClose} loading={loading} />
     </form>
   </FormModal>;

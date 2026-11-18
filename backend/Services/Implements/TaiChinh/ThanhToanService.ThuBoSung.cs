@@ -19,17 +19,17 @@ public partial class ThanhToanService
             var doiSoat = await _context.DoiSoatTienCocs.Include(ds => ds.DonThue)
                 .FirstOrDefaultAsync(ds => ds.MaDoiSoat == request.MaDoiSoat);
             if (doiSoat == null)
-                return Result<YeuCauThuResponse>.Loi(KietDomainConstants.ErrorCodes.DoiSoatNotFound, "Không tìm thấy bảng đối soát.");
+                return Result<YeuCauThuResponse>.Loi(DomainConstants.Errors.ReconciliationNotFound, "Không tìm thấy bảng đối soát.");
 
             var errQuyen = await KiemTraQuyenThuBoSungAsync(doiSoat.DonThue.MaKhachHang, actorId);
             if (errQuyen != null) return errQuyen;
 
             if (doiSoat.SoTienCanThuThem <= 0)
-                return Result<YeuCauThuResponse>.Loi(KietDomainConstants.ErrorCodes.KhongCoNghiaVuThuThem, "Bảng tính không thiếu hoặc chưa được xác nhận.");
+                return Result<YeuCauThuResponse>.Loi(DomainConstants.Errors.NoSupplementaryDuty, "Bảng tính không thiếu hoặc chưa được xác nhận.");
 
             var existing = await _context.ThanhToans.Include(t => t.ChiTietThanhToans)
                 .FirstOrDefaultAsync(t => t.MaDonThue == doiSoat.MaDonThue
-                    && (t.TrangThai == KietDomainConstants.PhieuStatus.ChoThanhToan || t.TrangThai == KietDomainConstants.PhieuStatus.ThanhCong)
+                    && (t.TrangThai == DomainConstants.Status.PendingPayment || t.TrangThai == DomainConstants.Status.Success)
                     && t.GhiChu != null && t.GhiChu.Contains($"DoiSoat_{request.MaDoiSoat}"));
             if (existing != null)
                 return Result<YeuCauThuResponse>.Ok(MapYeuCauThuResponse(existing, existing.ChiTietThanhToans.FirstOrDefault()?.MucDich));
@@ -40,18 +40,18 @@ public partial class ThanhToanService
             {
                 MaDonThue = doiSoat.MaDonThue, MaYeuCau = maYeuCau,
                 PhuongThuc = string.IsNullOrEmpty(request.PhuongThucDuocHoTro) ? "VNPAY" : request.PhuongThucDuocHoTro,
-                TongSoTien = doiSoat.SoTienCanThuThem, TrangThai = KietDomainConstants.PhieuStatus.ChoThanhToan,
+                TongSoTien = doiSoat.SoTienCanThuThem, TrangThai = DomainConstants.Status.PendingPayment,
                 TrangThaiDoiChieu = "ChuaDoiChieu", ThoiDiemTao = now, GhiChu = $"ThuBoSung_DoiSoat_{request.MaDoiSoat}"
             };
             thanhToanMoi.ChiTietThanhToans.Add(new ChiTietThanhToan
             {
-                MucDich = KietDomainConstants.MucDichGiaoDich.ThuBoSung,
+                MucDich = DomainConstants.TransactionPurposes.SupplementaryFee,
                 SoTien = doiSoat.SoTienCanThuThem, ThanhToan = thanhToanMoi
             });
             _context.ThanhToans.Add(thanhToanMoi);
             await _context.SaveChangesAsync();
 
-            return Result<YeuCauThuResponse>.Ok(MapYeuCauThuResponse(thanhToanMoi, KietDomainConstants.MucDichGiaoDich.ThuBoSung, false));
+            return Result<YeuCauThuResponse>.Ok(MapYeuCauThuResponse(thanhToanMoi, DomainConstants.TransactionPurposes.SupplementaryFee, false));
         }, _logger);
     }
 
@@ -158,8 +158,8 @@ public partial class ThanhToanService
         ThanhToan tt, string? mucDich, bool? canDoiChieuOverride = null, bool includeUrl = true) => new()
     {
         MaThanhToan = tt.MaThanhToan, MaYeuCau = tt.MaYeuCau, SoTien = tt.TongSoTien,
-        MucDich = mucDich ?? KietDomainConstants.MucDichGiaoDich.ThuBoSung, TrangThai = tt.TrangThai,
+        MucDich = mucDich ?? DomainConstants.TransactionPurposes.SupplementaryFee, TrangThai = tt.TrangThai,
         PaymentUrl = includeUrl ? $"https://mock-gateway.geargo.vn/pay?id={tt.MaYeuCau}" : null,
-        CanDoiChieu = canDoiChieuOverride ?? (tt.TrangThaiDoiChieu == KietDomainConstants.PhieuStatus.CanDoiChieu)
+        CanDoiChieu = canDoiChieuOverride ?? (tt.TrangThaiDoiChieu == DomainConstants.Status.VerificationNeeded)
     };
 }

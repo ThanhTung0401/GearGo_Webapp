@@ -44,21 +44,21 @@ public partial class ThanhToanService : IThanhToanService
             {
                 var giaoDichCu = await _context.ThanhToans.AsNoTracking().FirstOrDefaultAsync(t =>
                     t.MaDonThue == request.MaDonThue && t.MaGiaoDichCong == request.MaGiaoDichDoiTac
-                    && t.TrangThai == KietDomainConstants.PhieuStatus.ThanhCong);
+                    && t.TrangThai == DomainConstants.Status.Success);
                 if (giaoDichCu != null) return Result<string>.Ok(giaoDichCu.MaYeuCau);
             }
 
             var donThue = await _context.DonThues.Include(d => d.ChiTietDonThues).ThenInclude(c => c.GiuCho)
                 .Include(d => d.LuotSuDungKhuyenMai).FirstOrDefaultAsync(d => d.MaDonThue == request.MaDonThue);
             if (donThue == null)
-                return Result<string>.Loi(KietDomainConstants.ErrorCodes.DonThueNotFound, "Không tìm thấy đơn thuê.");
+                return Result<string>.Loi(DomainConstants.Errors.OrderRentalNotFound, "Không tìm thấy đơn thuê.");
 
             var now = DateTime.UtcNow;
             var thanhToanMoi = TaoThanhToanBanDau(donThue, request, now);
 
             if (donThue.TrangThai != TrangThaiDonThue.ChoThanhToan)
             {
-                thanhToanMoi.TrangThaiDoiChieu = KietDomainConstants.PhieuStatus.CanDoiSoat;
+                thanhToanMoi.TrangThaiDoiChieu = DomainConstants.Status.ReconcileNeeded;
                 thanhToanMoi.GhiChu = $"Giao dịch thu tiền khi đơn đang ở trạng thái {donThue.TrangThai} — cần đối soát/hoàn tiền.";
                 _context.ThanhToans.Add(thanhToanMoi);
                 _logger.LogWarning("Phát sinh giao dịch cần đối soát #{MaYeuCau} cho đơn #{MaDonThue} (Trạng thái đơn: {TrangThai}).",
@@ -69,9 +69,9 @@ public partial class ThanhToanService : IThanhToanService
             _context.ThanhToans.Add(thanhToanMoi);
             donThue.XacNhanThanhToan();
 
-            if (donThue.LuotSuDungKhuyenMai?.TrangThai == KietDomainConstants.PhieuStatus.DangGiu)
+            if (donThue.LuotSuDungKhuyenMai?.TrangThai == DomainConstants.Status.Holding)
             {
-                donThue.LuotSuDungKhuyenMai.TrangThai = KietDomainConstants.PhieuStatus.DaSuDung;
+                donThue.LuotSuDungKhuyenMai.TrangThai = DomainConstants.Status.Used;
                 donThue.LuotSuDungKhuyenMai.ThoiDiemSuDung = now;
             }
             if (_khuyenMaiService != null) await _khuyenMaiService.XacNhanDaSuDungAsync(donThue.MaDonThue);
@@ -88,15 +88,15 @@ public partial class ThanhToanService : IThanhToanService
     {
         var tt = await _context.ThanhToans.Include(t => t.ChiTietThanhToans).FirstOrDefaultAsync(t => t.MaYeuCau == maYeuCau);
         if (tt == null)
-            return Result<YeuCauThuResponse>.Loi(KietDomainConstants.ErrorCodes.GiaoDichNotFound, "Không tìm thấy giao dịch.");
+            return Result<YeuCauThuResponse>.Loi(DomainConstants.Errors.TransactionNotFound, "Không tìm thấy giao dịch.");
 
         var chiTiet = tt.ChiTietThanhToans.FirstOrDefault();
         return Result<YeuCauThuResponse>.Ok(new YeuCauThuResponse
         {
             MaThanhToan = tt.MaThanhToan, MaYeuCau = tt.MaYeuCau, SoTien = tt.TongSoTien,
             MucDich = chiTiet?.MucDich ?? "", TrangThai = tt.TrangThai,
-            PaymentUrl = tt.TrangThai == KietDomainConstants.PhieuStatus.ChoThanhToan ? $"https://mock-gateway.geargo.vn/pay?id={tt.MaYeuCau}" : null,
-            CanDoiChieu = tt.TrangThaiDoiChieu is KietDomainConstants.PhieuStatus.CanDoiChieu or KietDomainConstants.PhieuStatus.CanDoiSoat
+            PaymentUrl = tt.TrangThai == DomainConstants.Status.PendingPayment ? $"https://mock-gateway.geargo.vn/pay?id={tt.MaYeuCau}" : null,
+            CanDoiChieu = tt.TrangThaiDoiChieu is DomainConstants.Status.VerificationNeeded or DomainConstants.Status.ReconcileNeeded
         });
     }
 
@@ -120,17 +120,17 @@ public partial class ThanhToanService : IThanhToanService
         {
             MaDonThue = donThue.MaDonThue, MaYeuCau = DisplayCodeHelper.SinhMaYeuCauThanhToan(now),
             PhuongThuc = request.PhuongThucThanhToan, TongSoTien = request.SoTienDaTra,
-            MaGiaoDichCong = request.MaGiaoDichDoiTac, TrangThai = KietDomainConstants.PhieuStatus.ThanhCong,
+            MaGiaoDichCong = request.MaGiaoDichDoiTac, TrangThai = DomainConstants.Status.Success,
             ThoiDiemTao = now, ThoiDiemThanhCong = now
         };
         tt.ChiTietThanhToans.Add(new ChiTietThanhToan
         {
-            MucDich = KietDomainConstants.MucDichGiaoDich.TienThue,
+            MucDich = DomainConstants.TransactionPurposes.RentFee,
             SoTien = Math.Max(0, donThue.TongTienThueTruocGiam - donThue.TongTienGiam), ThanhToan = tt
         });
         tt.ChiTietThanhToans.Add(new ChiTietThanhToan
         {
-            MucDich = KietDomainConstants.MucDichGiaoDich.TienCoc,
+            MucDich = DomainConstants.TransactionPurposes.DepositFee,
             SoTien = Math.Max(0, donThue.TongTienCoc), ThanhToan = tt
         });
         return tt;

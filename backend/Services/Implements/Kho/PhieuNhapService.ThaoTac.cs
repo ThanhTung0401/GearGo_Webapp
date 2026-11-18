@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using GearGo.Exceptions;
+using GearGo.Helpers;
 using GearGo.Models.DTOs.PhieuNhap;
 using GearGo.Models.Entities;
 using GearGo.Models.Enums;
@@ -15,7 +16,7 @@ public partial class PhieuNhapService
 {
     public async Task<PhieuNhapResponse> TaoNhapAsync(TaoPhieuNhapRequest request, long maTaiKhoan, CancellationToken ct = default)
     {
-        var nhanVien = await LayNhanVienDangLamViecAsync(maTaiKhoan, ct);
+        var nhanVien = await ActorGuard.LayNhanVienDangLamViecAsync(_context, maTaiKhoan, ct);
         var ncc = await _context.NhaCungCaps.FirstOrDefaultAsync(x => x.MaNhaCungCap == request.MaNhaCungCap, ct);
         if (ncc == null)
             throw new KhongTimThayException($"Không tìm thấy nhà cung cấp với mã #{request.MaNhaCungCap}.");
@@ -212,13 +213,6 @@ public partial class PhieuNhapService
         return phieu;
     }
 
-    private async Task<NhanVien> LayNhanVienDangLamViecAsync(long maTaiKhoan, CancellationToken ct)
-    {
-        var nhanVien = await _context.NhanViens
-            .FirstOrDefaultAsync(nv => nv.MaTaiKhoan == maTaiKhoan && nv.TrangThaiLamViec == "DangLamViec", ct);
-        return nhanVien ?? throw new KhongCoQuyenException("Tài khoản chưa được liên kết với nhân viên đang làm việc.");
-    }
-
     private async Task KiemTraQuyenSuaPhieuAsync(PhieuNhapHang phieu, long maTaiKhoan, CancellationToken ct)
     {
         if (phieu.TrangThai != TrangThaiPhieuNhap.Nhap)
@@ -229,7 +223,7 @@ public partial class PhieuNhapService
             ?? throw new KhongCoQuyenException("Không tìm thấy thông tin tài khoản người thực hiện.");
         if (taiKhoan.VaiTro == "QuanTriVien") return;
 
-        var nhanVien = await LayNhanVienDangLamViecAsync(maTaiKhoan, ct);
+        var nhanVien = await ActorGuard.LayNhanVienDangLamViecAsync(_context, maTaiKhoan, ct);
         if (phieu.MaNguoiLap != nhanVien.MaNhanVien)
             throw new KhongCoQuyenException("Bạn chỉ có quyền sửa hoặc hủy phiếu nhập nháp do chính mình tạo.");
     }

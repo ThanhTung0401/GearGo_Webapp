@@ -183,6 +183,7 @@ public partial class TruyVanDonThueService : ITruyVanDonThueService
         return q;
     }
 
-    private static (int trang, int soMoi) ChuanHoaPhanTrang(int trang, int soMoi) =>
-        (Math.Max(1, trang), Math.Clamp(soMoi, 1, 100));
+    // Giữ nguyên hành vi Clamp(soMoi, 1, MaxPageSize) của truy vấn đơn thuê qua CalculationHelpers
+    private static (int trang, int soMoi) ChuanHoaPhanTrang(int trang, int soMoi)
+        => CalculationHelpers.ChuanHoaPhanTrang(trang, soMoi, dungMacDinhKhiKhongDuong: false);
 }

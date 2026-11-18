@@ -1,0 +1,1807 @@
+/* ==========================================================================
+   GearGo Admin Dashboard Styles - Giao diện Quản trị viên (Prefix: .adm-*)
+   Tách toàn bộ inline styles từ views/admin/* & hỗ trợ responsive 390px/1440px
+   ========================================================================== */
+
+/* === 1. Form & Trường nhập liệu dùng chung (thay thế fieldStyle / labelStyle) === */
+.adm-field {
+  width: 100%;
+  border: 1px solid var(--color-bone);
+  border-radius: 10px;
+  padding: 10px 14px;
+  background: #ffffff;
+  font-size: 0.9rem;
+  color: var(--color-charcoal);
+}
+
+.adm-field:disabled,
+.adm-field--readonly {
+  background: var(--color-parchment);
+}
+
+.adm-field--readonly-muted {
+  background: #F3F4F6;
+}
+
+.adm-field--compact {
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+}
+
+.adm-field--sm {
+  padding: 6px 10px;
+  border-radius: 6px;
+  border-color: #CBD5E1;
+  font-size: 0.8rem;
+}
+
+.adm-field--mono {
+  font-family: var(--font-mono);
+}
+
+.adm-field--code {
+  width: 120px;
+}
+
+.adm-field--code-upper {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.adm-field--narrow {
+  width: 180px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-family: var(--font-mono);
+  font-weight: 700;
+}
+
+.adm-field--no-resize {
+  resize: none;
+}
+
+.adm-label {
+  display: grid;
+  gap: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-bark);
+}
+
+.adm-label--block {
+  display: block;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--color-bark);
+  margin-bottom: 5px;
+}
+
+.adm-label--sub {
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--color-bark);
+  margin-bottom: 4px;
+}
+
+.adm-label--xs {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #475569;
+  margin-bottom: 4px;
+}
+
+.adm-label-note {
+  color: #6B7280;
+  font-weight: 400;
+}
+
+.adm-checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.adm-checkbox-row--bold {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--color-bark);
+}
+
+.adm-checkbox-chip {
+  border: 1px solid var(--color-bone);
+  border-radius: 8px;
+  padding: 7px 10px;
+  font-size: 0.78rem;
+}
+
+.adm-checkbox-card {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #F9FAFB;
+  border: 1px solid #E5E7EB;
+  cursor: pointer;
+}
+
+.adm-checkbox-card.is-checked {
+  background: #EFF6FF;
+  border-color: #BFDBFE;
+}
+
+.adm-checkbox-card input {
+  margin-top: 3px;
+}
+
+.adm-input-icon-wrap {
+  position: relative;
+  min-width: 260px;
+  flex: 1;
+}
+
+.adm-input-icon-wrap--fixed {
+  flex: 0 1 260px;
+}
+
+.adm-input-icon {
+  position: absolute;
+  left: 10px;
+  top: 9px;
+  color: #9CA3AF;
+  pointer-events: none;
+}
+
+.adm-input-with-icon {
+  width: 100%;
+  border: 1px solid var(--color-bone);
+  border-radius: 8px;
+  padding: 8px 12px 8px 32px;
+  font-size: 0.85rem;
+  background: #ffffff;
+}
+
+/* === 2. Tiêu đề trang, Thông báo trạng thái & Thanh công cụ lọc === */
+.adm-page-title {
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+  color: var(--color-bark);
+  margin-bottom: 4px;
+}
+
+.adm-page-title--lg {
+  font-size: 1.5rem;
+}
+
+.adm-page-title--sub {
+  font-size: 1.3rem;
+}
+
+.adm-page-title--compact {
+  margin-bottom: 0;
+}
+
+.adm-page-subtitle {
+  color: #6B7280;
+  font-size: 0.85rem;
+}
+
+.adm-page-subtitle--sm {
+  font-size: 0.8rem;
+}
+
+.adm-page-subtitle--compact {
+  font-size: 0.82rem;
+  margin-top: 2px;
+}
+
+.adm-version-pill {
+  background: var(--color-forest);
+  color: #ffffff;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  font-family: var(--font-mono);
+}
+
+.adm-alert {
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin-bottom: 14px;
+  font-size: 0.82rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.adm-alert--compact {
+  padding: 8px 10px;
+  font-size: 0.78rem;
+  margin-bottom: 10px;
+}
+
+.adm-alert--block {
+  display: block;
+}
+
+.adm-alert.is-error {
+  background: #FEF2F2;
+  border: 1px solid #FECACA;
+  color: #B91C1C;
+}
+
+.adm-alert.is-error-solid {
+  background: #FEE2E2;
+  border: 1px solid #FCA5A5;
+  color: #B91C1C;
+}
+
+.adm-alert.is-success {
+  background: #DCFCE7;
+  border: 1px solid #A7F3D0;
+  color: #15803D;
+}
+
+.adm-alert.is-warning {
+  background: #FFFBEB;
+  border: 1px solid #FDE68A;
+  color: #92400E;
+}
+
+.adm-alert.is-info {
+  background: #EFF6FF;
+  border: 1px solid #BFDBFE;
+  color: #1E40AF;
+}
+
+.adm-toolbar {
+  background: #ffffff;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--color-bone);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.adm-search-input {
+  flex: 1;
+  min-width: 220px;
+  border: 1px solid var(--color-bone);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 0.85rem;
+  background: #ffffff;
+}
+
+.adm-select {
+  border: 1px solid var(--color-bone);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 0.85rem;
+  background: #ffffff;
+}
+
+.adm-select--min {
+  min-width: 160px;
+}
+
+.adm-select--sm {
+  padding: 6px 10px;
+  font-size: 0.82rem;
+}
+
+.adm-select--xs {
+  padding: 5px 8px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  flex: 1;
+}
+
+.adm-date-range {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #ffffff;
+  border: 1px solid var(--color-bone);
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 0.75rem;
+}
+
+.adm-date-range-label {
+  color: var(--color-forest);
+  font-weight: 700;
+}
+
+.adm-date-input {
+  border: 1px solid var(--color-bone);
+  border-radius: 6px;
+  padding: 4px 7px;
+  font-size: 0.78rem;
+  background: #ffffff;
+}
+
+.adm-date-input--xs {
+  border-radius: 4px;
+  padding: 2px 5px;
+  font-size: 0.75rem;
+}
+
+.adm-clear-filter-btn {
+  background: none;
+  border: none;
+  color: #DC2626;
+  font-size: 0.78rem;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.adm-count-text {
+  font-size: 0.8rem;
+  color: #6B7280;
+}
+
+.adm-loading-text {
+  font-size: 0.82rem;
+  color: #6B7280;
+  margin-bottom: 12px;
+}
+
+.adm-empty-box {
+  background: #ffffff;
+  border-radius: 10px;
+  padding: 32px;
+  text-align: center;
+  color: #9CA3AF;
+  border: 1px dashed var(--color-bone);
+}
+
+.adm-hint-text {
+  font-size: 0.72rem;
+  color: #6B7280;
+}
+
+.adm-muted-note {
+  font-size: 0.72rem;
+  color: #9CA3AF;
+}
+
+/* === 3. Bố cục lưới & Thẻ nội dung === */
+.adm-section-max {
+  max-width: 960px;
+}
+
+.adm-transfer-wrap {
+  max-width: 700px;
+}
+
+.adm-card {
+  background: #ffffff;
+  border-radius: 12px;
+  border: 1px solid var(--color-bone);
+  overflow: hidden;
+}
+
+.adm-card--padded {
+  padding: 20px;
+  overflow: visible;
+}
+
+.adm-card--padded-sm {
+  padding: 18px;
+  overflow: visible;
+}
+
+.adm-card--parchment {
+  background: var(--color-parchment);
+  border-radius: 10px;
+  padding: 12px;
+  border: 1px solid var(--color-bone);
+}
+
+.adm-card--cream {
+  background: var(--color-cream);
+  border-radius: 10px;
+  padding: 12px;
+  border: 1px solid var(--color-bone);
+}
+
+.adm-card--soft {
+  background: #F9FAFB;
+  border-radius: 8px;
+  padding: 12px;
+  border: 1px solid var(--color-bone);
+}
+
+.adm-card--slate {
+  background: #F8FAFC;
+  border-radius: 8px;
+  padding: 12px;
+  border: 1px solid #E2E8F0;
+}
+
+.adm-card-header {
+  background: var(--color-parchment);
+  padding: 12px 16px;
+  font-weight: 700;
+  font-size: 0.88rem;
+  color: var(--color-bark);
+}
+
+.adm-card-title {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--color-bark);
+}
+
+.adm-section-heading {
+  font-weight: 700;
+  color: var(--color-bark);
+  font-size: 0.95rem;
+  margin-bottom: 10px;
+}
+
+.adm-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.adm-grid-2-lg {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+
+.adm-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.adm-grid-2-1-1 {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  gap: 12px;
+}
+
+.adm-grid-1-2 {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 12px;
+}
+
+.adm-grid-auto-sm {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr));
+  gap: 12px;
+}
+
+.adm-grid-auto-md {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
+  gap: 16px;
+}
+
+.adm-grid-auto-lg {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(250px, 100%), 1fr));
+  gap: 8px;
+}
+
+.adm-split-detail {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
+}
+
+.adm-split-detail.has-detail {
+  grid-template-columns: minmax(0, 1fr) 360px;
+}
+
+.adm-inventory-grid {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.8fr) minmax(0, 1.4fr);
+  gap: 20px;
+}
+
+.adm-notif-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  gap: 24px;
+}
+
+.adm-revenue-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: 24px;
+}
+
+.adm-import-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  gap: 24px;
+}
+
+.adm-kpi-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.adm-detail-panel {
+  background: #ffffff;
+  border-radius: 12px;
+  border: 1px solid var(--color-bone);
+  padding: 18px;
+  align-self: start;
+}
+
+.adm-detail-img {
+  width: 100%;
+  height: 130px;
+  object-fit: cover;
+  border-radius: 8px;
+  margin-bottom: 10px;
+  background: var(--color-parchment);
+}
+
+.adm-detail-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.82rem;
+  border-bottom: 1px dashed var(--color-bone);
+  padding: 5px 0;
+  gap: 8px;
+}
+
+.adm-detail-row-label {
+  color: #9CA3AF;
+}
+
+.adm-detail-row-val {
+  font-weight: 600;
+}
+
+.adm-detail-row-val.is-mono {
+  font-family: var(--font-mono);
+}
+
+/* === 4. Bảng dữ liệu quản trị (Data Tables) === */
+.adm-table-wrap {
+  background: #ffffff;
+  border-radius: 12px;
+  border: 1px solid var(--color-bone);
+  overflow: hidden;
+}
+
+.adm-table-scroll {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.adm-table-scroll--tall {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.adm-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.adm-table--min {
+  min-width: 580px;
+}
+
+.adm-table--sm {
+  font-size: 0.78rem;
+}
+
+.adm-table--md {
+  font-size: 0.8rem;
+}
+
+.adm-table thead tr {
+  background: var(--color-parchment);
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--color-bark);
+}
+
+.adm-table th {
+  padding: 10px 12px;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.adm-table td {
+  padding: 10px 12px;
+  vertical-align: middle;
+}
+
+.adm-table tbody tr {
+  border-top: 1px solid var(--color-bone);
+}
+
+.adm-table--zebra tbody tr:nth-child(odd) {
+  background: #ffffff;
+}
+
+.adm-table--zebra tbody tr:nth-child(even) {
+  background: var(--color-cream);
+}
+
+.adm-table tbody tr.is-clickable {
+  cursor: pointer;
+}
+
+.adm-table tbody tr.is-selected {
+  background: #F0FDF4;
+}
+
+.adm-cell-mono {
+  font-family: var(--font-mono);
+}
+
+.adm-cell-code {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--color-forest);
+}
+
+.adm-cell-title {
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: var(--color-bark);
+}
+
+.adm-cell-sub {
+  font-size: 0.72rem;
+  color: #9CA3AF;
+}
+
+.adm-cell-muted {
+  font-size: 0.78rem;
+  color: #6B7280;
+}
+
+.adm-cell-truncate {
+  max-width: 200px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.adm-cell-right {
+  text-align: right;
+}
+
+.adm-cell-center {
+  text-align: center;
+}
+
+.adm-table-empty {
+  padding: 28px 16px;
+  text-align: center;
+  color: #6B7280;
+  font-size: 0.85rem;
+}
+
+.adm-table-pagination {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  border-top: 1px solid var(--color-bone);
+  background: var(--color-cream);
+  font-size: 0.78rem;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* === 5. Huy hiệu, Trạng thái & Nút thao tác nhỏ === */
+.adm-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.adm-pill--round {
+  border-radius: 999px;
+}
+
+.adm-pill--xs {
+  padding: 1px 6px;
+  font-size: 0.68rem;
+}
+
+.adm-pill.is-success {
+  background: #DCFCE7;
+  color: #15803D;
+}
+
+.adm-pill.is-warning {
+  background: #FEF3C7;
+  color: #B45309;
+}
+
+.adm-pill.is-danger {
+  background: #FEE2E2;
+  color: #DC2626;
+}
+
+.adm-pill.is-danger-dark {
+  background: #FEE2E2;
+  color: #B91C1C;
+}
+
+.adm-pill.is-info {
+  background: #DBEAFE;
+  color: #1D4ED8;
+}
+
+.adm-pill.is-purple {
+  background: #E0E7FF;
+  color: #3730A3;
+}
+
+.adm-pill.is-neutral {
+  background: #F3F4F6;
+  color: #6B7280;
+}
+
+.adm-pill.is-slate {
+  background: #F1F5F9;
+  color: #64748B;
+}
+
+.adm-pill.is-forest {
+  background: var(--color-forest);
+  color: #ffffff;
+}
+
+.adm-pill.is-parchment {
+  background: var(--color-parchment);
+  color: var(--color-forest);
+}
+
+.adm-btn-primary {
+  background: var(--color-forest);
+  color: #ffffff;
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.adm-btn-amber {
+  background: var(--color-amber);
+  color: #ffffff;
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+
+.adm-btn-outline {
+  background: #ffffff;
+  border: 1px solid var(--color-bone);
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 0.75rem;
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--color-bark);
+}
+
+.adm-btn-parchment {
+  background: var(--color-parchment);
+  border: 1px solid var(--color-bone);
+  border-radius: 6px;
+  padding: 5px 10px;
+  font-size: 0.75rem;
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--color-bark);
+}
+
+.adm-btn-forest-outline {
+  background: #ffffff;
+  border: 1px solid var(--color-forest);
+  color: var(--color-forest);
+  border-radius: 6px;
+  padding: 5px 10px;
+  font-size: 0.75rem;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.adm-btn-forest-solid {
+  background: var(--color-forest);
+  border: 1px solid var(--color-forest);
+  color: #ffffff;
+  border-radius: 6px;
+  padding: 5px 10px;
+  font-size: 0.75rem;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.adm-btn-danger-outline {
+  background: #ffffff;
+  border: 1px solid #FECACA;
+  color: #DC2626;
+  border-radius: 6px;
+  padding: 5px 10px;
+  font-size: 0.75rem;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.adm-btn-danger-soft {
+  background: #FEF2F2;
+  border: 1px solid #FECACA;
+  color: #991B1B;
+  border-radius: 6px;
+  padding: 5px 10px;
+  font-size: 0.75rem;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.adm-btn-warning-outline {
+  background: #FFFBEB;
+  border: 1px solid #F59E0B;
+  color: #B45309;
+  border-radius: 6px;
+  padding: 5px 8px;
+  font-size: 0.75rem;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.adm-btn-success-outline {
+  background: #ECFDF5;
+  border: 1px solid #10B981;
+  color: #047857;
+  border-radius: 6px;
+  padding: 5px 8px;
+  font-size: 0.75rem;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.adm-btn-info-soft {
+  background: #EFF6FF;
+  border: 1px solid #BFDBFE;
+  color: #1D4ED8;
+  border-radius: 6px;
+  padding: 5px 8px;
+  font-size: 0.72rem;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.adm-btn-danger-solid {
+  background: #DC2626;
+  color: #ffffff;
+  border: none;
+}
+
+.adm-btn-crimson-solid {
+  background: #B91C1C;
+  color: #ffffff;
+  border: none;
+}
+
+.adm-btn-warning-solid {
+  background: #D97706;
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 18px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.adm-btn-amber-sm {
+  background: #E07A43;
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  padding: 5px 10px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.adm-btn-ghost {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+}
+
+.adm-btn-link {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  text-align: left;
+}
+
+.adm-btn-xs {
+  padding: 3px 8px;
+  font-size: 0.72rem;
+}
+
+.adm-btn-flex {
+  flex: 1;
+}
+
+.adm-tab-btn {
+  background: #ffffff;
+  color: var(--color-bark);
+  border: 1px solid var(--color-bone);
+  border-radius: 8px;
+  padding: 8px 14px;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 0.82rem;
+}
+
+.adm-tab-btn.is-active {
+  background: var(--color-forest);
+  color: #ffffff;
+  border-color: var(--color-forest);
+}
+
+/* === 6. Dashboard, Đối soát & Trung tâm tranh chấp === */
+.adm-kpi-value {
+  font-size: 1.3rem;
+}
+
+.adm-dispute-row {
+  background: #ffffff;
+}
+
+.adm-dispute-row.is-disputed {
+  background: #FFFBEB;
+}
+
+.adm-dispute-reply {
+  font-size: 0.74rem;
+  color: #B45309;
+  margin-top: 2px;
+}
+
+.adm-dispute-form-box {
+  background: #F9FAFB;
+  border: 1px solid var(--color-bone);
+  border-radius: 10px;
+  padding: 16px;
+}
+
+.adm-avail-row {
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--color-bone);
+}
+
+.adm-avail-count {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #DC2626;
+}
+
+.adm-avail-count.is-ok {
+  color: var(--color-forest);
+}
+
+.adm-progress-track {
+  background: var(--color-bone);
+  border-radius: 3px;
+  height: 5px;
+  overflow: hidden;
+}
+
+.adm-progress-track--promo {
+  height: 6px;
+  border-radius: 4px;
+  margin-top: 6px;
+  max-width: 300px;
+}
+
+.adm-progress-fill {
+  height: 100%;
+  transition: width 0.4s ease;
+  background: var(--color-forest);
+}
+
+.adm-progress-fill.is-mid {
+  background: var(--color-amber);
+}
+
+.adm-progress-fill.is-low,
+.adm-progress-fill.is-critical {
+  background: #EF4444;
+}
+
+.adm-flow-step {
+  border-radius: 8px;
+  padding: 7px 12px;
+  text-align: center;
+  min-width: 80px;
+  border: 1px solid transparent;
+  cursor: pointer;
+}
+
+.adm-flow-step.is-selected {
+  background: var(--color-forest) !important;
+  border: 2px solid var(--color-forest);
+  box-shadow: 0 2px 8px rgba(24, 61, 45, 0.2);
+}
+
+.adm-flow-step-count {
+  font-family: var(--font-mono);
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.adm-flow-step-label {
+  font-size: 0.66rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.adm-flow-step.is-selected .adm-flow-step-count,
+.adm-flow-step.is-selected .adm-flow-step-label {
+  color: #ffffff !important;
+}
+
+.adm-flow-arrow {
+  color: var(--color-bone);
+  font-size: 1.1rem;
+}
+
+.adm-flow-list-wrap {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px dashed var(--color-bone);
+}
+
+.adm-flow-order-row {
+  background: #F9FAFB;
+  border: 1px solid var(--color-bone);
+  border-radius: 8px;
+  padding: 10px 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.adm-evidence-box {
+  border-radius: 8px;
+  padding: 12px;
+  font-size: 0.78rem;
+}
+
+.adm-evidence-box.is-before {
+  background: #EFF6FF;
+  border: 1px solid #BFDBFE;
+}
+
+.adm-evidence-box.is-after {
+  background: #FEF2F2;
+  border: 1px solid #FECACA;
+}
+
+/* === 7. Danh mục, Sản phẩm, Thiết bị, Phiếu nhập, NCC & Khuyến mãi === */
+.adm-cat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr));
+  gap: 16px;
+}
+
+.adm-cat-card {
+  background: #ffffff;
+  border-radius: 12px;
+  border: 1px solid var(--color-bone);
+  overflow: hidden;
+}
+
+.adm-cat-card.is-inactive {
+  opacity: 0.62;
+}
+
+.adm-cat-banner {
+  background: var(--color-forest);
+  padding: 18px 20px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.adm-cat-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.14);
+  color: #ffffff;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+.adm-cat-name {
+  font-family: var(--font-display);
+  color: #ffffff;
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.adm-cat-meta {
+  color: var(--color-sage);
+  font-size: 0.75rem;
+}
+
+.adm-cat-body {
+  padding: 14px 18px;
+}
+
+.adm-cat-prod-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px dashed var(--color-bone);
+  font-size: 0.82rem;
+  gap: 8px;
+}
+
+.adm-cat-footer {
+  padding: 0 18px 14px;
+  display: flex;
+  gap: 6px;
+}
+
+.adm-prod-server-img-card {
+  position: relative;
+  border: 1px solid var(--color-bone);
+  border-radius: 8px;
+  padding: 4px;
+  background: #ffffff;
+}
+
+.adm-prod-server-img {
+  width: 92px;
+  height: 68px;
+  object-fit: cover;
+  border-radius: 6px;
+}
+
+.adm-prod-primary-tag {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  background: var(--color-forest);
+  color: #ffffff;
+  font-size: 0.65rem;
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-weight: 700;
+}
+
+.adm-prod-del-img-btn {
+  display: block;
+  width: 100%;
+  margin-top: 4px;
+  border: 1px solid #FECACA;
+  background: #FEF2F2;
+  color: #B91C1C;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  cursor: pointer;
+}
+
+.adm-prod-preview-img {
+  width: 180px;
+  height: 120px;
+  object-fit: cover;
+  border-radius: 10px;
+  border: 1px solid var(--color-bone);
+}
+
+.adm-receipt-card {
+  background: #ffffff;
+  border-radius: 10px;
+  padding: 14px 16px;
+  border: 1px solid var(--color-bone);
+  display: block;
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+}
+
+.adm-receipt-card.is-selected {
+  border-color: var(--color-forest);
+}
+
+.adm-receipt-footer {
+  padding: 16px 18px;
+  border-top: 1px solid var(--color-bone);
+}
+
+.adm-receipt-total {
+  display: flex;
+  justify-content: space-between;
+  font-weight: 800;
+  font-size: 1rem;
+  margin-bottom: 12px;
+}
+
+.adm-adj-box {
+  background: var(--color-parchment);
+  border-radius: 8px;
+  padding: 10px;
+  margin-top: 8px;
+  border: 1px solid var(--color-bone);
+}
+
+.adm-adj-item {
+  background: #ffffff;
+  padding: 9px 12px;
+  border-radius: 6px;
+  font-size: 0.76rem;
+  border: 1px solid var(--color-bone);
+}
+
+.adm-import-line-box {
+  border: 1px solid var(--color-bone);
+  border-radius: 12px;
+  padding: 14px;
+  background: var(--color-cream);
+}
+
+.adm-import-total-box {
+  display: flex;
+  justify-content: space-between;
+  background: var(--color-parchment);
+  border-radius: 10px;
+  padding: 13px;
+  font-weight: 800;
+}
+
+.adm-supplier-card {
+  background: #ffffff;
+  border-radius: 10px;
+  padding: 16px 20px;
+  border: 1px solid var(--color-bone);
+  display: flex;
+  gap: 14px;
+  align-items: center;
+}
+
+.adm-supplier-icon {
+  width: 44px;
+  height: 44px;
+  color: var(--color-forest);
+  background: var(--color-parchment);
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+.adm-supplier-right {
+  text-align: right;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.adm-promo-card {
+  background: #ffffff;
+  border-radius: 10px;
+  padding: 16px 20px;
+  border: 1px solid var(--color-bone);
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.adm-promo-card.is-expired {
+  border: 1px dashed #D1D5DB;
+  opacity: 0.85;
+}
+
+.adm-promo-card.is-inactive {
+  opacity: 0.85;
+}
+
+.adm-promo-badge {
+  background: var(--color-parchment);
+  border-radius: 10px;
+  padding: 12px 16px;
+  text-align: center;
+  min-width: 125px;
+  border: 1px solid var(--color-bone);
+}
+
+.adm-promo-code {
+  font-family: var(--font-mono);
+  font-weight: 800;
+  color: var(--color-forest);
+  letter-spacing: 0.06em;
+  font-size: 1rem;
+}
+
+.adm-promo-discount {
+  font-size: 0.75rem;
+  color: #D97706;
+  font-weight: 700;
+  margin-top: 2px;
+}
+
+.adm-promo-info {
+  flex: 1;
+  min-width: 240px;
+}
+
+.adm-promo-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: stretch;
+  min-width: 150px;
+}
+
+.adm-promo-sim-box {
+  background: var(--color-cream);
+  border: 1px dashed var(--color-moss);
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 0.8rem;
+  color: var(--color-forest);
+}
+
+.adm-promo-sim-highlight {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 8px;
+  background: #ffffff;
+  border-radius: 6px;
+  font-weight: 700;
+  color: #047857;
+}
+
+.adm-transfer-done {
+  background: #DCFCE7;
+  border-radius: 12px;
+  padding: 24px;
+  border: 1px solid #A7F3D0;
+  text-align: center;
+}
+
+.adm-impact-box {
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-size: 0.82rem;
+  background: #EFF6FF;
+  color: #1E40AF;
+}
+
+.adm-impact-box.is-blocked {
+  background: #FEF2F2;
+  color: #991B1B;
+}
+
+/* === 8. Chính sách, Thông báo, Đánh giá, Báo cáo & Audit Log === */
+.adm-policy-h3 {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--color-forest);
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.adm-policy-free-box {
+  background: #F0FDF4;
+  border: 1px solid #BBF7D0;
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.adm-policy-fee-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #ffffff;
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--color-bone);
+  gap: 8px;
+}
+
+.adm-policy-fee-input {
+  width: 110px;
+  text-align: right;
+  border: 1px solid var(--color-bone);
+  border-radius: 4px;
+  padding: 4px 6px;
+  font-size: 0.78rem;
+  font-family: var(--font-mono);
+}
+
+.adm-policy-banner {
+  background: var(--color-parchment);
+  border-radius: 10px;
+  padding: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.adm-diff-box {
+  background: var(--color-parchment);
+  border-radius: 8px;
+  padding: 10px;
+  margin-bottom: 16px;
+  border: 1px solid var(--color-bone);
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+.adm-notif-preview-wrap {
+  background: #F1F5F9;
+  border-radius: 10px;
+  padding: 14px;
+  border: 1px dashed #94A3B8;
+}
+
+.adm-notif-preview-card {
+  background: #ffffff;
+  border-radius: 8px;
+  padding: 12px;
+  border: 1px solid #E2E8F0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+}
+
+.adm-notif-history-list {
+  overflow-y: auto;
+  max-height: 480px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.adm-notif-history-item {
+  border: 1px solid var(--color-bone);
+  border-radius: 10px;
+  padding: 12px;
+  background: var(--color-cream);
+}
+
+.adm-notif-queue-box {
+  background: #F8F6F0;
+  border-radius: 12px;
+  border: 1px solid #E2DDD1;
+  padding: 20px;
+}
+
+.adm-review-card {
+  background: #ffffff;
+  border-radius: 12px;
+  border: 1px solid var(--color-bone);
+  padding: 16px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.adm-review-comment {
+  font-size: 0.88rem;
+  color: #374151;
+  line-height: 1.5;
+  margin-bottom: 8px;
+  font-style: italic;
+}
+
+.adm-review-img {
+  width: 60px;
+  height: 60px;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid #CBD5E1;
+  cursor: pointer;
+}
+
+.adm-review-reply-box {
+  background: #F0FDF4;
+  border-left: 3px solid #16A34A;
+  border-radius: 0 8px 8px 0;
+  padding: 8px 12px;
+  margin-bottom: 8px;
+}
+
+.adm-review-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 150px;
+}
+
+.adm-report-kpi-card {
+  background: #ffffff;
+  border-radius: 10px;
+  padding: 14px;
+  border: 1px solid var(--color-bone);
+  cursor: pointer;
+  transition: transform 0.15s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+}
+
+.adm-report-kpi-card.is-overdue {
+  background: #FEF2F2;
+  border-color: #F87171;
+}
+
+.adm-report-kpi-card.is-warn {
+  background: #FFFBEB;
+}
+
+.adm-report-kpi-val {
+  font-family: var(--font-mono);
+  font-size: 1.7rem;
+  font-weight: 800;
+  margin-top: 2px;
+}
+
+.adm-report-bar-track {
+  height: 12px;
+  background: #E5E7EB;
+  border-radius: 6px;
+  overflow: hidden;
+  display: flex;
+  margin-bottom: 16px;
+}
+
+.adm-report-bar-seg--rented { background: #1D4ED8; }
+.adm-report-bar-seg--avail { background: #15803D; }
+.adm-report-bar-seg--maint { background: #F59E0B; }
+.adm-report-bar-seg--lost { background: #EF4444; }
+
+.adm-report-legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.adm-report-rank-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: var(--color-parchment);
+  border-radius: 8px;
+  gap: 8px;
+}
+
+.adm-report-net-card {
+  background: var(--color-forest);
+  border-radius: 12px;
+  padding: 18px;
+  color: #ffffff;
+}
+
+.adm-report-depreciation-card {
+  background: #FFF7ED;
+  border: 1px solid #FFEDD5;
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+.adm-audit-pre {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: var(--font-mono);
+}
+
+.adm-audit-pre-box {
+  margin-top: 10px;
+  background: #ffffff;
+  border: 1px solid var(--color-bone);
+  border-radius: 8px;
+  padding: 12px;
+  max-height: 280px;
+  overflow: auto;
+  font-size: 0.75rem;
+  font-family: var(--font-mono);
+}
+
+.adm-audit-diff-before {
+  background: #FEF2F2;
+  border: 1px solid #FECACA;
+  border-radius: 8px;
+  padding: 10px;
+  font-size: 0.75rem;
+}
+
+.adm-audit-diff-after {
+  background: #F0FDF4;
+  border: 1px solid #BBF7D0;
+  border-radius: 8px;
+  padding: 10px;
+  font-size: 0.75rem;
+}
+
+.adm-audit-seal-note {
+  margin-top: 14px;
+  font-size: 0.75rem;
+  color: #9CA3AF;
+  font-style: italic;
+}
+
+/* === 9. Modal bổ sung & Kích thước Modal === */
+.adm-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 9999;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  overflow-y: auto;
+}
+
+.adm-modal-dialog {
+  background: #ffffff;
+  border-radius: 14px;
+  width: 100%;
+  max-width: 560px;
+  max-height: 90vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
+}
+
+.adm-modal-dialog.is-xs { max-width: 420px; }
+.adm-modal-dialog.is-sm { max-width: 460px; }
+.adm-modal-dialog.is-md { max-width: 520px; }
+.adm-modal-dialog.is-lg { max-width: 680px; }
+.adm-modal-dialog.is-xl { max-width: 760px; }
+.adm-modal-dialog.is-wide { max-width: 800px; }
+.adm-modal-dialog.is-reconcile { max-width: 860px; background: transparent; box-shadow: none; }
+
+.adm-modal-header-clean {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--color-bone);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.adm-modal-body-scroll {
+  padding: 20px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.adm-modal-footer-clean {
+  padding: 12px 20px;
+  border-top: 1px solid var(--color-bone);
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.modal-container.is-sm { max-width: 440px; }
+.modal-container.is-md { max-width: 480px; }
+.modal-container.is-520 { max-width: 520px; }
+.modal-container.is-560 { max-width: 560px; }
+.modal-container.is-700 { max-width: 700px; }
+
+/* === 10. Responsive Breakpoints (Tablet <= 900px, Mobile <= 640px) === */
+@media (max-width: 900px) {
+  .adm-split-detail.has-detail,
+  .adm-inventory-grid,
+  .adm-notif-layout,
+  .adm-revenue-grid,
+  .adm-import-grid,
+  .adm-grid-2-lg,
+  .adm-kpi-3,
+  .adm-grid-3,
+  .adm-grid-2-1-1,
+  .adm-grid-1-2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .adm-grid-2 {
+    grid-template-columns: 1fr;
+  }
+
+  .adm-supplier-card,
+  .adm-review-card {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .adm-supplier-right {
+    align-items: flex-start;
+    text-align: left;
+  }
+
+  .adm-promo-actions,
+  .adm-review-actions {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .adm-promo-info,
+  .adm-input-icon-wrap,
+  .adm-search-input,
+  .adm-select--min {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .adm-date-range {
+    flex-wrap: wrap;
+    width: 100%;
+  }
+
+  .adm-field--narrow {
+    width: 100%;
+  }
+
+  .adm-modal-overlay {
+    padding: 10px;
+  }
+
+  .adm-modal-body-scroll {
+    padding: 14px;
+  }
+}

@@ -12,7 +12,7 @@ public static class BanGiaoValidationRules
     {
         if (tongDaDong < tongTienYeuCau)
         {
-            return Result<bool>.Loi(KietDomainConstants.ErrorCodes.ChuaThanhToanDu,
+            return Result<bool>.Loi(DomainConstants.Errors.InsufficientPayment,
                 $"Đơn thuê này chưa thanh toán đủ. Yêu cầu: {tongTienYeuCau}, Đã đóng: {tongDaDong}");
         }
 

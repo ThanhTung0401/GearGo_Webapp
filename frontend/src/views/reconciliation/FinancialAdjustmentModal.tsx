@@ -40,37 +40,37 @@ export function FinancialAdjustmentModal(props: Props) {
     <>
       {/* ─── MODAL UC5.7: ĐIỀU CHỈNH TÀI CHÍNH SAU CHỐT ────────────────────────── */}
       {showAdjustmentModal && (
-        <div role="dialog" aria-modal="true" className="modal-overlay" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10000, display: "grid", placeItems: "center", padding: 16 }}>
-          <div className="modal-container" style={{ background: "white", borderRadius: 16, maxWidth: 540, width: "100%", padding: 24, boxShadow: "0 10px 30px rgba(0,0,0,0.2)" }}>
+        <div role="dialog" aria-modal="true" className="modal-overlay recon-adj-overlay">
+          <div className="modal-container recon-adj-container">
             <div className="modal-header flex justify-between items-center mb-4 pb-3 border-b border-bone">
               <div>
-                <span style={{ fontSize: "0.72rem", background: "#FEF3C7", color: "#B45309", padding: "2px 8px", borderRadius: 6, fontWeight: 700 }}>
+                <span className="recon-modal-badge-warning">
                   UC5.7: ĐIỀU CHỈNH TÀI CHÍNH SAU CHỐT
                 </span>
                 <h3 className="modal-title font-bold text-base text-bark mt-1">
                   Lập hồ sơ sửa sai tài chính cho Đơn {order.id}
                 </h3>
               </div>
-              <button onClick={() => setShowAdjustmentModal(false)} className="btn btn-ghost btn-sm text-lg" style={{ border: "none", background: "none", cursor: "pointer" }}>×</button>
+              <button onClick={() => setShowAdjustmentModal(false)} className="btn btn-ghost btn-sm text-lg recon-modal-close-icon">×</button>
             </div>
 
-            <div style={{ background: "var(--color-parchment)", borderRadius: 8, padding: 12, marginBottom: 14, fontSize: "0.8rem" }}>
-              <div className="grid grid-cols-2 gap-2 mb-2">
+            <div className="recon-adj-summary">
+              <div className="grid grid-cols-2 gap-2 mb-2 recon-adj-grid">
                 <div>Chứng từ gốc: <strong>{order.id} (Đã khóa)</strong></div>
                 <div>Khách hàng: <strong>{order.customerName}</strong></div>
                 <div>Cọc ban đầu: <strong>{fmt(depositCollected)}</strong></div>
                 <div>Phụ phí đã chốt: <strong>{fmt(totalApprovedSurcharges)}</strong></div>
               </div>
-              <div style={{ color: "#4B5563", fontSize: "0.75rem", borderTop: "1px dashed var(--color-bone)", paddingTop: 6 }}>
+              <div className="recon-adj-immutable-note">
                 💡 <em>Quy tắc bất biến: Hệ thống tạo chứng từ điều chỉnh bù trừ mới, KHÔNG ghi đè hoặc xóa số liệu đối soát gốc.</em>
               </div>
             </div>
 
             {adjMessage ? (
-              <div style={{ background: "#F0FDF4", border: "1px solid #BBF7D0", borderRadius: 8, padding: 16, textAlign: "center", marginBottom: 12 }}>
-                <div style={{ fontSize: "1.4rem", color: "#16A34A", marginBottom: 6 }}>✓</div>
-                <strong style={{ color: "#15803D", fontSize: "0.9rem" }}>{adjMessage}</strong>
-                <div style={{ marginTop: 12 }}>
+              <div className="recon-adj-success-box">
+                <div className="recon-adj-success-icon">✓</div>
+                <strong className="recon-adj-success-msg">{adjMessage}</strong>
+                <div className="recon-adj-success-actions">
                   <button
                     type="button"
                     onClick={() => setShowAdjustmentModal(false)}
@@ -138,14 +138,13 @@ export function FinancialAdjustmentModal(props: Props) {
               >
                 {app.realApi && approvedSurcharges.some((s) => s.backendId) && (
                   <div>
-                    <label style={{ fontSize: "0.8rem", fontWeight: 700, display: "block", marginBottom: 4 }}>
+                    <label className="recon-adj-label">
                       Phụ phí gốc cần điều chỉnh (tùy chọn):
                     </label>
                     <select
                       value={adjSurchargeId}
                       onChange={(e) => setAdjSurchargeId(e.target.value)}
-                      className="form-select"
-                      style={{ width: "100%", padding: 8, borderRadius: 6, border: "1px solid var(--color-bone)", fontSize: "0.82rem" }}
+                      className="form-select recon-adj-select"
                     >
                       <option value="">-- Lập đối soát điều chỉnh tổng hợp --</option>
                       {approvedSurcharges
@@ -159,14 +158,13 @@ export function FinancialAdjustmentModal(props: Props) {
                   </div>
                 )}
                 <div>
-                  <label style={{ fontSize: "0.8rem", fontWeight: 700, display: "block", marginBottom: 4 }}>
+                  <label className="recon-adj-label">
                     Nghiệp vụ điều chỉnh bù trừ:
                   </label>
                   <select
                     value={adjType}
                     onChange={(e) => setAdjType(e.target.value as typeof adjType)}
-                    className="form-select"
-                    style={{ width: "100%", padding: 8, borderRadius: 6, border: "1px solid var(--color-bone)", fontSize: "0.82rem" }}
+                    className="form-select recon-adj-select"
                   >
                     <option value="Hoàn trả">Hoàn trả thêm cho khách (Phát hiện trừ cọc thừa/đồ tìm thấy)</option>
                     <option value="Thu bù">Thu bù thêm tiền (Phát hiện hư hại phát sinh chưa tính đủ)</option>
@@ -175,7 +173,7 @@ export function FinancialAdjustmentModal(props: Props) {
                 </div>
 
                 <div>
-                  <label style={{ fontSize: "0.8rem", fontWeight: 700, display: "block", marginBottom: 4 }}>
+                  <label className="recon-adj-label">
                     Số tiền chênh lệch cần điều chỉnh (đ): *
                   </label>
                   <input
@@ -185,13 +183,12 @@ export function FinancialAdjustmentModal(props: Props) {
                     value={adjAmount}
                     onChange={(e) => setAdjAmount(Number(e.target.value))}
                     required
-                    className="form-input"
-                    style={{ width: "100%", padding: 8, borderRadius: 6, border: "1px solid var(--color-bone)", fontSize: "0.85rem", fontFamily: "var(--font-mono)", fontWeight: 700 }}
+                    className="form-input recon-adj-input-amount"
                   />
                 </div>
 
                 <div>
-                  <label style={{ fontSize: "0.8rem", fontWeight: 700, display: "block", marginBottom: 4 }}>
+                  <label className="recon-adj-label">
                     Lý do sai lệch & Căn cứ điều chỉnh: *
                   </label>
                   <textarea
@@ -200,12 +197,11 @@ export function FinancialAdjustmentModal(props: Props) {
                     value={adjReason}
                     onChange={(e) => setAdjReason(e.target.value)}
                     placeholder="Ví dụ: Khách tìm thấy cọc lều bị sót và đem gửi trả lại vào ngày hôm sau, cửa hàng hoàn lại 50.000đ tiền phụ phí đã trừ..."
-                    className="form-textarea"
-                    style={{ width: "100%", padding: 8, borderRadius: 6, border: "1px solid var(--color-bone)", fontSize: "0.8rem" }}
+                    className="form-textarea recon-adj-textarea"
                   />
                 </div>
 
-                <div className="flex justify-end gap-2 mt-2 pt-2 border-t border-bone">
+                <div className="flex justify-end gap-2 mt-2 pt-2 border-t border-bone flex-wrap">
                   <button
                     type="button"
                     onClick={() => setShowAdjustmentModal(false)}
@@ -215,8 +211,7 @@ export function FinancialAdjustmentModal(props: Props) {
                   </button>
                   <button
                     type="submit"
-                    className="btn btn-primary btn-sm"
-                    style={{ background: "#B45309", borderColor: "#B45309", color: "white", fontWeight: 700 }}
+                    className="btn btn-primary btn-sm recon-adj-submit-btn"
                   >
                     Lưu chứng từ điều chỉnh (UC5.7)
                   </button>

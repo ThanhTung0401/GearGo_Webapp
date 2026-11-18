@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useApp } from "../../../App";
 import { isRealApiEnabled } from "../../../services/apiClient";
 
@@ -189,52 +189,34 @@ export function PoliciesTab({ app }: { app: ReturnType<typeof useApp> }) {
   const currentVer = app.policies.version || "v1.2";
 
   return (
-    <div style={{ maxWidth: 960 }}>
+    <div className="adm-section-max">
       {/* Header & SubTabs */}
       <div className="flex justify-between items-center mb-4 flex-wrap gap-2">
         <div>
-          <div className="flex items-center gap-2">
-            <h2 style={{ fontFamily: "var(--font-display)", fontSize: "1.4rem", color: "var(--color-bark)" }}>
+          <div className="flex items-center gap-2 flex-wrap">
+            <h2 className="adm-page-title adm-page-title--compact">
               Cấu hình chính sách thuê & hủy (UC8.1)
             </h2>
-            <span style={{ background: "var(--color-forest)", color: "white", padding: "2px 8px", borderRadius: "999px", fontSize: "0.75rem", fontWeight: 700, fontFamily: "var(--font-mono)" }}>
+            <span className="adm-version-pill">
               {currentVer}
             </span>
           </div>
-          <p style={{ color: "#6B7280", fontSize: "0.82rem", marginTop: 2 }}>
+          <p className="adm-page-subtitle adm-page-subtitle--compact">
             Thiết lập quy tắc kinh doanh có phiên bản. Thay đổi chỉ áp dụng cho đơn mới, giữ nguyên chính sách trên các đơn cũ (không tính hồi tố).
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <button
             type="button"
             onClick={() => setSubTab("current")}
-            style={{
-              background: subTab === "current" ? "var(--color-forest)" : "white",
-              color: subTab === "current" ? "white" : "var(--color-bark)",
-              border: "1px solid var(--color-bone)",
-              borderRadius: 8,
-              padding: "7px 14px",
-              cursor: "pointer",
-              fontWeight: 700,
-              fontSize: "0.82rem",
-            }}
+            className={`adm-tab-btn ${subTab === "current" ? "is-active" : ""}`}
           >
             ⚙️ Cấu hình hiện hành
           </button>
           <button
             type="button"
             onClick={() => setSubTab("history")}
-            style={{
-              background: subTab === "history" ? "var(--color-forest)" : "white",
-              color: subTab === "history" ? "white" : "var(--color-bark)",
-              border: "1px solid var(--color-bone)",
-              borderRadius: 8,
-              padding: "7px 14px",
-              cursor: "pointer",
-              fontWeight: 700,
-              fontSize: "0.82rem",
-            }}
+            className={`adm-tab-btn ${subTab === "history" ? "is-active" : ""}`}
           >
             📜 Lịch sử phiên bản ({app.policyVersions.length})
           </button>
@@ -242,12 +224,7 @@ export function PoliciesTab({ app }: { app: ReturnType<typeof useApp> }) {
       </div>
 
       {message && (
-        <div style={{
-          background: message.type === "success" ? "#DCFCE7" : "#FEE2E2",
-          color: message.type === "success" ? "#15803D" : "#B91C1C",
-          border: `1px solid ${message.type === "success" ? "#A7F3D0" : "#FECACA"}`,
-          borderRadius: 8, padding: "10px 14px", marginBottom: 16, fontSize: "0.82rem", fontWeight: 600
-        }}>
+        <div className={`adm-alert font-semibold ${message.type === "success" ? "is-success" : "is-error-solid"}`}>
           {message.text}
         </div>
       )}
@@ -256,16 +233,16 @@ export function PoliciesTab({ app }: { app: ReturnType<typeof useApp> }) {
       {subTab === "current" && (
         <form onSubmit={handleOpenReview} className="flex flex-col gap-5">
           {/* Nhóm 1: Thời gian & Giữ chỗ */}
-          <div style={{ background: "white", borderRadius: 12, border: "1px solid var(--color-bone)", padding: 20 }}>
-            <h3 style={{ fontSize: "0.95rem", fontWeight: 700, color: "var(--color-forest)", marginBottom: 4, display: "flex", alignItems: "center", gap: 6 }}>
+          <div className="adm-card adm-card--padded">
+            <h3 className="adm-policy-h3">
               <span>⏱</span> 1. Thời gian & Quy định giữ chỗ
             </h3>
-            <p style={{ fontSize: "0.75rem", color: "#6B7280", marginBottom: 14 }}>
+            <p className="adm-hint-text mb-3.5">
               Kiểm soát vòng đời đơn Chờ thanh toán và khung giờ tiếp đón khách giao nhận thiết bị tại cửa hàng.
             </p>
-            <div className="grid gap-4" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))" }}>
+            <div className="adm-grid-auto-md">
               <div>
-                <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, color: "var(--color-bark)", marginBottom: 4 }}>
+                <label className="adm-label--sub">
                   Hạn giữ chỗ thanh toán (phút)
                 </label>
                 <input
@@ -274,36 +251,36 @@ export function PoliciesTab({ app }: { app: ReturnType<typeof useApp> }) {
                   max="120"
                   value={form.holdMinutes}
                   onChange={(e) => setForm({ ...form, holdMinutes: Number(e.target.value) })}
-                  style={{ width: "100%", border: "1px solid var(--color-bone)", borderRadius: 8, padding: "8px 10px", fontSize: "0.85rem" }}
+                  className="adm-field adm-field--compact"
                 />
-                <span style={{ fontSize: "0.7rem", color: "#6B7280" }}>Đơn Chờ thanh toán tự động hủy khi hết hạn.</span>
+                <span className="adm-hint-text text-[0.7rem]">Đơn Chờ thanh toán tự động hủy khi hết hạn.</span>
               </div>
               <div>
-                <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, color: "var(--color-bark)", marginBottom: 4 }}>
+                <label className="adm-label--sub">
                   Giờ nhận máy tiêu chuẩn
                 </label>
                 <input
                   type="time"
                   value={form.standardPickupTime || "08:00"}
                   onChange={(e) => setForm({ ...form, standardPickupTime: e.target.value })}
-                  style={{ width: "100%", border: "1px solid var(--color-bone)", borderRadius: 8, padding: "8px 10px", fontSize: "0.85rem" }}
+                  className="adm-field adm-field--compact"
                 />
-                <span style={{ fontSize: "0.7rem", color: "#6B7280" }}>Giờ mở cửa phục vụ giao máy sớm nhất.</span>
+                <span className="adm-hint-text text-[0.7rem]">Giờ mở cửa phục vụ giao máy sớm nhất.</span>
               </div>
               <div>
-                <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, color: "var(--color-bark)", marginBottom: 4 }}>
+                <label className="adm-label--sub">
                   Giờ trả máy tiêu chuẩn
                 </label>
                 <input
                   type="time"
                   value={form.standardReturnTime || "20:00"}
                   onChange={(e) => setForm({ ...form, standardReturnTime: e.target.value })}
-                  style={{ width: "100%", border: "1px solid var(--color-bone)", borderRadius: 8, padding: "8px 10px", fontSize: "0.85rem" }}
+                  className="adm-field adm-field--compact"
                 />
-                <span style={{ fontSize: "0.7rem", color: "#6B7280" }}>Giờ đóng cửa tiếp nhận trả máy trong ngày.</span>
+                <span className="adm-hint-text text-[0.7rem]">Giờ đóng cửa tiếp nhận trả máy trong ngày.</span>
               </div>
               <div>
-                <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, color: "var(--color-bark)", marginBottom: 4 }}>
+                <label className="adm-label--sub">
                   Tỷ lệ đặt cọc tối thiểu (%)
                 </label>
                 <input
@@ -312,32 +289,32 @@ export function PoliciesTab({ app }: { app: ReturnType<typeof useApp> }) {
                   max="100"
                   value={form.minDepositPercentage ?? 100}
                   onChange={(e) => setForm({ ...form, minDepositPercentage: Number(e.target.value) })}
-                  style={{ width: "100%", border: "1px solid var(--color-bone)", borderRadius: 8, padding: "8px 10px", fontSize: "0.85rem" }}
+                  className="adm-field adm-field--compact"
                 />
-                <span style={{ fontSize: "0.7rem", color: "#6B7280" }}>Mặc định 100% giá trị cọc quy định.</span>
+                <span className="adm-hint-text text-[0.7rem]">Mặc định 100% giá trị cọc quy định.</span>
               </div>
             </div>
           </div>
 
           {/* Nhóm 2: Mốc hủy đơn & Phạt hoàn tiền (UC8.1) */}
-          <div style={{ background: "white", borderRadius: 12, border: "1px solid var(--color-bone)", padding: 20 }}>
-            <h3 style={{ fontSize: "0.95rem", fontWeight: 700, color: "var(--color-forest)", marginBottom: 4, display: "flex", alignItems: "center", gap: 6 }}>
+          <div className="adm-card adm-card--padded">
+            <h3 className="adm-policy-h3">
               <span>🚫</span> 2. Mốc hủy đơn & Tỷ lệ phạt hoàn cọc (UC8.1)
             </h3>
-            <p style={{ fontSize: "0.75rem", color: "#6B7280", marginBottom: 14 }}>
+            <p className="adm-hint-text mb-3.5">
               Quy tắc tính phí phạt hủy khi khách chủ động hủy đơn trước giờ nhận máy. Chặn mâu thuẫn mốc thời gian (Dòng phụ 2.1).
             </p>
-            <div className="grid gap-4" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))" }}>
-              <div style={{ background: "#F0FDF4", border: "1px solid #BBF7D0", borderRadius: 8, padding: 12 }}>
-                <div style={{ fontWeight: 700, fontSize: "0.8rem", color: "#15803D", marginBottom: 4 }}>
+            <div className="adm-grid-auto-md">
+              <div className="adm-policy-free-box">
+                <div className="font-bold text-[0.8rem] text-[#15803D] mb-1">
                   Mốc 1: Hủy trước &gt; {form.cancellationFreeHours ?? 48} giờ
                 </div>
-                <div style={{ fontSize: "0.75rem", color: "#4B5563" }}>
+                <div className="text-[0.75rem] text-[#4B5563]">
                   Phí phạt hủy: <strong>0%</strong> (Hoàn 100% tiền cọc và tiền thuê).
                 </div>
               </div>
               <div>
-                <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, color: "var(--color-bark)", marginBottom: 4 }}>
+                <label className="adm-label--sub">
                   Tỷ lệ phạt hủy trước 24h - 48h (%)
                 </label>
                 <input
@@ -346,12 +323,12 @@ export function PoliciesTab({ app }: { app: ReturnType<typeof useApp> }) {
                   max="100"
                   value={form.cancellationTier1FeePercent}
                   onChange={(e) => setForm({ ...form, cancellationTier1FeePercent: Number(e.target.value) })}
-                  style={{ width: "100%", border: "1px solid var(--color-bone)", borderRadius: 8, padding: "8px 10px", fontSize: "0.85rem" }}
+                  className="adm-field adm-field--compact"
                 />
-                <span style={{ fontSize: "0.7rem", color: "#6B7280" }}>Áp dụng khi khách hủy đơn trong khoảng 24h đến 48h trước giờ nhận.</span>
+                <span className="adm-hint-text text-[0.7rem]">Áp dụng khi khách hủy đơn trong khoảng 24h đến 48h trước giờ nhận.</span>
               </div>
               <div>
-                <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, color: "var(--color-bark)", marginBottom: 4 }}>
+                <label className="adm-label--sub">
                   Tỷ lệ phạt hủy sát giờ &lt; 24h (%)
                 </label>
                 <input
@@ -360,24 +337,24 @@ export function PoliciesTab({ app }: { app: ReturnType<typeof useApp> }) {
                   max="100"
                   value={form.cancellationTier2FeePercent}
                   onChange={(e) => setForm({ ...form, cancellationTier2FeePercent: Number(e.target.value) })}
-                  style={{ width: "100%", border: "1px solid var(--color-bone)", borderRadius: 8, padding: "8px 10px", fontSize: "0.85rem" }}
+                  className="adm-field adm-field--compact"
                 />
-                <span style={{ fontSize: "0.7rem", color: "#6B7280" }}>Hủy sát giờ (&lt;24h) không được hoàn tiền thuê theo quy định.</span>
+                <span className="adm-hint-text text-[0.7rem]">Hủy sát giờ (&lt;24h) không được hoàn tiền thuê theo quy định.</span>
               </div>
             </div>
           </div>
 
           {/* Nhóm 3: Phạt trễ hạn & Biểu phí bồi thường hư hỏng / phụ kiện */}
-          <div style={{ background: "white", borderRadius: 12, border: "1px solid var(--color-bone)", padding: 20 }}>
-            <h3 style={{ fontSize: "0.95rem", fontWeight: 700, color: "var(--color-forest)", marginBottom: 4, display: "flex", alignItems: "center", gap: 6 }}>
+          <div className="adm-card adm-card--padded">
+            <h3 className="adm-policy-h3">
               <span>⚠️</span> 3. Phạt trễ hạn & Biểu phí bồi thường hư hại / phụ kiện
             </h3>
-            <p style={{ fontSize: "0.75rem", color: "#6B7280", marginBottom: 14 }}>
+            <p className="adm-hint-text mb-3.5">
               Cơ sở để nhân viên kho tính phụ phí quá hạn và bồi thường khi khách làm hỏng máy hoặc thất lạc phụ kiện.
             </p>
-            <div className="grid gap-4 mb-4" style={{ gridTemplateColumns: "1fr 1fr" }}>
+            <div className="adm-grid-2 mb-4 gap-4">
               <div>
-                <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, color: "var(--color-bark)", marginBottom: 4 }}>
+                <label className="adm-label--sub">
                   Hệ số phạt trễ hạn (lần/ngày)
                 </label>
                 <input
@@ -387,12 +364,12 @@ export function PoliciesTab({ app }: { app: ReturnType<typeof useApp> }) {
                   max="5.0"
                   value={form.overdueMultiplier}
                   onChange={(e) => setForm({ ...form, overdueMultiplier: Number(e.target.value) })}
-                  style={{ width: "100%", border: "1px solid var(--color-bone)", borderRadius: 8, padding: "8px 10px", fontSize: "0.85rem" }}
+                  className="adm-field adm-field--compact"
                 />
-                <span style={{ fontSize: "0.7rem", color: "#6B7280" }}>Ví dụ: 1.5 tương ứng 150% đơn giá ngày cho mỗi ngày quá hạn.</span>
+                <span className="adm-hint-text text-[0.7rem]">Ví dụ: 1.5 tương ứng 150% đơn giá ngày cho mỗi ngày quá hạn.</span>
               </div>
               <div>
-                <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, color: "var(--color-bark)", marginBottom: 4 }}>
+                <label className="adm-label--sub">
                   Tỷ lệ đền bù hư hỏng cơ bản (% giá trị thiết bị)
                 </label>
                 <input
@@ -401,28 +378,28 @@ export function PoliciesTab({ app }: { app: ReturnType<typeof useApp> }) {
                   max="100"
                   value={form.damageCompensationPercent ?? 50}
                   onChange={(e) => setForm({ ...form, damageCompensationPercent: Number(e.target.value) })}
-                  style={{ width: "100%", border: "1px solid var(--color-bone)", borderRadius: 8, padding: "8px 10px", fontSize: "0.85rem" }}
+                  className="adm-field adm-field--compact"
                 />
-                <span style={{ fontSize: "0.7rem", color: "#6B7280" }}>Mức phạt gợi ý khi thiết bị trầy xước nặng hoặc hỏng linh kiện.</span>
+                <span className="adm-hint-text text-[0.7rem]">Mức phạt gợi ý khi thiết bị trầy xước nặng hoặc hỏng linh kiện.</span>
               </div>
             </div>
 
             {/* Biểu phí phụ kiện lẻ */}
-            <div style={{ background: "var(--color-parchment)", borderRadius: 8, padding: 12 }}>
-              <div style={{ fontSize: "0.78rem", fontWeight: 700, color: "var(--color-bark)", marginBottom: 8 }}>
+            <div className="adm-card--parchment">
+              <div className="adm-label--sub mb-2">
                 Biểu phí bồi thường mất phụ kiện lẻ kèm theo:
               </div>
-              <div className="grid gap-2" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))" }}>
+              <div className="adm-grid-auto-lg">
                 {(form.accessoryLossFeeSchedule || []).map((item, idx) => (
-                  <div key={item.accessoryName} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "white", padding: "6px 10px", borderRadius: 6, border: "1px solid var(--color-bone)" }}>
-                    <span style={{ fontSize: "0.75rem", fontWeight: 600 }}>{item.accessoryName}</span>
+                  <div key={item.accessoryName} className="adm-policy-fee-item">
+                    <span className="text-[0.75rem] font-semibold">{item.accessoryName}</span>
                     <input
                       type="number"
                       step="10000"
                       min="0"
                       value={item.defaultFee}
                       onChange={(e) => updateAccessoryFee(idx, Number(e.target.value))}
-                      style={{ width: 110, textAlign: "right", border: "1px solid var(--color-bone)", borderRadius: 4, padding: "4px 6px", fontSize: "0.78rem", fontFamily: "var(--font-mono)" }}
+                      className="adm-policy-fee-input"
                     />
                   </div>
                 ))}
@@ -431,16 +408,16 @@ export function PoliciesTab({ app }: { app: ReturnType<typeof useApp> }) {
           </div>
 
           {/* Nhóm 4: Ngưỡng duyệt phí quản trị & Lịch nhắc khách */}
-          <div style={{ background: "white", borderRadius: 12, border: "1px solid var(--color-bone)", padding: 20 }}>
-            <h3 style={{ fontSize: "0.95rem", fontWeight: 700, color: "var(--color-forest)", marginBottom: 4, display: "flex", alignItems: "center", gap: 6 }}>
+          <div className="adm-card adm-card--padded">
+            <h3 className="adm-policy-h3">
               <span>🛡</span> 4. Ngưỡng duyệt phụ phí & Lịch nhắc khách tự động
             </h3>
-            <p style={{ fontSize: "0.75rem", color: "#6B7280", marginBottom: 14 }}>
+            <p className="adm-hint-text mb-3.5">
               Cấu hình bảo vệ kiểm soát nội bộ và tự động hóa trải nghiệm khách hàng trước các mốc nhận/trả.
             </p>
-            <div className="grid gap-4" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))" }}>
+            <div className="adm-grid-auto-md">
               <div>
-                <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, color: "var(--color-bark)", marginBottom: 4 }}>
+                <label className="adm-label--sub">
                   Ngưỡng phụ phí Admin duyệt (VNĐ)
                 </label>
                 <input
@@ -449,12 +426,12 @@ export function PoliciesTab({ app }: { app: ReturnType<typeof useApp> }) {
                   min="0"
                   value={form.adminApprovalFeeThreshold ?? 1000000}
                   onChange={(e) => setForm({ ...form, adminApprovalFeeThreshold: Number(e.target.value) })}
-                  style={{ width: "100%", border: "1px solid var(--color-bone)", borderRadius: 8, padding: "8px 10px", fontSize: "0.85rem", fontFamily: "var(--font-mono)" }}
+                  className="adm-field adm-field--compact adm-field--mono"
                 />
-                <span style={{ fontSize: "0.7rem", color: "#6B7280" }}>Phụ phí vượt mức này nhân viên không được tự quyết, cần Admin duyệt.</span>
+                <span className="adm-hint-text text-[0.7rem]">Phụ phí vượt mức này nhân viên không được tự quyết, cần Admin duyệt.</span>
               </div>
               <div>
-                <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, color: "var(--color-bark)", marginBottom: 4 }}>
+                <label className="adm-label--sub">
                   Nhắc nhận máy trước (giờ)
                 </label>
                 <input
@@ -463,12 +440,12 @@ export function PoliciesTab({ app }: { app: ReturnType<typeof useApp> }) {
                   max="24"
                   value={form.reminderPickupHoursBefore ?? 4}
                   onChange={(e) => setForm({ ...form, reminderPickupHoursBefore: Number(e.target.value) })}
-                  style={{ width: "100%", border: "1px solid var(--color-bone)", borderRadius: 8, padding: "8px 10px", fontSize: "0.85rem" }}
+                  className="adm-field adm-field--compact"
                 />
-                <span style={{ fontSize: "0.7rem", color: "#6B7280" }}>Hệ thống gửi thông báo nhắc khách đến nhận máy.</span>
+                <span className="adm-hint-text text-[0.7rem]">Hệ thống gửi thông báo nhắc khách đến nhận máy.</span>
               </div>
               <div>
-                <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, color: "var(--color-bark)", marginBottom: 4 }}>
+                <label className="adm-label--sub">
                   Nhắc trả máy trước (giờ)
                 </label>
                 <input
@@ -477,36 +454,26 @@ export function PoliciesTab({ app }: { app: ReturnType<typeof useApp> }) {
                   max="24"
                   value={form.reminderReturnHoursBefore ?? 2}
                   onChange={(e) => setForm({ ...form, reminderReturnHoursBefore: Number(e.target.value) })}
-                  style={{ width: "100%", border: "1px solid var(--color-bone)", borderRadius: 8, padding: "8px 10px", fontSize: "0.85rem" }}
+                  className="adm-field adm-field--compact"
                 />
-                <span style={{ fontSize: "0.7rem", color: "#6B7280" }}>Gửi cảnh báo trước giờ hẹn trả để tránh phát sinh phụ phí trễ.</span>
+                <span className="adm-hint-text text-[0.7rem]">Gửi cảnh báo trước giờ hẹn trả để tránh phát sinh phụ phí trễ.</span>
               </div>
             </div>
           </div>
 
           {/* Banner thông tin phiên bản & Nút lưu */}
-          <div style={{ background: "var(--color-parchment)", borderRadius: 10, padding: 16, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
+          <div className="adm-policy-banner">
             <div>
-              <div style={{ fontSize: "0.8rem", color: "var(--color-bark)", fontWeight: 700 }}>
-                Chính sách đang áp dụng: <span style={{ color: "var(--color-forest)" }}>{currentVer}</span> (Hiệu lực từ {app.policies.effectiveDate || "01/12/2024"})
+              <div className="text-[0.8rem] text-[var(--color-bark)] font-bold">
+                Chính sách đang áp dụng: <span className="text-[var(--color-forest)]">{currentVer}</span> (Hiệu lực từ {app.policies.effectiveDate || "01/12/2024"})
               </div>
-              <div style={{ fontSize: "0.72rem", color: "#6B7280", marginTop: 2 }}>
+              <div className="adm-hint-text mt-0.5">
                 Ban hành bởi <strong>{app.policies.updatedBy}</strong> lúc {app.policies.updatedAt}
               </div>
             </div>
             <button
               type="submit"
-              style={{
-                background: "var(--color-forest)",
-                color: "white",
-                border: "none",
-                borderRadius: 8,
-                padding: "10px 22px",
-                fontWeight: 700,
-                fontSize: "0.85rem",
-                cursor: "pointer",
-                boxShadow: "0 2px 8px rgba(34, 197, 94, 0.25)"
-              }}
+              className="adm-btn-primary px-5 py-2.5 font-bold shadow-sm"
             >
               Xem lại tác động & Ban hành phiên bản mới (UC8.1.1) →
             </button>
@@ -516,39 +483,39 @@ export function PoliciesTab({ app }: { app: ReturnType<typeof useApp> }) {
 
       {/* SUBTAB 2: LỊCH SỬ PHIÊN BẢN (UC8.1.1) */}
       {subTab === "history" && (
-        <div style={{ background: "white", borderRadius: 12, border: "1px solid var(--color-bone)", overflow: "hidden" }}>
-          <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--color-bone)" }}>
-            <h3 style={{ fontSize: "1rem", fontWeight: 700, color: "var(--color-bark)" }}>
+        <div className="adm-table-wrap">
+          <div className="px-5 py-4 border-b border-[var(--color-bone)]">
+            <h3 className="adm-section-heading mb-1 text-base">
               Lịch sử các phiên bản chính sách đã ban hành ({app.policyVersions.length})
             </h3>
-            <p style={{ fontSize: "0.75rem", color: "#6B7280", margin: 0 }}>
+            <p className="adm-hint-text text-[0.75rem] m-0">
               Mỗi phiên bản lưu giữ toàn bộ snapshot quy tắc kinh doanh tại thời điểm ban hành. Đơn thuê phát sinh thời điểm nào giữ nguyên căn cứ tính của phiên bản đó.
             </p>
           </div>
           <div className="responsive-table">
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <table className="adm-table adm-table--zebra adm-table--md">
               <thead>
-                <tr style={{ background: "var(--color-parchment)", fontSize: "0.75rem", fontWeight: 700, color: "var(--color-bark)" }}>
+                <tr>
                   {["Phiên bản", "Ngày hiệu lực", "Ngày cập nhật", "Người ban hành", "Lý do ban hành / Nội dung thay đổi", "Thao tác"].map((h) => (
-                    <th key={h} style={{ padding: "10px 14px", textAlign: "left" }}>{h}</th>
+                    <th key={h}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {app.policyVersions.map((v, i) => (
-                  <tr key={v.version} style={{ borderTop: "1px solid var(--color-bone)", background: i % 2 === 0 ? "white" : "var(--color-cream)", fontSize: "0.8rem" }}>
-                    <td style={{ padding: "12px 14px", fontWeight: 700, fontFamily: "var(--font-mono)", color: "var(--color-forest)" }}>
+                {app.policyVersions.map((v) => (
+                  <tr key={v.version}>
+                    <td className="adm-cell-code">
                       {v.version}
                     </td>
-                    <td style={{ padding: "12px 14px", fontWeight: 600 }}>{v.effectiveDate}</td>
-                    <td style={{ padding: "12px 14px", color: "#6B7280", fontSize: "0.75rem" }}>{v.updatedAt}</td>
-                    <td style={{ padding: "12px 14px" }}>{v.updatedBy}</td>
-                    <td style={{ padding: "12px 14px", color: "#374151" }}>{v.changeReason}</td>
-                    <td style={{ padding: "12px 14px" }}>
+                    <td className="font-semibold">{v.effectiveDate}</td>
+                    <td className="adm-hint-text">{v.updatedAt}</td>
+                    <td>{v.updatedBy}</td>
+                    <td className="text-[#374151]">{v.changeReason}</td>
+                    <td>
                       <button
                         type="button"
                         onClick={() => setSelectedSnapshot(v)}
-                        style={{ background: "white", color: "var(--color-forest)", border: "1px solid var(--color-forest)", borderRadius: 6, padding: "4px 10px", fontSize: "0.75rem", cursor: "pointer", fontWeight: 600 }}
+                        className="adm-btn-forest-outline"
                       >
                         👁 Xem snapshot
                       </button>
@@ -563,48 +530,48 @@ export function PoliciesTab({ app }: { app: ReturnType<typeof useApp> }) {
 
       {/* MODAL SO SÁNH ĐỐI CHIẾU CŨ VS MỚI (UC8.1.1) */}
       {showConfirmModal && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 9999, display: "grid", placeItems: "center", padding: 20 }}>
-          <div style={{ background: "white", borderRadius: 16, maxWidth: 580, width: "100%", padding: 24, boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.2)" }}>
+        <div className="adm-modal-overlay">
+          <div className="adm-modal-dialog is-md p-6 max-w-[580px]">
             <div className="flex justify-between items-start mb-3">
               <div>
-                <span style={{ fontSize: "0.72rem", background: "#DCFCE7", color: "#15803D", padding: "2px 8px", borderRadius: 6, fontWeight: 700 }}>
+                <span className="adm-pill is-success">
                   UC8.1.1: ĐỐI CHIẾU PHIÊN BẢN MỚI
                 </span>
-                <h3 style={{ fontFamily: "var(--font-display)", fontSize: "1.25rem", color: "var(--color-bark)", marginTop: 4 }}>
+                <h3 className="adm-card-title text-[1.25rem] mt-1">
                   Xác nhận ban hành chính sách mới
                 </h3>
               </div>
-              <button type="button" onClick={() => setShowConfirmModal(false)} style={{ border: "none", background: "none", fontSize: "1.2rem", cursor: "pointer" }}>✕</button>
+              <button type="button" onClick={() => setShowConfirmModal(false)} className="adm-btn-ghost text-lg">✕</button>
             </div>
 
-            <p style={{ fontSize: "0.78rem", color: "#4B5563", marginBottom: 12 }}>
+            <p className="text-[0.78rem] text-[#4B5563] mb-3">
               Hệ thống đã phát hiện <strong>{getChangedFields().length} thông số</strong> có sự thay đổi so với phiên bản hiện tại:
             </p>
 
             {/* Bảng diff Cũ vs Mới */}
-            <div style={{ background: "var(--color-parchment)", borderRadius: 8, padding: 10, marginBottom: 16, border: "1px solid var(--color-bone)", maxHeight: 180, overflowY: "auto" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.75rem" }}>
+            <div className="adm-diff-box">
+              <table className="adm-table adm-table--sm">
                 <thead>
-                  <tr style={{ color: "#6B7280", textAlign: "left" }}>
-                    <th style={{ padding: "4px 8px" }}>Thông số</th>
-                    <th style={{ padding: "4px 8px" }}>Giá trị cũ</th>
-                    <th style={{ padding: "4px 8px" }}>Giá trị mới</th>
+                  <tr>
+                    <th>Thông số</th>
+                    <th>Giá trị cũ</th>
+                    <th>Giá trị mới</th>
                   </tr>
                 </thead>
                 <tbody>
                   {getChangedFields().map((d) => (
-                    <tr key={d.field} style={{ borderTop: "1px solid var(--color-bone)" }}>
-                      <td style={{ padding: "6px 8px", fontWeight: 600 }}>{d.field}</td>
-                      <td style={{ padding: "6px 8px", color: "#9CA3AF", textDecoration: "line-through" }}>{d.oldVal}</td>
-                      <td style={{ padding: "6px 8px", color: "var(--color-forest)", fontWeight: 700 }}>{d.newVal}</td>
+                    <tr key={d.field}>
+                      <td className="font-semibold">{d.field}</td>
+                      <td className="text-[#9CA3AF] line-through">{d.oldVal}</td>
+                      <td className="text-[var(--color-forest)] font-bold">{d.newVal}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
 
-            <div style={{ marginBottom: 12 }}>
-              <label style={{ fontSize: "0.78rem", fontWeight: 700, display: "block", marginBottom: 4 }}>
+            <div className="mb-3">
+              <label className="adm-label--sub">
                 Lý do điều chỉnh chính sách * (Bắt buộc theo UC8.1)
               </label>
               <textarea
@@ -612,51 +579,37 @@ export function PoliciesTab({ app }: { app: ReturnType<typeof useApp> }) {
                 value={changeReason}
                 onChange={(e) => setChangeReason(e.target.value)}
                 rows={2}
-                style={{ width: "100%", border: "1px solid var(--color-bone)", borderRadius: 8, padding: "8px 10px", fontSize: "0.82rem", resize: "none" }}
+                className="adm-field adm-field--compact adm-field--no-resize"
               />
             </div>
 
-            <div style={{ marginBottom: 16 }}>
-              <label style={{ fontSize: "0.78rem", fontWeight: 700, display: "block", marginBottom: 4 }}>
+            <div className="mb-4">
+              <label className="adm-label--sub">
                 Thời điểm bắt đầu có hiệu lực
               </label>
               <input
                 type="datetime-local"
                 value={effectiveDate}
                 onChange={(e) => setEffectiveDate(e.target.value)}
-                style={{ width: "100%", border: "1px solid var(--color-bone)", borderRadius: 8, padding: "8px 10px", fontSize: "0.82rem" }}
+                className="adm-field adm-field--compact"
               />
-              <span style={{ fontSize: "0.7rem", color: "#6B7280" }}>Chính sách mới sẽ chỉ áp dụng cho các đơn đặt thuê phát sinh từ mốc thời gian này (không hồi tố).</span>
+              <span className="adm-hint-text text-[0.7rem]">Chính sách mới sẽ chỉ áp dụng cho các đơn đặt thuê phát sinh từ mốc thời gian này (không hồi tố).</span>
             </div>
 
             {checkingPolicy && (
-              <div style={{ fontSize: "0.78rem", color: "#6B7280", marginBottom: 10 }}>
+              <div className="adm-loading-text mb-2.5 text-[0.78rem]">
                 Đang kiểm tra hợp lệ phiên bản chính sách với máy chủ...
               </div>
             )}
 
             {previewCheck && (previewCheck.canhBao?.length ?? 0) > 0 && (
-              <div style={{ background: "#FEF3C7", border: "1px solid #FCD34D", color: "#92400E", borderRadius: 8, padding: "8px 10px", fontSize: "0.76rem", marginBottom: 10 }}>
+              <div className="adm-alert is-warning adm-alert--compact adm-alert--block">
                 <strong>Cảnh báo từ hệ thống:</strong> {previewCheck.canhBao.join(" | ")}
               </div>
             )}
 
             {modalError && (
-              <div
-                role="alert"
-                style={{
-                  background: "#FEF2F2",
-                  border: "1px solid #FECACA",
-                  color: "#B91C1C",
-                  borderRadius: 8,
-                  padding: "8px 10px",
-                  fontSize: "0.78rem",
-                  marginBottom: 12,
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 6,
-                }}
-              >
+              <div role="alert" className="adm-alert adm-alert--compact is-error mb-3">
                 <Icon name="alert-circle" size={15} />
                 <span>{modalError}</span>
               </div>
@@ -670,7 +623,7 @@ export function PoliciesTab({ app }: { app: ReturnType<typeof useApp> }) {
                   setShowConfirmModal(false);
                   setModalError("");
                 }}
-                style={{ background: "white", border: "1px solid var(--color-bone)", borderRadius: 8, padding: "8px 16px", cursor: "pointer", fontSize: "0.82rem" }}
+                className="adm-btn-outline py-2 px-4 text-[0.82rem]"
               >
                 Hủy bỏ
               </button>
@@ -678,7 +631,7 @@ export function PoliciesTab({ app }: { app: ReturnType<typeof useApp> }) {
                 type="button"
                 disabled={policySaving}
                 onClick={() => void handleConfirmSave()}
-                style={{ background: "var(--color-forest)", color: "white", border: "none", borderRadius: 8, padding: "8px 18px", fontWeight: 700, fontSize: "0.82rem", cursor: "pointer" }}
+                className="adm-btn-primary py-2 px-4.5 font-bold text-[0.82rem]"
               >
                 {policySaving ? "Đang ban hành..." : "✓ Ban hành & Lưu phiên bản mới"}
               </button>
@@ -689,25 +642,25 @@ export function PoliciesTab({ app }: { app: ReturnType<typeof useApp> }) {
 
       {/* MODAL XEM CHI TIẾT SNAPSHOT PHIÊN BẢN CŨ */}
       {selectedSnapshot && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 9999, display: "grid", placeItems: "center", padding: 20 }}>
-          <div style={{ background: "white", borderRadius: 16, maxWidth: 540, width: "100%", padding: 24 }}>
+        <div className="adm-modal-overlay">
+          <div className="adm-modal-dialog is-md p-6 max-w-[540px]">
             <div className="flex justify-between items-start mb-3">
               <div>
-                <span style={{ fontSize: "0.72rem", background: "var(--color-parchment)", color: "var(--color-forest)", padding: "2px 8px", borderRadius: 6, fontWeight: 700, fontFamily: "var(--font-mono)" }}>
+                <span className="adm-pill is-parchment adm-cell-mono">
                   SNAPSHOT {selectedSnapshot.version}
                 </span>
-                <h3 style={{ fontFamily: "var(--font-display)", fontSize: "1.2rem", color: "var(--color-bark)", marginTop: 4 }}>
+                <h3 className="adm-card-title text-[1.2rem] mt-1">
                   Chính sách có hiệu lực từ {selectedSnapshot.effectiveDate}
                 </h3>
               </div>
-              <button type="button" onClick={() => setSelectedSnapshot(null)} style={{ border: "none", background: "none", fontSize: "1.2rem", cursor: "pointer" }}>✕</button>
+              <button type="button" onClick={() => setSelectedSnapshot(null)} className="adm-btn-ghost text-lg">✕</button>
             </div>
 
-            <div style={{ fontSize: "0.78rem", color: "#6B7280", marginBottom: 12 }}>
+            <div className="adm-hint-text text-[0.78rem] mb-3">
               Lý do ban hành: <strong>{selectedSnapshot.changeReason}</strong> (Cập nhật bởi {selectedSnapshot.updatedBy} lúc {selectedSnapshot.updatedAt})
             </div>
 
-            <div style={{ background: "var(--color-parchment)", borderRadius: 8, padding: 12, fontSize: "0.78rem", display: "flex", flexDirection: "column", gap: 6, maxHeight: 260, overflowY: "auto" }}>
+            <div className="adm-card--parchment text-[0.78rem] flex flex-col gap-1.5 max-h-[260px] overflow-y-auto">
               <div className="flex justify-between"><span>Thời gian giữ chỗ:</span><strong>{selectedSnapshot.configSnapshot.holdMinutes} phút</strong></div>
               <div className="flex justify-between"><span>Giờ nhận / trả chuẩn:</span><strong>{selectedSnapshot.configSnapshot.standardPickupTime || "08:00"} - {selectedSnapshot.configSnapshot.standardReturnTime || "20:00"}</strong></div>
               <div className="flex justify-between"><span>Phí phạt hủy 24-48h:</span><strong>{selectedSnapshot.configSnapshot.cancellationTier1FeePercent}%</strong></div>
@@ -721,7 +674,7 @@ export function PoliciesTab({ app }: { app: ReturnType<typeof useApp> }) {
               <button
                 type="button"
                 onClick={() => setSelectedSnapshot(null)}
-                style={{ background: "var(--color-forest)", color: "white", border: "none", borderRadius: 8, padding: "8px 18px", fontWeight: 700, fontSize: "0.82rem", cursor: "pointer" }}
+                className="adm-btn-primary py-2 px-4.5 font-bold text-[0.82rem]"
               >
                 Đóng
               </button>

@@ -168,7 +168,7 @@ export function ProfileReviewsSection({
               key={idx}
               src={img}
               alt="Ảnh dã ngoại thực tế"
-              style={{ width: 56, height: 56, objectFit: "cover", borderRadius: 6, border: "1px solid #CBD5E1", cursor: "pointer" }}
+              className="cp-review-img-thumb"
               onClick={() => window.open(img, "_blank")}
               title="Xem ảnh gốc"
             />
@@ -176,12 +176,12 @@ export function ProfileReviewsSection({
         </div>
       )}
       {(existing.storeResponse || existing.response) && (
-        <div style={{ background: "#F0FDF4", borderLeft: "3px solid #16A34A", borderRadius: "0 6px 6px 0", padding: "8px 12px" }}>
-          <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "#166534", display: "flex", justifyContent: "space-between" }}>
+        <div className="cp-review-reply-box">
+          <div className="cp-review-reply-header">
             <span>💬 Phản hồi từ GearGo ({existing.storeResponse?.respondedBy || "Cửa hàng"})</span>
-            <span style={{ fontWeight: 400, color: "#64748B" }}>{existing.storeResponse?.respondedAt}</span>
+            <span className="cp-review-reply-date">{existing.storeResponse?.respondedAt}</span>
           </div>
-          <div style={{ fontSize: "0.78rem", color: "#14532D", marginTop: 4, lineHeight: 1.45 }}>
+          <div className="cp-review-reply-text">
             {existing.storeResponse?.response || existing.response}
           </div>
         </div>
@@ -204,16 +204,7 @@ export function ProfileReviewsSection({
               key={s}
               type="button"
               onClick={() => setRating(s)}
-              style={{
-                background: rating >= s ? "#FEF3C7" : "#F3F4F6",
-                border: `1px solid ${rating >= s ? "#F59E0B" : "#E5E7EB"}`,
-                color: rating >= s ? "#D97706" : "#9CA3AF",
-                borderRadius: 8,
-                padding: "6px 10px",
-                cursor: "pointer",
-                fontSize: "0.8rem",
-                fontWeight: 700,
-              }}
+              className={`cp-star-btn ${rating >= s ? "is-active" : ""}`}
             >
               ★ {s} {s === 5 ? "Rất tốt" : s === 4 ? "Tốt" : s === 3 ? "Bình thường" : s === 2 ? "Chưa tốt" : "Tệ"}
             </button>
@@ -241,8 +232,7 @@ export function ProfileReviewsSection({
             placeholder="Dán URL ảnh dã ngoại (https://...)"
             value={reviewImageInput}
             onChange={(e) => setReviewImageInput(e.target.value)}
-            className="form-input flex-1"
-            style={{ fontSize: "0.82rem", minWidth: 200 }}
+            className="form-input flex-1 cp-review-url-input"
           />
           <button
             type="button"
@@ -271,7 +261,7 @@ export function ProfileReviewsSection({
                 void handleUploadReviewFiles(e.target.files);
                 e.target.value = "";
               }}
-              style={{ display: "none" }}
+              className="cp-review-file-input"
             />
           </label>
         </div>
@@ -290,8 +280,7 @@ export function ProfileReviewsSection({
               onClick={() =>
                 setReviewImages((prev) => (prev.length < 5 && !prev.includes(sample.url) ? [...prev, sample.url] : prev))
               }
-              className="btn btn-ghost btn-sm"
-              style={{ fontSize: "0.72rem", border: "1px dashed #CBD5E1", padding: "3px 8px" }}
+              className="btn btn-ghost btn-sm cp-review-sample-btn"
             >
               {sample.label}
             </button>
@@ -301,28 +290,16 @@ export function ProfileReviewsSection({
         {reviewImages.length > 0 && (
           <div className="mt-2 flex gap-2 flex-wrap">
             {reviewImages.map((img, idx) => (
-              <div key={idx} style={{ position: "relative" }}>
+              <div key={idx} className="cp-review-preview-item">
                 <img
                   src={img}
                   alt={`Xem trước ảnh ${idx + 1}`}
-                  style={{ width: 72, height: 72, objectFit: "cover", borderRadius: 6, border: "1px solid #CBD5E1" }}
+                  className="cp-review-preview-img"
                 />
                 <button
                   type="button"
                   onClick={() => setReviewImages((prev) => prev.filter((_, i) => i !== idx))}
-                  style={{
-                    position: "absolute",
-                    top: -6,
-                    right: -6,
-                    width: 18,
-                    height: 18,
-                    borderRadius: "50%",
-                    background: "#EF4444",
-                    color: "white",
-                    border: "none",
-                    fontSize: "0.65rem",
-                    cursor: "pointer",
-                  }}
+                  className="cp-review-preview-remove"
                 >
                   ✕
                 </button>

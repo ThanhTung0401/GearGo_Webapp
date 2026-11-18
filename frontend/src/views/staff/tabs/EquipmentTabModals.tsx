@@ -128,26 +128,26 @@ export function EquipmentTabModals(props: EquipmentTabModalsProps) {
     <>
       {/* UC6.12: Modal Tạo Phiếu Bảo Trì */}
       {showCreateMaintenanceModal && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 9999, display: "grid", placeItems: "center", padding: 20 }}>
-          <div style={{ background: "white", borderRadius: 16, maxWidth: 500, width: "100%", padding: 24 }}>
+        <div className="so-modal-overlay">
+          <div className="so-modal-card-500">
             <div className="flex justify-between items-start mb-3">
               <div>
-                <span style={{ fontSize: "0.72rem", background: "#FEF3C7", color: "#B45309", padding: "2px 8px", borderRadius: 6, fontWeight: 700 }}>
+                <span className="so-modal-tag is-amber">
                   UC6.12: TẠO PHIẾU BẢO TRÌ
                 </span>
-                <h3 style={{ fontFamily: "var(--font-display)", fontSize: "1.25rem", color: "var(--color-bark)", marginTop: 4 }}>
+                <h3 className="so-modal-title-md">
                   Lập phiếu sửa chữa thiết bị
                 </h3>
               </div>
-              <button type="button" onClick={() => setShowCreateMaintenanceModal(false)} style={{ border: "none", background: "none", fontSize: "1.2rem", cursor: "pointer" }}>✕</button>
+              <button type="button" onClick={() => setShowCreateMaintenanceModal(false)} className="so-modal-close-sm">✕</button>
             </div>
 
-            <div style={{ marginBottom: 12 }}>
-              <label style={{ fontSize: "0.78rem", fontWeight: 600, display: "block", marginBottom: 4 }}>Thiết bị cần bảo trì:</label>
+            <div className="so-field-group">
+              <label className="so-field-label">Thiết bị cần bảo trì:</label>
               <select
                 value={createMaintEquipId}
                 onChange={(e) => setCreateMaintEquipId(e.target.value)}
-                style={{ width: "100%", padding: "8px 10px", borderRadius: 8, border: "1px solid var(--color-bone)", fontSize: "0.82rem", background: "white" }}
+                className="so-input"
               >
                 {app.equipment.filter((e) => e.equipmentStatus !== "Ngừng sử dụng").map((e) => {
                   const p = app.products.find((prod) => prod.id === e.productId);
@@ -160,50 +160,50 @@ export function EquipmentTabModals(props: EquipmentTabModalsProps) {
               </select>
             </div>
 
-            <div style={{ marginBottom: 12 }}>
-              <label style={{ fontSize: "0.78rem", fontWeight: 600, display: "block", marginBottom: 4 }}>Mô tả lỗi / Hư hỏng chi tiết:</label>
+            <div className="so-field-group">
+              <label className="so-field-label">Mô tả lỗi / Hư hỏng chi tiết:</label>
               <textarea
                 rows={3}
                 placeholder="Ví dụ: Rách đường chỉ may bạt nóc 10cm, chốt khoá bị kẹt..."
                 value={createMaintIssue}
                 onChange={(e) => setCreateMaintIssue(e.target.value)}
-                style={{ width: "100%", padding: "8px 10px", borderRadius: 8, border: "1px solid var(--color-bone)", fontSize: "0.82rem", resize: "vertical" }}
+                className="so-textarea-v"
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-3 mb-12">
+            <div className="so-modal-grid-2">
               <div>
-                <label style={{ fontSize: "0.78rem", fontWeight: 600, display: "block", marginBottom: 4 }}>Chi phí dự tính (đ):</label>
+                <label className="so-field-label">Chi phí dự tính (đ):</label>
                 <input
                   type="number"
                   value={createMaintCost}
                   onChange={(e) => setCreateMaintCost(Number(e.target.value))}
-                  style={{ width: "100%", padding: "8px 10px", borderRadius: 8, border: "1px solid var(--color-bone)", fontSize: "0.85rem", fontFamily: "var(--font-mono)" }}
+                  className="so-input-mono"
                 />
               </div>
               <div>
-                <label style={{ fontSize: "0.78rem", fontWeight: 600, display: "block", marginBottom: 4 }}>Đơn liên quan (nếu có):</label>
+                <label className="so-field-label">Đơn liên quan (nếu có):</label>
                 <input
                   placeholder="Ví dụ: ORD-001"
                   value={createMaintOrderId}
                   onChange={(e) => setCreateMaintOrderId(e.target.value)}
-                  style={{ width: "100%", padding: "8px 10px", borderRadius: 8, border: "1px solid var(--color-bone)", fontSize: "0.85rem", fontFamily: "var(--font-mono)" }}
+                  className="so-input-mono"
                 />
               </div>
             </div>
 
-            <div style={{ marginBottom: 16 }}>
-              <label style={{ fontSize: "0.78rem", fontWeight: 600, display: "block", marginBottom: 4 }}>Ghi chú điều phối:</label>
+            <div className="so-field-group-lg">
+              <label className="so-field-label">Ghi chú điều phối:</label>
               <input
                 placeholder="Ví dụ: Gửi sang xưởng sửa chữa lều Q8..."
                 value={createMaintNote}
                 onChange={(e) => setCreateMaintNote(e.target.value)}
-                style={{ width: "100%", padding: "8px 10px", borderRadius: 8, border: "1px solid var(--color-bone)", fontSize: "0.82rem" }}
+                className="so-input"
               />
             </div>
 
             <div className="flex justify-end gap-2">
-              <button type="button" onClick={() => setShowCreateMaintenanceModal(false)} style={{ background: "white", border: "1px solid var(--color-bone)", borderRadius: 8, padding: "8px 16px", cursor: "pointer", fontSize: "0.85rem" }}>
+              <button type="button" onClick={() => setShowCreateMaintenanceModal(false)} className="so-btn-cancel-md">
                 Hủy
               </button>
               <button
@@ -261,16 +261,7 @@ export function EquipmentTabModals(props: EquipmentTabModalsProps) {
                   setCreateMaintNote("");
                   setShowCreateMaintenanceModal(false);
                 }}
-                style={{
-                  background: (!createMaintEquipId || !createMaintIssue.trim()) ? "#9CA3AF" : "var(--color-forest)",
-                  color: "white",
-                  border: "none",
-                  borderRadius: 8,
-                  padding: "8px 20px",
-                  fontWeight: 700,
-                  fontSize: "0.85rem",
-                  cursor: (!createMaintEquipId || !createMaintIssue.trim()) ? "not-allowed" : "pointer",
-                }}
+                className="so-btn-primary-md"
               >
                 ✓ Tạo phiếu bảo trì
               </button>
@@ -281,73 +272,73 @@ export function EquipmentTabModals(props: EquipmentTabModalsProps) {
 
       {/* UC6.13: Modal Nghiệm Thu Bảo Trì */}
       {acceptingMaintenance && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 9999, display: "grid", placeItems: "center", padding: 20 }}>
-          <div style={{ background: "white", borderRadius: 16, maxWidth: 480, width: "100%", padding: 24 }}>
+        <div className="so-modal-overlay">
+          <div className="so-modal-card-480">
             <div className="flex justify-between items-start mb-3">
               <div>
-                <span style={{ fontSize: "0.72rem", background: "#DCFCE7", color: "#15803D", padding: "2px 8px", borderRadius: 6, fontWeight: 700 }}>
+                <span className="so-modal-tag is-green">
                   UC6.13: NGHIỆM THU BẢO TRÌ
                 </span>
-                <h3 style={{ fontFamily: "var(--font-display)", fontSize: "1.25rem", color: "var(--color-bark)", marginTop: 4 }}>
+                <h3 className="so-modal-title-md">
                   Nghiệm thu phiếu: {acceptingMaintenance.id}
                 </h3>
               </div>
-              <button type="button" onClick={() => setAcceptingMaintenance(null)} style={{ border: "none", background: "none", fontSize: "1.2rem", cursor: "pointer" }}>✕</button>
+              <button type="button" onClick={() => setAcceptingMaintenance(null)} className="so-modal-close-sm">✕</button>
             </div>
 
-            <div style={{ background: "var(--color-parchment)", borderRadius: 10, padding: 12, marginBottom: 14, fontSize: "0.82rem" }}>
-              <div>Thiết bị: <strong style={{ fontFamily: "var(--font-mono)" }}>{acceptingMaintenance.equipmentId}</strong></div>
+            <div className="so-info-box">
+              <div>Thiết bị: <strong className="so-td-mono-plain">{acceptingMaintenance.equipmentId}</strong></div>
               <div>Lỗi ban đầu: <strong>{acceptingMaintenance.issueDescription}</strong></div>
               <div>Dự tính: <strong>{fmt(acceptingMaintenance.estimatedCost)}</strong></div>
             </div>
 
-            <div style={{ marginBottom: 12 }}>
-              <label style={{ fontSize: "0.78rem", fontWeight: 600, display: "block", marginBottom: 4 }}>Chi phí sửa chữa thực tế (đ):</label>
+            <div className="so-field-group">
+              <label className="so-field-label">Chi phí sửa chữa thực tế (đ):</label>
               <input
                 type="number"
                 value={actualRepairCost}
                 onChange={(e) => setActualRepairCost(Number(e.target.value))}
-                style={{ width: "100%", padding: "8px 10px", borderRadius: 8, border: "1px solid var(--color-bone)", fontSize: "0.95rem", fontFamily: "var(--font-mono)", fontWeight: 700 }}
+                className="so-input-mono-bold"
               />
             </div>
 
-            <div style={{ marginBottom: 14 }}>
-              <label style={{ fontSize: "0.78rem", fontWeight: 700, display: "block", marginBottom: 6 }}>Kết quả nghiệm thu:</label>
+            <div className="so-field-group-md">
+              <label className="so-field-label-bold">Kết quả nghiệm thu:</label>
               <div className="flex flex-col gap-2">
-                <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.82rem", cursor: "pointer" }}>
+                <label className="so-radio-label">
                   <input
                     type="radio"
                     name="repairOutcome"
                     checked={repairOutcome === "Hoàn tất"}
                     onChange={() => setRepairOutcome("Hoàn tất")}
-                    style={{ accentColor: "var(--color-forest)" }}
+                    className="so-radio-forest"
                   />
                   <span>✓ <strong>Đạt chuẩn</strong> — Thiết bị hoạt động tốt, đưa về kho <strong>Sẵn sàng</strong></span>
                 </label>
-                <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.82rem", cursor: "pointer" }}>
+                <label className="so-radio-label">
                   <input
                     type="radio"
                     name="repairOutcome"
                     checked={repairOutcome === "Không thể sửa"}
                     onChange={() => setRepairOutcome("Không thể sửa")}
-                    style={{ accentColor: "#DC2626" }}
+                    className="so-radio-danger"
                   />
-                  <span style={{ color: "#DC2626" }}>✕ <strong>Không thể sửa</strong> — Hư hỏng nặng, chuyển sang <strong>Ngừng sử dụng</strong></span>
+                  <span className="so-text-danger">✕ <strong>Không thể sửa</strong> — Hư hỏng nặng, chuyển sang <strong>Ngừng sử dụng</strong></span>
                 </label>
               </div>
             </div>
 
-            <div style={{ marginBottom: 16 }}>
-              <label style={{ fontSize: "0.78rem", fontWeight: 600, display: "block", marginBottom: 4 }}>Ghi chú nghiệm thu:</label>
+            <div className="so-field-group-lg">
+              <label className="so-field-label">Ghi chú nghiệm thu:</label>
               <input
                 value={repairOutcomeNote}
                 onChange={(e) => setRepairOutcomeNote(e.target.value)}
-                style={{ width: "100%", padding: "8px 10px", borderRadius: 8, border: "1px solid var(--color-bone)", fontSize: "0.82rem" }}
+                className="so-input"
               />
             </div>
 
             <div className="flex justify-end gap-2">
-              <button type="button" onClick={() => setAcceptingMaintenance(null)} style={{ background: "white", border: "1px solid var(--color-bone)", borderRadius: 8, padding: "8px 16px", cursor: "pointer", fontSize: "0.85rem" }}>
+              <button type="button" onClick={() => setAcceptingMaintenance(null)} className="so-btn-cancel-md">
                 Hủy
               </button>
               <button
@@ -396,7 +387,8 @@ export function EquipmentTabModals(props: EquipmentTabModalsProps) {
                   setEquipSuccess(`Đã nghiệm thu phiếu bảo trì ${acceptingMaintenance.id}.`);
                   setAcceptingMaintenance(null);
                 }}
-                style={{ background: repairOutcome === "Hoàn tất" ? "var(--color-forest)" : "#DC2626", color: "white", border: "none", borderRadius: 8, padding: "8px 20px", fontWeight: 700, fontSize: "0.85rem", cursor: "pointer" }}
+                /* Đổi màu nút xác nhận theo kết quả nghiệm thu (Đạt chuẩn vs Không thể sửa) */
+                className={`so-btn-confirm-outcome ${repairOutcome === "Hoàn tất" ? "is-forest" : "is-danger"}`}
               >
                 ✓ Xác nhận nghiệm thu
               </button>
@@ -426,41 +418,41 @@ export function EquipmentTabModals(props: EquipmentTabModalsProps) {
 
       {/* UC6.9: Modal Chi tiết & Lịch bận thiết bị */}
       {viewingEquipDetail && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 9999, display: "grid", placeItems: "center", padding: 20 }}>
-          <div style={{ background: "white", borderRadius: 16, maxWidth: 540, width: "100%", padding: 22 }}>
+        <div className="so-modal-overlay">
+          <div className="so-modal-card-540">
             <div className="flex justify-between items-start mb-3">
               <div>
-                <span style={{ fontSize: "0.72rem", background: "#DBEAFE", color: "#1D4ED8", padding: "2px 8px", borderRadius: 6, fontWeight: 700 }}>
+                <span className="so-modal-tag is-blue">
                   UC6.9: CHI TIẾT & LỊCH BẬN THIẾT BỊ
                 </span>
-                <h3 style={{ fontFamily: "var(--font-display)", fontSize: "1.2rem", color: "var(--color-bark)", marginTop: 4 }}>
+                <h3 className="so-modal-title-sm">
                   {viewingEquipDetail.detail?.maThietBiHienThi || viewingEquipDetail.equip.displayCode || viewingEquipDetail.equip.id}
                 </h3>
               </div>
-              <button type="button" onClick={() => setViewingEquipDetail(null)} style={{ border: "none", background: "none", fontSize: "1.2rem", cursor: "pointer" }}>✕</button>
+              <button type="button" onClick={() => setViewingEquipDetail(null)} className="so-modal-close-sm">✕</button>
             </div>
             {viewingEquipDetail.loading ? (
-              <div style={{ padding: 20, textAlign: "center", color: "#6B7280", fontSize: "0.85rem" }}>Đang tải chi tiết và lịch bận...</div>
+              <div className="so-loading-center">Đang tải chi tiết và lịch bận...</div>
             ) : (
               <div>
-                <div style={{ background: "var(--color-parchment)", borderRadius: 10, padding: 12, marginBottom: 12, fontSize: "0.82rem" }}>
+                <div className="so-info-box-sm">
                   <div>Trạng thái: <strong>{viewingEquipDetail.detail?.trangThaiSuDung || viewingEquipDetail.equip.equipmentStatus}</strong></div>
                   <div>Tình trạng: <strong>{viewingEquipDetail.detail?.tinhTrang || viewingEquipDetail.equip.condition}</strong></div>
                   {viewingEquipDetail.detail?.ngayNhap && (
                     <div>Ngày nhập: <strong>{new Date(viewingEquipDetail.detail.ngayNhap).toLocaleDateString("vi-VN")}</strong></div>
                   )}
                 </div>
-                <strong style={{ fontSize: "0.85rem", color: "var(--color-bark)", display: "block", marginBottom: 6 }}>
+                <strong className="so-schedule-heading">
                   Lịch phân công / giữ chỗ ({viewingEquipDetail.schedule.length}):
                 </strong>
                 {viewingEquipDetail.schedule.length === 0 ? (
-                  <div style={{ fontSize: "0.8rem", color: "#6B7280", fontStyle: "italic" }}>Hiện không có lịch phân công nào.</div>
+                  <div className="so-schedule-empty">Hiện không có lịch phân công nào.</div>
                 ) : (
-                  <div className="flex flex-col gap-2" style={{ maxHeight: 220, overflowY: "auto" }}>
+                  <div className="flex flex-col gap-2 so-schedule-list">
                     {viewingEquipDetail.schedule.map((sch) => (
-                      <div key={sch.maPhanCong} style={{ border: "1px solid var(--color-bone)", borderRadius: 8, padding: "8px 10px", fontSize: "0.78rem", display: "flex", justifyContent: "space-between" }}>
+                      <div key={sch.maPhanCong} className="so-schedule-item">
                         <span>Đơn <strong>#{sch.maDonThue}</strong> · {new Date(sch.tuNgay).toLocaleDateString("vi-VN")} → {new Date(sch.denNgay).toLocaleDateString("vi-VN")}</span>
-                        <span style={{ fontWeight: 700, color: "#1D4ED8" }}>{sch.trangThai}</span>
+                        <span className="so-schedule-status">{sch.trangThai}</span>
                       </div>
                     ))}
                   </div>
@@ -473,28 +465,28 @@ export function EquipmentTabModals(props: EquipmentTabModalsProps) {
 
       {/* UC6.12: Modal Phân công xử lý bảo trì */}
       {assignMaintTarget && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 9999, display: "grid", placeItems: "center", padding: 20 }}>
-          <div style={{ background: "white", borderRadius: 14, maxWidth: 440, width: "100%", padding: 20 }}>
-            <h3 style={{ fontFamily: "var(--font-display)", fontSize: "1.15rem", color: "var(--color-bark)", marginBottom: 10 }}>
+        <div className="so-modal-overlay">
+          <div className="so-modal-card-440">
+            <h3 className="so-modal-title-10">
               Phân công xử lý phiếu {assignMaintTarget.id}
             </h3>
-            <label style={{ fontSize: "0.78rem", fontWeight: 600, display: "block", marginBottom: 4 }}>Mã nhân viên xử lý:</label>
+            <label className="so-field-label">Mã nhân viên xử lý:</label>
             <input
               type="number"
               min={1}
               value={assignHandlerId}
               onChange={(e) => setAssignHandlerId(Number(e.target.value))}
-              style={{ width: "100%", border: "1px solid var(--color-bone)", borderRadius: 8, padding: "7px 10px", fontSize: "0.85rem", marginBottom: 10 }}
+              className="so-input-mb10"
             />
-            <label style={{ fontSize: "0.78rem", fontWeight: 600, display: "block", marginBottom: 4 }}>Ghi chú / Lý do:</label>
+            <label className="so-field-label">Ghi chú / Lý do:</label>
             <input
               value={assignReason}
               onChange={(e) => setAssignReason(e.target.value)}
               placeholder="Giao kỹ thuật viên kiểm tra..."
-              style={{ width: "100%", border: "1px solid var(--color-bone)", borderRadius: 8, padding: "7px 10px", fontSize: "0.85rem", marginBottom: 14 }}
+              className="so-input-mb14-sm"
             />
             <div className="flex justify-end gap-2">
-              <button type="button" onClick={() => setAssignMaintTarget(null)} style={{ background: "white", border: "1px solid var(--color-bone)", borderRadius: 8, padding: "7px 14px", cursor: "pointer" }}>Hủy</button>
+              <button type="button" onClick={() => setAssignMaintTarget(null)} className="so-btn-cancel-modal">Hủy</button>
               <button
                 type="button"
                 disabled={equipBusy}
@@ -513,7 +505,7 @@ export function EquipmentTabModals(props: EquipmentTabModalsProps) {
                     setEquipBusy(false);
                   }
                 }}
-                style={{ background: "var(--color-forest)", color: "white", border: "none", borderRadius: 8, padding: "7px 16px", fontWeight: 700, cursor: "pointer" }}
+                className="so-btn-primary-modal"
               >
                 {equipBusy ? "Đang lưu..." : "Xác nhận"}
               </button>
@@ -524,29 +516,29 @@ export function EquipmentTabModals(props: EquipmentTabModalsProps) {
 
       {/* UC6.12: Modal Cập nhật tiến độ bảo trì */}
       {progressMaintTarget && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 9999, display: "grid", placeItems: "center", padding: 20 }}>
-          <div style={{ background: "white", borderRadius: 14, maxWidth: 440, width: "100%", padding: 20 }}>
-            <h3 style={{ fontFamily: "var(--font-display)", fontSize: "1.15rem", color: "var(--color-bark)", marginBottom: 10 }}>
+        <div className="so-modal-overlay">
+          <div className="so-modal-card-440">
+            <h3 className="so-modal-title-10">
               Cập nhật tiến độ phiếu {progressMaintTarget.id}
             </h3>
-            <label style={{ fontSize: "0.78rem", fontWeight: 600, display: "block", marginBottom: 4 }}>Kết quả / Tiến độ xử lý:</label>
+            <label className="so-field-label">Kết quả / Tiến độ xử lý:</label>
             <textarea
               rows={3}
               value={progressNote}
               onChange={(e) => setProgressNote(e.target.value)}
               placeholder="Đã thay khóa kéo và vệ sinh..."
-              style={{ width: "100%", border: "1px solid var(--color-bone)", borderRadius: 8, padding: "7px 10px", fontSize: "0.85rem", marginBottom: 10 }}
+              className="so-input-mb10"
             />
-            <label style={{ fontSize: "0.78rem", fontWeight: 600, display: "block", marginBottom: 4 }}>Chi phí phát sinh (đ):</label>
+            <label className="so-field-label">Chi phí phát sinh (đ):</label>
             <input
               type="number"
               min={0}
               value={progressCost}
               onChange={(e) => setProgressCost(Number(e.target.value))}
-              style={{ width: "100%", border: "1px solid var(--color-bone)", borderRadius: 8, padding: "7px 10px", fontSize: "0.85rem", marginBottom: 14 }}
+              className="so-input-mb14-sm"
             />
             <div className="flex justify-end gap-2">
-              <button type="button" onClick={() => setProgressMaintTarget(null)} style={{ background: "white", border: "1px solid var(--color-bone)", borderRadius: 8, padding: "7px 14px", cursor: "pointer" }}>Hủy</button>
+              <button type="button" onClick={() => setProgressMaintTarget(null)} className="so-btn-cancel-modal">Hủy</button>
               <button
                 type="button"
                 disabled={equipBusy}
@@ -565,7 +557,7 @@ export function EquipmentTabModals(props: EquipmentTabModalsProps) {
                     setEquipBusy(false);
                   }
                 }}
-                style={{ background: "var(--color-amber)", color: "white", border: "none", borderRadius: 8, padding: "7px 16px", fontWeight: 700, cursor: "pointer" }}
+                className="so-btn-amber-modal"
               >
                 {equipBusy ? "Đang lưu..." : "Lưu tiến độ"}
               </button>

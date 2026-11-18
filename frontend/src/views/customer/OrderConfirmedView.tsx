@@ -127,21 +127,23 @@ export function OrderConfirmedView() {
     }, 800);
   };
 
+  // Ánh xạ 3 trạng thái thanh toán của đơn sang lớp banner tương ứng
+  const bannerStateClass = paid ? "is-paid" : expired ? "is-expired" : "is-pending";
+
   return (
-    <div className="confirmed-wrap" style={{ maxWidth: 640, margin: "24px auto", padding: "0 16px" }}>
-      <div className="card-panel text-left overflow-hidden p-0" style={{ background: "white", borderRadius: 20, border: "1px solid var(--color-bone)", boxShadow: "0 10px 30px rgba(0,0,0,0.06)" }}>
+    <div className="confirmed-wrap cp-confirmed-wrap">
+      <div className="card-panel text-left overflow-hidden p-0 cp-confirmed-card">
         {/* Banner trạng thái */}
         <div
-          className={`p-6 text-center text-white ${
+          className={`p-6 text-center text-white cp-confirmed-banner ${bannerStateClass} ${
             paid ? "bg-forest" : expired ? "bg-clay" : "bg-amber"
           }`}
-          style={{ background: paid ? "var(--color-forest)" : expired ? "#DC2626" : "linear-gradient(135deg, #D97706 0%, #B45309 100%)" }}
         >
           <div className="text-4xl mb-2">{paid ? "✓" : expired ? "×" : "⏳"}</div>
-          <h2 className="text-xl font-bold font-display" style={{ margin: 0, color: "white" }}>
+          <h2 className="text-xl font-bold font-display cp-confirmed-banner-title">
             {paid ? "Đơn thuê đã được thanh toán & xác nhận!" : expired ? "Đơn thuê đã hết thời hạn giữ chỗ" : "Đơn thuê đang chờ thanh toán (Giữ chỗ 15 phút)"}
           </h2>
-          <p className="text-sm opacity-90 mt-1" style={{ maxWidth: 480, margin: "6px auto 0", color: "#FEF3C7" }}>
+          <p className="text-sm opacity-90 mt-1 cp-confirmed-banner-desc">
             {paid
               ? "Cửa hàng đã nhận thanh toán, giữ chỗ bảo đảm và nhân viên đang soạn đồ."
               : expired
@@ -157,10 +159,9 @@ export function OrderConfirmedView() {
               <div className="font-mono font-bold text-forest text-lg">{displayOrderCode}</div>
             </div>
             <span
-              className={`badge ${
+              className={`badge cp-confirmed-badge ${
                 paid ? "badge-success" : expired ? "badge-danger" : "badge-warning"
               }`}
-              style={{ fontSize: "0.82rem", padding: "4px 12px" }}
             >
               {order.status}
             </span>
@@ -169,58 +170,44 @@ export function OrderConfirmedView() {
           {/* Đồng hồ đếm ngược 15 phút giữ chỗ */}
           {!paid && !expired && seconds > 0 && (
             <div className="text-center my-4">
-              <div
-                className="timer-pill"
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 8,
-                  padding: "8px 18px",
-                  borderRadius: 99,
-                  background: "#FEF3C7",
-                  color: "#92400E",
-                  fontWeight: 700,
-                  fontSize: "0.95rem",
-                  border: "1px solid #FCD34D",
-                }}
-              >
-                <Icon name="clock" size={18} /> Thời hạn giữ chỗ còn lại: <span style={{ fontFamily: "var(--font-mono)", fontSize: "1.1rem" }}>{mm}:{ss}</span>
+              <div className="timer-pill cp-timer-pill">
+                <Icon name="clock" size={18} /> Thời hạn giữ chỗ còn lại: <span className="cp-timer-pill-value">{mm}:{ss}</span>
               </div>
             </div>
           )}
 
           {/* Khung mã VietQR chuyển khoản trực tiếp (UC5.1) */}
           {!paid && !expired && seconds > 0 && (
-            <div style={{ background: "var(--color-parchment)", borderRadius: 14, padding: 20, border: "1px solid var(--color-bone)", margin: "16px 0", textAlign: "center" }}>
-              <div style={{ fontSize: "0.8rem", fontWeight: 700, color: "var(--color-forest)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>
+            <div className="cp-qr-box">
+              <div className="cp-qr-title">
                 MÃ QR THANH TOÁN TỰ ĐỘNG 24/7 (VIETQR)
               </div>
 
               {/* QR Image */}
-              <div style={{ background: "white", padding: 12, borderRadius: 12, display: "inline-block", boxShadow: "0 4px 12px rgba(0,0,0,0.08)", marginBottom: 12 }}>
+              <div className="cp-qr-img-frame">
                 <img
                   src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=2|99|0901234567|CONG%20TY%20GEARGO||0|0|${totalAmount}|${encodeURIComponent(displayOrderCode)}|transfer_myqr`}
                   alt="Mã QR Chuyển khoản VietQR"
-                  style={{ width: 170, height: 170, display: "block" }}
+                  className="cp-qr-img"
                 />
               </div>
 
-              <div style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: "0.82rem", color: "var(--color-bark)", textAlign: "left", maxWidth: 360, margin: "0 auto", background: "white", padding: "12px 16px", borderRadius: 10, border: "1px solid var(--color-bone)" }}>
+              <div className="cp-qr-info-card">
                 <div>Ngân hàng: <strong>MB Bank (Quân Đội)</strong></div>
-                <div>Số tài khoản: <strong style={{ fontFamily: "var(--font-mono)", color: "var(--color-forest)" }}>0901 234 567</strong></div>
+                <div>Số tài khoản: <strong className="cp-qr-mono-forest">0901 234 567</strong></div>
                 <div>Chủ tài khoản: <strong>CONG TY TNHH GEARGO OUTDOOR</strong></div>
-                <div>Số tiền chuyển: <strong style={{ fontFamily: "var(--font-mono)", color: "var(--color-forest)" }}>{fmt(totalAmount)}</strong></div>
-                <div>Nội dung chuyển khoản: <strong style={{ fontFamily: "var(--font-mono)", color: "#D97706", background: "#FEF3C7", padding: "1px 6px", borderRadius: 4 }}>{displayOrderCode}</strong></div>
+                <div>Số tiền chuyển: <strong className="cp-qr-mono-forest">{fmt(totalAmount)}</strong></div>
+                <div>Nội dung chuyển khoản: <strong className="cp-qr-code-pill">{displayOrderCode}</strong></div>
               </div>
 
-              <div style={{ fontSize: "0.72rem", color: "#6B7280", marginTop: 8 }}>
+              <div className="cp-qr-hint">
                 💡 <em>Hệ thống sẽ tự động kích hoạt trạng thái "Đã xác nhận" ngay khi tiền vào tài khoản.</em>
               </div>
             </div>
           )}
 
           {/* Danh sách thiết bị và chi phí */}
-          <div className="flex flex-col gap-2 my-4 text-sm" style={{ background: "#F9FAFB", padding: 14, borderRadius: 12, border: "1px solid var(--color-bone)" }}>
+          <div className="flex flex-col gap-2 my-4 text-sm cp-confirmed-items-box">
             {order.items.map((item) => (
               <div
                 key={item.productId}
@@ -254,15 +241,15 @@ export function OrderConfirmedView() {
 
           {/* UC5.1: Biên lai điện tử xác nhận thanh toán thành công */}
           {paid && (
-            <div style={{ background: "#F0FDF4", border: "1px solid #BBF7D0", borderRadius: 14, padding: "16px 20px", margin: "18px 0" }}>
+            <div className="cp-receipt-card">
               <div className="flex items-center gap-2 mb-3">
-                <span style={{ fontSize: "1.2rem", color: "#16A34A" }}>🧾</span>
-                <strong style={{ color: "#15803D", fontSize: "0.95rem" }}>Biên Lai Giao Dịch Điện Tử VietQR (UC5.1)</strong>
+                <span className="cp-receipt-icon">🧾</span>
+                <strong className="cp-receipt-title">Biên Lai Giao Dịch Điện Tử VietQR (UC5.1)</strong>
               </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 7, fontSize: "0.82rem", color: "#374151" }}>
-                <div className="flex justify-between items-center">
+              <div className="cp-receipt-rows">
+                <div className="flex justify-between items-center gap-2 flex-wrap">
                   <span>Mã tham chiếu ngân hàng:</span>
-                  <strong style={{ fontFamily: "var(--font-mono)", color: "var(--color-forest)", background: "#DCFCE7", padding: "2px 8px", borderRadius: 4 }}>
+                  <strong className="cp-receipt-ref">
                     {latestPayment?.referenceCode || `FT${displayOrderCode.replace(/\D/g, "")}889`}
                   </strong>
                 </div>
@@ -276,11 +263,11 @@ export function OrderConfirmedView() {
                 </div>
                 <div className="flex justify-between">
                   <span>Tiền thuê thực nhận:</span>
-                  <span style={{ fontFamily: "var(--font-mono)", fontWeight: 600 }}>{fmt(order.rental - order.discount)}</span>
+                  <span className="cp-receipt-amount">{fmt(order.rental - order.discount)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Tiền cọc bảo đảm:</span>
-                  <span style={{ fontFamily: "var(--font-mono)", fontWeight: 700, color: "var(--color-forest)" }}>{fmt(order.depositTotal)} (Được đối soát hoàn 100%)</span>
+                  <span className="cp-receipt-deposit">{fmt(order.depositTotal)} (Được đối soát hoàn 100%)</span>
                 </div>
               </div>
             </div>
@@ -300,18 +287,17 @@ export function OrderConfirmedView() {
 
           {/* Dòng phụ 4.1: Kiểm tra đối chiếu với cổng thanh toán */}
           {!paid && !expired && seconds > 0 && (
-            <div style={{ margin: "14px 0" }}>
+            <div className="cp-gateway-wrap">
               <button
                 type="button"
                 disabled={checkingGateway}
                 onClick={() => void handleCheckGateway()}
-                className="btn btn-secondary btn-sm"
-                style={{ width: "100%", padding: "9px", fontSize: "0.82rem", fontWeight: 600, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}
+                className="btn btn-secondary btn-sm cp-gateway-btn"
               >
                 {checkingGateway ? "Đang đối chiếu cổng thanh toán..." : "Kiểm tra trạng thái giao dịch ngân hàng (Dòng 4.1)"}
               </button>
               {gatewayMessage && (
-                <div style={{ marginTop: 8, fontSize: "0.76rem", color: "#B45309", background: "#FEF3C7", padding: "8px 12px", borderRadius: 8, border: "1px solid #FCD34D" }}>
+                <div className="cp-gateway-msg">
                   {gatewayMessage}
                 </div>
               )}
@@ -320,12 +306,11 @@ export function OrderConfirmedView() {
 
           {/* Nút xác nhận thanh toán / mô phỏng cho demo */}
           {!paid && !expired && seconds > 0 && (
-            <div className={app.realApi ? "my-4" : "grid grid-cols-2 gap-3 my-4"}>
+            <div className={app.realApi ? "my-4" : "grid grid-cols-2 gap-3 my-4 cp-confirmed-actions"}>
               <button
                 disabled={processing}
                 onClick={() => void handlePay(true)}
-                className="btn btn-primary btn-md w-full"
-                style={{ padding: "12px", fontWeight: 700, width: "100%" }}
+                className="btn btn-primary btn-md w-full cp-confirmed-pay-btn"
               >
                 {processing
                   ? "Đang xử lý thanh toán..."
@@ -337,8 +322,7 @@ export function OrderConfirmedView() {
                 <button
                   disabled={processing}
                   onClick={() => void handlePay(false)}
-                  className="btn btn-secondary btn-md text-red-600 border-red-200"
-                  style={{ padding: "12px" }}
+                  className="btn btn-secondary btn-md text-red-600 border-red-200 cp-confirmed-fail-btn"
                 >
                   Mô phỏng lỗi thanh toán
                 </button>
@@ -348,8 +332,7 @@ export function OrderConfirmedView() {
 
           <button
             onClick={() => app.setPage("my-orders")}
-            className="btn btn-secondary btn-md btn-full mt-3"
-            style={{ width: "100%", padding: "12px", fontWeight: 600 }}
+            className="btn btn-secondary btn-md btn-full mt-3 cp-confirmed-orders-btn"
           >
             Quản lý danh sách đơn thuê của tôi →
           </button>

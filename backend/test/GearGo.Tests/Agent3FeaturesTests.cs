@@ -1,5 +1,5 @@
 using System.Text;
-using GearGo.Controllers;
+using GearGo.Controllers.Public;
 using GearGo.Models.DTOs.ThanhToan;
 using GearGo.Models.Entities;
 using GearGo.Models.Enums;

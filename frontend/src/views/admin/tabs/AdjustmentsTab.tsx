@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useApp } from "../../../App";
 import { isRealApiEnabled } from "../../../services/apiClient";
 
@@ -206,14 +206,14 @@ export function AdjustmentsTab({ app }: { app: ReturnType<typeof useApp> }) {
     <div className="flex flex-col gap-6">
       <div className="flex justify-between items-center flex-wrap gap-3">
         <div>
-          <h2 style={{ fontFamily: "var(--font-display)", fontSize: "1.4rem", color: "var(--color-bark)", marginBottom: 4 }}>
+          <h2 className="adm-page-title">
             Điều chỉnh tài chính & Sai lệch phiếu nhập (UC5.7, UC7.10)
           </h2>
-          <p style={{ color: "#6B7280", fontSize: "0.85rem" }}>
+          <p className="adm-page-subtitle">
             Đối chiếu giao dịch thanh toán ngoại lệ, lập chứng từ bù trừ sau đối soát đơn hoặc xử lý sai lệch nhập kho.
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           {realApi && (
             <button
               type="button"
@@ -238,40 +238,14 @@ export function AdjustmentsTab({ app }: { app: ReturnType<typeof useApp> }) {
       </div>
 
       {payError && (
-        <div
-          role="alert"
-          style={{
-            background: "#FEF2F2",
-            border: "1px solid #FECACA",
-            color: "#B91C1C",
-            borderRadius: 8,
-            padding: "10px 14px",
-            fontSize: "0.82rem",
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-          }}
-        >
+        <div role="alert" className="adm-alert is-error mb-0">
           <Icon name="alert-circle" size={16} />
           <span>{payError}</span>
         </div>
       )}
 
       {paySuccess && (
-        <div
-          role="status"
-          style={{
-            background: "#DCFCE7",
-            border: "1px solid #A7F3D0",
-            color: "#15803D",
-            borderRadius: 8,
-            padding: "10px 14px",
-            fontSize: "0.82rem",
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-          }}
-        >
+        <div role="status" className="adm-alert is-success mb-0">
           <Icon name="check" size={16} />
           <span>{paySuccess}</span>
         </div>
@@ -279,60 +253,60 @@ export function AdjustmentsTab({ app }: { app: ReturnType<typeof useApp> }) {
 
       {/* Giao dịch thanh toán cần đối chiếu ngoại lệ (/api/v1/thanh-toan/can-doi-chieu) */}
       {realApi && (
-        <div style={{ background: "#F8F6F0", borderRadius: 12, border: "1px solid #E2DDD1", overflow: "hidden" }}>
-          <div style={{ padding: "14px 18px", borderBottom: "1px solid #E2DDD1", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div className="adm-table-wrap bg-[#F8F6F0]">
+          <div className="px-4.5 py-3.5 border-b border-[var(--color-bone)] flex justify-between items-center">
             <div>
-              <h3 style={{ fontSize: "1rem", fontWeight: 700, color: "#11231B", margin: 0 }}>
+              <h3 className="adm-section-heading text-base m-0">
                 Giao dịch thanh toán cần đối chiếu ngoại lệ ({pendingPayments.length})
               </h3>
-              <p style={{ fontSize: "0.75rem", color: "#6B7280", margin: "2px 0 0" }}>
+              <p className="adm-hint-text text-[0.75rem] mt-0.5 mb-0">
                 Xử lý các giao dịch lệch số tiền, trùng thanh toán hoặc cần hoàn tiền thừa qua cổng thanh toán.
               </p>
             </div>
           </div>
           <div className="responsive-table">
-            <table style={{ width: "100%", borderCollapse: "collapse", background: "white" }}>
+            <table className="adm-table adm-table--zebra adm-table--md bg-white">
               <thead>
-                <tr style={{ background: "#F1ECE2", fontSize: "0.78rem", fontWeight: 700, color: "#11231B" }}>
+                <tr>
                   {["Mã GD", "Đơn thuê", "Phương thức", "Số tiền", "Lý do cần đối chiếu", "Trạng thái", "Thời điểm", "Thao tác"].map((h) => (
-                    <th key={h} style={{ padding: "10px 12px", textAlign: "left" }}>{h}</th>
+                    <th key={h}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {payLoading ? (
                   <tr>
-                    <td colSpan={8} style={{ padding: 24, textAlign: "center", color: "#6B7280", fontSize: "0.82rem" }}>
+                    <td colSpan={8} className="adm-table-empty">
                       Đang tải danh sách giao dịch cần đối chiếu...
                     </td>
                   </tr>
                 ) : pendingPayments.length === 0 ? (
                   <tr>
-                    <td colSpan={8} style={{ padding: 20, textAlign: "center", color: "#1B3F2F", fontSize: "0.82rem" }}>
+                    <td colSpan={8} className="adm-table-empty text-[#1B3F2F]">
                       Không có giao dịch thanh toán ngoại lệ nào đang chờ đối chiếu.
                     </td>
                   </tr>
                 ) : (
-                  pendingPayments.map((g, i) => (
-                    <tr key={g.maThanhToan} style={{ borderTop: "1px solid #E2DDD1", background: i % 2 === 0 ? "white" : "#F8F6F0", fontSize: "0.8rem" }}>
-                      <td style={{ padding: "10px 12px", fontFamily: "var(--font-mono)", fontWeight: 700, color: "#1B3F2F" }}>
+                  pendingPayments.map((g) => (
+                    <tr key={g.maThanhToan}>
+                      <td className="adm-cell-code">
                         {g.maYeuCau}
                       </td>
-                      <td style={{ padding: "10px 12px", fontFamily: "var(--font-mono)" }}>#{g.maDonThue}</td>
-                      <td style={{ padding: "10px 12px" }}>{g.phuongThuc}</td>
-                      <td style={{ padding: "10px 12px", fontFamily: "var(--font-mono)", fontWeight: 700, color: "#B45309" }}>
+                      <td className="adm-cell-mono">#{g.maDonThue}</td>
+                      <td>{g.phuongThuc}</td>
+                      <td className="adm-cell-mono font-bold text-[#B45309]">
                         {fmt(g.tongSoTien)}
                       </td>
-                      <td style={{ padding: "10px 12px", color: "#374151" }}>{g.lyDoCanDoiChieu || "Chênh lệch đối soát cổng thanh toán"}</td>
-                      <td style={{ padding: "10px 12px" }}>
-                        <span style={{ background: "#FEF3C7", color: "#92400E", padding: "2px 7px", borderRadius: 6, fontSize: "0.72rem", fontWeight: 700 }}>
+                      <td className="text-[#374151]">{g.lyDoCanDoiChieu || "Chênh lệch đối soát cổng thanh toán"}</td>
+                      <td>
+                        <span className="adm-pill is-warning">
                           {g.trangThaiDoiChieu || g.trangThai}
                         </span>
                       </td>
-                      <td style={{ padding: "10px 12px", fontSize: "0.74rem", color: "#6B7280" }}>
+                      <td className="adm-hint-text text-[0.74rem]">
                         {new Date(g.thoiDiemTao).toLocaleString("vi-VN")}
                       </td>
-                      <td style={{ padding: "10px 12px" }}>
+                      <td>
                         <button
                           type="button"
                           onClick={() => {
@@ -342,7 +316,7 @@ export function AdjustmentsTab({ app }: { app: ReturnType<typeof useApp> }) {
                             setReconcileRefundAmount(Number(g.tongSoTien || 0));
                             setReconcileModalError("");
                           }}
-                          style={{ background: "#E07A43", color: "white", border: "none", borderRadius: 6, padding: "5px 10px", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer" }}
+                          className="adm-btn-amber-sm"
                         >
                           Đối chiếu
                         </button>
@@ -357,68 +331,70 @@ export function AdjustmentsTab({ app }: { app: ReturnType<typeof useApp> }) {
       )}
 
       {/* Bảng chứng từ */}
-      <div style={{ background: "white", borderRadius: 12, border: "1px solid var(--color-bone)", overflow: "hidden" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse" }}>
-          <thead>
-            <tr style={{ background: "var(--color-parchment)", fontSize: "0.8rem", fontWeight: 600, color: "var(--color-bark)" }}>
-              {["Số chứng từ", "Loại điều chỉnh", "Chứng từ liên quan", "Số tiền (đ)", "Lý do bù trừ", "Người lập / Duyệt", "Thời gian", "Trạng thái"].map((h) => (
-                <th key={h} style={{ padding: "11px 14px", textAlign: "left" }}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {app.financialAdjustments.map((a, i) => (
-              <tr key={a.id} style={{ borderTop: "1px solid var(--color-bone)", background: i % 2 === 0 ? "white" : "var(--color-cream)" }}>
-                <td style={{ padding: "11px 14px", fontFamily: "var(--font-mono)", fontSize: "0.82rem", fontWeight: 700, color: "var(--color-forest)" }}>
-                  {a.id}
-                </td>
-                <td style={{ padding: "11px 14px", fontSize: "0.82rem", fontWeight: 600 }}>{a.type}</td>
-                <td style={{ padding: "11px 14px", fontFamily: "var(--font-mono)", fontSize: "0.8rem" }}>
-                  {a.orderId || a.importReceiptId || "—"}
-                </td>
-                <td style={{ padding: "11px 14px", fontFamily: "var(--font-mono)", fontSize: "0.85rem", fontWeight: 700, color: "#B45309" }}>
-                  {fmt(a.amount)}
-                </td>
-                <td style={{ padding: "11px 14px", fontSize: "0.82rem", color: "#374151" }}>{a.reason}</td>
-                <td style={{ padding: "11px 14px", fontSize: "0.8rem" }}>
-                  <div>{a.createdBy}</div>
-                  <div style={{ fontSize: "0.7rem", color: "#15803D" }}>Duyệt: {a.approvedBy || "Hệ thống"}</div>
-                </td>
-                <td style={{ padding: "11px 14px", fontSize: "0.75rem", color: "#6B7280" }}>{a.createdAt}</td>
-                <td style={{ padding: "11px 14px" }}>
-                  <span className="badge badge-success" style={{ fontSize: "0.72rem" }}>{a.status}</span>
-                </td>
+      <div className="adm-table-wrap">
+        <div className="adm-table-scroll">
+          <table className="adm-table adm-table--zebra adm-table--md">
+            <thead>
+              <tr>
+                {["Số chứng từ", "Loại điều chỉnh", "Chứng từ liên quan", "Số tiền (đ)", "Lý do bù trừ", "Người lập / Duyệt", "Thời gian", "Trạng thái"].map((h) => (
+                  <th key={h}>{h}</th>
+                ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {app.financialAdjustments.map((a) => (
+                <tr key={a.id}>
+                  <td className="adm-cell-code text-[0.82rem]">
+                    {a.id}
+                  </td>
+                  <td className="font-semibold text-[0.82rem]">{a.type}</td>
+                  <td className="adm-cell-mono text-[0.8rem]">
+                    {a.orderId || a.importReceiptId || "—"}
+                  </td>
+                  <td className="adm-cell-mono text-[0.85rem] font-bold text-[#B45309]">
+                    {fmt(a.amount)}
+                  </td>
+                  <td className="text-[0.82rem] text-[#374151]">{a.reason}</td>
+                  <td className="text-[0.8rem]">
+                    <div>{a.createdBy}</div>
+                    <div className="text-[0.7rem] text-[#15803D]">Duyệt: {a.approvedBy || "Hệ thống"}</div>
+                  </td>
+                  <td className="adm-hint-text text-[0.75rem]">{a.createdAt}</td>
+                  <td>
+                    <span className="badge badge-success text-[0.72rem]">{a.status}</span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* Modal Đối chiếu giao dịch ngoại lệ */}
       {reconcileTarget && (
         <div role="dialog" aria-modal="true" className="modal-overlay">
-          <div className="modal-container" style={{ maxWidth: 480 }}>
+          <div className="modal-container is-md">
             <div className="modal-header">
               <h3 className="modal-title">Đối chiếu giao dịch {reconcileTarget.maYeuCau}</h3>
               <button type="button" onClick={() => setReconcileTarget(null)} className="btn btn-ghost btn-sm text-lg">×</button>
             </div>
             <form onSubmit={(e) => void handleConfirmReconcilePayment(e)} className="modal-body flex flex-col gap-3">
               {reconcileModalError && (
-                <div role="alert" style={{ background: "#FEF2F2", border: "1px solid #FECACA", color: "#B91C1C", borderRadius: 8, padding: "8px 10px", fontSize: "0.78rem", display: "flex", alignItems: "center", gap: 6 }}>
+                <div role="alert" className="adm-alert adm-alert--compact is-error mb-0">
                   <Icon name="alert-circle" size={15} />
                   <span>{reconcileModalError}</span>
                 </div>
               )}
-              <div style={{ background: "#F8F6F0", borderRadius: 8, padding: 10, border: "1px solid #E2DDD1", fontSize: "0.8rem" }}>
+              <div className="adm-card--cream text-[0.8rem] p-2.5">
                 <div>Đơn thuê: <strong>#{reconcileTarget.maDonThue}</strong> · Phương thức: <strong>{reconcileTarget.phuongThuc}</strong></div>
-                <div>Số tiền giao dịch: <strong style={{ color: "#B45309" }}>{fmt(reconcileTarget.tongSoTien)}</strong></div>
+                <div>Số tiền giao dịch: <strong className="text-[#B45309]">{fmt(reconcileTarget.tongSoTien)}</strong></div>
               </div>
               <div>
-                <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 700, marginBottom: 4 }}>Kết luận đối chiếu</label>
+                <label className="adm-label--sub">Kết luận đối chiếu</label>
                 <select
                   value={reconcileOutcome}
                   onChange={(e) => setReconcileOutcome(e.target.value as any)}
-                  style={{ width: "100%", border: "1px solid var(--color-bone)", borderRadius: 8, padding: 9, fontSize: "0.84rem", background: "white" }}
+                  className="adm-field adm-field--compact"
                 >
                   <option value="HopLe_XacNhan">Hợp lệ — Xác nhận ghi nhận thanh toán</option>
                   <option value="HopLe_HoanTienThua">Hợp lệ — Cần hoàn tiền thừa cho khách</option>
@@ -427,31 +403,31 @@ export function AdjustmentsTab({ app }: { app: ReturnType<typeof useApp> }) {
               </div>
               {reconcileOutcome === "HopLe_HoanTienThua" && (
                 <div>
-                  <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 700, marginBottom: 4 }}>Số tiền cần hoàn (VNĐ)</label>
+                  <label className="adm-label--sub">Số tiền cần hoàn (VNĐ)</label>
                   <input
                     type="number"
                     min="1000"
                     step="1000"
                     value={reconcileRefundAmount}
                     onChange={(e) => setReconcileRefundAmount(Number(e.target.value))}
-                    style={{ width: "100%", border: "1px solid var(--color-bone)", borderRadius: 8, padding: 9, fontSize: "0.84rem" }}
+                    className="adm-field adm-field--compact"
                   />
                 </div>
               )}
               <div>
-                <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 700, marginBottom: 4 }}>Ghi chú kết luận *</label>
+                <label className="adm-label--sub">Ghi chú kết luận *</label>
                 <textarea
                   required
                   rows={2}
                   value={reconcileNote}
                   onChange={(e) => setReconcileNote(e.target.value)}
                   placeholder="Ghi rõ căn cứ sao kê / mã giao dịch ngân hàng..."
-                  style={{ width: "100%", border: "1px solid var(--color-bone)", borderRadius: 8, padding: 9, fontSize: "0.84rem" }}
+                  className="adm-field adm-field--compact"
                 />
               </div>
               <div className="flex gap-2 mt-1">
-                <button type="button" disabled={reconcileBusy} onClick={() => setReconcileTarget(null)} className="btn btn-secondary btn-md" style={{ flex: 1 }}>Hủy</button>
-                <button type="submit" disabled={reconcileBusy} className="btn btn-primary btn-md" style={{ flex: 1 }}>
+                <button type="button" disabled={reconcileBusy} onClick={() => setReconcileTarget(null)} className="btn btn-secondary btn-md adm-btn-flex">Hủy</button>
+                <button type="submit" disabled={reconcileBusy} className="btn btn-primary btn-md adm-btn-flex">
                   {reconcileBusy ? "Đang lưu..." : "Xác nhận đối chiếu"}
                 </button>
               </div>
@@ -463,24 +439,24 @@ export function AdjustmentsTab({ app }: { app: ReturnType<typeof useApp> }) {
       {/* Modal Lập chứng từ */}
       {showModal && (
         <div role="dialog" aria-modal="true" className="modal-overlay">
-          <div className="modal-container" style={{ maxWidth: 520 }}>
+          <div className="modal-container is-520">
             <div className="modal-header">
               <h3 className="modal-title">Lập chứng từ điều chỉnh bù trừ</h3>
               <button onClick={() => setShowModal(false)} className="btn btn-ghost btn-sm text-lg">×</button>
             </div>
             <form onSubmit={(e) => void handleSubmit(e)} className="modal-body flex flex-col gap-4">
               {modalError && (
-                <div role="alert" style={{ background: "#FEF2F2", border: "1px solid #FECACA", color: "#B91C1C", borderRadius: 8, padding: "8px 10px", fontSize: "0.78rem", display: "flex", alignItems: "center", gap: 6 }}>
+                <div role="alert" className="adm-alert adm-alert--compact is-error mb-0">
                   <Icon name="alert-circle" size={15} />
                   <span>{modalError}</span>
                 </div>
               )}
               <div>
-                <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 700, marginBottom: 5 }}>Loại điều chỉnh</label>
+                <label className="adm-label--block">Loại điều chỉnh</label>
                 <select
                   value={type}
                   onChange={(e) => setType(e.target.value as any)}
-                  style={{ width: "100%", border: "1px solid var(--color-bone)", borderRadius: 8, padding: 10, fontSize: "0.85rem", background: "white" }}
+                  className="adm-field"
                 >
                   <option value="Thu bù">Thu bù phụ phí sau hoàn tất</option>
                   <option value="Hoàn trả">Hoàn trả chênh lệch cọc</option>
@@ -489,13 +465,13 @@ export function AdjustmentsTab({ app }: { app: ReturnType<typeof useApp> }) {
                 </select>
               </div>
 
-              <div className="grid gap-3" style={{ gridTemplateColumns: "1fr 1fr" }}>
+              <div className="adm-grid-2">
                 <div>
-                  <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 700, marginBottom: 5 }}>Đơn hàng liên quan</label>
+                  <label className="adm-label--block">Đơn hàng liên quan</label>
                   <select
                     value={orderId}
                     onChange={(e) => setOrderId(e.target.value)}
-                    style={{ width: "100%", border: "1px solid var(--color-bone)", borderRadius: 8, padding: 10, fontSize: "0.85rem", background: "white" }}
+                    className="adm-field"
                   >
                     <option value="">Không có</option>
                     {app.orders.map((o) => (
@@ -505,11 +481,11 @@ export function AdjustmentsTab({ app }: { app: ReturnType<typeof useApp> }) {
                 </div>
 
                 <div>
-                  <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 700, marginBottom: 5 }}>Phiếu nhập liên quan</label>
+                  <label className="adm-label--block">Phiếu nhập liên quan</label>
                   <select
                     value={importReceiptId}
                     onChange={(e) => setImportReceiptId(e.target.value)}
-                    style={{ width: "100%", border: "1px solid var(--color-bone)", borderRadius: 8, padding: 10, fontSize: "0.85rem", background: "white" }}
+                    className="adm-field"
                   >
                     <option value="">Không có</option>
                     {app.importReceipts.map((r) => (
@@ -520,23 +496,23 @@ export function AdjustmentsTab({ app }: { app: ReturnType<typeof useApp> }) {
               </div>
 
               {realApi && orderId && (
-                <div style={{ background: "#F8F6F0", borderRadius: 8, padding: 10, border: "1px solid #E2DDD1", fontSize: "0.78rem" }}>
+                <div className="adm-card--cream text-[0.78rem] p-2.5">
                   {orderLookupLoading ? (
-                    <span style={{ color: "#6B7280" }}>Đang kiểm tra biên bản đối soát &amp; phụ phí của đơn...</span>
+                    <span className="text-[#6B7280]">Đang kiểm tra biên bản đối soát &amp; phụ phí của đơn...</span>
                   ) : orderDoiSoat ? (
                     <div className="flex flex-col gap-2">
                       <div>
-                        Biên bản đối soát gốc: <strong style={{ color: "#1B3F2F" }}>#{orderDoiSoat.maDoiSoat}</strong> ({orderDoiSoat.trangThai})
+                        Biên bản đối soát gốc: <strong className="text-[#1B3F2F]">#{orderDoiSoat.maDoiSoat}</strong> ({orderDoiSoat.trangThai})
                       </div>
                       {orderSurchargeIds.length > 0 && (
                         <div>
-                          <label style={{ display: "block", fontSize: "0.75rem", fontWeight: 700, marginBottom: 3 }}>
+                          <label className="adm-label--xs">
                             Phụ phí gốc cần lập dòng điều chỉnh kèm (tùy chọn):
                           </label>
                           <select
                             value={selectedSurchargeId}
                             onChange={(e) => setSelectedSurchargeId(e.target.value)}
-                            style={{ width: "100%", border: "1px solid #CBD5E1", borderRadius: 6, padding: "6px 8px", fontSize: "0.78rem", background: "white" }}
+                            className="adm-field adm-field--sm"
                           >
                             <option value="">Chỉ lập điều chỉnh trên biên bản đối soát</option>
                             {orderSurchargeIds.map((p) => (
@@ -547,13 +523,13 @@ export function AdjustmentsTab({ app }: { app: ReturnType<typeof useApp> }) {
                       )}
                     </div>
                   ) : (
-                    <span style={{ color: "#B91C1C" }}>{orderLookupError || "Đơn chưa có biên bản đối soát."}</span>
+                    <span className="text-[#B91C1C]">{orderLookupError || "Đơn chưa có biên bản đối soát."}</span>
                   )}
                 </div>
               )}
 
               <div>
-                <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 700, marginBottom: 5 }}>Số tiền điều chỉnh (VNĐ)</label>
+                <label className="adm-label--block">Số tiền điều chỉnh (VNĐ)</label>
                 <input
                   required
                   type="number"
@@ -561,25 +537,25 @@ export function AdjustmentsTab({ app }: { app: ReturnType<typeof useApp> }) {
                   step="5000"
                   value={amount}
                   onChange={(e) => setAmount(Number(e.target.value))}
-                  style={{ width: "100%", border: "1px solid var(--color-bone)", borderRadius: 8, padding: 10, fontSize: "0.9rem" }}
+                  className="adm-field"
                 />
               </div>
 
               <div>
-                <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 700, marginBottom: 5 }}>Lý do điều chỉnh</label>
+                <label className="adm-label--block">Lý do điều chỉnh</label>
                 <textarea
                   required
                   rows={3}
                   placeholder="Ghi rõ nguyên nhân sai lệch hoặc thỏa thuận bồi thường..."
                   value={reason}
                   onChange={(e) => setReason(e.target.value)}
-                  style={{ width: "100%", border: "1px solid var(--color-bone)", borderRadius: 8, padding: 10, fontSize: "0.85rem" }}
+                  className="adm-field"
                 />
               </div>
 
               <div className="flex gap-2 mt-2">
-                <button type="button" disabled={submitBusy} onClick={() => setShowModal(false)} className="btn btn-secondary btn-md" style={{ flex: 1 }}>Hủy</button>
-                <button type="submit" disabled={submitBusy} className="btn btn-primary btn-md" style={{ flex: 1 }}>
+                <button type="button" disabled={submitBusy} onClick={() => setShowModal(false)} className="btn btn-secondary btn-md adm-btn-flex">Hủy</button>
+                <button type="submit" disabled={submitBusy} className="btn btn-primary btn-md adm-btn-flex">
                   {submitBusy ? "Đang lưu..." : "Lưu chứng từ"}
                 </button>
               </div>

@@ -27,23 +27,23 @@ public class BaoCaoKhoController : BaseApiController
     /// <summary>Nhập hàng theo lô nhập: gốc, điều chỉnh, hiệu lực (chỉ phiếu đã nhập kho).</summary>
     [HttpGet("nhap-hang")]
     public async Task<IActionResult> LayNhapHang([FromQuery] LocNhapHangRequest filter)
-        => HandleResult(await _baoCaoKhoService.LayNhapHangAsync(filter, User.LayMaTaiKhoan()));
+        => HandleResult(await _baoCaoKhoService.LayNhapHangAsync(filter, MaTaiKhoanHienTai));
 
     /// <summary>Phát sinh điều chỉnh nhập trong kỳ theo thời điểm áp dụng.</summary>
     [HttpGet("dieu-chinh-nhap")]
     public async Task<IActionResult> LayDieuChinhNhap([FromQuery] LocNhapHangRequest filter)
-        => HandleResult(await _baoCaoKhoService.LayDieuChinhNhapAsync(filter, User.LayMaTaiKhoan()));
+        => HandleResult(await _baoCaoKhoService.LayDieuChinhNhapAsync(filter, MaTaiKhoanHienTai));
 
     /// <summary>Lịch sử đơn giá nhập và đơn giá bình quân gia quyền theo sản phẩm nguồn.</summary>
     [HttpGet("lich-su-don-gia")]
     public async Task<IActionResult> LayLichSuDonGia([FromQuery] LocNhapHangRequest filter)
-        => HandleResult(await _baoCaoKhoService.LayLichSuDonGiaAsync(filter, User.LayMaTaiKhoan()));
+        => HandleResult(await _baoCaoKhoService.LayLichSuDonGiaAsync(filter, MaTaiKhoanHienTai));
 
     /// <summary>Xuất CSV UTF-8 cùng bộ lọc và quyền với báo cáo tương ứng.</summary>
     [HttpGet("xuat-csv")]
     public async Task<IActionResult> XuatCsv([FromQuery] XuatCsvKhoRequest request)
     {
-        var result = await _baoCaoKhoService.XuatCsvAsync(request, User.LayMaTaiKhoan());
+        var result = await _baoCaoKhoService.XuatCsvAsync(request, MaTaiKhoanHienTai);
         if (!result.ThanhCong)
             return HandleResult(result);
 

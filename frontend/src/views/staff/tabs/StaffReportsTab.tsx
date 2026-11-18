@@ -114,10 +114,10 @@ export function StaffReportsTab({ app, openOrder }: { app: ReturnType<typeof use
     <div>
       <div className="flex justify-between items-center mb-5 flex-wrap gap-3">
         <div>
-          <h2 style={{ fontFamily: "var(--font-display)", fontSize: "1.4rem", color: "var(--color-bark)", marginBottom: 4 }}>
+          <h2 className="so-page-title">
             Báo cáo ca trực & Nhật ký nhân viên (UC10.1 & UC10.4)
           </h2>
-          <p style={{ color: "#6B7280", fontSize: "0.85rem" }}>
+          <p className="so-page-subtitle">
             Theo dõi khối lượng giao nhận, thiết bị kho trong ca trực và truy vết nhật ký thao tác phục vụ công việc.
           </p>
         </div>
@@ -125,23 +125,13 @@ export function StaffReportsTab({ app, openOrder }: { app: ReturnType<typeof use
         <div className="flex gap-2">
           <button
             onClick={() => setSubTab("shift")}
-            style={{
-              background: subTab === "shift" ? "var(--color-forest)" : "white",
-              color: subTab === "shift" ? "white" : "var(--color-bark)",
-              border: `1px solid ${subTab === "shift" ? "var(--color-forest)" : "var(--color-bone)"}`,
-              borderRadius: 8, padding: "7px 14px", fontWeight: 700, fontSize: "0.82rem", cursor: "pointer"
-            }}
+            className={`so-tab-btn is-compact ${subTab === "shift" ? "is-active" : ""}`}
           >
             <span className="icon-label"><Icon name="tool" size={15} /> Chỉ tiêu ca trực</span>
           </button>
           <button
             onClick={() => setSubTab("audit")}
-            style={{
-              background: subTab === "audit" ? "var(--color-forest)" : "white",
-              color: subTab === "audit" ? "white" : "var(--color-bark)",
-              border: `1px solid ${subTab === "audit" ? "var(--color-forest)" : "var(--color-bone)"}`,
-              borderRadius: 8, padding: "7px 14px", fontWeight: 700, fontSize: "0.82rem", cursor: "pointer"
-            }}
+            className={`so-tab-btn is-compact ${subTab === "audit" ? "is-active" : ""}`}
           >
             <span className="icon-label"><Icon name="clipboard" size={15} /> Nhật ký thao tác ({staffLogs.length})</span>
           </button>
@@ -149,7 +139,7 @@ export function StaffReportsTab({ app, openOrder }: { app: ReturnType<typeof use
       </div>
 
       {reportError && (
-        <div style={{ background: "#FEF2F2", border: "1px solid #FECACA", color: "#B91C1C", borderRadius: 8, padding: "10px 14px", marginBottom: 14, fontSize: "0.82rem", fontWeight: 600 }}>
+        <div className="so-alert-error">
           {reportError}
         </div>
       )}
@@ -157,103 +147,104 @@ export function StaffReportsTab({ app, openOrder }: { app: ReturnType<typeof use
       {subTab === "shift" && (
         <div>
           {reportLoading && (
-            <div style={{ fontSize: "0.8rem", color: "#6B7280", marginBottom: 10 }}>
+            <div className="so-loading-note">
               Đang tải số liệu báo cáo vận hành từ máy chủ...
             </div>
           )}
 
           {/* Lưới chỉ tiêu vận hành ca trực */}
-          <div className="grid gap-3 mb-6" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))" }}>
-            <div style={{ background: "white", borderRadius: 10, padding: 14, border: "1px solid var(--color-bone)" }}>
-              <div style={{ fontSize: "0.75rem", color: "#6B7280", fontWeight: 600 }}>Đơn cần chuẩn bị & giao</div>
-              <div style={{ fontFamily: "var(--font-mono)", fontSize: "1.7rem", fontWeight: 800, color: "var(--color-forest)", marginTop: 2 }}>
+          <div className="grid gap-3 mb-6 so-mini-kpi-grid">
+            <div className="so-mini-kpi-card">
+              <div className="so-mini-kpi-label">Đơn cần chuẩn bị & giao</div>
+              <div className="so-mini-kpi-val is-forest">
                 {pickupInShift.length}
               </div>
-              <div style={{ fontSize: "0.7rem", color: "#6B7280", marginTop: 4 }}>Chờ đóng gói & bàn giao</div>
+              <div className="so-mini-kpi-sub">Chờ đóng gói & bàn giao</div>
             </div>
 
-            <div style={{ background: "white", borderRadius: 10, padding: 14, border: "1px solid var(--color-bone)" }}>
-              <div style={{ fontSize: "0.75rem", color: "#6B7280", fontWeight: 600 }}>Đơn đang thuê (Chờ nhận trả)</div>
-              <div style={{ fontFamily: "var(--font-mono)", fontSize: "1.7rem", fontWeight: 800, color: "#2563EB", marginTop: 2 }}>
+            <div className="so-mini-kpi-card">
+              <div className="so-mini-kpi-label">Đơn đang thuê (Chờ nhận trả)</div>
+              <div className="so-mini-kpi-val is-blue">
                 {returnInShift.length}
               </div>
-              <div style={{ fontSize: "0.7rem", color: "#6B7280", marginTop: 4 }}>Khách đang sử dụng</div>
+              <div className="so-mini-kpi-sub">Khách đang sử dụng</div>
             </div>
 
-            <div style={{ background: overdueOrders.length > 0 ? "#FEF2F2" : "white", borderRadius: 10, padding: 14, border: `1px solid ${overdueOrders.length > 0 ? "#F87171" : "var(--color-bone)"}` }}>
-              <div style={{ fontSize: "0.75rem", color: overdueOrders.length > 0 ? "#B91C1C" : "#6B7280", fontWeight: 600 }}>Đơn quá hạn hiện tại</div>
-              <div style={{ fontFamily: "var(--font-mono)", fontSize: "1.7rem", fontWeight: 800, color: overdueOrders.length > 0 ? "#DC2626" : "var(--color-bark)", marginTop: 2 }}>
+            {/* Highlight cảnh báo đỏ khi có đơn quá hạn trong ca */}
+            <div className={`so-mini-kpi-card ${overdueOrders.length > 0 ? "is-alert" : ""}`}>
+              <div className="so-mini-kpi-label">Đơn quá hạn hiện tại</div>
+              <div className="so-mini-kpi-val">
                 {overdueOrders.length}
               </div>
-              <div style={{ fontSize: "0.7rem", color: overdueOrders.length > 0 ? "#DC2626" : "#6B7280", marginTop: 4 }}>Cần gọi điện giục trả đồ</div>
+              <div className="so-mini-kpi-sub">Cần gọi điện giục trả đồ</div>
             </div>
 
-            <div style={{ background: "white", borderRadius: 10, padding: 14, border: "1px solid var(--color-bone)" }}>
-              <div style={{ fontSize: "0.75rem", color: "#6B7280", fontWeight: 600 }}>Đơn chờ đối soát hoàn tất</div>
-              <div style={{ fontFamily: "var(--font-mono)", fontSize: "1.7rem", fontWeight: 800, color: "#D97706", marginTop: 2 }}>
+            <div className="so-mini-kpi-card">
+              <div className="so-mini-kpi-label">Đơn chờ đối soát hoàn tất</div>
+              <div className="so-mini-kpi-val is-amber">
                 {pendingReconcile.length}
               </div>
-              <div style={{ fontSize: "0.7rem", color: "#6B7280", marginTop: 4 }}>Đã nhận trả xong thiết bị</div>
+              <div className="so-mini-kpi-sub">Đã nhận trả xong thiết bị</div>
             </div>
 
-            <div style={{ background: "white", borderRadius: 10, padding: 14, border: "1px solid var(--color-bone)" }}>
-              <div style={{ fontSize: "0.75rem", color: "#6B7280", fontWeight: 600 }}>
+            <div className="so-mini-kpi-card">
+              <div className="so-mini-kpi-label">
                 {tongQuan ? "Tổng đơn thành công (Hệ thống)" : "Lượt đã giao thành công"}
               </div>
-              <div style={{ fontFamily: "var(--font-mono)", fontSize: "1.7rem", fontWeight: 800, color: "var(--color-forest)", marginTop: 2 }}>
+              <div className="so-mini-kpi-val is-forest">
                 {tongQuan ? tongQuan.tongDonThanhCong : handedOverToday.length}
               </div>
-              <div style={{ fontSize: "0.7rem", color: "#6B7280", marginTop: 4 }}>
+              <div className="so-mini-kpi-sub">
                 {tongQuan ? `Tỷ lệ hủy: ${tongQuan.tyLeHuyDonPhanTram}% · Quay vòng: ${tongQuan.tyLeQuayVongThietBi}x` : "Biên bản bàn giao đã ký"}
               </div>
             </div>
           </div>
 
           {/* Trạng thái thiết bị kho */}
-          <div className="grid gap-6 mb-6" style={{ gridTemplateColumns: "1.2fr 1fr" }}>
-            <div style={{ background: "white", borderRadius: 12, padding: 20, border: "1px solid var(--color-bone)" }}>
-              <h3 style={{ fontWeight: 700, color: "var(--color-bark)", marginBottom: 12, fontSize: "0.95rem" }}>
+          <div className="grid gap-6 mb-6 so-report-split-grid">
+            <div className="so-card">
+              <h3 className="so-card-title">
                 Tình trạng khả dụng thiết bị kho hiện tại
               </h3>
-              <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(2, 1fr)" }}>
-                <div style={{ background: "#F0FDF4", border: "1px solid #BBF7D0", borderRadius: 8, padding: 12 }}>
-                  <div style={{ fontSize: "0.75rem", color: "#166534" }}>Sẵn sàng cho thuê</div>
-                  <strong style={{ fontFamily: "var(--font-mono)", fontSize: "1.6rem", color: "#15803D" }}>{readyEquip}</strong>
-                  <div style={{ fontSize: "0.7rem", color: "#166534" }}>Đã vệ sinh, kiểm tra đầy đủ</div>
+              <div className="grid gap-3 so-equip-status-grid">
+                <div className="so-stat-box is-green">
+                  <div className="so-stat-box-label">Sẵn sàng cho thuê</div>
+                  <strong className="so-stat-box-val">{readyEquip}</strong>
+                  <div className="so-stat-box-sub">Đã vệ sinh, kiểm tra đầy đủ</div>
                 </div>
-                <div style={{ background: "#EFF6FF", border: "1px solid #BFDBFE", borderRadius: 8, padding: 12 }}>
-                  <div style={{ fontSize: "0.75rem", color: "#1E40AF" }}>Đang cho khách thuê</div>
-                  <strong style={{ fontFamily: "var(--font-mono)", fontSize: "1.6rem", color: "#1D4ED8" }}>{rentingEquip}</strong>
-                  <div style={{ fontSize: "0.7rem", color: "#1E40AF" }}>Theo các đơn đang hiệu lực</div>
+                <div className="so-stat-box is-blue">
+                  <div className="so-stat-box-label">Đang cho khách thuê</div>
+                  <strong className="so-stat-box-val">{rentingEquip}</strong>
+                  <div className="so-stat-box-sub">Theo các đơn đang hiệu lực</div>
                 </div>
-                <div style={{ background: "#FFFBEB", border: "1px solid #FDE68A", borderRadius: 8, padding: 12 }}>
-                  <div style={{ fontSize: "0.75rem", color: "#92400E" }}>Đang bảo trì / Sửa chữa</div>
-                  <strong style={{ fontFamily: "var(--font-mono)", fontSize: "1.6rem", color: "#D97706" }}>{maintEquip}</strong>
-                  <div style={{ fontSize: "0.7rem", color: "#92400E" }}>
+                <div className="so-stat-box is-amber">
+                  <div className="so-stat-box-label">Đang bảo trì / Sửa chữa</div>
+                  <strong className="so-stat-box-val">{maintEquip}</strong>
+                  <div className="so-stat-box-sub">
                     {typeof maintReport?.soPhieuDangMo === "number"
                       ? `${maintReport.soPhieuDangMo} phiếu bảo trì đang mở`
                       : "Cần kỹ thuật kiểm tra"}
                   </div>
                 </div>
-                <div style={{ background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: 8, padding: 12 }}>
-                  <div style={{ fontSize: "0.75rem", color: "#991B1B" }}>Thất lạc / Mất mát</div>
-                  <strong style={{ fontFamily: "var(--font-mono)", fontSize: "1.6rem", color: "#DC2626" }}>{lostEquip}</strong>
-                  <div style={{ fontSize: "0.7rem", color: "#991B1B" }}>
+                <div className="so-stat-box is-red">
+                  <div className="so-stat-box-label">Thất lạc / Mất mát</div>
+                  <strong className="so-stat-box-val">{lostEquip}</strong>
+                  <div className="so-stat-box-sub">
                     {tongQuan ? `Tỷ lệ hao mòn: ${tongQuan.tyLeHaoMonPhanTram}%` : "Đã lập biên bản bồi thường"}
                   </div>
                 </div>
               </div>
             </div>
 
-            <div style={{ background: "white", borderRadius: 12, padding: 20, border: "1px solid var(--color-bone)" }}>
-              <h3 style={{ fontWeight: 700, color: "var(--color-bark)", marginBottom: 10, fontSize: "0.95rem" }}>
+            <div className="so-card">
+              <h3 className="so-card-title-sm">
                 Quy định phân quyền vận hành (BR01 & UC10.1)
               </h3>
-              <div style={{ fontSize: "0.82rem", color: "#4B5563", lineHeight: 1.6 }}>
-                <p style={{ marginBottom: 8 }}>
+              <div className="so-policy-copy">
+                <p>
                   • <strong>Phạm vi dữ liệu:</strong> Nhân viên kho và CSKH được phân quyền theo dõi tình trạng đơn thuê, điều phối giao nhận và kiểm soát thiết bị tại kho.
                 </p>
-                <p style={{ marginBottom: 8 }}>
+                <p>
                   • <strong>Bảo mật tài chính:</strong> Các số liệu dòng tiền ròng và giá vốn nhập kho được bảo vệ thuộc thẩm quyền Quản trị viên.
                 </p>
                 <p>
@@ -264,27 +255,27 @@ export function StaffReportsTab({ app, openOrder }: { app: ReturnType<typeof use
           </div>
 
           {opsReport && opsReport.chiSoTheoSanPham.length > 0 && (
-            <div style={{ background: "white", borderRadius: 12, border: "1px solid var(--color-bone)", overflow: "auto" }}>
-              <div style={{ padding: "12px 16px", borderBottom: "1px solid var(--color-bone)", fontWeight: 700, fontSize: "0.9rem", color: "var(--color-bark)" }}>
+            <div className="so-table-card responsive-table">
+              <div className="so-table-section-head">
                 Hiệu suất xoay vòng thiết bị theo sản phẩm
               </div>
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.82rem" }}>
+              <table className="so-table">
                 <thead>
-                  <tr style={{ background: "var(--color-parchment)", textAlign: "left" }}>
+                  <tr>
                     {["Sản phẩm", "Danh mục", "Tổng TB", "Lượt thuê", "Hỏng hóc", "Thất lạc"].map((h) => (
-                      <th key={h} style={{ padding: "9px 12px" }}>{h}</th>
+                      <th key={h}>{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {opsReport.chiSoTheoSanPham.slice(0, 10).map((sp) => (
-                    <tr key={sp.maSanPham} style={{ borderTop: "1px solid var(--color-bone)" }}>
-                      <td style={{ padding: "9px 12px", fontWeight: 600 }}>{sp.tenSanPham}</td>
-                      <td style={{ padding: "9px 12px", color: "#6B7280" }}>{sp.tenDanhMuc}</td>
-                      <td style={{ padding: "9px 12px", fontFamily: "var(--font-mono)" }}>{sp.tongSoThietBi}</td>
-                      <td style={{ padding: "9px 12px", fontFamily: "var(--font-mono)", fontWeight: 700, color: "var(--color-forest)" }}>{sp.soLuotThue}</td>
-                      <td style={{ padding: "9px 12px", fontFamily: "var(--font-mono)", color: sp.soLuotHongHoc > 0 ? "#D97706" : "#6B7280" }}>{sp.soLuotHongHoc}</td>
-                      <td style={{ padding: "9px 12px", fontFamily: "var(--font-mono)", color: sp.soLuotMat > 0 ? "#DC2626" : "#6B7280" }}>{sp.soLuotMat}</td>
+                    <tr key={sp.maSanPham}>
+                      <td className="so-td-semibold">{sp.tenSanPham}</td>
+                      <td className="so-td-muted">{sp.tenDanhMuc}</td>
+                      <td className="so-td-mono-plain">{sp.tongSoThietBi}</td>
+                      <td className="so-td-mono-lg">{sp.soLuotThue}</td>
+                      <td className={`so-td-warn ${sp.soLuotHongHoc > 0 ? "is-warn" : ""}`}>{sp.soLuotHongHoc}</td>
+                      <td className={`so-td-danger ${sp.soLuotMat > 0 ? "is-danger" : ""}`}>{sp.soLuotMat}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -298,31 +289,31 @@ export function StaffReportsTab({ app, openOrder }: { app: ReturnType<typeof use
         <div>
           {/* Tìm kiếm nhật ký nhân viên */}
           <div className="flex gap-3 mb-4">
-            <div style={{ position: "relative", minWidth: 280, flex: 1 }}>
+            <div className="so-search-wrap">
               <input
                 type="text"
                 placeholder="Tìm nhật ký thao tác theo hành động, mã đơn, thiết bị..."
                 value={searchAudit}
                 onChange={(e) => setSearchAudit(e.target.value)}
-                style={{ width: "100%", border: "1px solid var(--color-bone)", borderRadius: 8, padding: "8px 12px 8px 32px", fontSize: "0.85rem", background: "white" }}
+                className="so-search-input"
               />
-              <div style={{ position: "absolute", left: 10, top: 9, color: "#9CA3AF" }}><Icon name="search" size={16} /></div>
+              <div className="so-search-icon"><Icon name="search" size={16} /></div>
             </div>
           </div>
 
-          <div style={{ background: "white", borderRadius: 12, border: "1px solid var(--color-bone)", overflow: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.82rem" }}>
+          <div className="so-table-card responsive-table">
+            <table className="so-table so-table-audit">
               <thead>
-                <tr style={{ background: "var(--color-parchment)", textAlign: "left" }}>
+                <tr>
                   {["Thời gian", "Người thực hiện", "Hành động", "Đối tượng tác động", "Chi tiết nội dung", "Thao tác"].map((h) => (
-                    <th key={h} style={{ padding: "10px 12px" }}>{h}</th>
+                    <th key={h}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {staffLogs.length === 0 ? (
                   <tr>
-                    <td colSpan={6} style={{ padding: "30px 0", textAlign: "center", color: "#6B7280" }}>
+                    <td colSpan={6} className="so-td-empty">
                       Chưa có nhật ký thao tác phù hợp.
                     </td>
                   </tr>
@@ -335,22 +326,21 @@ export function StaffReportsTab({ app, openOrder }: { app: ReturnType<typeof use
                     const orderIdToOpen =
                       log.thamChieuUrl?.match(/\/don-thue\/(\d+)/)?.[1] || log.targetId;
                     return (
-                      <tr key={log.id} style={{ borderTop: "1px solid var(--color-bone)" }}>
-                        <td style={{ padding: "10px 12px", fontFamily: "var(--font-mono)", fontSize: "0.75rem", color: "#6B7280" }}>
+                      <tr key={log.id}>
+                        <td className="so-td-mono-time">
                           {log.timestamp}
                         </td>
-                        <td style={{ padding: "10px 12px", fontWeight: 700 }}>{log.actor}</td>
-                        <td style={{ padding: "10px 12px", fontWeight: 600, color: "var(--color-forest)" }}>{log.action}</td>
-                        <td style={{ padding: "10px 12px", fontFamily: "var(--font-mono)" }}>
-                          <span style={{ color: "#6B7280" }}>{log.targetEntity}:</span> <strong>{log.targetId}</strong>
+                        <td className="so-td-bold">{log.actor}</td>
+                        <td className="so-td-action">{log.action}</td>
+                        <td className="so-td-mono-plain">
+                          <span className="so-td-muted">{log.targetEntity}:</span> <strong>{log.targetId}</strong>
                         </td>
-                        <td style={{ padding: "10px 12px", color: "#374151" }}>{log.detail}</td>
-                        <td style={{ padding: "10px 12px" }}>
+                        <td className="so-td-detail">{log.detail}</td>
+                        <td>
                           {orderMatch && orderIdToOpen && (
                             <button
                               onClick={() => openOrder(orderIdToOpen, "orders")}
-                              className="btn btn-secondary btn-sm"
-                              style={{ padding: "2px 8px", fontSize: "0.72rem" }}
+                              className="btn btn-secondary btn-sm so-btn-xs"
                             >
                               Xem đơn
                             </button>

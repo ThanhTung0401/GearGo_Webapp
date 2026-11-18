@@ -20,7 +20,7 @@ public partial class HoanTienService
         if (khoa == 0) throw new KetQuaHoanKhongKhopException("Không có yêu cầu hoàn với mã này.", new { maYeuCau });
 
         var h = await TaiTheoDoiAsync(maYeuCau, ct);
-        if (ph.SoTien.HasValue && TienTe.LamTronVnd(ph.SoTien.Value) != h.SoTien)
+        if (ph.SoTien.HasValue && CalculationHelpers.LamTronVnd(ph.SoTien.Value) != h.SoTien)
         {
             _lichSu.GhiNhatKyThaoTac(new GhiNhatKyCommand(null, "KET_QUA_HOAN_SAI_SO_TIEN", "HOAN_TIEN", h.MaHoanTien.ToString(),
                 new { h.SoTien, h.TrangThai }, new { ph.SoTien, KetQua = ph.KetQua.ToString(), ph.MaGiaoDichHoanCong }, nguonKetQua));
@@ -91,8 +91,8 @@ public partial class HoanTienService
             maDon, LoaiSuKienThongBao.HoanTien, MaSuKienThongBao.HoanTien(h.MaHoanTien, h.TrangThai),
             thanhCong ? "Hoàn tiền thành công" : "Hoàn tiền đang được xử lý lại",
             thanhCong
-                ? $"Khoản hoàn {TienTe.HienThi(h.SoTien)} đã được chuyển thành công."
-                : $"Khoản hoàn {TienTe.HienThi(h.SoTien)} chưa chuyển được; cửa hàng sẽ xử lý lại, bạn chưa cần thao tác."));
+                ? $"Khoản hoàn {CalculationHelpers.HienThiVnd(h.SoTien)} đã được chuyển thành công."
+                : $"Khoản hoàn {CalculationHelpers.HienThiVnd(h.SoTien)} chưa chuyển được; cửa hàng sẽ xử lý lại, bạn chưa cần thao tác."));
     }
 
     private async Task<long> TaoLanThuMoiAsync(HoanTien thatBai, long maTaiKhoan, long? maNhanVien, string? ghiChu, CancellationToken ct)

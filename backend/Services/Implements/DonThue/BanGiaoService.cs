@@ -29,7 +29,7 @@ public class BanGiaoService : IBanGiaoService
             .FirstOrDefaultAsync(p => p.MaDonThue == maDonThue);
 
         if (phieu == null)
-            return Result<PhieuBanGiaoResponse>.Loi(KietDomainConstants.ErrorCodes.NotFound, "Đơn thuê này chưa có biên bản bàn giao.");
+            return Result<PhieuBanGiaoResponse>.Loi(DomainConstants.Errors.NotFound, "Đơn thuê này chưa có biên bản bàn giao.");
 
         return Result<PhieuBanGiaoResponse>.Ok(phieu.ToResponse());
     }
@@ -43,9 +43,9 @@ public class BanGiaoService : IBanGiaoService
                 .FirstOrDefaultAsync(d => d.MaDonThue == maDonThue);
 
             if (donThue == null)
-                return Result<PhieuBanGiaoResponse>.Loi(KietDomainConstants.ErrorCodes.DonNotFound, "Không tìm thấy đơn thuê.");
+                return Result<PhieuBanGiaoResponse>.Loi(DomainConstants.Errors.OrderNotFound, "Không tìm thấy đơn thuê.");
             if (donThue.TrangThai != TrangThaiDonThue.SanSangNhan)
-                return Result<PhieuBanGiaoResponse>.Loi(KietDomainConstants.ErrorCodes.InvalidState, "Đơn thuê chưa sẵn sàng bàn giao.");
+                return Result<PhieuBanGiaoResponse>.Loi(DomainConstants.Errors.InvalidState, "Đơn thuê chưa sẵn sàng bàn giao.");
 
             var phieuDaCo = await _context.PhieuBanGiaos
                 .Include(p => p.ChiTietBanGiaos)
@@ -58,7 +58,7 @@ public class BanGiaoService : IBanGiaoService
             {
                 MaDonThue = maDonThue,
                 MaNhanVien = nhanVienTao?.MaNhanVien ?? maNhanVienTao,
-                TrangThai = KietDomainConstants.PhieuStatus.ChoGiao,
+                TrangThai = DomainConstants.Status.PendingDelivery,
                 ThoiDiemLap = DateTime.UtcNow
             };
             _context.PhieuBanGiaos.Add(phieuMoi);
@@ -66,7 +66,7 @@ public class BanGiaoService : IBanGiaoService
             var chiTietDonIds = donThue.ChiTietDonThues.Select(c => c.MaChiTietDon).ToList();
             var phanCongs = await _context.PhanCongThietBis
                 .Where(pc => chiTietDonIds.Contains(pc.MaChiTietDon)
-                             && pc.TrangThai == KietDomainConstants.PhieuStatus.DaPhanCong)
+                             && pc.TrangThai == DomainConstants.Status.Assigned)
                 .ToListAsync();
 
             foreach (var phanCong in phanCongs)
@@ -75,7 +75,7 @@ public class BanGiaoService : IBanGiaoService
                 {
                     PhieuBanGiao = phieuMoi,
                     MaPhanCong = phanCong.MaPhanCong,
-                    TinhTrangTruocThue = KietDomainConstants.PhieuStatus.TinhTrangMacDinhBanGiao
+                    TinhTrangTruocThue = DomainConstants.Status.DefaultHandoverCondition
                 });
             }
 
@@ -90,9 +90,9 @@ public class BanGiaoService : IBanGiaoService
             .FirstOrDefaultAsync(p => p.MaPhieuBanGiao == maPhieuBanGiao);
 
         if (phieu == null)
-            return Result<PhieuBanGiaoResponse>.Loi(KietDomainConstants.ErrorCodes.NotFound, "Không tìm thấy phiếu.");
-        if (phieu.TrangThai == KietDomainConstants.PhieuStatus.DaGiao)
-            return Result<PhieuBanGiaoResponse>.Loi(KietDomainConstants.ErrorCodes.Locked, "Phiếu đã chốt không thể sửa.");
+            return Result<PhieuBanGiaoResponse>.Loi(DomainConstants.Errors.NotFound, "Không tìm thấy phiếu.");
+        if (phieu.TrangThai == DomainConstants.Status.Delivered)
+            return Result<PhieuBanGiaoResponse>.Loi(DomainConstants.Errors.Locked, "Phiếu đã chốt không thể sửa.");
 
         phieu.TenNguoiNhanThucTe = request.TenNguoiNhanThucTe;
         phieu.ThoiDiemKhachXacNhan = request.ThoiDiemKhachXacNhan;
@@ -124,9 +124,9 @@ public class BanGiaoService : IBanGiaoService
                 .FirstOrDefaultAsync(p => p.MaPhieuBanGiao == maPhieuBanGiao);
 
             if (phieu == null)
-                return Result<bool>.Loi(KietDomainConstants.ErrorCodes.NotFound, "Không tìm thấy phiếu.");
-            if (phieu.TrangThai == KietDomainConstants.PhieuStatus.DaGiao)
-                return Result<bool>.Loi(KietDomainConstants.ErrorCodes.Locked, "Phiếu đã chốt.");
+                return Result<bool>.Loi(DomainConstants.Errors.NotFound, "Không tìm thấy phiếu.");
+            if (phieu.TrangThai == DomainConstants.Status.Delivered)
+                return Result<bool>.Loi(DomainConstants.Errors.Locked, "Phiếu đã chốt.");
 
             var nhanVienThucHien = await _context.LayNhanVienAsync(maNhanVienChot);
             var tenNhanVien = nhanVienThucHien?.HoTen ?? $"Nhân viên {maNhanVienChot}";
@@ -139,7 +139,7 @@ public class BanGiaoService : IBanGiaoService
             decimal tongTienYeuCau = phieu.DonThue.ChiTietDonThues.Sum(c =>
                 c.DonGiaThueMoiNgay * c.SoNgayTinhTien + c.MucCocMoiThietBi - c.TienGiam);
             decimal tongDaDong = await _context.ThanhToans
-                .Where(t => t.MaDonThue == phieu.MaDonThue && t.TrangThai == KietDomainConstants.PhieuStatus.ThanhCong)
+                .Where(t => t.MaDonThue == phieu.MaDonThue && t.TrangThai == DomainConstants.Status.Success)
                 .SumAsync(t => t.TongSoTien);
 
             var validationResult = BanGiaoValidationRules.KiemTraThanhToan(tongTienYeuCau, tongDaDong);

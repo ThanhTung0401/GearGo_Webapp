@@ -87,7 +87,7 @@ public partial class VongDoiThietBiService : IVongDoiThietBiService
         if (thietBi == null)
             return Result<AnhHuongThayDoiResponse>.Loi(DomainConstants.Errors.EquipmentNotFound, "Không tìm thấy thiết bị.");
 
-        if (request.LoaiThayDoi == KietDomainConstants.VongDoiConfig.LoaiGiangCap)
+        if (request.LoaiThayDoi == DomainConstants.Lifecycle.Downgrade)
         {
             if (!request.MaSanPhamDich.HasValue)
                 return Result<AnhHuongThayDoiResponse>.Loi(DomainConstants.Errors.TargetProductMismatch, "Phải chọn sản phẩm đích khi giáng cấp.");
@@ -110,13 +110,13 @@ public partial class VongDoiThietBiService : IVongDoiThietBiService
             res.VuongMac.Add("Thiết bị đang được khách thuê (chưa thu hồi).");
         }
 
-        if (loaiThayDoi == KietDomainConstants.VongDoiConfig.LoaiNgungSuDung)
+        if (loaiThayDoi == DomainConstants.Lifecycle.Decommission)
         {
             bool coBaoTriMo = await _context.PhieuBaoTris.AnyAsync(p =>
                 p.MaThietBi == thietBi.MaThietBi &&
-                (p.TrangThai == KietDomainConstants.BaoTriConfig.TrangThaiChoXuLy ||
-                 p.TrangThai == KietDomainConstants.BaoTriConfig.TrangThaiDangXuLy ||
-                 p.TrangThai == KietDomainConstants.BaoTriConfig.TrangThaiChoKiemTra));
+                (p.TrangThai == DomainConstants.Status.PendingProcessing ||
+                 p.TrangThai == DomainConstants.Status.InProgress ||
+                 p.TrangThai == DomainConstants.Status.PendingInspection));
             if (coBaoTriMo)
             {
                 res.CoTheDeNghi = false;
@@ -128,7 +128,7 @@ public partial class VongDoiThietBiService : IVongDoiThietBiService
         var camKetCuThe = await _context.PhanCongThietBis
             .Include(pc => pc.ChiTietDon).ThenInclude(ct => ct.DonThue)
             .Where(pc => pc.MaThietBi == thietBi.MaThietBi &&
-                         pc.TrangThai == KietDomainConstants.PhieuStatus.DaPhanCong &&
+                         pc.TrangThai == DomainConstants.Status.Assigned &&
                          (pc.ChiTietDon.DonThue.TrangThai == TrangThaiDonThue.ChoThanhToan ||
                           pc.ChiTietDon.DonThue.TrangThai == TrangThaiDonThue.DaXacNhan ||
                           pc.ChiTietDon.DonThue.TrangThai == TrangThaiDonThue.DangChuanBi ||

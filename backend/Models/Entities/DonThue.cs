@@ -130,7 +130,7 @@ public class DonThue
             NgayDat = now,
             GioNhanDuKien = req.GioNhanDuKien,
             GioTraDuKien = req.GioTraDuKien,
-            HanThanhToan = hanThanhToan ?? now.AddMinutes(KietDomainConstants.PolicyConfig.ThoiGianGiuChoPhut),
+            HanThanhToan = hanThanhToan ?? now.AddMinutes(DomainConstants.Policies.HoldTimeMinutes),
             TenNguoiNhan = req.TenNguoiNhan,
             SoDienThoaiNguoiNhan = req.SoDienThoaiNguoiNhan,
             EmailLienHe = req.EmailLienHe,
@@ -159,7 +159,7 @@ public class DonThue
     {
         var chiTiets = new List<ChiTietDonThue>();
         var giuChos = new List<GiuCho>();
-        var hanThanhToan = HanThanhToan ?? now.AddMinutes(KietDomainConstants.PolicyConfig.ThoiGianGiuChoPhut);
+        var hanThanhToan = HanThanhToan ?? now.AddMinutes(DomainConstants.Policies.HoldTimeMinutes);
         decimal tienGiamConLai = TongTienGiam;
 
         for (int i = 0; i < items.Count; i++)

@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useApp } from "../../../context/AppContext";
 import { isRealApiEnabled } from "../../../services/apiClient";
 
@@ -6,7 +6,7 @@ import { promotionApi } from "../../../services/api/promotionApi";
 
 import { fmt, type Promotion } from "../../../store";
 
-import { FormModal, fieldStyle, labelStyle } from "../forms/FormModal";
+import { FormModal } from "../forms/FormModal";
 
 import PromotionDetailModal from "../../../components/PromotionDetailModal";
 import { PromotionForm } from "../forms/PromotionForm";
@@ -118,41 +118,41 @@ export function PromotionsTab({ app }: { app: ReturnType<typeof useApp> }) {
     <div>
       <div className="flex flex-wrap justify-between items-center gap-3 mb-4">
         <div>
-          <h2 style={{ fontFamily: "var(--font-display)", fontSize: "1.4rem", color: "var(--color-bark)" }}>Quản lý chính sách khuyến mãi (UC8.2 - UC8.5)</h2>
-          <p style={{ fontSize: "0.8rem", color: "#6B7280", margin: 0 }}>
+          <h2 className="adm-page-title adm-page-title--compact">Quản lý chính sách khuyến mãi (UC8.2 - UC8.5)</h2>
+          <p className="adm-page-subtitle adm-page-subtitle--sm m-0">
             Kiểm soát mã giảm giá, giới hạn ngân sách, theo dõi doanh thu và tra cứu đơn áp dụng thực tế.
           </p>
         </div>
         <button
           onClick={() => setAction("new")}
-          style={{ background: "var(--color-forest)", color: "white", padding: "9px 18px", borderRadius: "8px", border: "none", cursor: "pointer", fontWeight: 700, fontSize: "0.85rem", display: "flex", alignItems: "center", gap: 6 }}
+          className="adm-btn-primary font-bold flex items-center gap-1.5"
         >
           <span>+</span> Tạo mã giảm mới (UC8.2)
         </button>
       </div>
       {promoActionError && (
-        <div role="alert" style={{ background: "#FEE2E2", color: "#B91C1C", padding: "10px 14px", borderRadius: 8, marginBottom: 12, fontSize: "0.82rem" }}>
+        <div role="alert" className="adm-alert is-error-solid adm-alert--block">
           {promoActionError}
         </div>
       )}
 
       {/* Bộ lọc và thanh tra cứu (UC8.4) */}
-      <div style={{ background: "white", padding: "12px 16px", borderRadius: "10px", border: "1px solid var(--color-bone)", display: "flex", flexWrap: "wrap", gap: 12, alignItems: "center", marginBottom: 16 }}>
-        <div style={{ flex: 1, minWidth: 220 }}>
+      <div className="adm-toolbar">
+        <div className="flex-1 min-w-[200px]">
           <input
             type="text"
             value={promoSearch}
             onChange={(e) => setPromoSearch(e.target.value)}
             placeholder="🔍 Tìm kiếm theo mã code hoặc tên chương trình..."
-            style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid var(--color-bone)", fontSize: "0.85rem" }}
+            className="adm-search-input w-full min-w-0"
           />
         </div>
-        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-          <span style={{ fontSize: "0.8rem", fontWeight: 600, color: "var(--color-bark)" }}>Trạng thái:</span>
+        <div className="flex gap-2.5 items-center">
+          <span className="adm-count-text font-semibold text-[var(--color-bark)]">Trạng thái:</span>
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value as any)}
-            style={{ padding: "8px 12px", borderRadius: 8, border: "1px solid var(--color-bone)", fontSize: "0.85rem", background: "white" }}
+            className="adm-select"
           >
             <option value="all">Tất cả ({app.promotions.length})</option>
             <option value="active">Đang hoạt động</option>
@@ -160,12 +160,12 @@ export function PromotionsTab({ app }: { app: ReturnType<typeof useApp> }) {
             <option value="expired">Đã hết hạn</option>
           </select>
         </div>
-        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-          <span style={{ fontSize: "0.8rem", fontWeight: 600, color: "var(--color-bark)" }}>Loại giảm:</span>
+        <div className="flex gap-2.5 items-center">
+          <span className="adm-count-text font-semibold text-[var(--color-bark)]">Loại giảm:</span>
           <select
             value={typeFilter}
             onChange={(e) => setTypeFilter(e.target.value as any)}
-            style={{ padding: "8px 12px", borderRadius: 8, border: "1px solid var(--color-bone)", fontSize: "0.85rem", background: "white" }}
+            className="adm-select"
           >
             <option value="all">Tất cả hình thức</option>
             <option value="percentage">Phần trăm (%)</option>
@@ -176,8 +176,8 @@ export function PromotionsTab({ app }: { app: ReturnType<typeof useApp> }) {
 
       {/* Danh sách khuyến mãi */}
       {filteredPromotions.length === 0 ? (
-        <div style={{ background: "white", borderRadius: 10, padding: 36, textAlign: "center", border: "1px dashed var(--color-bone)" }}>
-          <p style={{ color: "#6B7280", margin: 0 }}>Không tìm thấy chương trình khuyến mãi nào phù hợp với bộ lọc hiện tại.</p>
+        <div className="adm-empty-box">
+          <p className="text-[#6B7280] m-0">Không tìm thấy chương trình khuyến mãi nào phù hợp với bộ lọc hiện tại.</p>
         </div>
       ) : (
         <div className="flex flex-col gap-3">
@@ -187,108 +187,81 @@ export function PromotionsTab({ app }: { app: ReturnType<typeof useApp> }) {
             const isFull = p.totalUsageLimit !== null && p.usedCount >= p.totalUsageLimit;
 
             return (
+              /* Đổi viền và làm mờ thẻ khuyến mãi khi đã hết hạn hoặc tạm dừng */
               <div
                 key={p.id}
-                style={{
-                  background: "white",
-                  borderRadius: "10px",
-                  padding: "16px 20px",
-                  border: isExpired ? "1px dashed #D1D5DB" : "1px solid var(--color-bone)",
-                  display: "flex",
-                  gap: "16px",
-                  alignItems: "center",
-                  flexWrap: "wrap",
-                  opacity: isExpired || p.status === "inactive" ? 0.85 : 1,
-                }}
+                className={`adm-promo-card ${isExpired ? "is-expired" : p.status === "inactive" ? "is-inactive" : ""}`}
               >
                 {/* Badge mã code */}
-                <div style={{ background: "var(--color-parchment)", borderRadius: "10px", padding: "12px 16px", textAlign: "center", minWidth: 125, border: "1px solid var(--color-bone)" }}>
-                  <div style={{ fontFamily: "var(--font-mono)", fontWeight: 800, color: "var(--color-forest)", letterSpacing: "0.06em", fontSize: "1rem" }}>
+                <div className="adm-promo-badge">
+                  <div className="adm-promo-code">
                     {p.code}
                   </div>
-                  <div style={{ fontSize: "0.75rem", color: "#D97706", fontWeight: 700, marginTop: 2 }}>
+                  <div className="adm-promo-discount">
                     {p.discountType === "percentage" ? `Giảm ${p.discountValue}%` : `Giảm ${fmt(p.discountValue)}`}
                   </div>
                   {p.maxDiscount && (
-                    <div style={{ fontSize: "0.68rem", color: "#6B7280" }}>
+                    <div className="adm-hint-text text-[0.68rem]">
                       Tối đa {fmt(p.maxDiscount)}
                     </div>
                   )}
                 </div>
 
                 {/* Thông tin chương trình */}
-                <div style={{ flex: 1, minWidth: 260 }}>
+                <div className="adm-promo-info">
                   <div className="flex items-center gap-2 mb-1 flex-wrap">
-                    <strong style={{ fontSize: "0.95rem", color: "var(--color-bark)" }}>{p.name}</strong>
+                    <strong className="text-[0.95rem] text-[var(--color-bark)]">{p.name}</strong>
                     {isExpired ? (
-                      <span style={{ background: "#FEE2E2", color: "#B91C1C", padding: "2px 8px", borderRadius: 6, fontSize: "0.7rem", fontWeight: 700 }}>Đã hết hạn</span>
+                      <span className="adm-pill is-danger-dark">Đã hết hạn</span>
                     ) : p.status === "inactive" ? (
-                      <span style={{ background: "#FEF3C7", color: "#B45309", padding: "2px 8px", borderRadius: 6, fontSize: "0.7rem", fontWeight: 700 }}>Tạm dừng</span>
+                      <span className="adm-pill is-warning">Tạm dừng</span>
                     ) : isFull ? (
-                      <span style={{ background: "#FEE2E2", color: "#DC2626", padding: "2px 8px", borderRadius: 6, fontSize: "0.7rem", fontWeight: 700 }}>Hết lượt</span>
+                      <span className="adm-pill is-danger">Hết lượt</span>
                     ) : (
-                      <span style={{ background: "#DCFCE7", color: "#15803D", padding: "2px 8px", borderRadius: 6, fontSize: "0.7rem", fontWeight: 700 }}>Đang hiệu lực</span>
+                      <span className="adm-pill is-success">Đang hiệu lực</span>
                     )}
                   </div>
 
-                  <div style={{ fontSize: "0.8rem", color: "#4B5563", marginBottom: 4 }}>
+                  <div className="text-[0.8rem] text-[#4B5563] mb-1">
                     Đơn tối thiểu: <strong>{fmt(p.minimumRental)}</strong> · Phạm vi:{" "}
                     <strong>{p.scope === "all" ? "Tất cả thiết bị" : p.scope === "products" ? `Theo sản phẩm (${p.productIds.length})` : `Theo danh mục (${p.categoryIds.length})`}</strong>
                   </div>
 
-                  <div style={{ fontSize: "0.74rem", color: "#6B7280" }}>
+                  <div className="adm-hint-text text-[0.74rem]">
                     Hiệu lực: {new Date(p.startsAt).toLocaleDateString("vi-VN")} → {new Date(p.endsAt).toLocaleDateString("vi-VN")} · Đã dùng: <strong>{p.usedCount}</strong> / {p.totalUsageLimit ?? "∞"} lượt
                   </div>
 
                   {/* Thanh tiến độ sử dụng lượt */}
                   {p.totalUsageLimit && (
-                    <div style={{ background: "var(--color-bone)", borderRadius: "4px", height: "6px", marginTop: "6px", overflow: "hidden", maxWidth: 300 }}>
-                      <div style={{ height: "100%", background: usagePercent >= 90 ? "#EF4444" : "var(--color-forest)", width: `${usagePercent}%`, transition: "width 0.3s ease" }} />
+                    <div className="adm-progress-track adm-progress-track--promo">
+                      {/* Chiều rộng thanh tiến độ tính động theo phần trăm lượt đã dùng */}
+                      <div className={`adm-progress-fill ${usagePercent >= 90 ? "is-critical" : ""}`} style={{ width: `${usagePercent}%` }} />
                     </div>
                   )}
 
                   {/* Lý do tạm dừng nếu có */}
                   {p.status === "inactive" && p.stopReason && (
-                    <div style={{ marginTop: 6, fontSize: "0.74rem", color: "#92400E", background: "#FEF3C7", padding: "3px 8px", borderRadius: 6, display: "inline-block" }}>
+                    <div className="adm-pill is-warning mt-1.5 font-normal">
                       ⚠️ Lý do tạm dừng: {p.stopReason}
                     </div>
                   )}
                 </div>
 
                 {/* Các nút hành động */}
-                <div style={{ display: "flex", flexDirection: "column", gap: 6, alignItems: "stretch", minWidth: 150 }}>
+                <div className="adm-promo-actions">
                   {/* Nút xem chi tiết & đơn áp dụng (UC8.4) */}
                   <button
                     onClick={() => setSelectedPromoDetail(p)}
-                    style={{
-                      background: "white",
-                      border: "1px solid var(--color-forest)",
-                      color: "var(--color-forest)",
-                      borderRadius: 6,
-                      padding: "6px 12px",
-                      cursor: "pointer",
-                      fontSize: "0.78rem",
-                      fontWeight: 700,
-                      textAlign: "center",
-                    }}
+                    className="adm-btn-forest-outline text-center py-1.5 px-3"
                   >
                     👁 Xem đơn áp dụng (UC8.4)
                   </button>
 
-                  <div style={{ display: "flex", gap: 6 }}>
+                  <div className="flex gap-1.5">
                     {/* Nút sửa */}
                     <button
                       onClick={() => setAction(p)}
-                      style={{
-                        flex: 1,
-                        border: "1px solid var(--color-bone)",
-                        borderRadius: 6,
-                        background: "white",
-                        padding: "5px 8px",
-                        cursor: "pointer",
-                        fontSize: "0.75rem",
-                        fontWeight: 600,
-                      }}
+                      className="adm-btn-outline adm-btn-flex py-1.5"
                     >
                       ✏️ Sửa (UC8.3)
                     </button>
@@ -297,18 +270,7 @@ export function PromotionsTab({ app }: { app: ReturnType<typeof useApp> }) {
                     <button
                       disabled={togglingPromoId === p.id}
                       onClick={() => handleToggleStatus(p)}
-                      style={{
-                        flex: 1,
-                        border: "1px solid",
-                        borderColor: p.status === "active" ? "#F59E0B" : "#10B981",
-                        background: p.status === "active" ? "#FFFBEB" : "#ECFDF5",
-                        color: p.status === "active" ? "#B45309" : "#047857",
-                        borderRadius: 6,
-                        padding: "5px 8px",
-                        cursor: togglingPromoId === p.id ? "wait" : "pointer",
-                        fontSize: "0.75rem",
-                        fontWeight: 600,
-                      }}
+                      className={`adm-btn-flex ${p.status === "active" ? "adm-btn-warning-outline" : "adm-btn-success-outline"}`}
                     >
                       {togglingPromoId === p.id ? "..." : p.status === "active" ? "⏸ Tạm dừng" : "▶ Kích hoạt"}
                     </button>
@@ -356,34 +318,34 @@ export function PromotionsTab({ app }: { app: ReturnType<typeof useApp> }) {
           onClose={() => setStoppingPromo(null)}
         >
           <form onSubmit={handlePauseSubmit} className="grid gap-4 mt-4">
-            <label style={labelStyle}>
+            <label className="adm-label">
               Lý do tạm dừng chương trình (Bắt buộc)
               <textarea
                 rows={3}
                 value={stopReason}
                 onChange={(e) => setStopReason(e.target.value)}
                 placeholder="VD: Hết ngân sách chiến dịch tháng này / Phát hiện gian lận lạm dụng mã / Tạm dừng theo chỉ đạo của ban giám đốc..."
-                style={fieldStyle}
+                className="adm-field"
               />
             </label>
             {stopError && (
-              <div role="alert" style={{ color: "#B91C1C", background: "#FEE2E2", padding: 10, borderRadius: 8, fontSize: "0.85rem" }}>
+              <div role="alert" className="adm-alert is-error-solid adm-alert--block mb-0">
                 {stopError}
               </div>
             )}
-            <div className="modal-footer mt-2" style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
+            <div className="modal-footer mt-2">
               <button
                 type="button"
                 disabled={stopLoading}
                 onClick={() => setStoppingPromo(null)}
-                style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid var(--color-bone)", background: "white", cursor: "pointer" }}
+                className="btn btn-secondary btn-md"
               >
                 Hủy
               </button>
               <button
                 type="submit"
                 disabled={stopLoading}
-                style={{ padding: "8px 18px", borderRadius: 8, border: "none", background: "#D97706", color: "white", fontWeight: 700, cursor: stopLoading ? "wait" : "pointer" }}
+                className="adm-btn-warning-solid"
               >
                 {stopLoading ? "Đang xử lý..." : "⏸ Xác nhận tạm dừng (UC8.5)"}
               </button>

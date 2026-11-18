@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using GearGo.Helpers;
 using GearGo.Models.DTOs.Admin;
 using GearGo.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -13,7 +14,7 @@ namespace GearGo.Controllers.Admin;
 [ApiController]
 [Authorize(Policy = "AdminOnly")]
 [Route("api/admin/danh-muc")]
-public class DanhMucController : ControllerBase
+public class DanhMucController : BaseApiController
 {
     private readonly IAdminDanhMucService _adminDanhMucService;
 

@@ -34,12 +34,12 @@ export function ReportsImportSection({
   return (
     <div>
       <div className="flex justify-between items-center mb-4 flex-wrap gap-3">
-        <div className="flex items-center gap-2">
-          <span style={{ fontSize: "0.82rem", fontWeight: 600 }}>Lọc theo Nhà cung cấp:</span>
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-[0.82rem] font-semibold">Lọc theo Nhà cung cấp:</span>
           <select
             value={supplierFilter}
             onChange={(e) => setSupplierFilter(e.target.value)}
-            style={{ border: "1px solid var(--color-bone)", borderRadius: 8, padding: "6px 12px", fontSize: "0.82rem", background: "white" }}
+            className="adm-select adm-select--sm"
           >
             <option value="all">Tất cả nhà cung cấp</option>
             {app.suppliers.map((s) => (
@@ -47,28 +47,28 @@ export function ReportsImportSection({
             ))}
           </select>
         </div>
-        <div style={{ background: "var(--color-parchment)", borderRadius: 8, padding: "6px 14px", border: "1px solid var(--color-bone)", fontSize: "0.85rem" }}>
-          Tổng giá trị nhập hiệu lực: <strong style={{ fontFamily: "var(--font-mono)", color: "var(--color-forest)" }}>{fmt(totalImportAssetValue)}</strong>
+        <div className="adm-card--parchment px-3.5 py-1.5 text-[0.85rem]">
+          Tổng giá trị nhập hiệu lực: <strong className="adm-cell-mono text-[var(--color-forest)]">{fmt(totalImportAssetValue)}</strong>
           {isRealApi && importReport && importReport.tongGiaTriGoc !== importReport.tongGiaTriHieuLuc && (
-            <span style={{ fontSize: "0.75rem", color: "#6B7280", marginLeft: 8 }}>(Gốc: {fmt(Number(importReport.tongGiaTriGoc ?? 0))})</span>
+            <span className="adm-hint-text text-[0.75rem] ml-2">(Gốc: {fmt(Number(importReport.tongGiaTriGoc ?? 0))})</span>
           )}
         </div>
       </div>
 
-      <div className="grid gap-6 mb-6" style={{ gridTemplateColumns: "1.2fr 1fr" }}>
-        <div style={{ background: "white", borderRadius: 12, padding: 20, border: "1px solid var(--color-bone)" }}>
-          <h3 style={{ fontWeight: 700, color: "var(--color-bark)", marginBottom: 12, fontSize: "0.95rem" }}>
+      <div className="adm-import-grid mb-6">
+        <div className="adm-card adm-card--padded">
+          <h3 className="adm-section-heading mb-3">
             Danh sách chứng từ nhập kho thực tế (UC10.3)
           </h3>
-          <p style={{ fontSize: "0.78rem", color: "#6B7280", marginBottom: 12 }}>
+          <p className="adm-hint-text text-[0.78rem] mb-3">
             Chỉ tính các phiếu đã hoàn tất nhập kho theo biên bản kiểm định. Nhấn nút "Mở chứng từ" để đối chiếu vật phẩm.
           </p>
-          <div className="responsive-table" style={{ overflow: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+          <div className="responsive-table adm-table-scroll">
+            <table className="adm-table adm-table--md">
               <thead>
-                <tr style={{ background: "var(--color-parchment)", fontSize: "0.78rem", fontWeight: 600, color: "var(--color-bark)" }}>
+                <tr>
                   {["Mã phiếu", "Nhà cung cấp", "Ngày xác nhận", "Số dòng", "Tổng giá trị", "Thao tác"].map((h) => (
-                    <th key={h} style={{ padding: "8px 10px", textAlign: "left" }}>{h}</th>
+                    <th key={h}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -77,19 +77,19 @@ export function ReportsImportSection({
                   (importReport.phieu.items as any[]).map((p) => {
                     const matchedReceipt = app.importReceipts.find((r) => r.id === String(p.maPhieuNhap));
                     return (
-                      <tr key={p.maPhieuNhap} style={{ borderTop: "1px solid var(--color-bone)", fontSize: "0.8rem" }}>
-                        <td style={{ padding: "8px 10px", fontFamily: "var(--font-mono)", fontWeight: 700, color: "var(--color-forest)" }}>{p.maPhieuHienThi || p.maPhieuNhap}</td>
-                        <td style={{ padding: "8px 10px" }}>{p.tenNhaCungCapHienTai}</td>
-                        <td style={{ padding: "8px 10px", color: "#6B7280" }}>{p.ngayNhapThucTe ? new Date(p.ngayNhapThucTe).toLocaleDateString("vi-VN") : "—"}</td>
-                        <td style={{ padding: "8px 10px" }}>{(p.dong ?? []).length} sản phẩm</td>
-                        <td style={{ padding: "8px 10px", fontFamily: "var(--font-mono)", fontWeight: 700, color: "var(--color-forest)" }}>{fmt(Number(p.tongGiaTriHieuLuc ?? p.tongGiaTriGoc ?? 0))}</td>
-                        <td style={{ padding: "8px 10px" }}>
+                      <tr key={p.maPhieuNhap}>
+                        <td className="adm-cell-code">{p.maPhieuHienThi || p.maPhieuNhap}</td>
+                        <td>{p.tenNhaCungCapHienTai}</td>
+                        <td className="adm-hint-text">{p.ngayNhapThucTe ? new Date(p.ngayNhapThucTe).toLocaleDateString("vi-VN") : "—"}</td>
+                        <td>{(p.dong ?? []).length} sản phẩm</td>
+                        <td className="adm-cell-mono font-bold text-[var(--color-forest)]">{fmt(Number(p.tongGiaTriHieuLuc ?? p.tongGiaTriGoc ?? 0))}</td>
+                        <td>
                           {matchedReceipt ? (
-                            <button onClick={() => setViewingReceipt(matchedReceipt)} className="btn btn-secondary btn-sm" style={{ padding: "3px 8px", fontSize: "0.72rem" }}>
+                            <button onClick={() => setViewingReceipt(matchedReceipt)} className="btn btn-secondary btn-sm adm-btn-xs">
                               🔍 Mở chứng từ
                             </button>
                           ) : (
-                            <span style={{ fontSize: "0.72rem", color: "#9CA3AF" }}>#{p.maPhieuNhap}</span>
+                            <span className="adm-muted-note">#{p.maPhieuNhap}</span>
                           )}
                         </td>
                       </tr>
@@ -99,17 +99,16 @@ export function ReportsImportSection({
                   inRangeImports.map((r) => {
                     const totalVal = r.lines.reduce((s, l) => s + l.quantity * l.unitPrice, 0);
                     return (
-                      <tr key={r.id} style={{ borderTop: "1px solid var(--color-bone)", fontSize: "0.8rem" }}>
-                        <td style={{ padding: "8px 10px", fontFamily: "var(--font-mono)", fontWeight: 700, color: "var(--color-forest)" }}>{r.displayCode ?? r.id}</td>
-                        <td style={{ padding: "8px 10px" }}>{r.supplierName}</td>
-                        <td style={{ padding: "8px 10px", color: "#6B7280" }}>{r.confirmedAt || r.createdAt}</td>
-                        <td style={{ padding: "8px 10px" }}>{r.lines.length} sản phẩm</td>
-                        <td style={{ padding: "8px 10px", fontFamily: "var(--font-mono)", fontWeight: 700, color: "var(--color-forest)" }}>{fmt(totalVal)}</td>
-                        <td style={{ padding: "8px 10px" }}>
+                      <tr key={r.id}>
+                        <td className="adm-cell-code">{r.displayCode ?? r.id}</td>
+                        <td>{r.supplierName}</td>
+                        <td className="adm-hint-text">{r.confirmedAt || r.createdAt}</td>
+                        <td>{r.lines.length} sản phẩm</td>
+                        <td className="adm-cell-mono font-bold text-[var(--color-forest)]">{fmt(totalVal)}</td>
+                        <td>
                           <button
                             onClick={() => setViewingReceipt(r)}
-                            className="btn btn-secondary btn-sm"
-                            style={{ padding: "3px 8px", fontSize: "0.72rem" }}
+                            className="btn btn-secondary btn-sm adm-btn-xs"
                           >
                             🔍 Mở chứng từ
                           </button>
@@ -123,15 +122,15 @@ export function ReportsImportSection({
           </div>
         </div>
 
-        <div style={{ background: "white", borderRadius: 12, padding: 20, border: "1px solid var(--color-bone)" }}>
-          <h3 style={{ fontWeight: 700, color: "var(--color-bark)", marginBottom: 12, fontSize: "0.95rem" }}>
+        <div className="adm-card adm-card--padded">
+          <h3 className="adm-section-heading mb-3">
             Thiết bị khấu hao & Chuyển loại (Giáng cấp)
           </h3>
-          <p style={{ fontSize: "0.8rem", color: "#6B7280", marginBottom: 14 }}>
+          <p className="adm-hint-text text-[0.8rem] mb-3.5">
             Danh sách thiết bị đã qua nhiều lần sử dụng và được chuyển sang dòng sản phẩm Tiết kiệm (khấu hao tài sản).
           </p>
           {movedEquips.length === 0 ? (
-            <div style={{ background: "var(--color-parchment)", borderRadius: 8, padding: 14, textAlign: "center", color: "#6B7280", fontSize: "0.85rem" }}>
+            <div className="adm-card--parchment text-center text-[#6B7280] text-[0.85rem] p-3.5">
               Chưa có thiết bị nào được giáng cấp loại.
             </div>
           ) : (
@@ -140,12 +139,12 @@ export function ReportsImportSection({
                 const curr = app.products.find((p) => p.id === e.productId);
                 const orig = app.products.find((p) => p.id === e.originalProductId);
                 return (
-                  <div key={e.id} style={{ background: "#FFF7ED", border: "1px solid #FFEDD5", borderRadius: 8, padding: "10px 12px" }}>
+                  <div key={e.id} className="adm-report-depreciation-card">
                     <div className="flex justify-between">
-                      <strong style={{ fontFamily: "var(--font-mono)", color: "var(--color-forest)" }}>{e.displayCode ?? e.id}</strong>
-                      <span style={{ fontSize: "0.72rem", color: "#C2410C", fontWeight: 700 }}>Đã thuê {e.rentCount} lần</span>
+                      <strong className="adm-cell-mono text-[var(--color-forest)]">{e.displayCode ?? e.id}</strong>
+                      <span className="text-[0.72rem] text-[#C2410C] font-bold">Đã thuê {e.rentCount} lần</span>
                     </div>
-                    <div style={{ fontSize: "0.78rem", color: "#4B5563", marginTop: 2 }}>
+                    <div className="text-[0.78rem] text-[#4B5563] mt-0.5">
                       Gốc: <strong>{orig?.name}</strong> → Hiện tại: <strong>{curr?.name}</strong>
                     </div>
                   </div>
@@ -157,39 +156,39 @@ export function ReportsImportSection({
       </div>
 
       {isRealApi && (
-        <div className="grid gap-6 mt-6" style={{ gridTemplateColumns: "1fr 1fr" }}>
-          <div style={{ background: "white", borderRadius: 12, padding: 20, border: "1px solid var(--color-bone)" }}>
-            <h3 style={{ fontWeight: 700, color: "var(--color-bark)", marginBottom: 8, fontSize: "0.95rem" }}>
+        <div className="adm-grid-2-lg mt-6">
+          <div className="adm-card adm-card--padded">
+            <h3 className="adm-section-heading mb-2">
               Điều chỉnh phiếu nhập đã áp dụng (UC10.3)
             </h3>
-            <p style={{ fontSize: "0.78rem", color: "#6B7280", marginBottom: 12 }}>
+            <p className="adm-hint-text text-[0.78rem] mb-3">
               Tổng phiếu điều chỉnh: <strong>{importAdjReport?.soPhieuDieuChinh ?? 0}</strong> · Chênh lệch SL:{" "}
               <strong>{importAdjReport?.tongDeltaSoLuong ?? 0}</strong> · Chênh lệch giá trị:{" "}
-              <strong style={{ fontFamily: "var(--font-mono)" }}>{fmt(Number(importAdjReport?.tongDeltaGiaTri ?? 0))}</strong>
+              <strong className="adm-cell-mono">{fmt(Number(importAdjReport?.tongDeltaGiaTri ?? 0))}</strong>
             </p>
             {Array.isArray(importAdjReport?.items?.items) && importAdjReport.items.items.length > 0 ? (
-              <div className="responsive-table" style={{ overflow: "auto" }}>
-                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.78rem" }}>
+              <div className="responsive-table adm-table-scroll">
+                <table className="adm-table adm-table--sm">
                   <thead>
-                    <tr style={{ background: "var(--color-parchment)", color: "var(--color-bark)" }}>
-                      <th style={{ padding: "6px 8px", textAlign: "left" }}>Phiếu ĐC</th>
-                      <th style={{ padding: "6px 8px", textAlign: "left" }}>Phiếu nhập / Loại</th>
-                      <th style={{ padding: "6px 8px", textAlign: "right" }}>Δ SL</th>
-                      <th style={{ padding: "6px 8px", textAlign: "right" }}>Δ Giá trị</th>
+                    <tr>
+                      <th>Phiếu ĐC</th>
+                      <th>Phiếu nhập / Loại</th>
+                      <th className="adm-cell-right">Δ SL</th>
+                      <th className="adm-cell-right">Δ Giá trị</th>
                     </tr>
                   </thead>
                   <tbody>
                     {(importAdjReport.items.items as any[]).map((item, idx) => (
-                      <tr key={item.maPhieuDieuChinh ?? idx} style={{ borderTop: "1px solid var(--color-bone)" }}>
-                        <td style={{ padding: "6px 8px", fontFamily: "var(--font-mono)", fontWeight: 700 }}>
+                      <tr key={item.maPhieuDieuChinh ?? idx}>
+                        <td className="adm-cell-mono font-bold">
                           #{item.maPhieuDieuChinh ?? "—"}
                         </td>
-                        <td style={{ padding: "6px 8px" }} title={item.lyDo ?? ""}>
+                        <td title={item.lyDo ?? ""}>
                           {item.maPhieuNhapHienThi || `PN #${item.maPhieuNhap ?? "—"}`}
                           {item.loaiDieuChinh ? ` · ${item.loaiDieuChinh}` : ""}
                         </td>
-                        <td style={{ padding: "6px 8px", textAlign: "right" }}>{item.deltaSoLuong ?? 0}</td>
-                        <td style={{ padding: "6px 8px", textAlign: "right", fontFamily: "var(--font-mono)" }}>
+                        <td className="adm-cell-right">{item.deltaSoLuong ?? 0}</td>
+                        <td className="adm-cell-right adm-cell-mono">
                           {fmt(Number(item.deltaGiaTri ?? 0))}
                         </td>
                       </tr>
@@ -198,39 +197,39 @@ export function ReportsImportSection({
                 </table>
               </div>
             ) : (
-              <div style={{ background: "var(--color-parchment)", borderRadius: 8, padding: 12, textAlign: "center", color: "#6B7280", fontSize: "0.8rem" }}>
+              <div className="adm-card--parchment text-center text-[#6B7280] text-[0.8rem]">
                 Không có điều chỉnh nhập nào trong kỳ.
               </div>
             )}
           </div>
 
-          <div style={{ background: "white", borderRadius: 12, padding: 20, border: "1px solid var(--color-bone)" }}>
-            <h3 style={{ fontWeight: 700, color: "var(--color-bark)", marginBottom: 8, fontSize: "0.95rem" }}>
+          <div className="adm-card adm-card--padded">
+            <h3 className="adm-section-heading mb-2">
               Lịch sử đơn giá nhập theo sản phẩm (UC10.3)
             </h3>
-            <p style={{ fontSize: "0.78rem", color: "#6B7280", marginBottom: 12 }}>
+            <p className="adm-hint-text text-[0.78rem] mb-3">
               Đơn giá bình quân hiệu lực, giá thấp nhất và cao nhất theo từng sản phẩm nguồn trong kỳ.
             </p>
             {Array.isArray(priceHistoryReport?.sanPham) && priceHistoryReport.sanPham.length > 0 ? (
-              <div className="responsive-table" style={{ overflow: "auto" }}>
-                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.78rem" }}>
+              <div className="responsive-table adm-table-scroll">
+                <table className="adm-table adm-table--sm">
                   <thead>
-                    <tr style={{ background: "var(--color-parchment)", color: "var(--color-bark)" }}>
-                      <th style={{ padding: "6px 8px", textAlign: "left" }}>Sản phẩm</th>
-                      <th style={{ padding: "6px 8px", textAlign: "right" }}>Lần nhập</th>
-                      <th style={{ padding: "6px 8px", textAlign: "right" }}>ĐG BQ hiệu lực</th>
-                      <th style={{ padding: "6px 8px", textAlign: "right" }}>Thấp - Cao</th>
+                    <tr>
+                      <th>Sản phẩm</th>
+                      <th className="adm-cell-right">Lần nhập</th>
+                      <th className="adm-cell-right">ĐG BQ hiệu lực</th>
+                      <th className="adm-cell-right">Thấp - Cao</th>
                     </tr>
                   </thead>
                   <tbody>
                     {(priceHistoryReport.sanPham as any[]).map((sp) => (
-                      <tr key={sp.maSanPhamNguon} style={{ borderTop: "1px solid var(--color-bone)" }}>
-                        <td style={{ padding: "6px 8px", fontWeight: 600 }}>{sp.tenSanPham}</td>
-                        <td style={{ padding: "6px 8px", textAlign: "right" }}>{sp.soLanNhap ?? 0}</td>
-                        <td style={{ padding: "6px 8px", textAlign: "right", fontFamily: "var(--font-mono)", fontWeight: 700, color: "var(--color-forest)" }}>
+                      <tr key={sp.maSanPhamNguon}>
+                        <td className="font-semibold">{sp.tenSanPham}</td>
+                        <td className="adm-cell-right">{sp.soLanNhap ?? 0}</td>
+                        <td className="adm-cell-right adm-cell-mono font-bold text-[var(--color-forest)]">
                           {sp.donGiaBinhQuanHieuLuc != null ? fmt(Number(sp.donGiaBinhQuanHieuLuc)) : "—"}
                         </td>
-                        <td style={{ padding: "6px 8px", textAlign: "right", fontFamily: "var(--font-mono)", color: "#6B7280" }}>
+                        <td className="adm-cell-right adm-cell-mono adm-hint-text">
                           {sp.donGiaThapNhat != null ? fmt(Number(sp.donGiaThapNhat)) : "—"} – {sp.donGiaCaoNhat != null ? fmt(Number(sp.donGiaCaoNhat)) : "—"}
                         </td>
                       </tr>
@@ -239,7 +238,7 @@ export function ReportsImportSection({
                 </table>
               </div>
             ) : (
-              <div style={{ background: "var(--color-parchment)", borderRadius: 8, padding: 12, textAlign: "center", color: "#6B7280", fontSize: "0.8rem" }}>
+              <div className="adm-card--parchment text-center text-[#6B7280] text-[0.8rem]">
                 Chưa có lịch sử biến động đơn giá trong kỳ.
               </div>
             )}

@@ -184,85 +184,80 @@ export function CheckoutView() {
   };
 
   return (
-    <div className="customer-container" style={{ maxWidth: 1040, margin: "0 auto", padding: "24px 20px" }}>
+    <div className="customer-container cp-container cp-container--1040">
       <button
         onClick={() => app.setPage("cart")}
-        className="btn btn-ghost btn-sm mb-4"
-        style={{ display: "flex", alignItems: "center", gap: 6, color: "var(--color-forest)", fontWeight: 600 }}
+        className="btn btn-ghost btn-sm mb-4 cp-checkout-back-btn"
       >
         ← Quay lại giỏ hàng
       </button>
 
-      <div className="customer-page-header" style={{ marginBottom: 20 }}>
+      <div className="customer-page-header cp-page-header">
         <h1 className="customer-page-title">Xác nhận thông tin đặt thuê & Giữ chỗ (UC3.2)</h1>
         <p className="text-sm text-gray-500 mt-1">
           Hệ thống sẽ ghi nhận đơn và kích hoạt đồng hồ giữ chỗ 15 phút để bạn hoàn tất thanh toán.
         </p>
       </div>
 
-      <div className="cart-grid" style={{ display: "grid", gridTemplateColumns: "1fr 380px", gap: 24, alignItems: "start" }}>
+      <div className="cart-grid cp-cart-grid">
         <div className="flex flex-col gap-5">
           {/* Thông tin người nhận thiết bị */}
-          <div className="card-panel" style={{ background: "white", padding: 22, borderRadius: 16, border: "1px solid var(--color-bone)" }}>
+          <div className="card-panel cp-card">
             <h4 className="font-bold text-bark text-base mb-3 flex items-center gap-2">
               <Icon name="user" size={18} /> Thông tin người nhận thiết bị (Tự động cập nhật)
             </h4>
-            <div className="form-grid-2" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 14 }}>
+            <div className="form-grid-2 cp-checkout-form-grid">
               <div className="form-group">
-                <label className="form-label" style={{ fontSize: "0.8rem", fontWeight: 600 }}>Họ và tên người nhận *</label>
+                <label className="form-label cp-checkout-label">Họ và tên người nhận *</label>
                 <input
                   value={receiverName}
                   onChange={(e) => setReceiverName(e.target.value)}
-                  className="form-input"
-                  style={{ width: "100%", padding: "10px 12px", borderRadius: 8, border: "1px solid var(--color-bone)" }}
+                  className="form-input cp-checkout-input"
                 />
               </div>
               <div className="form-group">
-                <label className="form-label" style={{ fontSize: "0.8rem", fontWeight: 600 }}>Số điện thoại liên hệ *</label>
+                <label className="form-label cp-checkout-label">Số điện thoại liên hệ *</label>
                 <input
                   value={receiverPhone}
                   onChange={(e) => setReceiverPhone(e.target.value)}
-                  className="form-input"
-                  style={{ width: "100%", padding: "10px 12px", borderRadius: 8, border: "1px solid var(--color-bone)" }}
+                  className="form-input cp-checkout-input"
                 />
               </div>
               <div className="form-group">
-                <label className="form-label" style={{ fontSize: "0.8rem", fontWeight: 600 }}>Email nhận biên lai điện tử</label>
+                <label className="form-label cp-checkout-label">Email nhận biên lai điện tử</label>
                 <input
                   value={receiverEmail}
                   onChange={(e) => setReceiverEmail(e.target.value)}
-                  className="form-input"
-                  style={{ width: "100%", padding: "10px 12px", borderRadius: 8, border: "1px solid var(--color-bone)" }}
+                  className="form-input cp-checkout-input"
                 />
               </div>
               <div className="form-group">
-                <label className="form-label" style={{ fontSize: "0.8rem", fontWeight: 600 }}>Địa điểm nhận & nghiệm thu đồ</label>
-                <div style={{ padding: "10px 12px", borderRadius: 8, background: "var(--color-parchment)", fontSize: "0.82rem", color: "var(--color-bark)", fontWeight: 600 }}>
+                <label className="form-label cp-checkout-label">Địa điểm nhận & nghiệm thu đồ</label>
+                <div className="cp-checkout-location-pill">
                   📍 128 Nguyễn Đình Chiểu, P. Võ Thị Sáu, Q.3, TP.HCM
                 </div>
               </div>
             </div>
 
-            <div style={{ marginTop: 14, paddingTop: 12, borderTop: "1px dashed var(--color-bone)", display: "flex", gap: 16, flexWrap: "wrap", fontSize: "0.82rem", color: "#6B7280" }}>
+            <div className="cp-checkout-schedule-summary">
               <span>🕒 <strong>Nhận đồ:</strong> {app.pickupDate} ({app.pickupHour || "09:00"})</span>
               <span>→</span>
               <span>🕒 <strong>Trả đồ:</strong> {app.returnDate} ({app.returnHour || "09:00"})</span>
             </div>
 
             <div className="form-group mt-3">
-              <label className="form-label" style={{ fontSize: "0.78rem", fontWeight: 600 }}>Ghi chú cho cửa hàng (tùy chọn)</label>
+              <label className="form-label cp-checkout-label--sm">Ghi chú cho cửa hàng (tùy chọn)</label>
               <input
                 value={orderNote}
                 onChange={(e) => setOrderNote(e.target.value)}
                 placeholder="VD: Nhận sớm hơn 15 phút, cần hỗ trợ kiểm tra gậy lều..."
-                className="form-input"
-                style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid var(--color-bone)", fontSize: "0.82rem" }}
+                className="form-input cp-checkout-input--note"
               />
             </div>
           </div>
 
           {/* Danh sách thiết bị thuê */}
-          <div className="card-panel" style={{ background: "white", padding: 22, borderRadius: 16, border: "1px solid var(--color-bone)" }}>
+          <div className="card-panel cp-card">
             <h4 className="font-bold text-bark text-base mb-3 flex items-center gap-2">
               <Icon name="tent" size={18} /> Danh sách thiết bị chốt đặt ({app.cart.length} món · {days} ngày)
             </h4>
@@ -292,9 +287,9 @@ export function CheckoutView() {
           </div>
 
           {/* Chính sách hủy & bảo đảm cọc */}
-          <div className="policy-banner" style={{ background: "#EFF6FF", border: "1px solid #BFDBFE", borderRadius: 14, padding: "16px 18px", fontSize: "0.82rem", color: "#1E3A8A" }}>
+          <div className="policy-banner cp-checkout-policy-banner">
             <strong>🛡️ Cam kết hoàn cọc & Quy định hủy đơn (BR22):</strong>
-            <ul style={{ margin: "6px 0 0", paddingLeft: 18, lineHeight: 1.6 }}>
+            <ul className="cp-checkout-policy-list">
               <li><strong>Hoàn cọc 100%:</strong> Tự động chuyển khoản hoàn cọc trong 5–15 phút sau khi nghiệm thu đồ nguyên vẹn.</li>
               <li><strong>Hủy đơn trước 48 giờ:</strong> Hoàn 100% tiền thuê và 100% tiền cọc.</li>
               <li><strong>Hủy đơn trong 24–48 giờ:</strong> Giữ 30% tiền thuê làm phí hủy, hoàn 70% tiền thuê + 100% tiền cọc.</li>
@@ -304,8 +299,8 @@ export function CheckoutView() {
         </div>
 
         {/* Cột Tổng kết & Thanh toán */}
-        <div className="summary-card" style={{ background: "white", borderRadius: 16, padding: 22, border: "1px solid var(--color-bone)", position: "sticky", top: 24, boxShadow: "0 4px 15px rgba(0,0,0,0.04)" }}>
-          <h3 className="summary-title" style={{ fontSize: "1.1rem", fontWeight: 700, color: "var(--color-bark)", marginBottom: 14 }}>
+        <div className="summary-card cp-summary-card">
+          <h3 className="summary-title cp-summary-title cp-checkout-summary-title">
             Tổng kết đơn thuê (UC3.2.1)
           </h3>
 
@@ -342,17 +337,7 @@ export function CheckoutView() {
                 <label
                   key={m.id}
                   onClick={() => setPaymentMethod(m.id)}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    padding: "8px 10px",
-                    borderRadius: 8,
-                    border: paymentMethod === m.id ? "1.5px solid var(--color-forest)" : "1px solid var(--color-bone)",
-                    background: paymentMethod === m.id ? "#F0FDF4" : "white",
-                    cursor: "pointer",
-                    fontSize: "0.78rem",
-                  }}
+                  className={`cp-pay-option ${paymentMethod === m.id ? "is-selected" : ""}`}
                 >
                   <div className="flex items-center gap-2">
                     <input
@@ -362,9 +347,9 @@ export function CheckoutView() {
                       onChange={() => setPaymentMethod(m.id)}
                       className="accent-forest"
                     />
-                    <span style={{ fontWeight: paymentMethod === m.id ? 700 : 500 }}>{m.name}</span>
+                    <span className="cp-pay-option-name">{m.name}</span>
                   </div>
-                  <span style={{ fontSize: "0.68rem", padding: "1px 6px", borderRadius: 4, background: "var(--color-parchment)", color: "var(--color-moss)", fontWeight: 700 }}>
+                  <span className="cp-pay-option-badge">
                     {m.badge}
                   </span>
                 </label>
@@ -373,11 +358,11 @@ export function CheckoutView() {
 
             {/* Khung minh họa VietQR sinh động */}
             {paymentMethod === "qr" && (
-              <div style={{ marginTop: 12, padding: 12, borderRadius: 10, background: "var(--color-parchment)", border: "1px solid var(--color-bone)", textAlign: "center" }}>
-                <div style={{ fontSize: "0.72rem", color: "#065F46", fontWeight: 700, marginBottom: 4 }}>
+              <div className="cp-vietqr-note">
+                <div className="cp-vietqr-note-title">
                   ⚡ Cổng thanh toán VietQR tự động
                 </div>
-                <div style={{ fontSize: "0.74rem", color: "#4B5563" }}>
+                <div className="cp-vietqr-note-desc">
                   Mã QR chuyển khoản ngân hàng sẽ được tạo lập ngay ở bước kế tiếp kèm đồng hồ giữ chỗ 15 phút.
                 </div>
               </div>
@@ -385,14 +370,13 @@ export function CheckoutView() {
           </div>
 
           {/* Checkbox cam kết điều khoản bắt buộc */}
-          <div style={{ marginTop: 16, paddingTop: 12, borderTop: "1px solid var(--color-bone)" }}>
-            <label style={{ display: "flex", alignItems: "flex-start", gap: 8, cursor: "pointer", fontSize: "0.78rem", color: "var(--color-bark)", lineHeight: 1.4 }}>
+          <div className="cp-terms-wrap">
+            <label className="cp-terms-label">
               <input
                 type="checkbox"
                 checked={agreedTerms}
                 onChange={(e) => setAgreedTerms(e.target.checked)}
-                style={{ marginTop: 2 }}
-                className="accent-forest"
+                className="accent-forest cp-terms-checkbox"
               />
               <span>
                 Tôi đã đọc và đồng ý với <strong>Quy chế thuê đồ</strong>, cam kết hoàn cọc 100% và <strong>Quy định hủy đơn</strong> của GearGo.
@@ -409,21 +393,12 @@ export function CheckoutView() {
           <button
             onClick={() => void handleConfirm()}
             disabled={!agreedTerms || submitting}
-            className="btn btn-primary btn-lg btn-full mt-4"
-            style={{
-              width: "100%",
-              padding: "14px",
-              borderRadius: 10,
-              fontWeight: 700,
-              fontSize: "0.95rem",
-              background: !agreedTerms || submitting ? "#9CA3AF" : "var(--color-forest)",
-              cursor: !agreedTerms || submitting ? "not-allowed" : "pointer",
-            }}
+            className="btn btn-primary btn-lg btn-full mt-4 cp-btn-checkout"
           >
             {submitting ? "Đang tạo đơn & giữ chỗ 15 phút..." : "✓ Xác nhận đặt thuê & Giữ chỗ 15 phút"}
           </button>
 
-          <p style={{ fontSize: "0.72rem", color: "#9CA3AF", textAlign: "center", marginTop: 8 }}>
+          <p className="cp-cart-hold-note">
             🔒 Cam kết giữ chỗ toàn bộ danh mục thiết bị trong 15 phút
           </p>
         </div>
@@ -431,38 +406,38 @@ export function CheckoutView() {
 
       {/* Modal xác nhận báo giá thay đổi (UC3.2.2) */}
       {quoteChangeModal && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", display: "grid", placeItems: "center", zIndex: 1000, padding: 16 }}>
-          <div style={{ background: "white", borderRadius: 16, maxWidth: 460, width: "100%", padding: 24, boxShadow: "0 20px 40px rgba(0,0,0,0.2)" }}>
-            <h3 style={{ fontFamily: "var(--font-display)", fontSize: "1.1rem", fontWeight: 700, color: "#B45309", margin: "0 0 8px" }}>
+        <div className="cp-modal-overlay cp-modal-overlay--light">
+          <div className="cp-modal-box cp-modal-box--460">
+            <h3 className="cp-quote-modal-title">
               ⚠️ Báo giá đơn thuê vừa thay đổi (UC3.2.2)
             </h3>
-            <p style={{ fontSize: "0.84rem", color: "#4B5563", margin: "0 0 14px", lineHeight: 1.5 }}>
+            <p className="cp-quote-modal-desc">
               {quoteChangeModal.message}
             </p>
-            <div style={{ background: "var(--color-parchment)", borderRadius: 10, padding: 12, fontSize: "0.82rem", marginBottom: 16 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+            <div className="cp-quote-modal-box">
+              <div className="cp-quote-row">
                 <span>Tổng trước đó:</span>
-                <span style={{ fontFamily: "var(--font-mono)", textDecoration: "line-through", color: "#6B7280" }}>
+                <span className="cp-quote-old-price">
                   {fmt(quoteChangeModal.oldTotal)}
                 </span>
               </div>
-              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+              <div className="cp-quote-row">
                 <span>Tiền thuê mới:</span>
-                <span style={{ fontFamily: "var(--font-mono)", fontWeight: 600 }}>{fmt(quoteChangeModal.newRental)}</span>
+                <span className="cp-quote-val">{fmt(quoteChangeModal.newRental)}</span>
               </div>
               {quoteChangeModal.newDiscount > 0 && (
-                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4, color: "#059669" }}>
+                <div className="cp-quote-row cp-quote-row--discount">
                   <span>Ưu đãi mới:</span>
-                  <span style={{ fontFamily: "var(--font-mono)", fontWeight: 600 }}>−{fmt(quoteChangeModal.newDiscount)}</span>
+                  <span className="cp-quote-val">−{fmt(quoteChangeModal.newDiscount)}</span>
                 </div>
               )}
-              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+              <div className="cp-quote-row cp-quote-row--deposit">
                 <span>Tiền cọc:</span>
-                <span style={{ fontFamily: "var(--font-mono)", fontWeight: 600 }}>{fmt(quoteChangeModal.newDeposit)}</span>
+                <span className="cp-quote-val">{fmt(quoteChangeModal.newDeposit)}</span>
               </div>
-              <div style={{ display: "flex", justifyContent: "space-between", paddingTop: 6, borderTop: "1px dashed #CBD5E1", fontWeight: 700, color: "var(--color-forest)" }}>
+              <div className="cp-quote-row--total">
                 <span>Tổng thanh toán mới:</span>
-                <span style={{ fontFamily: "var(--font-mono)" }}>{fmt(quoteChangeModal.newTotal)}</span>
+                <span className="cp-summary-val--mono">{fmt(quoteChangeModal.newTotal)}</span>
               </div>
             </div>
             <div className="flex gap-2">
@@ -470,8 +445,7 @@ export function CheckoutView() {
                 type="button"
                 disabled={submitting}
                 onClick={() => void handleConfirm(true)}
-                className="btn btn-primary"
-                style={{ flex: 1, padding: "10px 14px", borderRadius: 8, fontWeight: 700 }}
+                className="btn btn-primary cp-quote-btn-confirm"
               >
                 {submitting ? "Đang đặt đơn..." : "Đồng ý giá mới & Đặt đơn"}
               </button>
@@ -479,8 +453,7 @@ export function CheckoutView() {
                 type="button"
                 disabled={submitting}
                 onClick={() => setQuoteChangeModal(null)}
-                className="btn btn-secondary"
-                style={{ padding: "10px 16px", borderRadius: 8 }}
+                className="btn btn-secondary cp-quote-btn-cancel"
               >
                 Hủy
               </button>

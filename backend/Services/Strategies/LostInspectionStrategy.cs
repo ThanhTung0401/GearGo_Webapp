@@ -7,7 +7,7 @@ namespace GearGo.Services.Strategies;
 public class LostInspectionStrategy : IInspectionStrategy
 {
     public bool CanHandle(string ketLuan)
-        => ketLuan == KietDomainConstants.KetLuanKiemTra.MatThietBi;
+        => ketLuan == DomainConstants.InspectionConclusions.Lost;
 
     public Task XuLySauKiemTraAsync(
         ChiTietNhanTra chiTiet,

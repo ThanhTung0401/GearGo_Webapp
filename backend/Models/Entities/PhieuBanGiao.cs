@@ -44,7 +44,7 @@ public class PhieuBanGiao
 
     [Column("trang_thai")]
     [MaxLength(50)]
-    public string TrangThai { get; set; } = KietDomainConstants.PhieuStatus.ChoGiao;
+    public string TrangThai { get; set; } = DomainConstants.Status.PendingDelivery;
 
     [Column("ghi_chu")]
     public string? GhiChu { get; set; }
@@ -61,14 +61,14 @@ public class PhieuBanGiao
     // ----- RICH DOMAIN -----
     public void ChotPhieu(string tenNguoiNhan, string tenNhanVienLucGiao)
     {
-        if (TrangThai == KietDomainConstants.PhieuStatus.DaGiao)
+        if (TrangThai == DomainConstants.Status.Delivered)
             throw new TrangThaiKhongHopLeException("Phiếu đã được chốt từ trước.");
         if (ThoiDiemKhachXacNhan == null)
-            throw new DuLieuKhongHopLeException(KietDomainConstants.ErrorCodes.DuLieuKhongHopLe, "Khách hàng chưa xác nhận bàn giao.");
+            throw new DuLieuKhongHopLeException(DomainConstants.Errors.InvalidData, "Khách hàng chưa xác nhận bàn giao.");
         if (string.IsNullOrWhiteSpace(BangChungXacNhan))
-            throw new DuLieuKhongHopLeException(KietDomainConstants.ErrorCodes.DuLieuKhongHopLe, "Thiếu bằng chứng xác nhận của khách.");
+            throw new DuLieuKhongHopLeException(DomainConstants.Errors.InvalidData, "Thiếu bằng chứng xác nhận của khách.");
 
-        TrangThai = KietDomainConstants.PhieuStatus.DaGiao;
+        TrangThai = DomainConstants.Status.Delivered;
         ThoiDiemGiaoThucTe = DateTime.UtcNow;
         TenNguoiNhanThucTe = tenNguoiNhan;
         TenNhanVienLucGiao = tenNhanVienLucGiao;

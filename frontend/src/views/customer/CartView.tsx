@@ -257,9 +257,9 @@ export function CartView() {
   }
 
   return (
-    <div className="customer-container" style={{ maxWidth: 1100, margin: "0 auto", padding: "28px 20px" }}>
+    <div className="customer-container cp-container cp-container--1100">
       {/* Header Giỏ hàng */}
-      <div className="customer-page-header" style={{ marginBottom: 20 }}>
+      <div className="customer-page-header cp-page-header">
         <h1 className="customer-page-title">Giỏ thiết bị thuê & Báo giá (UC3.1)</h1>
         <p className="text-sm text-gray-500 mt-1">
           Lập danh mục, đối chiếu khả dụng và chốt dự tính chi phí trước khi tạo đơn.
@@ -267,28 +267,28 @@ export function CartView() {
       </div>
 
       {/* Thanh chỉnh sửa lịch thuê trực tiếp tại Giỏ hàng (UC3.1 Dòng sự kiện 2) */}
-      <div style={{ background: "white", borderRadius: 14, padding: "16px 20px", marginBottom: 24, border: "1px solid var(--color-bone)", boxShadow: "0 2px 8px rgba(0,0,0,0.03)" }}>
-        <div style={{ fontSize: "0.82rem", fontWeight: 700, color: "var(--color-bark)", marginBottom: 10, display: "flex", alignItems: "center", gap: 8 }}>
+      <div className="cp-cart-schedule-box">
+        <div className="cp-cart-schedule-header">
           <span>📅 Lịch trình thuê đồ (Block 24h làm tròn lên):</span>
-          <span style={{ fontSize: "0.75rem", padding: "2px 8px", borderRadius: 6, background: datesValid ? "#ECFDF5" : "#FEF2F2", color: datesValid ? "#065F46" : "#DC2626", fontWeight: 700 }}>
+          <span className={`cp-cart-duration-pill ${datesValid ? "is-valid" : "is-invalid"}`}>
             {datesValid ? `Tổng thời gian: ${days} ngày` : "Thời gian chưa hợp lệ"}
           </span>
         </div>
 
         <div className="flex flex-wrap gap-4 items-end">
           <div>
-            <label style={{ fontSize: "0.72rem", color: "#6B7280", display: "block", marginBottom: 4 }}>Ngày & Giờ nhận đồ</label>
+            <label className="cp-cart-date-label">Ngày & Giờ nhận đồ</label>
             <div className="flex gap-1">
               <input
                 type="date"
                 value={app.pickupDate}
                 onChange={(e) => void handleScheduleChange(e.target.value, app.pickupHour || "09:00", app.returnDate, app.returnHour || "09:00")}
-                style={{ padding: "8px 10px", borderRadius: "8px 0 0 8px", border: "1px solid var(--color-bone)", fontSize: "0.85rem" }}
+                className="cp-cart-date-input"
               />
               <select
                 value={app.pickupHour || "09:00"}
                 onChange={(e) => void handleScheduleChange(app.pickupDate, e.target.value, app.returnDate, app.returnHour || "09:00")}
-                style={{ padding: "8px 8px", borderRadius: "0 8px 8px 0", border: "1px solid var(--color-bone)", borderLeft: "none", background: "var(--color-parchment)", fontSize: "0.82rem" }}
+                className="cp-cart-hour-select"
               >
                 {["08:00", "09:00", "10:00", "12:00", "14:00", "16:00", "18:00", "20:00"].map((h) => (
                   <option key={h} value={h}>{h}</option>
@@ -297,21 +297,21 @@ export function CartView() {
             </div>
           </div>
 
-          <span style={{ color: "#9CA3AF", paddingBottom: 10, fontSize: "1.1rem" }}>→</span>
+          <span className="cp-cart-arrow">→</span>
 
           <div>
-            <label style={{ fontSize: "0.72rem", color: "#6B7280", display: "block", marginBottom: 4 }}>Ngày & Giờ trả đồ</label>
+            <label className="cp-cart-date-label">Ngày & Giờ trả đồ</label>
             <div className="flex gap-1">
               <input
                 type="date"
                 value={app.returnDate}
                 onChange={(e) => void handleScheduleChange(app.pickupDate, app.pickupHour || "09:00", e.target.value, app.returnHour || "09:00")}
-                style={{ padding: "8px 10px", borderRadius: "8px 0 0 8px", border: "1px solid var(--color-bone)", fontSize: "0.85rem" }}
+                className="cp-cart-date-input"
               />
               <select
                 value={app.returnHour || "09:00"}
                 onChange={(e) => void handleScheduleChange(app.pickupDate, app.pickupHour || "09:00", app.returnDate, e.target.value)}
-                style={{ padding: "8px 8px", borderRadius: "0 8px 8px 0", border: "1px solid var(--color-bone)", borderLeft: "none", background: "var(--color-parchment)", fontSize: "0.82rem" }}
+                className="cp-cart-hour-select"
               >
                 {["08:00", "09:00", "10:00", "12:00", "14:00", "16:00", "18:00", "20:00"].map((h) => (
                   <option key={h} value={h}>{h}</option>
@@ -320,76 +320,66 @@ export function CartView() {
             </div>
           </div>
 
-          <div style={{ flex: 1, minWidth: 200, fontSize: "0.78rem", color: "#6B7280", alignSelf: "center", lineHeight: 1.4 }}>
+          <div className="cp-cart-schedule-hint">
             💡 <em>Đổi lịch thuê sẽ tự động kiểm tra lại tồn kho khả dụng và tính toán lại toàn bộ báo giá.</em>
           </div>
         </div>
         {cartApiError && (
-          <div role="alert" style={{ marginTop: 10, padding: "8px 12px", borderRadius: 8, background: "#FEF2F2", color: "#B91C1C", fontSize: "0.78rem", border: "1px solid #FECACA" }}>
+          <div role="alert" className="cp-alert-error mt-2.5">
             {cartApiError}
           </div>
         )}
       </div>
 
-      <div className="cart-grid" style={{ display: "grid", gridTemplateColumns: "1fr 380px", gap: 24, alignItems: "start" }}>
+      <div className="cart-grid cp-cart-grid">
         {/* Danh sách thiết bị trong giỏ */}
         <div className="flex flex-col gap-3">
           {app.cart.map((c) => {
             const p = app.products.find((p) => p.id === c.productId);
             if (!p) return null;
             const stockInfo = cartAvailability.find((item) => item.productId === c.productId);
+            // Đánh dấu viền đỏ khi số lượng chọn vượt tồn kho hoặc sản phẩm đã hết hàng
             const isError = stockInfo?.isOver || stockInfo?.isOutOfStock;
 
             return (
               <div
                 key={c.productId}
-                className="cart-item-card"
-                style={{
-                  background: "white",
-                  borderRadius: 14,
-                  padding: "16px 18px",
-                  border: isError ? "2px solid #EF4444" : "1px solid var(--color-bone)",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 16,
-                  boxShadow: isError ? "0 4px 12px rgba(239,68,68,0.1)" : "none",
-                  transition: "all 0.2s ease",
-                }}
+                className={`cart-item-card cp-cart-item-card ${isError ? "is-error" : ""}`}
               >
                 <img
                   src={p.image}
                   alt={p.name}
-                  style={{ width: 84, height: 72, objectFit: "cover", borderRadius: 10, background: "var(--color-parchment)" }}
+                  className="cp-cart-item-thumb"
                 />
 
-                <div style={{ flex: 1, minWidth: 200 }}>
-                  <div className="flex items-center gap-2 mb-1">
-                    <span style={{ fontSize: "0.68rem", padding: "1px 6px", borderRadius: 4, background: "var(--color-parchment)", color: "var(--color-moss)", fontWeight: 700 }}>
+                <div className="cp-cart-item-body">
+                  <div className="flex items-center gap-2 mb-1 flex-wrap">
+                    <span className="cp-cart-item-cat">
                       {p.category}
                     </span>
-                    <strong style={{ fontSize: "0.95rem", color: "var(--color-bark)" }}>{p.name}</strong>
+                    <strong className="cp-cart-item-title">{p.name}</strong>
                   </div>
 
-                  <div style={{ fontSize: "0.8rem", color: "#6B7280", marginBottom: 3 }}>
-                    Đơn giá: {fmt(p.pricePerDay)}/ngày × {days} ngày = <strong style={{ color: "var(--color-forest)" }}>{fmt(p.pricePerDay * days * c.qty)}</strong>
+                  <div className="cp-cart-item-price-row">
+                    Đơn giá: {fmt(p.pricePerDay)}/ngày × {days} ngày = <strong className="cp-cart-item-price-val">{fmt(p.pricePerDay * days * c.qty)}</strong>
                   </div>
 
-                  <div style={{ fontSize: "0.75rem", color: "#6B7280" }}>
-                    Cọc bảo đảm: {fmt(p.deposit)} × {c.qty} chiếc = <strong style={{ color: "#4B5563" }}>{fmt(p.deposit * c.qty)}</strong> (Hoàn 100% khi trả đồ)
+                  <div className="cp-cart-item-deposit-row">
+                    Cọc bảo đảm: {fmt(p.deposit)} × {c.qty} chiếc = <strong className="cp-cart-item-deposit-val">{fmt(p.deposit * c.qty)}</strong> (Hoàn 100% khi trả đồ)
                   </div>
 
                   {/* Trạng thái tồn kho khả dụng theo UC2.3 / UC3.1 */}
-                  <div style={{ marginTop: 6 }}>
+                  <div className="cp-cart-stock-wrap">
                     {stockInfo?.isOutOfStock ? (
-                      <span style={{ fontSize: "0.72rem", padding: "2px 8px", borderRadius: 6, background: "#FEE2E2", color: "#B91C1C", fontWeight: 700 }}>
+                      <span className="cp-cart-stock-pill cp-cart-stock-pill--out">
                         ✗ Hết hàng trong khoảng ngày đã chọn (Tồn kho: 0)
                       </span>
                     ) : stockInfo?.isOver ? (
-                      <span style={{ fontSize: "0.72rem", padding: "2px 8px", borderRadius: 6, background: "#FEF3C7", color: "#B45309", fontWeight: 700 }}>
+                      <span className="cp-cart-stock-pill cp-cart-stock-pill--over">
                         ⚠ Vượt tồn kho: Kho chỉ còn {stockInfo.avail} chiếc (Đang chọn {c.qty})
                       </span>
                     ) : (
-                      <span style={{ fontSize: "0.72rem", padding: "2px 8px", borderRadius: 6, background: "#ECFDF5", color: "#065F46", fontWeight: 600 }}>
+                      <span className="cp-cart-stock-pill cp-cart-stock-pill--ok">
                         ✓ Khả dụng (Kho sẵn sàng: {stockInfo?.avail} chiếc)
                       </span>
                     )}
@@ -397,24 +387,22 @@ export function CartView() {
                 </div>
 
                 {/* Bộ điều chỉnh số lượng (+ / −) */}
-                <div className="qty-stepper" style={{ display: "flex", alignItems: "center", gap: 3, background: "var(--color-parchment)", padding: 4, borderRadius: 8, border: "1px solid var(--color-bone)" }}>
+                <div className="qty-stepper cp-qty-stepper">
                   <button
                     disabled={cartBusy}
                     onClick={() => void handleQtyDelta(c.productId, -1)}
-                    className="qty-btn"
-                    style={{ width: 28, height: 28, borderRadius: 6, border: "none", background: "white", cursor: cartBusy ? "wait" : "pointer", fontWeight: 700 }}
+                    className={`qty-btn cp-qty-btn ${cartBusy ? "is-busy" : ""}`}
                     aria-label="Giảm số lượng"
                   >
                     −
                   </button>
-                  <span style={{ width: 32, textAlign: "center", fontWeight: 700, fontFamily: "var(--font-mono)", fontSize: "0.9rem" }}>
+                  <span className="cp-qty-val">
                     {c.qty}
                   </span>
                   <button
                     disabled={cartBusy}
                     onClick={() => void handleQtyDelta(c.productId, 1)}
-                    className="qty-btn"
-                    style={{ width: 28, height: 28, borderRadius: 6, border: "none", background: "white", cursor: cartBusy ? "wait" : "pointer", fontWeight: 700 }}
+                    className={`qty-btn cp-qty-btn ${cartBusy ? "is-busy" : ""}`}
                     aria-label="Tăng số lượng"
                   >
                     +
@@ -425,7 +413,7 @@ export function CartView() {
                 <button
                   disabled={cartBusy}
                   onClick={() => void handleRemoveItem(c.productId)}
-                  style={{ background: "none", border: "none", cursor: cartBusy ? "wait" : "pointer", color: "#9CA3AF", padding: 6, borderRadius: 6 }}
+                  className={`cp-cart-remove-btn ${cartBusy ? "is-busy" : ""}`}
                   title="Xóa thiết bị khỏi giỏ"
                   aria-label="Xóa sản phẩm"
                 >
@@ -437,49 +425,48 @@ export function CartView() {
         </div>
 
         {/* Tóm tắt báo giá Sticky (UC3.1.1 & UC3.1.2) */}
-        <div className="summary-card" style={{ background: "white", borderRadius: 16, padding: 22, border: "1px solid var(--color-bone)", position: "sticky", top: 24, boxShadow: "0 4px 15px rgba(0,0,0,0.04)" }}>
-          <h3 className="summary-title" style={{ fontSize: "1.1rem", fontWeight: 700, color: "var(--color-bark)", marginBottom: 16 }}>
+        <div className="summary-card cp-summary-card">
+          <h3 className="summary-title cp-summary-title">
             Báo giá thuê dự tính (UC3.1.1)
           </h3>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: 10, fontSize: "0.85rem", marginBottom: 16 }}>
-            <div className="summary-row" style={{ display: "flex", justifyContent: "space-between" }}>
-              <span style={{ color: "#6B7280" }}>Tiền thuê thiết bị ({days} ngày)</span>
-              <span style={{ fontFamily: "var(--font-mono)", fontWeight: 700, color: "var(--color-bark)" }}>{fmt(rental)}</span>
+          <div className="cp-summary-list">
+            <div className="summary-row cp-summary-row">
+              <span className="cp-summary-label">Tiền thuê thiết bị ({days} ngày)</span>
+              <span className="cp-summary-val">{fmt(rental)}</span>
             </div>
 
-            <div className="summary-row" style={{ display: "flex", justifyContent: "space-between" }}>
-              <span style={{ color: "#6B7280" }}>Tiền cọc bảo đảm (Hoàn lại 100%)</span>
-              <span style={{ fontFamily: "var(--font-mono)", fontWeight: 700, color: "var(--color-bark)" }}>{fmt(depositTotal)}</span>
+            <div className="summary-row cp-summary-row">
+              <span className="cp-summary-label">Tiền cọc bảo đảm (Hoàn lại 100%)</span>
+              <span className="cp-summary-val">{fmt(depositTotal)}</span>
             </div>
 
             {discount > 0 && (
-              <div className="summary-row text-emerald-600" style={{ display: "flex", justifyContent: "space-between", color: "#059669", fontWeight: 700 }}>
+              <div className="summary-row cp-summary-row cp-summary-row--discount text-emerald-600">
                 <span>Ưu đãi áp dụng ({promoCode})</span>
-                <span style={{ fontFamily: "var(--font-mono)" }}>−{fmt(discount)}</span>
+                <span className="cp-summary-val--mono">−{fmt(discount)}</span>
               </div>
             )}
           </div>
 
           {/* Ô nhập mã ưu đãi (UC3.1.2) */}
-          <div style={{ background: "var(--color-parchment)", borderRadius: 10, padding: 12, marginBottom: 16, border: "1px solid var(--color-bone)" }}>
-            <div style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--color-bark)", marginBottom: 6 }}>
+          <div className="cp-promo-panel">
+            <div className="cp-promo-label">
               Mã khuyến mãi giảm giá thuê (UC3.1.2)
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
               <input
                 type="text"
                 placeholder="VD: CAMPGO10"
                 value={promoCode}
                 onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
-                style={{ flex: 1, padding: "8px 10px", borderRadius: 6, border: "1px solid var(--color-bone)", fontSize: "0.82rem", background: "white" }}
+                className="cp-promo-input"
               />
               <button
                 type="button"
                 disabled={cartBusy}
                 onClick={() => void applyPromo()}
-                className="btn btn-secondary btn-sm"
-                style={{ padding: "8px 14px", borderRadius: 6, fontWeight: 700, fontSize: "0.8rem" }}
+                className="btn btn-secondary btn-sm cp-promo-apply-btn"
               >
                 {cartBusy ? "..." : "Áp dụng"}
               </button>
@@ -488,41 +475,40 @@ export function CartView() {
                   type="button"
                   disabled={cartBusy}
                   onClick={() => void removePromo()}
-                  className="btn btn-ghost btn-sm"
-                  style={{ padding: "8px 10px", borderRadius: 6, fontSize: "0.78rem", color: "#B91C1C" }}
+                  className="btn btn-ghost btn-sm cp-promo-remove-btn"
                 >
                   Bỏ mã
                 </button>
               )}
             </div>
-            {promoError && <div style={{ fontSize: "0.74rem", color: "#DC2626", marginTop: 4 }}>{promoError}</div>}
-            <div style={{ fontSize: "0.7rem", color: "#6B7280", marginTop: 4 }}>
+            {promoError && <div className="cp-promo-error">{promoError}</div>}
+            <div className="cp-promo-note">
               * Giảm giá chỉ áp dụng trên tiền thuê đủ điều kiện, không áp dụng cho tiền cọc.
             </div>
           </div>
 
           {/* Tổng thanh toán ban đầu */}
-          <div style={{ borderTop: "2px solid var(--color-bone)", paddingTop: 14, marginBottom: 16 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span style={{ fontWeight: 700, color: "var(--color-bark)", fontSize: "0.95rem" }}>Tổng thanh toán ban đầu</span>
-              <span style={{ fontFamily: "var(--font-mono)", fontWeight: 800, color: "var(--color-forest)", fontSize: "1.3rem" }}>
+          <div className="cp-cart-total-box">
+            <div className="cp-cart-total-row">
+              <span className="cp-cart-total-label">Tổng thanh toán ban đầu</span>
+              <span className="cp-cart-total-price">
                 {fmt(grand)}
               </span>
             </div>
-            <div style={{ fontSize: "0.72rem", color: "#9CA3AF", marginTop: 4, lineHeight: 1.4 }}>
+            <div className="cp-cart-total-sub">
               Bao gồm: {fmt(rental - discount)} (Thuê) + {fmt(depositTotal)} (Cọc hoàn lại khi trả đồ).
             </div>
           </div>
 
           {/* Cảnh báo lỗi tồn kho (UC3.1 Dòng phụ 2.1) */}
           {hasStockError && (
-            <div style={{ background: "#FEE2E2", border: "1px solid #FCA5A5", borderRadius: 8, padding: 10, fontSize: "0.76rem", color: "#B91C1C", marginBottom: 14, lineHeight: 1.4 }}>
+            <div className="cp-cart-stock-alert">
               <strong>⚠ Không đủ hàng:</strong> Có thiết bị vượt quá số lượng khả dụng trong khoảng thời gian đã chọn. Quý khách vui lòng giảm số lượng hoặc bỏ món lỗi để tiếp tục.
             </div>
           )}
 
           {!datesValid && (
-            <div style={{ background: "#FEF3C7", border: "1px solid #FCD34D", borderRadius: 8, padding: 10, fontSize: "0.76rem", color: "#92400E", marginBottom: 14 }}>
+            <div className="cp-cart-date-alert">
               ⚠ Ngày trả phải sau ngày nhận. Vui lòng chọn lại lịch thuê hợp lệ.
             </div>
           )}
@@ -530,21 +516,12 @@ export function CartView() {
           <button
             onClick={handleProceedToCheckout}
             disabled={hasStockError || !datesValid}
-            className="btn btn-primary btn-lg btn-full"
-            style={{
-              width: "100%",
-              padding: "14px",
-              borderRadius: 10,
-              fontWeight: 700,
-              fontSize: "0.95rem",
-              background: hasStockError || !datesValid ? "#9CA3AF" : "var(--color-forest)",
-              cursor: hasStockError || !datesValid ? "not-allowed" : "pointer",
-            }}
+            className="btn btn-primary btn-lg btn-full cp-btn-checkout"
           >
             Tiến hành xác nhận thuê →
           </button>
 
-          <p style={{ fontSize: "0.72rem", color: "#9CA3AF", textAlign: "center", marginTop: 8 }}>
+          <p className="cp-cart-hold-note">
             Giỏ thuê chỉ lưu tạm thời, hệ thống sẽ chính thức giữ chỗ 15 phút ở bước tạo đơn.
           </p>
         </div>
@@ -552,31 +529,29 @@ export function CartView() {
 
       {/* Modal Yêu cầu đăng nhập đối với Khách vãng lai */}
       {showAuthModal && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(17,24,39,0.6)", backdropFilter: "blur(4px)", display: "grid", placeItems: "center", zIndex: 9999, padding: 16 }}>
-          <div style={{ background: "white", borderRadius: 18, maxWidth: 440, width: "100%", padding: 26, border: "1px solid var(--color-bone)", boxShadow: "0 20px 40px rgba(0,0,0,0.25)" }}>
-            <div style={{ width: 44, height: 44, borderRadius: 10, background: "#EFF6FF", color: "#1D4ED8", display: "grid", placeItems: "center", margin: "0 auto 14px" }}>
+        <div className="cp-modal-overlay">
+          <div className="cp-modal-box cp-modal-box--sm">
+            <div className="cp-modal-auth-icon">
               <Icon name="user" size={24} />
             </div>
-            <h3 style={{ fontFamily: "var(--font-display)", fontSize: "1.2rem", color: "var(--color-bark)", textAlign: "center", margin: "0 0 6px" }}>
+            <h3 className="cp-modal-auth-title">
               Đăng nhập để đặt thuê thiết bị
             </h3>
-            <p style={{ fontSize: "0.84rem", color: "#4B5563", textAlign: "center", lineHeight: 1.5, margin: "0 0 18px" }}>
+            <p className="cp-modal-auth-desc">
               Để lưu đơn thuê, giữ chỗ thiết bị 15 phút và bảo đảm quyền lợi hoàn cọc, quý khách vui lòng đăng nhập hoặc tạo tài khoản GearGo.
             </p>
             <div className="flex gap-2">
               <button
                 type="button"
                 onClick={() => { setShowAuthModal(false); app.setPage("login"); }}
-                className="btn btn-primary"
-                style={{ flex: 1, padding: "11px", borderRadius: 8, fontWeight: 700 }}
+                className="btn btn-primary cp-modal-btn-primary"
               >
                 Đăng nhập / Đăng ký ngay →
               </button>
               <button
                 type="button"
                 onClick={() => setShowAuthModal(false)}
-                className="btn btn-secondary"
-                style={{ padding: "11px 16px", borderRadius: 8 }}
+                className="btn btn-secondary cp-modal-btn-secondary"
               >
                 Để sau
               </button>

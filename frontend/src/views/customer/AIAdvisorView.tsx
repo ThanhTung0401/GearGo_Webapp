@@ -348,59 +348,39 @@ export function AIAdvisorView() {
   };
 
   return (
-    <div className="customer-container" style={{ maxWidth: 980, margin: "0 auto", padding: "28px 20px" }}>
+    <div className="customer-container cp-container cp-container--980">
       {/* Hero Header */}
-      <div className="advisor-hero" style={{ background: "linear-gradient(135deg, #1B3F2F 0%, #2D5A43 100%)", color: "white", padding: "32px 28px", borderRadius: 20, marginBottom: 28, boxShadow: "0 10px 25px rgba(27,63,47,0.18)" }}>
+      <div className="advisor-hero cp-ai-hero">
         <div className="flex items-center gap-3 mb-2">
-          <div style={{ width: 44, height: 44, borderRadius: 12, background: "rgba(255,255,255,0.15)", display: "grid", placeItems: "center" }}>
+          <div className="cp-ai-hero-icon">
             <Icon name="tent" size={26} />
           </div>
           <div>
-            <div style={{ fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.08em", color: "#A7F3D0", fontWeight: 700 }}>
+            <div className="cp-ai-hero-eyebrow">
               GearGo Smart Gear Planner · UC2.4 & UC2.4.1
             </div>
-            <h1 className="font-display font-bold text-2xl md:text-3xl" style={{ margin: 0, color: "white" }}>
+            <h1 className="font-display font-bold text-2xl md:text-3xl cp-ai-hero-title">
               Trợ lý AI tư vấn bộ đồ cắm trại & Combo mẫu
             </h1>
           </div>
         </div>
-        <p style={{ margin: "8px 0 0", color: "#E2E8F0", fontSize: "0.92rem", lineHeight: 1.6, maxWidth: 680 }}>
+        <p className="cp-ai-hero-desc">
           Đề xuất danh mục thiết bị tối ưu theo điểm đến, quy mô đoàn và ngân sách dự kiến của bạn. Bạn hoàn toàn có thể tùy chỉnh thêm bớt từng món trước khi đưa vào giỏ thuê.
         </p>
 
         {/* Tab chuyển đổi chế độ tư vấn (AI vs Presets - UC2.4.1) */}
-        <div className="flex gap-2 mt-5" style={{ background: "rgba(0,0,0,0.22)", padding: 4, borderRadius: 12, width: "fit-content" }}>
+        <div className="flex gap-2 mt-5 cp-ai-tabs">
           <button
             type="button"
             onClick={() => { setAdvisorMode("ai"); setSent(false); }}
-            style={{
-              padding: "8px 18px",
-              borderRadius: 8,
-              border: "none",
-              fontSize: "0.85rem",
-              fontWeight: 700,
-              cursor: "pointer",
-              transition: "all 0.2s ease",
-              background: advisorMode === "ai" ? "white" : "transparent",
-              color: advisorMode === "ai" ? "var(--color-forest)" : "#D1D5DB",
-            }}
+            className={`cp-ai-tab ${advisorMode === "ai" ? "is-active" : ""}`}
           >
             🤖 AI tư vấn thông minh
           </button>
           <button
             type="button"
             onClick={() => { setAdvisorMode("presets"); setSent(false); }}
-            style={{
-              padding: "8px 18px",
-              borderRadius: 8,
-              border: "none",
-              fontSize: "0.85rem",
-              fontWeight: 700,
-              cursor: "pointer",
-              transition: "all 0.2s ease",
-              background: advisorMode === "presets" ? "white" : "transparent",
-              color: advisorMode === "presets" ? "var(--color-forest)" : "#D1D5DB",
-            }}
+            className={`cp-ai-tab ${advisorMode === "presets" ? "is-active" : ""}`}
           >
             📦 Bộ combo mẫu có sẵn (UC2.4.1)
           </button>
@@ -409,27 +389,27 @@ export function AIAdvisorView() {
 
       {/* ─── CHẾ ĐỘ 1: AI TƯ VẤN THÔNG MINH ─── */}
       {advisorMode === "ai" && !sent && (
-        <div className="card-panel" style={{ background: "white", padding: 28, borderRadius: 18, border: "1px solid var(--color-bone)", boxShadow: "0 2px 10px rgba(0,0,0,0.04)" }}>
-          <div className="flex justify-between items-center mb-5 pb-3 border-b border-gray-100">
+        <div className="card-panel cp-card cp-card--lg cp-card--soft-shadow">
+          <div className="flex justify-between items-center mb-5 pb-3 border-b border-gray-100 flex-wrap gap-2">
             <div>
-              <h3 className="font-display font-bold text-lg text-bark" style={{ margin: 0 }}>
+              <h3 className="font-display font-bold text-lg text-bark cp-card-title">
                 Nhập thông tin chuyến đi của bạn
               </h3>
-              <p style={{ margin: "3px 0 0", fontSize: "0.82rem", color: "#6B7280" }}>
+              <p className="cp-card-subtitle">
                 AI sẽ căn cứ vào địa hình, số lượng người và số ngày để lọc thiết bị tối ưu.
               </p>
             </div>
-            <span style={{ fontSize: "0.75rem", padding: "4px 10px", borderRadius: 99, background: "#ECFDF5", color: "#065F46", fontWeight: 700 }}>
+            <span className="cp-ai-badge-live">
               Kho đồ thật 100%
             </span>
           </div>
 
           {/* Chọn phong cách / Địa hình chuyến đi */}
-          <div style={{ marginBottom: 20 }}>
-            <label className="form-label" style={{ fontWeight: 700, fontSize: "0.85rem", marginBottom: 8, display: "block" }}>
+          <div className="cp-ai-terrain-section">
+            <label className="form-label cp-ai-terrain-label">
               Phong cách cắm trại & địa hình:
             </label>
-            <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}>
+            <div className="grid gap-3 cp-ai-terrain-grid">
               {[
                 { id: "lake" as const, title: "🌊 Ven hồ / Bãi sông chill", desc: "Thư giãn, thoáng mát, cần bàn ghế và đèn bão ngắm hoàng hôn." },
                 { id: "mountain" as const, title: "⛰️ Rừng núi / Trekking leo đồi", desc: "Gọn nhẹ, chống gió lạnh, cần túi ngủ ấm và đèn đeo trán." },
@@ -438,19 +418,12 @@ export function AIAdvisorView() {
                 <div
                   key={t.id}
                   onClick={() => setTripTerrain(t.id)}
-                  style={{
-                    padding: "14px 16px",
-                    borderRadius: 12,
-                    border: tripTerrain === t.id ? "2px solid var(--color-forest)" : "1px solid var(--color-bone)",
-                    background: tripTerrain === t.id ? "#F0FDF4" : "var(--color-parchment)",
-                    cursor: "pointer",
-                    transition: "all 0.15s ease",
-                  }}
+                  className={`cp-ai-terrain-card ${tripTerrain === t.id ? "is-selected" : ""}`}
                 >
-                  <div style={{ fontWeight: 700, fontSize: "0.88rem", color: "var(--color-bark)", marginBottom: 4 }}>
+                  <div className="cp-ai-terrain-title">
                     {t.title}
                   </div>
-                  <div style={{ fontSize: "0.76rem", color: "#6B7280", lineHeight: 1.4 }}>
+                  <div className="cp-ai-terrain-desc">
                     {t.desc}
                   </div>
                 </div>
@@ -458,15 +431,14 @@ export function AIAdvisorView() {
             </div>
           </div>
 
-          <div className="form-grid-2" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 16 }}>
+          <div className="form-grid-2 cp-ai-form-grid">
             <div className="form-group">
-              <label className="form-label" style={{ fontWeight: 600, fontSize: "0.82rem" }}>Điểm đến dự kiến</label>
+              <label className="form-label cp-ai-field-label">Điểm đến dự kiến</label>
               <input
                 value={destination}
                 onChange={(e) => setDestination(e.target.value)}
                 placeholder="VD: Đà Lạt, Hồ Trị An, Mộc Châu, Ba Vì..."
-                className="form-input"
-                style={{ width: "100%", padding: "10px 14px", borderRadius: 8, border: "1px solid var(--color-bone)" }}
+                className="form-input cp-ai-input"
               />
               <div className="flex gap-1 mt-2 flex-wrap">
                 {["Đà Lạt", "Hồ Trị An", "Núi Bà Đen", "Mộc Châu", "Tà Năng"].map((place) => (
@@ -474,7 +446,7 @@ export function AIAdvisorView() {
                     key={place}
                     type="button"
                     onClick={() => setDestination(place)}
-                    style={{ fontSize: "0.72rem", padding: "2px 8px", borderRadius: 6, background: "var(--color-parchment)", border: "1px solid var(--color-bone)", cursor: "pointer", color: "#4B5563" }}
+                    className="cp-ai-place-chip"
                   >
                     {place}
                   </button>
@@ -483,7 +455,7 @@ export function AIAdvisorView() {
             </div>
 
             <div className="form-group">
-              <label className="form-label" style={{ fontWeight: 600, fontSize: "0.82rem" }}>Số lượng thành viên</label>
+              <label className="form-label cp-ai-field-label">Số lượng thành viên</label>
               <div className="flex items-center gap-2">
                 <input
                   type="number"
@@ -491,15 +463,14 @@ export function AIAdvisorView() {
                   max="30"
                   value={people}
                   onChange={(e) => setPeople(e.target.value)}
-                  className="form-input"
-                  style={{ width: "100%", padding: "10px 14px", borderRadius: 8, border: "1px solid var(--color-bone)" }}
+                  className="form-input cp-ai-input"
                 />
-                <span style={{ fontSize: "0.82rem", color: "#6B7280", whiteSpace: "nowrap" }}>người</span>
+                <span className="cp-ai-unit-suffix">người</span>
               </div>
             </div>
 
             <div className="form-group">
-              <label className="form-label" style={{ fontWeight: 600, fontSize: "0.82rem" }}>Thời gian thuê (Tính theo block 24h)</label>
+              <label className="form-label cp-ai-field-label">Thời gian thuê (Tính theo block 24h)</label>
               <div className="flex items-center gap-2">
                 <input
                   type="number"
@@ -507,47 +478,45 @@ export function AIAdvisorView() {
                   max="14"
                   value={nights}
                   onChange={(e) => setNights(e.target.value)}
-                  className="form-input"
-                  style={{ width: "100%", padding: "10px 14px", borderRadius: 8, border: "1px solid var(--color-bone)" }}
+                  className="form-input cp-ai-input"
                 />
-                <span style={{ fontSize: "0.82rem", color: "#6B7280", whiteSpace: "nowrap" }}>ngày (24h/ngày)</span>
+                <span className="cp-ai-unit-suffix">ngày (24h/ngày)</span>
               </div>
             </div>
 
             <div className="form-group">
-              <label className="form-label" style={{ fontWeight: 600, fontSize: "0.82rem" }}>Ngân sách dự kiến (đ)</label>
+              <label className="form-label cp-ai-field-label">Ngân sách dự kiến (đ)</label>
               <input
                 type="number"
                 step="50000"
                 value={budget}
                 onChange={(e) => setBudget(e.target.value)}
-                className="form-input"
-                style={{ width: "100%", padding: "10px 14px", borderRadius: 8, border: "1px solid var(--color-bone)" }}
+                className="form-input cp-ai-input"
               />
-              <span style={{ fontSize: "0.72rem", color: "#9CA3AF", marginTop: 4, display: "block" }}>
+              <span className="cp-ai-budget-hint">
                 Tương đương: {parseInt(budget || "0").toLocaleString("vi-VN")} đ
               </span>
             </div>
           </div>
 
           {advisorError && !sent && (
-            <div role="alert" style={{ marginTop: 14, padding: "10px 14px", borderRadius: 10, background: "#FEF2F2", color: "#B91C1C", border: "1px solid #FECACA", fontSize: "0.82rem" }}>
+            <div role="alert" className="cp-alert-error cp-alert-error--md">
               {advisorError}
             </div>
           )}
 
           {/* Nút kích hoạt AI với trạng thái Loading */}
-          <div style={{ marginTop: 24, textAlign: "right" }}>
+          <div className="cp-ai-submit-wrap">
             {isAnalyzing ? (
-              <div style={{ background: "#F0FDF4", border: "1px solid #BBF7D0", padding: "16px 20px", borderRadius: 12, display: "flex", alignItems: "center", gap: 14 }}>
-                <div style={{ width: 24, height: 24, border: "3px solid #16A34A", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
-                <div style={{ textAlign: "left" }}>
-                  <div style={{ fontWeight: 700, fontSize: "0.88rem", color: "#166534" }}>
+              <div className="cp-ai-analyzing-box">
+                <div className="cp-ai-spinner" />
+                <div className="cp-ai-analyzing-text">
+                  <div className="cp-ai-analyzing-step">
                     {analysisStep === 0 && "🤖 Đang khởi tạo mô hình tư vấn AI..."}
                     {analysisStep === 1 && `🌤️ Phân tích thời tiết & địa hình tại ${destination}...`}
                     {analysisStep === 2 && "🎒 Chọn lọc danh mục thiết bị phù hợp trong kho GearGo..."}
                   </div>
-                  <div style={{ fontSize: "0.75rem", color: "#4B5563" }}>
+                  <div className="cp-ai-analyzing-sub">
                     Tự động tối ưu chi phí và sức chứa theo đoàn {numPeople} người.
                   </div>
                 </div>
@@ -556,8 +525,7 @@ export function AIAdvisorView() {
               <button
                 type="button"
                 onClick={() => void handleStartAIAnalysis()}
-                className="btn btn-primary"
-                style={{ padding: "14px 28px", fontSize: "0.95rem", fontWeight: 700, borderRadius: 10 }}
+                className="btn btn-primary cp-ai-analyze-btn"
               >
                 🤖 Phân tích & Tạo gợi ý combo tối ưu →
               </button>
@@ -568,12 +536,12 @@ export function AIAdvisorView() {
 
       {/* ─── CHẾ ĐỘ 2: BỘ COMBO MẪU CÓ SẴN (PRESET COMBOS - FALLBACK UC2.4.1) ─── */}
       {advisorMode === "presets" && !sent && (
-        <div className="card-panel" style={{ background: "white", padding: 28, borderRadius: 18, border: "1px solid var(--color-bone)" }}>
+        <div className="card-panel cp-card cp-card--lg">
           <div className="mb-5 pb-3 border-b border-gray-100">
-            <h3 className="font-display font-bold text-lg text-bark" style={{ margin: 0 }}>
+            <h3 className="font-display font-bold text-lg text-bark cp-card-title">
               Bộ combo mẫu tuyển chọn sẵn (Preset Combos)
             </h3>
-            <p style={{ margin: "4px 0 0", fontSize: "0.84rem", color: "#6B7280" }}>
+            <p className="cp-ai-presets-desc">
               Giải pháp đóng gói sẵn theo các kịch bản dã ngoại thực tế, không cần chờ AI suy nghĩ. Quý khách có thể chọn và chỉnh sửa số lượng tùy ý.
             </p>
           </div>
@@ -582,41 +550,32 @@ export function AIAdvisorView() {
             {PRESET_COMBOS.map((preset) => (
               <div
                 key={preset.id}
-                style={{
-                  border: "1px solid var(--color-bone)",
-                  borderRadius: 14,
-                  padding: "18px 20px",
-                  background: "var(--color-parchment)",
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 12,
-                }}
+                className="cp-ai-preset-card"
               >
                 <div className="flex justify-between items-start flex-wrap gap-2">
                   <div>
                     <div className="flex items-center gap-2">
-                      <span style={{ fontSize: "0.7rem", padding: "2px 8px", borderRadius: 6, background: "var(--color-forest)", color: "white", fontWeight: 700 }}>
+                      <span className="cp-ai-preset-tag">
                         {preset.tag}
                       </span>
-                      <span style={{ fontSize: "0.78rem", color: "#6B7280", fontWeight: 600 }}>
+                      <span className="cp-ai-preset-for">
                         {preset.suitableFor}
                       </span>
                     </div>
-                    <h4 style={{ margin: "6px 0 0", fontSize: "1.1rem", color: "var(--color-bark)", fontWeight: 700 }}>
+                    <h4 className="cp-ai-preset-name">
                       {preset.name}
                     </h4>
                   </div>
                   <button
                     type="button"
                     onClick={() => handleSelectPreset(preset)}
-                    className="btn btn-primary btn-sm"
-                    style={{ padding: "8px 16px", borderRadius: 8, fontWeight: 700, fontSize: "0.82rem" }}
+                    className="btn btn-primary btn-sm cp-ai-preset-btn"
                   >
                     Chọn bộ này & Chỉnh sửa →
                   </button>
                 </div>
 
-                <p style={{ margin: 0, fontSize: "0.84rem", color: "#4B5563", lineHeight: 1.5 }}>
+                <p className="cp-ai-preset-desc">
                   {preset.description}
                 </p>
 
@@ -624,14 +583,7 @@ export function AIAdvisorView() {
                   {preset.items.map((it, idx) => (
                     <span
                       key={idx}
-                      style={{
-                        fontSize: "0.75rem",
-                        padding: "3px 10px",
-                        borderRadius: 6,
-                        background: "white",
-                        border: "1px solid var(--color-bone)",
-                        color: "var(--color-bark)",
-                      }}
+                      className="cp-ai-preset-chip"
                     >
                       ✓ {it.cat}: <strong>{it.qty} chiếc</strong> ({it.reason})
                     </span>

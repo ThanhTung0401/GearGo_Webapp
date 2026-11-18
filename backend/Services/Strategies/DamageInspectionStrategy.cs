@@ -15,7 +15,7 @@ public class DamageInspectionStrategy : IInspectionStrategy
     }
 
     public bool CanHandle(string ketLuan)
-        => ketLuan is KietDomainConstants.KetLuanKiemTra.HongNhe or KietDomainConstants.KetLuanKiemTra.HongNang;
+        => ketLuan is DomainConstants.InspectionConclusions.MinorDamage or DomainConstants.InspectionConclusions.MajorDamage;
 
     public async Task XuLySauKiemTraAsync(
         ChiTietNhanTra chiTiet,
@@ -26,15 +26,15 @@ public class DamageInspectionStrategy : IInspectionStrategy
         thietBi.TrangThaiSuDung = TrangThaiThietBi.DangBaoTri;
         chiTiet.ThoiDiemTraThucTe ??= DateTime.UtcNow;
 
-        string mucDo = chiTiet.KetLuan == KietDomainConstants.KetLuanKiemTra.HongNang
-            ? KietDomainConstants.BaoTriConfig.MucDoNang
-            : KietDomainConstants.BaoTriConfig.MucDoNhe;
+        string mucDo = chiTiet.KetLuan == DomainConstants.InspectionConclusions.MajorDamage
+            ? DomainConstants.Maintenance.LevelMajor
+            : DomainConstants.Maintenance.LevelMinor;
 
         await _baoTriService.TaoPhieuBaoTriToiThieuAsync(
             thietBi.MaThietBi,
             maDonThue,
             nhanVien.MaNhanVien,
-            KietDomainConstants.BaoTriConfig.LoaiSuaChua,
+            DomainConstants.Maintenance.TypeRepair,
             $"Hư hỏng sau thuê: {chiTiet.TinhTrangSauThue}",
             mucDo);
     }

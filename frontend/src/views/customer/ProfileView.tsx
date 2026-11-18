@@ -259,7 +259,7 @@ export function ProfileView() {
               <img
                 src={profile.avatarUrl}
                 alt={profile.name}
-                style={{ width: 48, height: 48, borderRadius: "50%", objectFit: "cover", border: "2px solid var(--color-forest)" }}
+                className="cp-profile-avatar"
               />
             )}
           </div>
@@ -294,8 +294,8 @@ export function ProfileView() {
 
           {/* UC1.6: Khối xác minh OTP khi thay đổi Email hoặc Số điện thoại */}
           {app.realApi && contactChanged && (
-            <div style={{ marginTop: 14, padding: 14, borderRadius: 10, background: "#FFFBEB", border: "1px solid #FCD34D" }}>
-              <div style={{ fontSize: "0.8rem", fontWeight: 700, color: "#92400E", marginBottom: 6 }}>
+            <div className="cp-profile-otp-box">
+              <div className="cp-profile-otp-title">
                 🔐 Xác minh OTP khi thay đổi Email / Số điện thoại (UC1.6)
               </div>
               <div className="flex gap-2 items-center flex-wrap">
@@ -312,12 +312,11 @@ export function ProfileView() {
                   placeholder="Nhập mã OTP"
                   value={otpCode}
                   onChange={(e) => setOtpCode(e.target.value)}
-                  className="form-input"
-                  style={{ maxWidth: 180, fontSize: "0.84rem" }}
+                  className="form-input cp-profile-otp-input"
                 />
               </div>
               {otpInfo && (
-                <div style={{ marginTop: 6, fontSize: "0.75rem", color: "#065F46", fontWeight: 600 }}>
+                <div className="cp-profile-otp-info">
                   {otpInfo}
                 </div>
               )}

@@ -251,30 +251,30 @@ export function ReportsTab({ app }: { app: ReturnType<typeof useApp> }) {
       {/* Tiêu đề & Bộ chọn kỳ báo cáo (UC10.1, UC10.1.1) */}
       <div className="flex justify-between items-center mb-5 flex-wrap gap-3">
         <div>
-          <h2 style={{ fontFamily: "var(--font-display)", fontSize: "1.5rem", color: "var(--color-bark)", marginBottom: 4 }}>
+          <h2 className="adm-page-title adm-page-title--lg">
             Báo cáo & Phân tích chuyên sâu (UC10.1 - UC10.3)
           </h2>
-          <p style={{ color: "#6B7280", fontSize: "0.85rem" }}>
+          <p className="adm-page-subtitle">
             Hệ thống 4 báo cáo tách biệt, tuân thủ nghiêm ngặt nguyên tắc kế toán tài chính và hỗ trợ truy vết cấu thành.
           </p>
         </div>
 
         {/* Bộ lọc khoảng ngày & Xuất CSV */}
         <div className="flex items-center gap-2 flex-wrap">
-          <div className="flex items-center gap-1.5 bg-white border border-bone rounded-lg p-1.5 px-3 text-xs shadow-xs">
-            <span style={{ color: "var(--color-forest)", fontWeight: 700 }}>Kỳ báo cáo:</span>
+          <div className="adm-date-range shadow-xs">
+            <span className="adm-date-range-label">Kỳ báo cáo:</span>
             <input
               type="date"
               value={fromDate}
               onChange={(e) => setFromDate(e.target.value)}
-              style={{ border: "1px solid var(--color-bone)", borderRadius: 4, padding: "3px 6px", fontSize: "0.78rem" }}
+              className="adm-date-input adm-date-input--xs"
             />
             <span>→</span>
             <input
               type="date"
               value={toDate}
               onChange={(e) => setToDate(e.target.value)}
-              style={{ border: "1px solid var(--color-bone)", borderRadius: 4, padding: "3px 6px", fontSize: "0.78rem" }}
+              className="adm-date-input adm-date-input--xs"
             />
           </div>
           <button
@@ -289,24 +289,24 @@ export function ReportsTab({ app }: { app: ReturnType<typeof useApp> }) {
       </div>
 
       {loadingReports && (
-        <div style={{ marginBottom: 12, fontSize: "0.82rem", color: "#6B7280" }}>
+        <div className="adm-loading-text">
           Đang tổng hợp số liệu báo cáo từ máy chủ...
         </div>
       )}
       {reportError && (
-        <div role="alert" style={{ background: "#FEE2E2", border: "1px solid #FCA5A5", color: "#B91C1C", borderRadius: 8, padding: "10px 16px", marginBottom: 14, fontSize: "0.84rem" }}>
+        <div role="alert" className="adm-alert is-error-solid adm-alert--block">
           {reportError}
         </div>
       )}
       {exportStatus && (
-        <div role="alert" style={{ background: exportStatus.type === "error" ? "#FEE2E2" : "#DCFCE7", color: exportStatus.type === "error" ? "#B91C1C" : "#15803D", borderRadius: 8, padding: "10px 16px", marginBottom: 14, fontSize: "0.84rem" }}>
+        <div role="alert" className={`adm-alert adm-alert--block ${exportStatus.type === "error" ? "is-error-solid" : "is-success"}`}>
           {exportStatus.text}
         </div>
       )}
 
       {/* Cảnh báo ngày không hợp lệ (Dòng sự kiện phụ 2.1) */}
       {isDateInvalid && (
-        <div style={{ background: "#FEE2E2", border: "1px solid #FCA5A5", color: "#B91C1C", borderRadius: 8, padding: "10px 16px", marginBottom: 16, fontSize: "0.85rem", display: "flex", alignItems: "center", gap: 8 }}>
+        <div className="adm-alert is-error-solid mb-4">
           <strong>Lỗi kỳ báo cáo:</strong> Ngày kết thúc ({toDate}) không được nhỏ hơn ngày bắt đầu ({fromDate}). Vui lòng điều chỉnh lại bộ lọc để cập nhật dữ liệu.
         </div>
       )}
@@ -322,16 +322,7 @@ export function ReportsTab({ app }: { app: ReturnType<typeof useApp> }) {
           <button
             key={tab.key}
             onClick={() => setReportSubTab(tab.key)}
-            style={{
-              background: reportSubTab === tab.key ? "var(--color-forest)" : "white",
-              color: reportSubTab === tab.key ? "white" : "var(--color-bark)",
-              border: `1px solid ${reportSubTab === tab.key ? "var(--color-forest)" : "var(--color-bone)"}`,
-              borderRadius: 8,
-              padding: "9px 16px",
-              cursor: "pointer",
-              fontWeight: 700,
-              fontSize: "0.82rem",
-            }}
+            className={`adm-tab-btn ${reportSubTab === tab.key ? "is-active" : ""}`}
           >
             <span className="icon-label"><Icon name={tab.icon} size={16} /> {tab.label}</span>
           </button>
@@ -342,64 +333,60 @@ export function ReportsTab({ app }: { app: ReturnType<typeof useApp> }) {
       {reportSubTab === "operational" && (
         <div>
           {/* Lưới 6 chỉ tiêu vận hành trọng yếu (Click để Drill-down - Bước 4 UC10.1) */}
-          <div className="grid gap-3 mb-6" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))" }}>
+          <div className="adm-grid-auto-sm mb-6">
             <div
               onClick={() => setDrilldownData({ title: "Danh sách đơn cần giao trong kỳ", subtitle: `Có ${ordersToPickup.length} đơn có giờ nhận dự kiến trong kỳ ${fromDate} → ${toDate}`, type: "orders", items: ordersToPickup })}
-              style={{ background: "white", borderRadius: 10, padding: 14, border: "1px solid var(--color-bone)", cursor: "pointer", transition: "transform 0.15s ease", boxShadow: "0 1px 3px rgba(0,0,0,0.03)" }}
-              className="hover:border-forest"
+              className="adm-report-kpi-card hover:border-forest"
             >
-              <div style={{ fontSize: "0.75rem", color: "#6B7280", fontWeight: 600 }}>Đơn cần giao trong kỳ</div>
-              <div style={{ fontFamily: "var(--font-mono)", fontSize: "1.7rem", fontWeight: 800, color: "var(--color-forest)", marginTop: 2 }}>
+              <div className="text-[0.75rem] text-[#6B7280] font-semibold">Đơn cần giao trong kỳ</div>
+              <div className="adm-report-kpi-val text-[var(--color-forest)]">
                 {ordersToPickup.length}
               </div>
-              <div style={{ fontSize: "0.7rem", color: "var(--color-amber)", marginTop: 4 }}>🔍 Nhấn để xem danh sách</div>
+              <div className="text-[0.7rem] text-[var(--color-amber)] mt-1">🔍 Nhấn để xem danh sách</div>
             </div>
 
             <div
               onClick={() => setDrilldownData({ title: "Danh sách đơn cần nhận trả trong kỳ", subtitle: `Có ${ordersToReturn.length} đơn có hạn trả dự kiến trong kỳ`, type: "orders", items: ordersToReturn })}
-              style={{ background: "white", borderRadius: 10, padding: 14, border: "1px solid var(--color-bone)", cursor: "pointer", boxShadow: "0 1px 3px rgba(0,0,0,0.03)" }}
-              className="hover:border-forest"
+              className="adm-report-kpi-card hover:border-forest"
             >
-              <div style={{ fontSize: "0.75rem", color: "#6B7280", fontWeight: 600 }}>Đơn cần nhận trả trong kỳ</div>
-              <div style={{ fontFamily: "var(--font-mono)", fontSize: "1.7rem", fontWeight: 800, color: "#2563EB", marginTop: 2 }}>
+              <div className="text-[0.75rem] text-[#6B7280] font-semibold">Đơn cần nhận trả trong kỳ</div>
+              <div className="adm-report-kpi-val text-[#2563EB]">
                 {ordersToReturn.length}
               </div>
-              <div style={{ fontSize: "0.7rem", color: "var(--color-amber)", marginTop: 4 }}>🔍 Nhấn để xem danh sách</div>
+              <div className="text-[0.7rem] text-[var(--color-amber)] mt-1">🔍 Nhấn để xem danh sách</div>
             </div>
 
             <div
               onClick={() => setDrilldownData({ title: "Danh sách đơn quá hạn tại thời điểm tổng hợp", subtitle: `Đơn quá giờ trả dự kiến nhưng chưa trả đủ thiết bị`, type: "orders", items: overdueOrders })}
-              style={{ background: overdueOrders.length > 0 ? "#FEF2F2" : "white", borderRadius: 10, padding: 14, border: `1px solid ${overdueOrders.length > 0 ? "#F87171" : "var(--color-bone)"}`, cursor: "pointer" }}
+              className={`adm-report-kpi-card ${overdueOrders.length > 0 ? "is-overdue" : ""}`}
             >
-              <div style={{ fontSize: "0.75rem", color: overdueOrders.length > 0 ? "#B91C1C" : "#6B7280", fontWeight: 600 }}>Đơn quá hạn hiện tại</div>
-              <div style={{ fontFamily: "var(--font-mono)", fontSize: "1.7rem", fontWeight: 800, color: overdueOrders.length > 0 ? "#DC2626" : "var(--color-bark)", marginTop: 2 }}>
+              <div className={`text-[0.75rem] font-semibold ${overdueOrders.length > 0 ? "text-[#B91C1C]" : "text-[#6B7280]"}`}>Đơn quá hạn hiện tại</div>
+              <div className={`adm-report-kpi-val ${overdueOrders.length > 0 ? "text-[#DC2626]" : "text-[var(--color-bark)]"}`}>
                 {overdueOrders.length}
               </div>
-              <div style={{ fontSize: "0.7rem", color: overdueOrders.length > 0 ? "#DC2626" : "#9CA3AF", marginTop: 4 }}>Cần gọi điện xử lý ngay</div>
+              <div className={`text-[0.7rem] mt-1 ${overdueOrders.length > 0 ? "text-[#DC2626]" : "text-[#9CA3AF]"}`}>Cần gọi điện xử lý ngay</div>
             </div>
 
             <div
               onClick={() => setDrilldownData({ title: "Danh sách đơn chờ đối soát cọc", subtitle: `Thiết bị đã nhận trả xong, đang chờ thủ quỹ hoàn/thu cọc`, type: "orders", items: pendingReconcileOrders })}
-              style={{ background: "white", borderRadius: 10, padding: 14, border: "1px solid var(--color-bone)", cursor: "pointer" }}
-              className="hover:border-forest"
+              className="adm-report-kpi-card hover:border-forest"
             >
-              <div style={{ fontSize: "0.75rem", color: "#6B7280", fontWeight: 600 }}>Đơn chờ đối soát cọc</div>
-              <div style={{ fontFamily: "var(--font-mono)", fontSize: "1.7rem", fontWeight: 800, color: "#D97706", marginTop: 2 }}>
+              <div className="text-[0.75rem] text-[#6B7280] font-semibold">Đơn chờ đối soát cọc</div>
+              <div className="adm-report-kpi-val text-[#D97706]">
                 {pendingReconcileOrders.length}
               </div>
-              <div style={{ fontSize: "0.7rem", color: "var(--color-amber)", marginTop: 4 }}>🔍 Nhấn để xem danh sách</div>
+              <div className="text-[0.7rem] text-[var(--color-amber)] mt-1">🔍 Nhấn để xem danh sách</div>
             </div>
 
             <div
               onClick={() => setDrilldownData({ title: "Danh sách lượt thuê đã bàn giao thành công", subtitle: `Các đơn đã giao thiết bị cho khách trong kỳ`, type: "orders", items: handedOverOrders })}
-              style={{ background: "white", borderRadius: 10, padding: 14, border: "1px solid var(--color-bone)", cursor: "pointer" }}
-              className="hover:border-forest"
+              className="adm-report-kpi-card hover:border-forest"
             >
-              <div style={{ fontSize: "0.75rem", color: "#6B7280", fontWeight: 600 }}>Lượt thuê đã bàn giao</div>
-              <div style={{ fontFamily: "var(--font-mono)", fontSize: "1.7rem", fontWeight: 800, color: "var(--color-forest)", marginTop: 2 }}>
+              <div className="text-[0.75rem] text-[#6B7280] font-semibold">Lượt thuê đã bàn giao</div>
+              <div className="adm-report-kpi-val text-[var(--color-forest)]">
                 {isRealApi && opsReport?.tongQuan ? opsReport.tongQuan.tongDonThanhCong : handedOverOrders.length}
               </div>
-              <div style={{ fontSize: "0.7rem", color: "#6B7280", marginTop: 4 }}>
+              <div className="text-[0.7rem] text-[#6B7280] mt-1">
                 {isRealApi && opsReport?.tongQuan
                   ? `Quay vòng ${opsReport.tongQuan.tyLeQuayVongThietBi} · TB ${opsReport.tongQuan.soNgayThueTrungBinh} ngày`
                   : "Tổng lượt giao trong kỳ"}
@@ -408,13 +395,13 @@ export function ReportsTab({ app }: { app: ReturnType<typeof useApp> }) {
 
             <div
               onClick={() => setDrilldownData({ title: "Chi tiết các trường hợp thiết bị hư hỏng/mất mát", subtitle: `Danh sách biên bản nhận trả ghi nhận thiết bị hỏng có kết luận`, type: "damage", items: damageRecords })}
-              style={{ background: damageRecords.length > 0 ? "#FFFBEB" : "white", borderRadius: 10, padding: 14, border: "1px solid var(--color-bone)", cursor: "pointer" }}
+              className={`adm-report-kpi-card ${damageRecords.length > 0 ? "is-warn" : ""}`}
             >
-              <div style={{ fontSize: "0.75rem", color: "#92400E", fontWeight: 600 }}>Bảo trì & Hư hỏng kỳ</div>
-              <div style={{ fontFamily: "var(--font-mono)", fontSize: "1.7rem", fontWeight: 800, color: "#B45309", marginTop: 2 }}>
+              <div className="text-[0.75rem] text-[#92400E] font-semibold">Bảo trì & Hư hỏng kỳ</div>
+              <div className="adm-report-kpi-val text-[#B45309]">
                 {isRealApi && maintReport ? Number(maintReport.tongSoPhieu ?? 0) : damageRecords.length}
               </div>
-              <div style={{ fontSize: "0.7rem", color: "#B45309", marginTop: 4 }}>
+              <div className="text-[0.7rem] text-[#B45309] mt-1">
                 {isRealApi && maintReport
                   ? `Vệ sinh ${maintReport.soPhieuVeSinh ?? 0} · Sửa ${maintReport.soPhieuSuaChua ?? 0} · Chi phí ${fmt(Number(maintReport.chiPhiDaChot ?? 0))}`
                   : "🔍 Chi tiết từng biên bản"}
@@ -423,9 +410,9 @@ export function ReportsTab({ app }: { app: ReturnType<typeof useApp> }) {
           </div>
 
           {/* Công suất kho và Top thiết bị */}
-          <div className="grid gap-6" style={{ gridTemplateColumns: "1fr 1fr" }}>
-            <div style={{ background: "white", borderRadius: 12, padding: 20, border: "1px solid var(--color-bone)" }}>
-              <h3 style={{ fontWeight: 700, color: "var(--color-bark)", marginBottom: 14, fontSize: "1rem" }}>
+          <div className="adm-grid-2-lg">
+            <div className="adm-card adm-card--padded">
+              <h3 className="adm-section-heading mb-3.5 text-base">
                 Hiệu suất sử dụng thiết bị (Công suất kho)
               </h3>
               {(() => {
@@ -441,50 +428,51 @@ export function ReportsTab({ app }: { app: ReturnType<typeof useApp> }) {
 
                 return (
                   <div>
-                    <div className="flex items-end gap-3 mb-4">
-                      <span style={{ fontFamily: "var(--font-mono)", fontSize: "2.5rem", fontWeight: 800, color: "var(--color-forest)", lineHeight: 1 }}>{rate}%</span>
-                      <span style={{ fontSize: "0.85rem", color: "#6B7280" }}>
+                    <div className="flex items-end gap-3 mb-4 flex-wrap">
+                      <span className="adm-cell-mono text-[2.5rem] font-extrabold text-[var(--color-forest)] leading-none">{rate}%</span>
+                      <span className="adm-page-subtitle">
                         công suất đang thuê ({rentedEquip}/{totalEquip})
                         {useStock && stockReport.tongGiaTriNhap != null ? ` · Giá trị kho ${fmt(Number(stockReport.tongGiaTriNhap))}` : ""}
                       </span>
                     </div>
-                    <div style={{ height: 12, background: "#E5E7EB", borderRadius: 6, overflow: "hidden", display: "flex", marginBottom: 16 }}>
-                      <div style={{ width: `${totalEquip > 0 ? (rentedEquip / totalEquip) * 100 : 0}%`, background: "#1D4ED8" }} title="Đang thuê" />
-                      <div style={{ width: `${totalEquip > 0 ? (availEquip / totalEquip) * 100 : 0}%`, background: "#15803D" }} title="Sẵn sàng" />
-                      <div style={{ width: `${totalEquip > 0 ? (maintEquip / totalEquip) * 100 : 0}%`, background: "#F59E0B" }} title="Bảo trì" />
-                      <div style={{ width: `${totalEquip > 0 ? (lostEquip / totalEquip) * 100 : 0}%`, background: "#EF4444" }} title="Hỏng/Mất" />
+                    <div className="adm-report-bar-track">
+                      {/* Chiều rộng từng phân đoạn thanh công suất tính động theo tỷ lệ thiết bị */}
+                      <div className="adm-report-bar-seg--rented" style={{ width: `${totalEquip > 0 ? (rentedEquip / totalEquip) * 100 : 0}%` }} title="Đang thuê" />
+                      <div className="adm-report-bar-seg--avail" style={{ width: `${totalEquip > 0 ? (availEquip / totalEquip) * 100 : 0}%` }} title="Sẵn sàng" />
+                      <div className="adm-report-bar-seg--maint" style={{ width: `${totalEquip > 0 ? (maintEquip / totalEquip) * 100 : 0}%` }} title="Bảo trì" />
+                      <div className="adm-report-bar-seg--lost" style={{ width: `${totalEquip > 0 ? (lostEquip / totalEquip) * 100 : 0}%` }} title="Hỏng/Mất" />
                     </div>
-                    <div className="grid gap-2" style={{ gridTemplateColumns: "repeat(2, 1fr)", fontSize: "0.82rem" }}>
-                      <div className="flex items-center gap-2"><span style={{ width: 10, height: 10, borderRadius: "50%", background: "#1D4ED8" }} /> Đang thuê: <strong>{rentedEquip}</strong></div>
-                      <div className="flex items-center gap-2"><span style={{ width: 10, height: 10, borderRadius: "50%", background: "#15803D" }} /> Sẵn sàng: <strong>{availEquip}</strong></div>
-                      <div className="flex items-center gap-2"><span style={{ width: 10, height: 10, borderRadius: "50%", background: "#F59E0B" }} /> Đang bảo dưỡng: <strong>{maintEquip}</strong></div>
-                      <div className="flex items-center gap-2"><span style={{ width: 10, height: 10, borderRadius: "50%", background: "#EF4444" }} /> Thất lạc/Ngừng dùng: <strong>{lostEquip}</strong></div>
+                    <div className="adm-grid-2 text-[0.82rem] gap-2">
+                      <div className="flex items-center gap-2"><span className="adm-report-legend-dot adm-report-bar-seg--rented" /> Đang thuê: <strong>{rentedEquip}</strong></div>
+                      <div className="flex items-center gap-2"><span className="adm-report-legend-dot adm-report-bar-seg--avail" /> Sẵn sàng: <strong>{availEquip}</strong></div>
+                      <div className="flex items-center gap-2"><span className="adm-report-legend-dot adm-report-bar-seg--maint" /> Đang bảo dưỡng: <strong>{maintEquip}</strong></div>
+                      <div className="flex items-center gap-2"><span className="adm-report-legend-dot adm-report-bar-seg--lost" /> Thất lạc/Ngừng dùng: <strong>{lostEquip}</strong></div>
                     </div>
                   </div>
                 );
               })()}
             </div>
 
-            <div style={{ background: "white", borderRadius: 12, padding: 20, border: "1px solid var(--color-bone)" }}>
-              <h3 style={{ fontWeight: 700, color: "var(--color-bark)", marginBottom: 14, fontSize: "1rem" }}>
+            <div className="adm-card adm-card--padded">
+              <h3 className="adm-section-heading mb-3.5 text-base">
                 {isRealApi && opsReport?.chiSoTheoSanPham?.length ? "Hiệu suất theo sản phẩm trong kỳ (Backend)" : "Top thiết bị có số lượt thuê cao nhất"}
               </h3>
               <div className="flex flex-col gap-2">
                 {isRealApi && opsReport?.chiSoTheoSanPham?.length ? (
                   opsReport.chiSoTheoSanPham.slice(0, 5).map((sp, idx) => (
-                    <div key={sp.maSanPham} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 12px", background: "var(--color-parchment)", borderRadius: 8 }}>
+                    <div key={sp.maSanPham} className="adm-report-rank-row">
                       <div className="flex items-center gap-2">
-                        <span style={{ fontFamily: "var(--font-mono)", fontWeight: 700, color: "var(--color-amber)", width: 18 }}>#{idx + 1}</span>
+                        <span className="adm-cell-mono font-bold text-[var(--color-amber)] w-4.5">#{idx + 1}</span>
                         <div>
-                          <strong style={{ color: "var(--color-forest)" }}>{sp.tenSanPham}</strong>
-                          <div style={{ fontSize: "0.72rem", color: "#6B7280" }}>
+                          <strong className="text-[var(--color-forest)]">{sp.tenSanPham}</strong>
+                          <div className="adm-hint-text">
                             {sp.tenDanhMuc} · {sp.tongSoThietBi} thiết bị · Hỏng {sp.soLuotHongHoc} · Mất {sp.soLuotMat}
                           </div>
                         </div>
                       </div>
-                      <div style={{ textAlign: "right" }}>
-                        <div style={{ fontFamily: "var(--font-mono)", fontWeight: 700, color: "var(--color-bark)" }}>{sp.soLuotThue} lượt</div>
-                        <div style={{ fontSize: "0.72rem", color: "var(--color-forest)" }}>{fmt(sp.tongDoanhThuUocTinh)}</div>
+                      <div className="adm-cell-right">
+                        <div className="adm-cell-mono font-bold text-[var(--color-bark)]">{sp.soLuotThue} lượt</div>
+                        <div className="text-[0.72rem] text-[var(--color-forest)]">{fmt(sp.tongDoanhThuUocTinh)}</div>
                       </div>
                     </div>
                   ))
@@ -492,15 +480,15 @@ export function ReportsTab({ app }: { app: ReturnType<typeof useApp> }) {
                   [...app.equipment].sort((a, b) => b.rentCount - a.rentCount).slice(0, 5).map((e, idx) => {
                     const prod = app.products.find((p) => p.id === e.productId);
                     return (
-                      <div key={e.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 12px", background: "var(--color-parchment)", borderRadius: 8 }}>
+                      <div key={e.id} className="adm-report-rank-row">
                         <div className="flex items-center gap-2">
-                          <span style={{ fontFamily: "var(--font-mono)", fontWeight: 700, color: "var(--color-amber)", width: 18 }}>#{idx + 1}</span>
+                          <span className="adm-cell-mono font-bold text-[var(--color-amber)] w-4.5">#{idx + 1}</span>
                           <div>
-                            <strong style={{ fontFamily: "var(--font-mono)", color: "var(--color-forest)" }}>{e.displayCode ?? e.id}</strong> — {prod?.name}
-                            <div style={{ fontSize: "0.72rem", color: "#6B7280" }}>{e.condition} · Nhập {e.importDate}</div>
+                            <strong className="adm-cell-mono text-[var(--color-forest)]">{e.displayCode ?? e.id}</strong> — {prod?.name}
+                            <div className="adm-hint-text">{e.condition} · Nhập {e.importDate}</div>
                           </div>
                         </div>
-                        <span style={{ fontFamily: "var(--font-mono)", fontWeight: 700, color: "var(--color-bark)" }}>{e.rentCount} lần thuê</span>
+                        <span className="adm-cell-mono font-bold text-[var(--color-bark)]">{e.rentCount} lần thuê</span>
                       </div>
                     );
                   })
@@ -514,67 +502,66 @@ export function ReportsTab({ app }: { app: ReturnType<typeof useApp> }) {
       {/* ─── BÁO CÁO 2: DOANH THU THUẦN (UC10.2 & UC10.2.1) ─────────────────── */}
       {reportSubTab === "revenue" && (
         <div>
-          <div style={{ background: "#EFF6FF", border: "1px solid #BFDBFE", borderRadius: 10, padding: "12px 18px", marginBottom: 20, color: "#1E40AF", fontSize: "0.85rem" }}>
+          <div className="adm-alert is-info adm-alert--block mb-5 text-[0.85rem]">
             <strong>💡 NGUYÊN TẮC KẾ TOÁN BẤT DI BẤT DỊCH (UC10.2):</strong> Tiền cọc là khoản nợ phải trả lại cho khách sau khi đối soát xong. Tiền cọc <strong>tuyệt đối không được tính vào doanh thu</strong> kinh doanh của GearGo.
           </div>
 
-          <div className="grid gap-4 mb-6" style={{ gridTemplateColumns: "repeat(3, 1fr)" }}>
+          <div className="adm-kpi-3 mb-6">
             <div
               onClick={() => setDrilldownData({ title: "Danh sách đơn thuê hoàn tất cấu thành doanh thu", subtitle: `Các đơn đã thanh toán và quyết toán hoàn tất trong kỳ`, type: "orders", items: completedOrders })}
-              style={{ background: "white", borderRadius: 12, padding: 18, border: "1px solid var(--color-bone)", cursor: "pointer" }}
-              className="hover:border-forest"
+              className="adm-card adm-card--padded-sm cursor-pointer hover:border-forest"
             >
-              <div style={{ fontSize: "0.78rem", color: "#6B7280", fontWeight: 600 }}>Doanh thu tiền thuê thuần</div>
-              <div style={{ fontFamily: "var(--font-mono)", fontSize: "1.6rem", fontWeight: 800, color: "var(--color-forest)", marginTop: 4 }}>
+              <div className="adm-hint-text text-[0.78rem] font-semibold">Doanh thu tiền thuê thuần</div>
+              <div className="adm-cell-mono text-[1.6rem] font-extrabold text-[var(--color-forest)] mt-1">
                 {fmt(pureRentalRevenue)}
               </div>
-              <div style={{ fontSize: "0.72rem", color: "var(--color-amber)", marginTop: 4 }}>Từ {completedCountDisplay} đơn hoàn tất trong kỳ 🔍</div>
+              <div className="text-[0.72rem] text-[var(--color-amber)] mt-1">Từ {completedCountDisplay} đơn hoàn tất trong kỳ 🔍</div>
             </div>
 
-            <div style={{ background: "white", borderRadius: 12, padding: 18, border: "1px solid var(--color-bone)" }}>
-              <div style={{ fontSize: "0.78rem", color: "#6B7280", fontWeight: 600 }}>Phụ phí & Điều chỉnh đối soát</div>
-              <div style={{ fontFamily: "var(--font-mono)", fontSize: "1.6rem", fontWeight: 800, color: "#D97706", marginTop: 4 }}>
+            <div className="adm-card adm-card--padded-sm">
+              <div className="adm-hint-text text-[0.78rem] font-semibold">Phụ phí & Điều chỉnh đối soát</div>
+              <div className="adm-cell-mono text-[1.6rem] font-extrabold text-[#D97706] mt-1">
                 +{fmt(surchargeRevenue + deltaAdjustmentRevenue)}
               </div>
-              <div style={{ fontSize: "0.72rem", color: "#9CA3AF", marginTop: 4 }}>
+              <div className="adm-muted-note mt-1">
                 Ban đầu {fmt(surchargeRevenue)}{isRealApi && revAdjReport ? ` · Điều chỉnh ${fmt(deltaAdjustmentRevenue)} (${revAdjReport.soPhieuDieuChinh ?? 0} phiếu)` : ` (${approvedSurcharges.length} khoản)`}
               </div>
             </div>
 
-            <div style={{ background: "var(--color-forest)", borderRadius: 12, padding: 18, color: "white" }}>
-              <div style={{ fontSize: "0.78rem", opacity: 0.85, fontWeight: 600 }}>TỔNG DOANH THU THUẦN</div>
-              <div style={{ fontFamily: "var(--font-mono)", fontSize: "1.8rem", fontWeight: 800, marginTop: 4 }}>
+            <div className="adm-report-net-card">
+              <div className="text-[0.78rem] opacity-85 font-semibold">TỔNG DOANH THU THUẦN</div>
+              <div className="adm-cell-mono text-[1.8rem] font-extrabold mt-1">
                 {fmt(totalNetRevenue)}
               </div>
-              <div style={{ fontSize: "0.72rem", opacity: 0.8, marginTop: 4 }}>Thuê thuần + Phụ phí đối soát ± Điều chỉnh</div>
+              <div className="text-[0.72rem] opacity-80 mt-1">Thuê thuần + Phụ phí đối soát ± Điều chỉnh</div>
             </div>
           </div>
 
-          <div className="grid gap-6 mb-6" style={{ gridTemplateColumns: "1.4fr 1fr" }}>
-            <div style={{ background: "white", borderRadius: 12, padding: 20, border: "1px solid var(--color-bone)" }}>
-              <h3 style={{ fontWeight: 700, color: "var(--color-bark)", marginBottom: 12, fontSize: "0.95rem" }}>
+          <div className="adm-revenue-grid mb-6">
+            <div className="adm-card adm-card--padded">
+              <h3 className="adm-section-heading mb-3">
                 {isRealApi && revReport?.items ? `Chi tiết đơn hoàn tất trong kỳ (${revReport.items.length} đơn)` : "Doanh thu phân bổ theo danh mục sản phẩm trong kỳ"}
               </h3>
               {isRealApi && revReport?.items ? (
-                <div className="responsive-table" style={{ overflow: "auto", maxHeight: 300 }}>
-                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.78rem" }}>
+                <div className="responsive-table adm-table-scroll adm-table-scroll--tall">
+                  <table className="adm-table adm-table--sm">
                     <thead>
-                      <tr style={{ background: "var(--color-parchment)", textAlign: "left" }}>
-                        <th style={{ padding: "8px 10px" }}>Mã đơn</th>
-                        <th style={{ padding: "8px 10px" }}>Hoàn tất</th>
-                        <th style={{ padding: "8px 10px", textAlign: "right" }}>Thuê sau giảm</th>
-                        <th style={{ padding: "8px 10px", textAlign: "right" }}>Phụ phí</th>
-                        <th style={{ padding: "8px 10px", textAlign: "right" }}>Tổng doanh thu</th>
+                      <tr>
+                        <th>Mã đơn</th>
+                        <th>Hoàn tất</th>
+                        <th className="adm-cell-right">Thuê sau giảm</th>
+                        <th className="adm-cell-right">Phụ phí</th>
+                        <th className="adm-cell-right">Tổng doanh thu</th>
                       </tr>
                     </thead>
                     <tbody>
                       {(revReport.items as any[]).map((it) => (
-                        <tr key={it.maDonThue} style={{ borderTop: "1px solid var(--color-bone)" }}>
-                          <td style={{ padding: "7px 10px", fontFamily: "var(--font-mono)", fontWeight: 700, color: "var(--color-forest)" }}>{it.maDonHienThi || it.maDonThue}</td>
-                          <td style={{ padding: "7px 10px", color: "#6B7280" }}>{it.thoiDiemHoanTat ? new Date(it.thoiDiemHoanTat).toLocaleDateString("vi-VN") : "—"}</td>
-                          <td style={{ padding: "7px 10px", textAlign: "right", fontFamily: "var(--font-mono)" }}>{fmt(Number(it.tienThueSauGiam ?? 0))}</td>
-                          <td style={{ padding: "7px 10px", textAlign: "right", fontFamily: "var(--font-mono)", color: "#D97706" }}>{fmt(Number(it.phuPhiDoiSoatBanDau ?? 0))}</td>
-                          <td style={{ padding: "7px 10px", textAlign: "right", fontFamily: "var(--font-mono)", fontWeight: 700 }}>{fmt(Number(it.tongDoanhThu ?? 0))}</td>
+                        <tr key={it.maDonThue}>
+                          <td className="adm-cell-code">{it.maDonHienThi || it.maDonThue}</td>
+                          <td className="adm-hint-text">{it.thoiDiemHoanTat ? new Date(it.thoiDiemHoanTat).toLocaleDateString("vi-VN") : "—"}</td>
+                          <td className="adm-cell-right adm-cell-mono">{fmt(Number(it.tienThueSauGiam ?? 0))}</td>
+                          <td className="adm-cell-right adm-cell-mono text-[#D97706]">{fmt(Number(it.phuPhiDoiSoatBanDau ?? 0))}</td>
+                          <td className="adm-cell-right adm-cell-mono font-bold">{fmt(Number(it.tongDoanhThu ?? 0))}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -586,13 +573,14 @@ export function ReportsTab({ app }: { app: ReturnType<typeof useApp> }) {
                   const catRev = completedOrders.flatMap((o) => o.items).filter((it) => catProds.includes(it.productId)).reduce((s, it) => s + it.pricePerDay * it.qty * it.days, 0);
                   const percent = pureRentalRevenue > 0 ? Math.round((catRev / pureRentalRevenue) * 100) : 0;
                   return (
-                    <div key={c.id} style={{ marginBottom: 12 }}>
+                    <div key={c.id} className="mb-3">
                       <div className="flex justify-between text-sm mb-1">
-                        <span style={{ fontWeight: 600 }}>{c.name}</span>
-                        <span style={{ fontFamily: "var(--font-mono)", fontWeight: 700, color: "var(--color-forest)" }}>{fmt(catRev)} ({percent}%)</span>
+                        <span className="font-semibold">{c.name}</span>
+                        <span className="adm-cell-mono font-bold text-[var(--color-forest)]">{fmt(catRev)} ({percent}%)</span>
                       </div>
-                      <div style={{ height: 8, background: "var(--color-parchment)", borderRadius: 4, overflow: "hidden" }}>
-                        <div style={{ height: "100%", background: "var(--color-forest)", width: `${percent}%` }} />
+                      <div className="adm-progress-track h-2 rounded bg-[var(--color-parchment)]">
+                        {/* Chiều rộng thanh tỷ trọng doanh thu danh mục tính động theo phần trăm */}
+                        <div className="adm-progress-fill" style={{ width: `${percent}%` }} />
                       </div>
                     </div>
                   );
@@ -601,46 +589,46 @@ export function ReportsTab({ app }: { app: ReturnType<typeof useApp> }) {
             </div>
 
             <div className="flex flex-col gap-3">
-              <div style={{ background: "white", borderRadius: 12, padding: 18, border: "1px solid var(--color-bone)" }}>
-                <h3 style={{ fontWeight: 700, color: "var(--color-bark)", marginBottom: 10, fontSize: "0.9rem" }}>
+              <div className="adm-card adm-card--padded-sm">
+                <h3 className="adm-section-heading text-[0.9rem] mb-2.5">
                   Chỉ số chuyển đổi & Chăm sóc khách hàng (UC10.2)
                 </h3>
-                <div className="grid gap-2" style={{ gridTemplateColumns: "1fr 1fr" }}>
-                  <div style={{ background: "var(--color-parchment)", borderRadius: 8, padding: 10 }}>
-                    <div style={{ fontSize: "0.72rem", color: "#6B7280" }}>Tỷ lệ hủy đơn (BR22)</div>
-                    <div style={{ fontFamily: "var(--font-mono)", fontSize: "1.4rem", fontWeight: 800, color: "#DC2626", marginTop: 2 }}>
+                <div className="adm-grid-2 gap-2">
+                  <div className="adm-card--parchment p-2.5">
+                    <div className="adm-hint-text">Tỷ lệ hủy đơn (BR22)</div>
+                    <div className="adm-cell-mono text-[1.4rem] font-extrabold text-[#DC2626] mt-0.5">
                       {cancellationRate}%
                     </div>
-                    <div style={{ fontSize: "0.68rem", color: "#9CA3AF" }}>{canceledCount} hủy / {validDenominator} đơn phát sinh</div>
+                    <div className="adm-muted-note text-[0.68rem]">{canceledCount} hủy / {validDenominator} đơn phát sinh</div>
                   </div>
 
-                  <div style={{ background: "var(--color-parchment)", borderRadius: 8, padding: 10 }}>
-                    <div style={{ fontSize: "0.72rem", color: "#6B7280" }}>Khách quay lại (≥2 lần)</div>
-                    <div style={{ fontFamily: "var(--font-mono)", fontSize: "1.4rem", fontWeight: 800, color: "var(--color-forest)", marginTop: 2 }}>
+                  <div className="adm-card--parchment p-2.5">
+                    <div className="adm-hint-text">Khách quay lại (≥2 lần)</div>
+                    <div className="adm-cell-mono text-[1.4rem] font-extrabold text-[var(--color-forest)] mt-0.5">
                       {returningCustomersCount}
                     </div>
-                    <div style={{ fontSize: "0.68rem", color: "#9CA3AF" }}>Khách có ≥2 đơn hoàn tất</div>
+                    <div className="adm-muted-note text-[0.68rem]">Khách có ≥2 đơn hoàn tất</div>
                   </div>
                 </div>
               </div>
 
-              <div style={{ background: "white", borderRadius: 12, padding: 18, border: "1px solid var(--color-bone)" }}>
-                <div style={{ background: "#F9FAFB", borderRadius: 8, padding: 12, marginBottom: 10 }}>
-                  <div style={{ fontSize: "0.75rem", color: "#6B7280" }}>Thu nhập khác: Phí hủy đơn giữ lại (UC07)</div>
-                  <div style={{ fontFamily: "var(--font-mono)", fontSize: "1.2rem", fontWeight: 700, color: "var(--color-bark)", marginTop: 2 }}>
+              <div className="adm-card adm-card--padded-sm">
+                <div className="adm-card--soft mb-2.5">
+                  <div className="adm-hint-text text-[0.75rem]">Thu nhập khác: Phí hủy đơn giữ lại (UC07)</div>
+                  <div className="adm-cell-mono text-[1.2rem] font-bold text-[var(--color-bark)] mt-0.5">
                     {fmt(cancellationFees)}
                   </div>
-                  <div style={{ fontSize: "0.68rem", color: "#9CA3AF" }}>
+                  <div className="adm-muted-note text-[0.68rem]">
                     {isRealApi && cancelFeeReport ? `${cancelFeeReport.soDonHuyCoPhi ?? 0} đơn hủy có thu phí` : "Thu từ khách hủy sát giờ hẹn (<48h)"}
                   </div>
                 </div>
 
-                <div style={{ background: "#FFFBEB", borderRadius: 8, padding: 12, border: "1px solid #FDE68A" }}>
-                  <div style={{ fontSize: "0.75rem", color: "#92400E", fontWeight: 600 }}>Tiền cọc đang tạm giữ trong các đơn mở</div>
-                  <div style={{ fontFamily: "var(--font-mono)", fontSize: "1.2rem", fontWeight: 700, color: "#B45309", marginTop: 2 }}>
+                <div className="adm-alert is-warning adm-alert--block mb-0">
+                  <div className="text-[0.75rem] font-semibold">Tiền cọc đang tạm giữ trong các đơn mở</div>
+                  <div className="adm-cell-mono text-[1.2rem] font-bold text-[#B45309] mt-0.5">
                     {fmt(currentHeldDeposit)}
                   </div>
-                  <div style={{ fontSize: "0.68rem", color: "#B45309" }}>
+                  <div className="text-[0.68rem] text-[#B45309]">
                     {isRealApi && depositReport ? `${depositReport.soDonConGiuCoc ?? 0} đơn còn giữ cọc · Không tính doanh thu` : "Nợ phải hoàn trả khách sau khi đối soát"}
                   </div>
                 </div>
@@ -653,34 +641,34 @@ export function ReportsTab({ app }: { app: ReturnType<typeof useApp> }) {
       {/* ─── BÁO CÁO 3: DÒNG TIỀN THỰC TẾ (UC10.2.1 CASHFLOW) ────────────────── */}
       {reportSubTab === "cashflow" && (
         <div>
-          <div className="grid gap-4 mb-6" style={{ gridTemplateColumns: "repeat(3, 1fr)" }}>
-            <div style={{ background: "white", borderRadius: 12, padding: 18, border: "1px solid var(--color-bone)" }}>
-              <div style={{ fontSize: "0.78rem", color: "#15803D", fontWeight: 700 }}>↑ DÒNG TIỀN VÀO (INFLOW)</div>
-              <div style={{ fontFamily: "var(--font-mono)", fontSize: "1.6rem", fontWeight: 800, color: "#15803D", marginTop: 4 }}>
+          <div className="adm-kpi-3 mb-6">
+            <div className="adm-card adm-card--padded-sm">
+              <div className="text-[0.78rem] text-[#15803D] font-bold">↑ DÒNG TIỀN VÀO (INFLOW)</div>
+              <div className="adm-cell-mono text-[1.6rem] font-extrabold text-[#15803D] mt-1">
                 +{fmt(totalCashInflow)}
               </div>
-              <div style={{ fontSize: "0.72rem", color: "#6B7280", marginTop: 4 }}>Tiền thuê + Cọc ban đầu + Thu thêm phụ phí</div>
+              <div className="adm-hint-text mt-1">Tiền thuê + Cọc ban đầu + Thu thêm phụ phí</div>
             </div>
 
-            <div style={{ background: "white", borderRadius: 12, padding: 18, border: "1px solid var(--color-bone)" }}>
-              <div style={{ fontSize: "0.78rem", color: "#DC2626", fontWeight: 700 }}>↓ DÒNG TIỀN RA (OUTFLOW)</div>
-              <div style={{ fontFamily: "var(--font-mono)", fontSize: "1.6rem", fontWeight: 800, color: "#DC2626", marginTop: 4 }}>
+            <div className="adm-card adm-card--padded-sm">
+              <div className="text-[0.78rem] text-[#DC2626] font-bold">↓ DÒNG TIỀN RA (OUTFLOW)</div>
+              <div className="adm-cell-mono text-[1.6rem] font-extrabold text-[#DC2626] mt-1">
                 −{fmt(totalCashOutflow)}
               </div>
-              <div style={{ fontSize: "0.72rem", color: "#6B7280", marginTop: 4 }}>Hoàn cọc đối soát + Hoàn tiền hủy đơn</div>
+              <div className="adm-hint-text mt-1">Hoàn cọc đối soát + Hoàn tiền hủy đơn</div>
             </div>
 
-            <div style={{ background: "white", borderRadius: 12, padding: 18, border: "1px solid var(--color-bone)" }}>
-              <div style={{ fontSize: "0.78rem", color: "var(--color-bark)", fontWeight: 700 }}>DÒNG TIỀN RÒNG (NET CASHFLOW)</div>
-              <div style={{ fontFamily: "var(--font-mono)", fontSize: "1.6rem", fontWeight: 800, color: netCashflow >= 0 ? "var(--color-forest)" : "#DC2626", marginTop: 4 }}>
+            <div className="adm-card adm-card--padded-sm">
+              <div className="text-[0.78rem] text-[var(--color-bark)] font-bold">DÒNG TIỀN RÒNG (NET CASHFLOW)</div>
+              <div className={`adm-cell-mono text-[1.6rem] font-extrabold mt-1 ${netCashflow >= 0 ? "text-[var(--color-forest)]" : "text-[#DC2626]"}`}>
                 {netCashflow >= 0 ? "+" : ""}{fmt(netCashflow)}
               </div>
-              <div style={{ fontSize: "0.72rem", color: "#6B7280", marginTop: 4 }}>Lượng tiền thực tế chênh lệch trong tài khoản</div>
+              <div className="adm-hint-text mt-1">Lượng tiền thực tế chênh lệch trong tài khoản</div>
             </div>
           </div>
 
           {isRealApi && pendingItemsReport && (
-            <div style={{ background: "#FFFBEB", border: "1px solid #FDE68A", borderRadius: 10, padding: "12px 16px", marginBottom: 16, fontSize: "0.82rem", color: "#92400E" }}>
+            <div className="adm-alert is-warning adm-alert--block mb-4">
               <strong>Khoản cần xử lý kế toán:</strong>{" "}
               {pendingItemsReport.soKhoanThuCanDoiChieu ?? 0} khoản thu chờ đối chiếu ({fmt(Number(pendingItemsReport.tongTienThuCanDoiChieu ?? 0))}) ·{" "}
               {(pendingItemsReport.hoanDangChoItems ?? []).length} khoản hoàn đang chờ ·{" "}
@@ -689,45 +677,45 @@ export function ReportsTab({ app }: { app: ReturnType<typeof useApp> }) {
             </div>
           )}
 
-          <div style={{ background: "white", borderRadius: 12, padding: 18, border: "1px solid var(--color-bone)", marginBottom: 20 }}>
-            <h3 style={{ fontWeight: 700, color: "var(--color-bark)", fontSize: "0.95rem", marginBottom: 8 }}>
+          <div className="adm-card adm-card--padded-sm mb-5">
+            <h3 className="adm-section-heading mb-2">
               Bảng đối chiếu chênh lệch: Doanh thu thuần vs Dòng tiền thực tế (UC10.2 - Bước 6)
             </h3>
-            <p style={{ fontSize: "0.8rem", color: "#6B7280", marginBottom: 12 }}>
+            <p className="adm-page-subtitle adm-page-subtitle--sm mb-3">
               Giải thích nguyên nhân chênh lệch giữa Doanh thu ghi nhận trên đơn hoàn tất và Dòng tiền ra vào tài khoản ngân hàng trong kỳ.
             </p>
-            <div style={{ background: "var(--color-parchment)", borderRadius: 8, padding: 12, fontSize: "0.82rem" }}>
-              <div className="flex justify-between py-1 border-b border-bone">
+            <div className="adm-card--parchment text-[0.82rem]">
+              <div className="flex justify-between py-1 border-b border-bone gap-2">
                 <span>(A) Tổng doanh thu thuần ghi nhận (Thuê + Phụ phí giữ lại):</span>
-                <strong style={{ fontFamily: "var(--font-mono)", color: "var(--color-forest)" }}>{fmt(totalNetRevenue)}</strong>
+                <strong className="adm-cell-mono text-[var(--color-forest)]">{fmt(totalNetRevenue)}</strong>
               </div>
-              <div className="flex justify-between py-1 border-b border-bone">
+              <div className="flex justify-between py-1 border-b border-bone gap-2">
                 <span>(B) Dòng tiền ròng thực tế qua tài khoản (Net Cashflow):</span>
-                <strong style={{ fontFamily: "var(--font-mono)" }}>{fmt(netCashflow)}</strong>
+                <strong className="adm-cell-mono">{fmt(netCashflow)}</strong>
               </div>
-              <div className="flex justify-between py-1 border-b border-bone" style={{ color: "#B45309" }}>
+              <div className="flex justify-between py-1 border-b border-bone gap-2 text-[#B45309]">
                 <span>(+) Tiền cọc khách hàng đang tạm giữ trong các đơn mở (Chưa hoàn):</span>
-                <strong style={{ fontFamily: "var(--font-mono)" }}>+{fmt(currentHeldDeposit)}</strong>
+                <strong className="adm-cell-mono">+{fmt(currentHeldDeposit)}</strong>
               </div>
-              <div className="flex justify-between py-1" style={{ color: "#4B5563" }}>
+              <div className="flex justify-between py-1 gap-2 text-[#4B5563]">
                 <span>(+) Khoản thu nhập từ phí hủy đơn:</span>
-                <strong style={{ fontFamily: "var(--font-mono)" }}>+{fmt(cancellationFees)}</strong>
+                <strong className="adm-cell-mono">+{fmt(cancellationFees)}</strong>
               </div>
             </div>
           </div>
 
-          <div style={{ background: "white", borderRadius: 12, padding: 20, border: "1px solid var(--color-bone)" }}>
-            <h3 style={{ fontWeight: 700, color: "var(--color-bark)", marginBottom: 12, fontSize: "0.95rem" }}>
+          <div className="adm-card adm-card--padded">
+            <h3 className="adm-section-heading mb-3">
               {isRealApi && cashReport
                 ? `Chi tiết giao dịch dòng tiền trong kỳ (${(cashReport.giaoDichThus ?? []).length} thu · ${(cashReport.khoanHoans ?? []).length} hoàn)`
                 : `Chi tiết giao dịch dòng tiền trong kỳ (${inRangeTransactions.length} giao dịch)`}
             </h3>
-            <div className="responsive-table" style={{ overflow: "auto" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <div className="responsive-table adm-table-scroll">
+              <table className="adm-table adm-table--md">
                 <thead>
-                  <tr style={{ background: "var(--color-parchment)", fontSize: "0.78rem", fontWeight: 600, color: "var(--color-bark)" }}>
+                  <tr>
                     {["Mã GD", "Loại giao dịch", "Đơn hàng", "Khách hàng / Lý do", "Số tiền", "Trạng thái", "Ngày hoàn tất"].map((h) => (
-                      <th key={h} style={{ padding: "9px 12px", textAlign: "left" }}>{h}</th>
+                      <th key={h}>{h}</th>
                     ))}
                   </tr>
                 </thead>
@@ -757,38 +745,41 @@ export function ReportsTab({ app }: { app: ReturnType<typeof useApp> }) {
                         at: h.thoiDiemThanhCong ? new Date(h.thoiDiemThanhCong).toLocaleString("vi-VN") : "—",
                       })),
                     ].map((row) => (
-                      <tr key={row.key} style={{ borderTop: "1px solid var(--color-bone)", fontSize: "0.8rem" }}>
-                        <td style={{ padding: "9px 12px", fontFamily: "var(--font-mono)", fontWeight: 700, color: "var(--color-forest)" }}>{row.code}</td>
-                        <td style={{ padding: "9px 12px", fontWeight: 600 }}>{row.type}</td>
-                        <td style={{ padding: "9px 12px", fontFamily: "var(--font-mono)" }}>{row.orderCode}</td>
-                        <td style={{ padding: "9px 12px" }}>{row.note}</td>
-                        <td style={{ padding: "9px 12px", fontFamily: "var(--font-mono)", fontWeight: 700, color: row.isIn ? "#15803D" : "#DC2626" }}>
+                      <tr key={row.key}>
+                        <td className="adm-cell-code">{row.code}</td>
+                        <td className="font-semibold">{row.type}</td>
+                        <td className="adm-cell-mono">{row.orderCode}</td>
+                        <td>{row.note}</td>
+                        <td className={`adm-cell-mono font-bold ${row.isIn ? "text-[#15803D]" : "text-[#DC2626]"}`}>
                           {row.isIn ? "+" : "−"}{fmt(row.amount)}
                         </td>
-                        <td style={{ padding: "9px 12px" }}>
-                          <span style={{ background: "#DCFCE7", color: "#15803D", padding: "2px 8px", borderRadius: 6, fontSize: "0.72rem", fontWeight: 700 }}>{row.status}</span>
+                        <td>
+                          <span className="adm-pill is-success">{row.status}</span>
                         </td>
-                        <td style={{ padding: "9px 12px", color: "#6B7280" }}>{row.at}</td>
+                        <td className="adm-hint-text">{row.at}</td>
                       </tr>
                     ))
                   ) : (
-                    inRangeTransactions.map((t, idx) => (
-                      <tr key={`${t.id}-${idx}`} style={{ borderTop: "1px solid var(--color-bone)", fontSize: "0.8rem" }}>
-                        <td style={{ padding: "9px 12px", fontFamily: "var(--font-mono)", fontWeight: 700, color: "var(--color-forest)" }}>{t.id}</td>
-                        <td style={{ padding: "9px 12px", fontWeight: 600 }}>{t.type}</td>
-                        <td style={{ padding: "9px 12px", fontFamily: "var(--font-mono)" }}>{t.orderId}</td>
-                        <td style={{ padding: "9px 12px" }}>{t.customerName}</td>
-                        <td style={{ padding: "9px 12px", fontFamily: "var(--font-mono)", fontWeight: 700, color: t.type === "Thanh toán ban đầu" || t.type === "Thu thêm" ? "#15803D" : "#DC2626" }}>
-                          {t.type === "Thanh toán ban đầu" || t.type === "Thu thêm" ? "+" : "−"}{fmt(t.amount)}
-                        </td>
-                        <td style={{ padding: "9px 12px" }}>
-                          <span style={{ background: t.status === "Thành công" ? "#DCFCE7" : "#FEE2E2", color: t.status === "Thành công" ? "#15803D" : "#DC2626", padding: "2px 8px", borderRadius: 6, fontSize: "0.72rem", fontWeight: 700 }}>
-                            {t.status}
-                          </span>
-                        </td>
-                        <td style={{ padding: "9px 12px", color: "#6B7280" }}>{t.completedAt || t.createdAt}</td>
-                      </tr>
-                    ))
+                    inRangeTransactions.map((t, idx) => {
+                      const isInflow = t.type === "Thanh toán ban đầu" || t.type === "Thu thêm";
+                      return (
+                        <tr key={`${t.id}-${idx}`}>
+                          <td className="adm-cell-code">{t.id}</td>
+                          <td className="font-semibold">{t.type}</td>
+                          <td className="adm-cell-mono">{t.orderId}</td>
+                          <td>{t.customerName}</td>
+                          <td className={`adm-cell-mono font-bold ${isInflow ? "text-[#15803D]" : "text-[#DC2626]"}`}>
+                            {isInflow ? "+" : "−"}{fmt(t.amount)}
+                          </td>
+                          <td>
+                            <span className={`adm-pill ${t.status === "Thành công" ? "is-success" : "is-danger-dark"}`}>
+                              {t.status}
+                            </span>
+                          </td>
+                          <td className="adm-hint-text">{t.completedAt || t.createdAt}</td>
+                        </tr>
+                      );
+                    })
                   )}
                 </tbody>
               </table>

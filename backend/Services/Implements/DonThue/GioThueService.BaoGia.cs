@@ -1,4 +1,5 @@
 using GearGo.Exceptions;
+using GearGo.Helpers;
 using GearGo.Models.DTOs.GioThue;
 using GearGo.Models.DTOs.KhuyenMai;
 using GearGo.Models.Entities;
@@ -11,7 +12,7 @@ public partial class GioThueService
     // Chuẩn hóa danh sách dòng giỏ thuê sang DTO kiểm tra khuyến mãi
     private static List<DongBaoGiaItem> TaoDanhSachKhuyenMaiItems(GioThue gio)
     {
-        int soNgayThue = Math.Max(1, (int)Math.Ceiling((gio.GioTraDuKien!.Value - gio.GioNhanDuKien!.Value).TotalDays));
+        int soNgayThue = CalculationHelpers.TinhSoNgayThue(gio.GioNhanDuKien!.Value, gio.GioTraDuKien!.Value);
         return gio.ChiTietGioThues.Select(c => new DongBaoGiaItem
         {
             MaSanPham = c.MaSanPham,

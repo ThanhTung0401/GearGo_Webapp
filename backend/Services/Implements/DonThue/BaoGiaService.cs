@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
+using GearGo.Helpers;
 using GearGo.Models.DTOs.GioThue;
 using GearGo.Services.Interfaces;
 
@@ -15,7 +16,7 @@ public class BaoGiaService : IBaoGiaService
     {
         var response = new BaoGiaResponse
         {
-            SoNgayThue = Math.Max(1, (int)Math.Ceiling((gioTra - gioNhan).TotalHours / 24.0))
+            SoNgayThue = CalculationHelpers.TinhSoNgayThue(gioNhan, gioTra)
         };
 
         decimal tongThue = 0, tongCoc = 0;

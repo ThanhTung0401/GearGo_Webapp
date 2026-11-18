@@ -19,17 +19,17 @@ public class TaiKhoanController : BaseApiController
 
     [HttpGet]
     public async Task<IActionResult> Tim([FromQuery] TimTaiKhoanRequest request, CancellationToken ct)
-        => HandleResult(await _service.TimTaiKhoanAsync(request, User.LayMaTaiKhoan(), ct));
+        => HandleResult(await _service.TimTaiKhoanAsync(request, MaTaiKhoanHienTai, ct));
 
     [HttpGet("{id:long}")]
     public async Task<IActionResult> Lay(long id, CancellationToken ct)
-        => HandleResult(await _service.LayTaiKhoanAsync(id, User.LayMaTaiKhoan(), ct));
+        => HandleResult(await _service.LayTaiKhoanAsync(id, MaTaiKhoanHienTai, ct));
 
     [HttpPost("{id:long}/khoa")]
     public async Task<IActionResult> Khoa(long id, [FromBody] KhoaTaiKhoanRequest request, CancellationToken ct)
-        => HandleResult(await _service.KhoaTaiKhoanAsync(id, request, User.LayMaTaiKhoan(), ct));
+        => HandleResult(await _service.KhoaTaiKhoanAsync(id, request, MaTaiKhoanHienTai, ct));
 
     [HttpPost("{id:long}/mo-khoa")]
     public async Task<IActionResult> MoKhoa(long id, [FromBody] MoKhoaTaiKhoanRequest request, CancellationToken ct)
-        => HandleResult(await _service.MoKhoaTaiKhoanAsync(id, request, User.LayMaTaiKhoan(), ct));
+        => HandleResult(await _service.MoKhoaTaiKhoanAsync(id, request, MaTaiKhoanHienTai, ct));
 }

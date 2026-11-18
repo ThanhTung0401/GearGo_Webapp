@@ -40,31 +40,30 @@ export function OverviewTab({ app, openOrder }: { app: ReturnType<typeof useApp>
 
       {/* Cảnh báo đơn quá hạn (UC13) */}
       {overdueOrders.length > 0 && (
-        <div style={{ background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: 12, padding: "16px 20px", marginBottom: 24 }}>
-          <div className="flex items-center gap-2 mb-2" style={{ color: "#B91C1C", fontWeight: 700, fontSize: "0.95rem" }}>
+        <div className="so-overdue-banner-overview">
+          <div className="flex items-center gap-2 mb-2 so-overdue-title">
             <Icon name="alert-circle" size={20} />
             <span>CẢNH BÁO: Có {overdueOrders.length} đơn thuê quá hạn hẹn trả</span>
           </div>
-          <p style={{ color: "#991B1B", fontSize: "0.82rem", marginBottom: 12 }}>
+          <p className="so-overdue-desc">
             Thiết bị chưa được trả đúng hạn cam kết. Nhân viên vui lòng gọi điện nhắc khách hoặc áp dụng phụ phí trễ hạn (150% giá ngày theo block 24h).
           </p>
           <div className="flex flex-col gap-2">
             {overdueOrders.map((o) => {
               const od = app.checkOrderOverdue(o);
               return (
-                <div key={o.id} style={{ background: "white", borderRadius: 8, padding: "10px 14px", border: "1px solid #FCA5A5", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div key={o.id} className="so-alert-item">
                   <div>
-                    <span style={{ fontFamily: "var(--font-mono)", fontWeight: 700, color: "#DC2626" }}>{o.displayCode || o.id}</span> — <strong>{o.customerName}</strong> ({o.customerPhone})
-                    <div style={{ fontSize: "0.75rem", color: "#6B7280" }}>
-                      Hạn trả: {o.returnTime} · <strong style={{ color: "#B91C1C" }}>Trễ {od.overdueDays} ngày ({od.overdueHours} giờ)</strong>
+                    <span className="so-alert-item-code">{o.displayCode || o.id}</span> — <strong>{o.customerName}</strong> ({o.customerPhone})
+                    <div className="so-alert-item-meta">
+                      Hạn trả: {o.returnTime} · <strong className="so-alert-item-late">Trễ {od.overdueDays} ngày ({od.overdueHours} giờ)</strong>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <span style={{ fontFamily: "var(--font-mono)", fontWeight: 700, color: "#DC2626", fontSize: "0.85rem" }}>
+                  <div className="so-alert-item-actions">
+                    <span className="so-alert-item-fee">
                       +{fmt(od.surcharge)} (150%)
                     </span>
-                    <button onClick={() => openOrder(o.id, "return")}
-                      style={{ background: "#DC2626", color: "white", border: "none", borderRadius: 6, padding: "6px 12px", fontSize: "0.78rem", fontWeight: 700, cursor: "pointer" }}>
+                    <button onClick={() => openOrder(o.id, "return")} className="so-btn-danger-sm">
                       Nhận trả / Xử lý trễ →
                     </button>
                   </div>
@@ -75,7 +74,7 @@ export function OverviewTab({ app, openOrder }: { app: ReturnType<typeof useApp>
         </div>
       )}
 
-      <h3 style={{ fontFamily: "var(--font-display)", fontSize: "1.1rem", color: "var(--color-bark)", marginBottom: "12px" }}>
+      <h3 className="so-section-heading">
         Đơn cần chuẩn bị & nhận trả hôm nay
       </h3>
       <div className="flex flex-col gap-3">
@@ -88,35 +87,35 @@ export function OverviewTab({ app, openOrder }: { app: ReturnType<typeof useApp>
 
           return (
             <div key={o.id} onClick={() => openOrder(o.id, actionTab)}
-              style={{ background: "white", borderRadius: "10px", padding: "14px 16px", border: "1px solid var(--color-bone)", display: "flex", gap: "12px", alignItems: "center", cursor: "pointer" }}
-              className="hover:shadow-md transition-shadow"
+              className="so-overview-order-row hover:shadow-md transition-shadow"
             >
-              <div style={{ flex: 1 }}>
+              <div className="so-flex-1">
                 <div className="flex items-center gap-2 mb-1 flex-wrap">
-                  <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.82rem", color: "var(--color-forest)", fontWeight: 700 }}>{o.displayCode || o.id}</span>
-                  <span style={{ background: sc.bg, color: sc.text, padding: "2px 8px", borderRadius: "10px", fontSize: "0.7rem", fontWeight: 600 }}>{o.status}</span>
+                  <span className="so-overview-order-code">{o.displayCode || o.id}</span>
+                  {/* Màu trạng thái lấy động từ bảng ánh xạ statusColors */}
+                  <span className="so-status-pill" style={{ background: sc.bg, color: sc.text }}>{o.status}</span>
                   {isPartial && (
-                    <span style={{ background: "#FFF7ED", color: "#C2410C", padding: "2px 8px", borderRadius: 10, fontSize: "0.7rem", fontWeight: 700 }}>
+                    <span className="so-badge-partial">
                       Đã trả {returnedCnt}/{o.assignedEquipment.length} món
                     </span>
                   )}
                   {isOverdue && (
-                    <span style={{ background: "#FEE2E2", color: "#DC2626", padding: "2px 8px", borderRadius: 10, fontSize: "0.7rem", fontWeight: 700 }}>
+                    <span className="so-badge-overdue">
                       Quá hạn
                     </span>
                   )}
                 </div>
-                <div style={{ fontWeight: 600, fontSize: "0.9rem", color: "var(--color-bark)" }}>{o.customerName} · {o.customerPhone}</div>
-                <div style={{ fontSize: "0.75rem", color: "#6B7280" }}>
+                <div className="so-overview-order-name">{o.customerName} · {o.customerPhone}</div>
+                <div className="so-overview-order-items">
                   {o.items.length > 0 ? o.items.map((i) => `${i.productName || "Thiết bị"} ×${i.qty}`).join(", ") : `Đã gán ${o.assignedEquipment.length} thiết bị`}
                 </div>
               </div>
-              <div style={{ textAlign: "right" }}>
-                <div style={{ fontSize: "0.75rem", color: "#6B7280" }}>Hẹn nhận: {o.pickupTime ? o.pickupTime.replace("T", " ").slice(0, 16) : "—"}</div>
-                <div style={{ fontSize: "0.75rem", color: "#6B7280" }}>Hẹn trả: {o.returnTime ? o.returnTime.replace("T", " ").slice(0, 16) : "—"}</div>
-                {o.total !== undefined && <div style={{ fontFamily: "var(--font-mono)", fontWeight: 700, color: "var(--color-forest)", marginTop: 2 }}>{fmt(o.rental - o.discount + o.depositTotal)}</div>}
+              <div className="so-overview-order-meta">
+                <div className="so-overview-order-items">Hẹn nhận: {o.pickupTime ? o.pickupTime.replace("T", " ").slice(0, 16) : "—"}</div>
+                <div className="so-overview-order-items">Hẹn trả: {o.returnTime ? o.returnTime.replace("T", " ").slice(0, 16) : "—"}</div>
+                {o.total !== undefined && <div className="so-overview-order-total">{fmt(o.rental - o.discount + o.depositTotal)}</div>}
               </div>
-              <span style={{ color: "var(--color-forest)", fontSize: "1.1rem" }}>→</span>
+              <span className="so-overview-order-arrow">→</span>
             </div>
           );
         })}

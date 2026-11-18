@@ -36,7 +36,7 @@ export function ForgotPasswordView() {
       <div className="auth-page">
         <div className="auth-wrapper text-center">
           <div className="auth-card text-center">
-            <div className="auth-icon-badge" style={{ background: "var(--color-moss)" }}>
+            <div className="auth-icon-badge auth-icon-badge--moss">
               <Icon name="shield" size={26} />
             </div>
             <h2 className="auth-title">Nhập mã xác minh OTP</h2>
@@ -96,8 +96,7 @@ export function ForgotPasswordView() {
                     setErr("");
                   }}
                   placeholder="123456"
-                  style={{ textAlign: "center", fontSize: "1.3rem", letterSpacing: "6px", fontFamily: "var(--font-mono)", fontWeight: 700 }}
-                  className={`form-input ${err ? "form-input-error" : ""}`}
+                  className={`form-input auth-otp-input ${err ? "form-input-error" : ""}`}
                 />
                 {err && <div className="form-error-msg">{err}</div>}
               </div>
@@ -254,7 +253,7 @@ export function ForgotPasswordView() {
       <div className="auth-page">
         <div className="auth-wrapper text-center">
           <div className="auth-card text-center">
-            <div className="auth-icon-badge" style={{ background: "var(--color-forest)" }}>
+            <div className="auth-icon-badge">
               <Icon name="check" size={26} />
             </div>
             <h2 className="auth-title">Đổi mật khẩu thành công!</h2>

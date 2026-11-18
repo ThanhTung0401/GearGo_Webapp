@@ -28,8 +28,8 @@ public partial class BaoTriService
             }
 
             phieu.MaNguoiXuLy = nvCheck.DuLieu!.MaNhanVien;
-            if (phieu.TrangThai == KietDomainConstants.BaoTriConfig.TrangThaiChoXuLy)
-                phieu.TrangThai = KietDomainConstants.BaoTriConfig.TrangThaiDangXuLy;
+            if (phieu.TrangThai == DomainConstants.Status.PendingProcessing)
+                phieu.TrangThai = DomainConstants.Status.InProgress;
 
             await _context.SaveChangesAsync();
             return Result<BaoTriResponse>.Ok((await LayPhieuBaoTriDayDuAsync(maPhieuBaoTri))!.ToResponse());
@@ -55,8 +55,8 @@ public partial class BaoTriService
             if (request.ChiPhi.HasValue) phieu.ChiPhi = request.ChiPhi.Value;
             if (request.BangChung != null) phieu.BangChung = request.BangChung;
             if (request.NgayDuKienHoanThanh.HasValue) phieu.NgayDuKienHoanThanh = request.NgayDuKienHoanThanh.Value;
-            if (phieu.TrangThai == KietDomainConstants.BaoTriConfig.TrangThaiChoXuLy)
-                phieu.TrangThai = KietDomainConstants.BaoTriConfig.TrangThaiDangXuLy;
+            if (phieu.TrangThai == DomainConstants.Status.PendingProcessing)
+                phieu.TrangThai = DomainConstants.Status.InProgress;
 
             await _context.SaveChangesAsync();
             return Result<BaoTriResponse>.Ok((await LayPhieuBaoTriDayDuAsync(maPhieuBaoTri))!.ToResponse());
@@ -77,7 +77,7 @@ public partial class BaoTriService
             if (string.IsNullOrWhiteSpace(phieu.KetQua))
                 return Result<BaoTriResponse>.Loi(DomainConstants.Errors.InspectionResultIncomplete, "Cần cập nhật kết quả xử lý trước khi gửi kiểm tra nghiệm thu.");
 
-            phieu.TrangThai = KietDomainConstants.BaoTriConfig.TrangThaiChoKiemTra;
+            phieu.TrangThai = DomainConstants.Status.PendingInspection;
             await _context.SaveChangesAsync();
             return Result<BaoTriResponse>.Ok((await LayPhieuBaoTriDayDuAsync(maPhieuBaoTri))!.ToResponse());
         }, _logger);
@@ -95,9 +95,9 @@ public partial class BaoTriService
             var phieu = await LayPhieuBaoTriDayDuAsync(maPhieuBaoTri);
             if (phieu == null)
                 return Result<BaoTriResponse>.Loi(DomainConstants.Errors.ReceiptNotFound, "Không tìm thấy phiếu bảo trì.");
-            if (phieu.TrangThai == KietDomainConstants.BaoTriConfig.TrangThaiHoanThanh)
+            if (phieu.TrangThai == DomainConstants.Status.Completed)
                 return Result<BaoTriResponse>.Ok(phieu.ToResponse());
-            if (phieu.TrangThai == KietDomainConstants.BaoTriConfig.TrangThaiKhongDat)
+            if (phieu.TrangThai == DomainConstants.Status.Failed)
                 return Result<BaoTriResponse>.Loi(DomainConstants.Errors.MaintenanceTicketClosed, "Phiếu bảo trì đã kết thúc với kết luận Không Đạt.");
 
             var ngayHoanThanh = request.NgayHoanThanhThucTe ?? DateTime.UtcNow;
@@ -110,7 +110,7 @@ public partial class BaoTriService
             if (!nvCheck.ThanhCong)
                 return Result<BaoTriResponse>.Loi(nvCheck.MaLoi!, "Không tìm thấy hồ sơ nhân viên xác nhận.");
 
-            phieu.TrangThai = KietDomainConstants.BaoTriConfig.TrangThaiHoanThanh;
+            phieu.TrangThai = DomainConstants.Status.Completed;
             phieu.MaNguoiXacNhanHoanThanh = nvCheck.DuLieu!.MaNhanVien;
             phieu.NgayHoanThanhThucTe = ngayHoanThanh;
             phieu.KetQua = request.KetQuaKiemTra;
@@ -146,7 +146,7 @@ public partial class BaoTriService
             if (!nvCheck.ThanhCong)
                 return Result<BaoTriResponse>.Loi(nvCheck.MaLoi!, "Không tìm thấy hồ sơ nhân viên xác nhận.");
 
-            phieu.TrangThai = KietDomainConstants.BaoTriConfig.TrangThaiKhongDat;
+            phieu.TrangThai = DomainConstants.Status.Failed;
             phieu.MaNguoiXacNhanHoanThanh = nvCheck.DuLieu!.MaNhanVien;
             phieu.NgayHoanThanhThucTe = request.NgayHoanThanhThucTe ?? DateTime.UtcNow;
             phieu.KetQua = request.KetQuaKiemTra;

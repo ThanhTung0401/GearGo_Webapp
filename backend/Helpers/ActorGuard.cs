@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using GearGo.Data;
 using GearGo.Exceptions;
+using GearGo.Models.Common;
 using GearGo.Models.Entities;
 using Microsoft.EntityFrameworkCore;
 
@@ -20,6 +21,7 @@ public static class ClaimsPrincipalExtensions
 
 /// <summary>
 /// Kiểm tra trạng thái/quyền HIỆN TẠI trong database, không tin vai trò trong JWT cũ.
+/// Tập trung toàn bộ các helper xác thực/tra cứu tác nhân (throwing guards và Result&lt;NhanVien&gt; extensions).
 /// </summary>
 public static class ActorGuard
 {
@@ -70,12 +72,75 @@ public static class ActorGuard
     public static Task<long?> LayMaNhanVienAsync(ApplicationDbContext ctx, long maTaiKhoan, CancellationToken ct = default)
         => ctx.NhanViens.Where(n => n.MaTaiKhoan == maTaiKhoan)
             .Select(n => (long?)n.MaNhanVien).FirstOrDefaultAsync(ct);
+
     /// <summary>
-    /// Lấy thông tin nhân viên theo MaTaiKhoan hoặc MaNhanVien (hỗ trợ linh hoạt cả 2 định dạng id)
+    /// Lấy hồ sơ nhân viên đang làm việc theo MaTaiKhoan; ném KhongCoQuyenException nếu chưa liên kết hoặc đã nghỉ việc.
+    /// Dùng chung cho các service ném exception nghiệp vụ (ChuanBiDonService, PhieuNhapService).
     /// </summary>
-    public static async Task<NhanVien?> LayNhanVienAsync(this ApplicationDbContext ctx, long actorId, CancellationToken ct = default)
+    public static async Task<NhanVien> LayNhanVienDangLamViecAsync(
+        ApplicationDbContext ctx, long maTaiKhoan, CancellationToken ct = default)
     {
         return await ctx.NhanViens
-            .FirstOrDefaultAsync(n => n.MaTaiKhoan == actorId || n.MaNhanVien == actorId, ct);
+            .FirstOrDefaultAsync(nv => nv.MaTaiKhoan == maTaiKhoan && nv.TrangThaiLamViec == DomainConstants.StaffStatus.Working, ct)
+            ?? throw new KhongCoQuyenException("Tài khoản không liên kết với nhân viên đang làm việc.");
+    }
+
+    /// <summary>
+    /// Lấy thông tin nhân viên theo MaTaiKhoan hoặc MaNhanVien (hỗ trợ linh hoạt cả 2 định dạng id).
+    /// </summary>
+    public static Task<NhanVien?> LayNhanVienAsync(this ApplicationDbContext ctx, long actorId, CancellationToken ct = default)
+        => TimNhanVienTheoActorIdAsync(ctx, actorId, kemTaiKhoan: false, ct);
+
+    /// <summary>
+    /// Kiểm tra và lấy thông tin nhân viên theo Actor ID dưới dạng Result&lt;NhanVien&gt;.
+    /// Nếu không tìm thấy, trả về lỗi chuẩn NHAN_VIEN_NOT_FOUND.
+    /// </summary>
+    public static async Task<Result<NhanVien>> LayNhanVienHopLeAsync(
+        this ApplicationDbContext context, long actorId, CancellationToken ct = default)
+    {
+        var nhanVien = await context.LayNhanVienAsync(actorId, ct);
+        if (nhanVien == null)
+        {
+            return Result<NhanVien>.Loi(
+                DomainConstants.Errors.StaffNotFound,
+                "Không tìm thấy thông tin nhân viên thao tác.");
+        }
+        return Result<NhanVien>.Ok(nhanVien);
+    }
+
+    /// <summary>
+    /// Kiểm tra và lấy nhân viên hợp lệ (còn làm việc và tài khoản còn hoạt động) dưới dạng Result&lt;NhanVien&gt;.
+    /// </summary>
+    public static async Task<Result<NhanVien>> LayNhanVienDangHoatDongAsync(
+        this ApplicationDbContext context, long actorId, CancellationToken ct = default)
+    {
+        var nv = await TimNhanVienTheoActorIdAsync(context, actorId, kemTaiKhoan: true, ct);
+        if (nv == null)
+        {
+            return Result<NhanVien>.Loi(
+                DomainConstants.Errors.StaffNotFound,
+                "Không tìm thấy hồ sơ nhân viên thực hiện.");
+        }
+
+        if (nv.TrangThaiLamViec != DomainConstants.StaffStatus.Working ||
+            (nv.TaiKhoan != null && nv.TaiKhoan.TrangThai != DomainConstants.AccountStatus.Active))
+        {
+            return Result<NhanVien>.Loi(
+                DomainConstants.Errors.StaffResigned,
+                "Nhân viên đã nghỉ việc hoặc tài khoản đã bị tạm khóa.");
+        }
+
+        return Result<NhanVien>.Ok(nv);
+    }
+
+    // Truy vấn dùng chung theo MaTaiKhoan hoặc MaNhanVien, tùy chọn Include(TaiKhoan) khi cần kiểm tra trạng thái khóa.
+    private static Task<NhanVien?> TimNhanVienTheoActorIdAsync(
+        ApplicationDbContext ctx, long actorId, bool kemTaiKhoan, CancellationToken ct)
+    {
+        IQueryable<NhanVien> query = ctx.NhanViens;
+        if (kemTaiKhoan)
+            query = query.Include(n => n.TaiKhoan);
+
+        return query.FirstOrDefaultAsync(n => n.MaTaiKhoan == actorId || n.MaNhanVien == actorId, ct);
     }
 }

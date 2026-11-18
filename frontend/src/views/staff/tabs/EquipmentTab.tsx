@@ -143,27 +143,27 @@ export function EquipmentTab({ app }: { app: ReturnType<typeof useApp> }) {
   return (
     <div>
       {equipError && (
-        <div style={{ background: "#FEF2F2", border: "1px solid #FECACA", color: "#B91C1C", borderRadius: 8, padding: "10px 14px", marginBottom: 12, fontSize: "0.82rem", fontWeight: 600 }}>
+        <div className="so-alert-error">
           {equipError}
         </div>
       )}
       {equipSuccess && (
-        <div style={{ background: "#F0FDF4", border: "1px solid #BBF7D0", color: "#15803D", borderRadius: 8, padding: "10px 14px", marginBottom: 12, fontSize: "0.82rem", fontWeight: 600 }}>
+        <div className="so-alert-success">
           {equipSuccess}
         </div>
       )}
       {/* Sub tabs: Kho / Phiếu bảo trì / Nhập hàng */}
       <div className="flex gap-2 mb-4 border-b border-bone pb-2 flex-wrap">
         <button onClick={() => setSubTab("inventory")}
-          style={{ background: subTab === "inventory" ? "var(--color-forest)" : "white", color: subTab === "inventory" ? "white" : "var(--color-bark)", border: "1px solid var(--color-bone)", borderRadius: 8, padding: "8px 16px", cursor: "pointer", fontWeight: 700, fontSize: "0.85rem" }}>
+          className={`so-tab-btn ${subTab === "inventory" ? "is-active" : ""}`}>
           📦 Danh sách kho ({app.equipment.length} thiết bị)
         </button>
         <button onClick={() => setSubTab("maintenance")}
-          style={{ background: subTab === "maintenance" ? "var(--color-forest)" : "white", color: subTab === "maintenance" ? "white" : "var(--color-bark)", border: "1px solid var(--color-bone)", borderRadius: 8, padding: "8px 16px", cursor: "pointer", fontWeight: 700, fontSize: "0.85rem" }}>
+          className={`so-tab-btn ${subTab === "maintenance" ? "is-active" : ""}`}>
           🛠 Phiếu bảo trì & sửa chữa ({app.maintenanceReceipts.length} phiếu)
         </button>
         <button onClick={() => setSubTab("import")}
-          style={{ background: subTab === "import" ? "var(--color-forest)" : "white", color: subTab === "import" ? "white" : "var(--color-bark)", border: "1px solid var(--color-bone)", borderRadius: 8, padding: "8px 16px", cursor: "pointer", fontWeight: 700, fontSize: "0.85rem" }}>
+          className={`so-tab-btn ${subTab === "import" ? "is-active" : ""}`}>
           🚚 Nhập hàng & Kiểm nhận ({app.importReceipts.length} phiếu)
         </button>
       </div>
@@ -173,13 +173,13 @@ export function EquipmentTab({ app }: { app: ReturnType<typeof useApp> }) {
           <div className="flex gap-3 mb-4 flex-wrap items-center">
             <select value={filter} onChange={(e) => setFilter(e.target.value)}
               aria-label="Lọc theo trạng thái thiết bị"
-              style={{ border: "1px solid var(--color-bone)", borderRadius: "8px", padding: "7px 12px", fontSize: "0.85rem", background: "white" }}
+              className="so-select"
             >
               {statuses.map((s) => <option key={s}>{s}</option>)}
             </select>
             <select value={productFilter} onChange={(e) => setProductFilter(e.target.value)}
               aria-label="Lọc theo sản phẩm"
-              style={{ border: "1px solid var(--color-bone)", borderRadius: "8px", padding: "7px 12px", fontSize: "0.85rem", background: "white" }}
+              className="so-select"
             >
               {products.map((s) => <option key={s}>{s}</option>)}
             </select>
@@ -187,60 +187,62 @@ export function EquipmentTab({ app }: { app: ReturnType<typeof useApp> }) {
               {["Sẵn sàng", "Đang thuê", "Đang bảo trì", "Thất lạc"].map((s) => {
                 const cnt = app.equipment.filter((e) => e.equipmentStatus === s).length;
                 const style = statusStyle[s];
-                return <div key={s} style={{ background: style.bg, color: style.text, padding: "5px 10px", borderRadius: "8px", fontSize: "0.75rem", fontWeight: 700 }}>{s}: {cnt}</div>;
+                /* Màu chip đếm thiết bị lấy động theo bản đồ statusStyle */
+                return <div key={s} className="so-status-chip" style={{ background: style.bg, color: style.text }}>{s}: {cnt}</div>;
               })}
             </div>
             <button onClick={() => setShowAuditModal(true)}
-              style={{ background: "var(--color-amber)", color: "white", padding: "7px 14px", borderRadius: "8px", border: "none", cursor: "pointer", fontWeight: 700, fontSize: "0.8rem", marginLeft: "auto" }}>
+              className="so-btn-amber-auto">
               📋 Kiểm kê kho (UC6.10)
             </button>
           </div>
 
-          <div className="responsive-table" style={{ background: "white", borderRadius: "12px", border: "1px solid var(--color-bone)", overflow: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+          <div className="responsive-table so-table-card">
+            <table className="so-table so-zebra-table">
               <thead>
-                <tr style={{ background: "var(--color-parchment)", fontSize: "0.78rem", fontWeight: 600, color: "var(--color-bark)" }}>
+                <tr>
                   {["Mã thiết bị", "Sản phẩm hiện tại", "Phiếu nhập", "Ngày nhập", "Tình trạng", "Trạng thái", "Số lần thuê", "Thao tác"].map((h) => (
-                    <th key={h} style={{ padding: "9px 12px", textAlign: "left" }}>{h}</th>
+                    <th key={h}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((e, i) => {
+                {filtered.map((e) => {
                   const p = app.products.find((pr) => pr.id === e.productId);
                   const origP = app.products.find((pr) => pr.id === e.originalProductId);
                   const moved = e.productId !== e.originalProductId;
                   const st = statusStyle[e.equipmentStatus] || { bg: "#F3F4F6", text: "#374151" };
                   return (
-                    <tr key={e.id} style={{ borderTop: "1px solid var(--color-bone)", background: i % 2 === 0 ? "white" : "var(--color-cream)" }}>
-                      <td style={{ padding: "9px 12px", fontFamily: "var(--font-mono)", fontSize: "0.8rem", fontWeight: 700, color: "var(--color-forest)" }}>{e.displayCode || e.id}</td>
-                      <td style={{ padding: "9px 12px", fontSize: "0.82rem" }}>
-                        <div style={{ fontWeight: 600 }}>{p?.name}</div>
-                        {moved && <div style={{ fontSize: "0.68rem", color: "var(--color-amber)", fontWeight: 700 }}>↳ Giáng cấp/chuyển từ {origP?.name}</div>}
+                    <tr key={e.id}>
+                      <td className="so-td-mono-md">{e.displayCode || e.id}</td>
+                      <td>
+                        <div className="so-td-semibold">{p?.name}</div>
+                        {moved && <div className="so-equip-moved">↳ Giáng cấp/chuyển từ {origP?.name}</div>}
                       </td>
-                      <td style={{ padding: "9px 12px", fontSize: "0.78rem", color: "#9CA3AF", fontFamily: "var(--font-mono)" }}>{e.importReceiptId}</td>
-                      <td style={{ padding: "9px 12px", fontSize: "0.78rem", color: "#6B7280" }}>{e.importDate}</td>
-                      <td style={{ padding: "9px 12px", fontSize: "0.8rem", color: "#6B7280" }}>{e.condition}</td>
-                      <td style={{ padding: "9px 12px" }}>
-                        <span style={{ background: st.bg, color: st.text, padding: "2px 8px", borderRadius: "10px", fontSize: "0.72rem", fontWeight: 600 }}>{e.equipmentStatus}</span>
+                      <td className="so-td-mono-muted">{e.importReceiptId}</td>
+                      <td className="so-td-muted-sm">{e.importDate}</td>
+                      <td className="so-td-muted">{e.condition}</td>
+                      <td>
+                        {/* Màu trạng thái thiết bị lấy động từ statusStyle */}
+                        <span className="so-status-pill-md" style={{ background: st.bg, color: st.text }}>{e.equipmentStatus}</span>
                       </td>
-                      <td style={{ padding: "9px 12px", fontFamily: "var(--font-mono)", textAlign: "center" }}>{e.rentCount}</td>
-                      <td style={{ padding: "9px 12px" }}>
+                      <td className="so-td-mono-center">{e.rentCount}</td>
+                      <td>
                         <div className="flex gap-1">
                           <button onClick={() => setViewingLifecycle(e)}
-                            style={{ background: "white", border: "1px solid var(--color-forest)", color: "var(--color-forest)", borderRadius: 6, padding: "3px 8px", fontSize: "0.72rem", cursor: "pointer", fontWeight: 600 }}>
+                            className="so-btn-outline-forest">
                             🔍 Sổ đời
                           </button>
                           <button
                             type="button"
                             onClick={() => void handleOpenEquipSchedule(e)}
-                            style={{ background: "#EFF6FF", border: "1px solid #BFDBFE", color: "#1D4ED8", borderRadius: 6, padding: "3px 8px", fontSize: "0.72rem", cursor: "pointer", fontWeight: 600 }}
+                            className="so-btn-info-sm"
                           >
                             📅 Lịch bận
                           </button>
                           {e.equipmentStatus === "Sẵn sàng" && (
                             <button onClick={() => { setTransferModal(e); setTargetProductId(""); }}
-                              style={{ background: "white", border: "1px solid var(--color-bone)", borderRadius: 6, padding: "3px 8px", fontSize: "0.72rem", cursor: "pointer", fontWeight: 600 }}>
+                              className="so-btn-outline-sm">
                               Chuyển loại
                             </button>
                           )}
@@ -255,25 +257,25 @@ export function EquipmentTab({ app }: { app: ReturnType<typeof useApp> }) {
 
           {/* Modal chuyển loại thiết bị (giáng cấp cũ sang tiết kiệm) */}
           {transferModal && (
-            <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 9999, display: "grid", placeItems: "center", padding: 20 }}>
-              <div style={{ background: "white", borderRadius: 14, maxWidth: 460, width: "100%", padding: 20 }}>
-                <h3 style={{ fontFamily: "var(--font-display)", fontSize: "1.2rem", color: "var(--color-bark)", marginBottom: 8 }}>
+            <div className="so-modal-overlay is-dim">
+              <div className="so-modal-card-sm">
+                <h3 className="so-modal-title-mb">
                   Chuyển loại thiết bị: {transferModal.displayCode || transferModal.id}
                 </h3>
-                <p style={{ fontSize: "0.82rem", color: "#6B7280", marginBottom: 12 }}>
+                <p className="so-modal-desc">
                   Dùng khi thiết bị cũ khấu hao (ví dụ từ Tiêu chuẩn sang Tiết kiệm).
                 </p>
-                <label style={{ fontSize: "0.78rem", fontWeight: 600, display: "block", marginBottom: 4 }}>Sản phẩm đích mới:</label>
+                <label className="so-field-label">Sản phẩm đích mới:</label>
                 <select value={targetProductId} onChange={(e) => setTargetProductId(e.target.value)}
-                  style={{ width: "100%", border: "1px solid var(--color-bone)", borderRadius: 8, padding: "8px", fontSize: "0.85rem", marginBottom: 14, background: "white" }}>
+                  className="so-input-mb14">
                   <option value="">-- Chọn sản phẩm đích --</option>
                   {app.products.filter((p) => p.id !== transferModal.productId && p.status === "active").map((p) => (
                     <option key={p.id} value={p.id}>{p.name} ({fmt(p.pricePerDay)}/ngày)</option>
                   ))}
                 </select>
                 <div className="flex justify-end gap-2">
-                  <button onClick={() => setTransferModal(null)} style={{ background: "white", border: "1px solid var(--color-bone)", borderRadius: 6, padding: "6px 12px", cursor: "pointer" }}>Hủy</button>
-                  <button disabled={!targetProductId} onClick={handleTransfer} style={{ background: targetProductId ? "var(--color-forest)" : "#9CA3AF", color: "white", border: "none", borderRadius: 6, padding: "6px 16px", cursor: targetProductId ? "pointer" : "not-allowed", fontWeight: 700 }}>Xác nhận chuyển</button>
+                  <button onClick={() => setTransferModal(null)} className="so-btn-cancel">Hủy</button>
+                  <button disabled={!targetProductId} onClick={handleTransfer} className={`so-btn-confirm ${targetProductId ? "is-ready" : ""}`}>Xác nhận chuyển</button>
                 </div>
               </div>
             </div>
@@ -289,10 +291,10 @@ export function EquipmentTab({ app }: { app: ReturnType<typeof useApp> }) {
         <div>
           <div className="flex justify-between items-center mb-4 flex-wrap gap-2">
             <div>
-              <h3 style={{ fontFamily: "var(--font-display)", fontSize: "1.15rem", color: "var(--color-bark)" }}>
+              <h3 className="so-section-title">
                 Hồ sơ bảo trì & sửa chữa thiết bị
               </h3>
-              <p style={{ fontSize: "0.8rem", color: "#6B7280" }}>
+              <p className="so-section-sub">
                 Ghi nhận các thiết bị hư hỏng, ước tính kinh phí và nghiệm thu đưa về kho Sẵn sàng.
               </p>
             </div>
@@ -303,51 +305,56 @@ export function EquipmentTab({ app }: { app: ReturnType<typeof useApp> }) {
                 setCreateMaintEquipId(firstAvailable);
                 setShowCreateMaintenanceModal(true);
               }}
-              style={{ background: "var(--color-forest)", color: "white", padding: "8px 16px", borderRadius: 8, border: "none", cursor: "pointer", fontWeight: 700, fontSize: "0.85rem" }}
+              className="so-btn-primary"
             >
               + Tạo phiếu bảo trì (UC6.12)
             </button>
           </div>
 
-          <div className="responsive-table" style={{ background: "white", borderRadius: "12px", border: "1px solid var(--color-bone)", overflow: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+          <div className="responsive-table so-table-card">
+            <table className="so-table so-zebra-table">
               <thead>
-                <tr style={{ background: "var(--color-parchment)", fontSize: "0.78rem", fontWeight: 600, color: "var(--color-bark)" }}>
+                <tr>
                   {["Mã phiếu", "Mã thiết bị", "Mô tả lỗi / Hư hỏng", "Đơn liên quan", "Ngày tạo", "Dự tính", "Thực tế", "Trạng thái", "Thao tác"].map((h) => (
-                    <th key={h} style={{ padding: "9px 12px", textAlign: "left" }}>{h}</th>
+                    <th key={h}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {app.maintenanceReceipts.map((m, i) => {
+                {app.maintenanceReceipts.map((m) => {
                   const matchedEquip = app.equipment.find(
                     (eq) => eq.id === m.equipmentId || eq.displayCode === m.equipmentId
                   );
                   const equipDisplay = matchedEquip?.displayCode || m.equipmentId;
+                  /* Ánh xạ trạng thái phiếu bảo trì sang modifier CSS hữu hạn */
+                  const maintStatusMod =
+                    m.status === "Hoàn tất"
+                      ? "is-done"
+                      : m.status === "Đang bảo dưỡng"
+                      ? "is-progress"
+                      : m.status === "Không thể sửa"
+                      ? "is-unfixable"
+                      : "is-pending";
                   return (
-                  <tr key={m.id} style={{ borderTop: "1px solid var(--color-bone)", background: i % 2 === 0 ? "white" : "var(--color-cream)" }}>
-                    <td style={{ padding: "9px 12px", fontFamily: "var(--font-mono)", fontSize: "0.8rem", fontWeight: 700, color: "var(--color-forest)" }}>{m.id}</td>
-                    <td style={{ padding: "9px 12px", fontFamily: "var(--font-mono)", fontWeight: 600 }}>{equipDisplay}</td>
-                    <td style={{ padding: "9px 12px", fontSize: "0.82rem" }}>
+                  <tr key={m.id}>
+                    <td className="so-td-mono-md">{m.id}</td>
+                    <td className="so-td-mono-dark">{equipDisplay}</td>
+                    <td>
                       <div>{m.issueDescription}</div>
-                      {m.note && <div style={{ fontSize: "0.7rem", color: "#6B7280" }}>{m.note}</div>}
+                      {m.note && <div className="so-maint-note">{m.note}</div>}
                     </td>
-                    <td style={{ padding: "9px 12px", fontSize: "0.78rem", fontFamily: "var(--font-mono)", color: "#6B7280" }}>{m.orderId || "—"}</td>
-                    <td style={{ padding: "9px 12px", fontSize: "0.78rem", color: "#6B7280" }}>{m.createdAt}</td>
-                    <td style={{ padding: "9px 12px", fontFamily: "var(--font-mono)", fontSize: "0.82rem", fontWeight: 700 }}>{fmt(m.estimatedCost)}</td>
-                    <td style={{ padding: "9px 12px", fontFamily: "var(--font-mono)", fontSize: "0.82rem", fontWeight: 700, color: m.actualCost ? "var(--color-forest)" : "#9CA3AF" }}>
+                    <td className="so-td-mono-gray">{m.orderId || "—"}</td>
+                    <td className="so-td-muted-sm">{m.createdAt}</td>
+                    <td className="so-td-cost">{fmt(m.estimatedCost)}</td>
+                    <td className={`so-td-actual-cost ${m.actualCost ? "has-cost" : ""}`}>
                       {m.actualCost !== undefined ? fmt(m.actualCost) : "—"}
                     </td>
-                    <td style={{ padding: "9px 12px" }}>
-                      <span style={{
-                        background: m.status === "Hoàn tất" ? "#DCFCE7" : m.status === "Đang bảo dưỡng" ? "#FEF3C7" : m.status === "Không thể sửa" ? "#FEE2E2" : "#F3F4F6",
-                        color: m.status === "Hoàn tất" ? "#15803D" : m.status === "Đang bảo dưỡng" ? "#B45309" : m.status === "Không thể sửa" ? "#DC2626" : "#4B5563",
-                        padding: "3px 8px", borderRadius: 8, fontSize: "0.72rem", fontWeight: 700
-                      }}>
+                    <td>
+                      <span className={`so-status-badge ${maintStatusMod}`}>
                         {m.status}
                       </span>
                     </td>
-                    <td style={{ padding: "9px 12px" }}>
+                    <td>
                       {m.status !== "Hoàn tất" && m.status !== "Không thể sửa" ? (
                         <div className="flex gap-1 flex-wrap">
                           {(app.realApi || isRealApiEnabled()) && (
@@ -359,7 +366,7 @@ export function EquipmentTab({ app }: { app: ReturnType<typeof useApp> }) {
                                   setAssignHandlerId(1);
                                   setAssignReason("");
                                 }}
-                                style={{ background: "#EFF6FF", color: "#1D4ED8", border: "1px solid #BFDBFE", borderRadius: 6, padding: "4px 8px", fontSize: "0.72rem", cursor: "pointer", fontWeight: 600 }}
+                                className="so-btn-info-pad"
                               >
                                 Phân công
                               </button>
@@ -370,7 +377,7 @@ export function EquipmentTab({ app }: { app: ReturnType<typeof useApp> }) {
                                   setProgressNote(m.note || "");
                                   setProgressCost(m.actualCost ?? m.estimatedCost);
                                 }}
-                                style={{ background: "#FFFBEB", color: "#B45309", border: "1px solid #FDE68A", borderRadius: 6, padding: "4px 8px", fontSize: "0.72rem", cursor: "pointer", fontWeight: 600 }}
+                                className="so-btn-amber-pill"
                               >
                                 Tiến độ
                               </button>
@@ -392,7 +399,7 @@ export function EquipmentTab({ app }: { app: ReturnType<typeof useApp> }) {
                                     setEquipBusy(false);
                                   }
                                 }}
-                                style={{ background: "#F3E8FF", color: "#7C3AED", border: "1px solid #DDD6FE", borderRadius: 6, padding: "4px 8px", fontSize: "0.72rem", cursor: "pointer", fontWeight: 600 }}
+                                className="so-btn-purple-sm"
                               >
                                 Gửi KT
                               </button>
@@ -406,13 +413,13 @@ export function EquipmentTab({ app }: { app: ReturnType<typeof useApp> }) {
                               setRepairOutcome("Hoàn tất");
                               setRepairOutcomeNote(m.note || "Đã kiểm tra kỹ thuật và vệ sinh đạt chuẩn.");
                             }}
-                            style={{ background: "var(--color-forest)", color: "white", border: "none", borderRadius: 6, padding: "5px 10px", fontSize: "0.75rem", cursor: "pointer", fontWeight: 700 }}
+                            className="so-btn-primary-sm"
                           >
                             Nghiệm thu →
                           </button>
                         </div>
                       ) : (
-                        <span style={{ fontSize: "0.75rem", color: "#9CA3AF" }}>Đã chốt</span>
+                        <span className="so-muted-sm">Đã chốt</span>
                       )}
                     </td>
                   </tr>
@@ -429,29 +436,29 @@ export function EquipmentTab({ app }: { app: ReturnType<typeof useApp> }) {
         <div>
           <div className="flex justify-between items-center mb-4 flex-wrap gap-2">
             <div>
-              <h3 style={{ fontFamily: "var(--font-display)", fontSize: "1.15rem", color: "var(--color-bark)" }}>
+              <h3 className="so-section-title">
                 Quản lý nhập hàng & Kiểm nhận thực tế tại kho (UC7.3 - UC7.8)
               </h3>
-              <p style={{ fontSize: "0.8rem", color: "#6B7280" }}>
+              <p className="so-section-sub">
                 Khi xe hàng tới kho, nhân viên kho mở biên bản kiểm nhận thực tế để đếm số lượng, phân loại đạt/lỗi/từ chối và chốt mã serial.
               </p>
             </div>
           </div>
 
           {/* Bộ lọc tìm kiếm cho nhân viên kho */}
-          <div className="flex gap-3 mb-4 flex-wrap items-center" style={{ background: "white", padding: "12px 14px", borderRadius: "10px", border: "1px solid var(--color-bone)" }}>
+          <div className="flex gap-3 mb-4 flex-wrap items-center so-filter-bar">
             <input
               type="text"
               placeholder="🔍 Tìm mã phiếu, NCC, người lập..."
               value={importSearch}
               onChange={(e) => setImportSearch(e.target.value)}
-              style={{ flex: 1, minWidth: 220, border: "1px solid var(--color-bone)", borderRadius: "8px", padding: "7px 10px", fontSize: "0.82rem" }}
+              className="so-filter-input"
             />
             <select
               value={importStatusFilter}
               onChange={(e) => setImportStatusFilter(e.target.value)}
               aria-label="Lọc theo trạng thái phiếu"
-              style={{ border: "1px solid var(--color-bone)", borderRadius: "8px", padding: "7px 10px", fontSize: "0.82rem", background: "white" }}
+              className="so-select-sm"
             >
               {["Tất cả", "Nháp", "Đã nhập kho", "Đã hủy"].map((s) => (
                 <option key={s} value={s}>{s === "Tất cả" ? "Tất cả trạng thái" : s}</option>
@@ -461,19 +468,19 @@ export function EquipmentTab({ app }: { app: ReturnType<typeof useApp> }) {
               <button
                 type="button"
                 onClick={() => { setImportSearch(""); setImportStatusFilter("Tất cả"); }}
-                style={{ background: "none", border: "none", color: "#DC2626", fontSize: "0.78rem", cursor: "pointer", fontWeight: 600 }}
+                className="so-btn-clear"
               >
                 ✕ Xóa lọc
               </button>
             )}
           </div>
 
-          <div className="responsive-table" style={{ background: "white", borderRadius: "12px", border: "1px solid var(--color-bone)", overflow: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+          <div className="responsive-table so-table-card">
+            <table className="so-table so-zebra-table so-table-audit">
               <thead>
-                <tr style={{ background: "var(--color-parchment)", fontSize: "0.78rem", fontWeight: 600, color: "var(--color-bark)" }}>
+                <tr>
                   {["Mã phiếu", "Nhà cung cấp", "Ngày lập / Người lập", "Số lượng mặt hàng", "Trạng thái", "Thao tác"].map((h) => (
-                    <th key={h} style={{ padding: "9px 12px", textAlign: "left" }}>{h}</th>
+                    <th key={h}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -490,53 +497,56 @@ export function EquipmentTab({ app }: { app: ReturnType<typeof useApp> }) {
                       r.createdBy.toLowerCase().includes(q);
                     return matchStatus && matchQ;
                   })
-                  .map((r, i) => {
+                  .map((r) => {
                     const totalQty = r.lines.reduce((s, l) => s + l.quantity, 0);
                     const supplier = app.suppliers.find((s) => s.id === r.supplierId || s.displayCode === r.supplierId);
+                    /* Ánh xạ trạng thái phiếu nhập sang modifier CSS hữu hạn */
+                    const importStatusMod =
+                      r.status === "Đã nhập kho"
+                        ? "is-done"
+                        : r.status === "Đã hủy"
+                        ? "is-cancelled"
+                        : "is-progress";
                     return (
-                      <tr key={r.id} style={{ borderTop: "1px solid var(--color-bone)", background: i % 2 === 0 ? "white" : "var(--color-cream)" }}>
-                        <td style={{ padding: "10px 12px", fontFamily: "var(--font-mono)", fontSize: "0.82rem", fontWeight: 700, color: "var(--color-forest)" }}>
+                      <tr key={r.id}>
+                        <td className="so-td-mono-lg">
                           {r.displayCode ?? r.id}
                         </td>
-                        <td style={{ padding: "10px 12px" }}>
-                          <div style={{ fontWeight: 700, fontSize: "0.86rem" }}>{r.supplierName}</div>
+                        <td>
+                          <div className="so-supplier-name">{r.supplierName}</div>
                           {supplier && (
                             <button
                               type="button"
                               onClick={() => setViewingSupplierProfile(supplier)}
-                              style={{ background: "none", border: "none", color: "var(--color-forest)", fontSize: "0.72rem", cursor: "pointer", textDecoration: "underline", padding: 0 }}
+                              className="so-link-btn-sm"
                             >
                               👁 Xem hồ sơ NCC (UC7.3)
                             </button>
                           )}
                         </td>
-                        <td style={{ padding: "10px 12px", fontSize: "0.78rem", color: "#6B7280" }}>
+                        <td className="so-td-muted-sm">
                           <div>{r.createdAt}</div>
-                          <div style={{ fontWeight: 500 }}>Bởi {r.createdBy}</div>
+                          <div className="so-import-by">Bởi {r.createdBy}</div>
                         </td>
-                        <td style={{ padding: "10px 12px", fontSize: "0.82rem" }}>
+                        <td>
                           <strong>{r.lines.length}</strong> dòng · <strong>{totalQty}</strong> thiết bị
                         </td>
-                        <td style={{ padding: "10px 12px" }}>
-                          <span style={{
-                            background: r.status === "Đã nhập kho" ? "#DCFCE7" : r.status === "Đã hủy" ? "#F3F4F6" : "#FEF3C7",
-                            color: r.status === "Đã nhập kho" ? "#15803D" : r.status === "Đã hủy" ? "#6B7280" : "#B45309",
-                            padding: "3px 9px", borderRadius: 8, fontSize: "0.72rem", fontWeight: 700
-                          }}>
+                        <td>
+                          <span className={`so-status-badge is-wide ${importStatusMod}`}>
                             {r.status}
                           </span>
                         </td>
-                        <td style={{ padding: "10px 12px" }}>
+                        <td>
                           {r.status === "Nháp" ? (
                             <button
                               type="button"
                               onClick={() => setInspectingImportReceipt(r)}
-                              style={{ background: "var(--color-forest)", color: "white", border: "none", borderRadius: 6, padding: "6px 12px", fontSize: "0.78rem", cursor: "pointer", fontWeight: 700, boxShadow: "0 2px 6px rgba(34, 197, 94, 0.25)" }}
+                              className="so-btn-receive"
                             >
                               📦 Kiểm nhận thực tế (UC7.7) →
                             </button>
                           ) : (
-                            <span style={{ fontSize: "0.75rem", color: "#6B7280" }}>
+                            <span className="so-import-done">
                               {r.status === "Đã nhập kho" ? `✓ Đã nhập kho lúc ${r.confirmedAt}` : "Phiếu đã hủy"}
                             </span>
                           )}

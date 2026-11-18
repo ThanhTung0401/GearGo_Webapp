@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useApp } from "../../../context/AppContext";
 import { isRealApiEnabled } from "../../../services/apiClient";
 
@@ -107,32 +107,31 @@ export function TransferPanel({ app }: { app: ReturnType<typeof useApp> }) {
   };
 
   return (
-    <div style={{ maxWidth: 700 }}>
-      <h2 style={{ fontFamily: "var(--font-display)", fontSize: "1.4rem", color: "var(--color-bark)", marginBottom: "8px" }}>Chuyển loại sản phẩm cho thuê của thiết bị</h2>
-      <p style={{ fontSize: "0.85rem", color: "#6B7280", marginBottom: "20px" }}>
+    <div className="adm-transfer-wrap">
+      <h2 className="adm-page-title mb-2">Chuyển loại sản phẩm cho thuê của thiết bị</h2>
+      <p className="adm-page-subtitle mb-5">
         Cho phép chuyển thiết bị đã cũ sang sản phẩm cho thuê rẻ hơn (VD: Tiêu chuẩn → Tiết kiệm). Lịch sử nhập kho gốc được giữ nguyên.
       </p>
 
       {done ? (
-        <div style={{ background: "#DCFCE7", borderRadius: "12px", padding: "24px", border: "1px solid #A7F3D0", textAlign: "center" }}>
-          <div style={{ fontSize: "3rem", marginBottom: "8px" }}>✅</div>
-          <h3 style={{ fontFamily: "var(--font-display)", fontSize: "1.1rem", color: "var(--color-forest)", marginBottom: "8px" }}>Đã chuyển thành công!</h3>
-          <p style={{ fontSize: "0.88rem", color: "#15803D", marginBottom: "4px" }}>Thiết bị <strong>{eq?.displayCode ?? equipId}</strong> nay thuộc <strong>{targetProduct?.name}</strong>.</p>
-          <p style={{ fontSize: "0.78rem", color: "#15803D" }}>{resultNote || "Khả dụng của hai sản phẩm đã được cập nhật."}</p>
-          <button onClick={() => { setDone(false); setEquipId(""); setTargetProductId(""); setReason(""); setResultNote(""); setImpactPreview(null); }}
-            style={{ marginTop: "14px", background: "var(--color-forest)", color: "white", padding: "10px 22px", borderRadius: "8px", border: "none", cursor: "pointer", fontWeight: 600 }}
+        <div className="adm-transfer-done">
+          <div className="text-5xl mb-2">✅</div>
+          <h3 className="adm-card-title text-[var(--color-forest)] mb-2">Đã chuyển thành công!</h3>
+          <p className="text-[0.88rem] text-[#15803D] mb-1">Thiết bị <strong>{eq?.displayCode ?? equipId}</strong> nay thuộc <strong>{targetProduct?.name}</strong>.</p>
+          <p className="text-[0.78rem] text-[#15803D]">{resultNote || "Khả dụng của hai sản phẩm đã được cập nhật."}</p>
+          <button
+            onClick={() => { setDone(false); setEquipId(""); setTargetProductId(""); setReason(""); setResultNote(""); setImpactPreview(null); }}
+            className="adm-btn-primary mt-3.5 px-5 py-2.5"
           >
             Chuyển thiết bị khác
           </button>
         </div>
       ) : (
-        <div style={{ background: "white", borderRadius: "12px", border: "1px solid var(--color-bone)", padding: "20px" }}>
+        <div className="adm-card adm-card--padded">
           <div className="flex flex-col gap-4">
             <div>
-              <label style={{ fontSize: "0.78rem", fontWeight: 700, color: "var(--color-bark)", display: "block", marginBottom: "5px" }}>1. Chọn mã thiết bị</label>
-              <select value={equipId} onChange={(e) => { setEquipId(e.target.value); setDone(false); }}
-                style={{ width: "100%", border: "1px solid var(--color-bone)", borderRadius: "8px", padding: "9px 12px", fontSize: "0.88rem", background: "white" }}
-              >
+              <label className="adm-label--sub">1. Chọn mã thiết bị</label>
+              <select value={equipId} onChange={(e) => { setEquipId(e.target.value); setDone(false); }} className="adm-field adm-field--compact">
                 <option value="">-- Chọn thiết bị sẵn sàng --</option>
                 {app.equipment.filter((e) => e.equipmentStatus === "Sẵn sàng").map((e) => {
                   const pname = app.products.find((p) => p.id === e.productId)?.name || e.productId;
@@ -142,28 +141,25 @@ export function TransferPanel({ app }: { app: ReturnType<typeof useApp> }) {
             </div>
 
             {eq && (
-              <div style={{ background: "var(--color-parchment)", borderRadius: "8px", padding: "12px 16px", fontSize: "0.82rem" }}>
+              <div className="adm-card--parchment text-[0.82rem]">
                 <div className="flex justify-between mb-1">
-                  <span style={{ color: "#9CA3AF" }}>Sản phẩm hiện tại</span>
-                  <span style={{ fontWeight: 600 }}>{currentProduct?.name}</span>
+                  <span className="adm-muted-note">Sản phẩm hiện tại</span>
+                  <span className="font-semibold">{currentProduct?.name}</span>
                 </div>
                 <div className="flex justify-between mb-1">
-                  <span style={{ color: "#9CA3AF" }}>Nguồn nhập ban đầu</span>
-                  <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.75rem" }}>{origProduct?.name} · {eq.importReceiptId}</span>
+                  <span className="adm-muted-note">Nguồn nhập ban đầu</span>
+                  <span className="adm-cell-mono text-xs">{origProduct?.name} · {eq.importReceiptId}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span style={{ color: "#9CA3AF" }}>Điều kiện</span>
+                  <span className="adm-muted-note">Điều kiện</span>
                   <span>{eq.condition} · {eq.rentCount} lần thuê</span>
                 </div>
               </div>
             )}
 
             <div>
-              <label style={{ fontSize: "0.78rem", fontWeight: 700, color: "var(--color-bark)", display: "block", marginBottom: "5px" }}>2. Chọn sản phẩm mới</label>
-              <select value={targetProductId} onChange={(e) => setTargetProductId(e.target.value)}
-                style={{ width: "100%", border: "1px solid var(--color-bone)", borderRadius: "8px", padding: "9px 12px", fontSize: "0.88rem", background: "white" }}
-                disabled={!eq}
-              >
+              <label className="adm-label--sub">2. Chọn sản phẩm mới</label>
+              <select value={targetProductId} onChange={(e) => setTargetProductId(e.target.value)} className="adm-field adm-field--compact" disabled={!eq}>
                 <option value="">-- Chọn sản phẩm đích --</option>
                 {app.products.filter((p) => p.id !== eq?.productId && p.status === "active").map((p) => (
                   <option key={p.id} value={p.id}>{p.name} — {fmt(p.pricePerDay)}/ngày</option>
@@ -172,46 +168,50 @@ export function TransferPanel({ app }: { app: ReturnType<typeof useApp> }) {
             </div>
 
             {eq && targetProduct && targetProduct.pricePerDay > (currentProduct?.pricePerDay || 0) && (
-              <div style={{ background: "#FEE2E2", borderRadius: "8px", padding: "10px 14px", fontSize: "0.8rem", color: "#DC2626", border: "1px solid #FECACA" }}>
+              <div className="adm-alert is-error adm-alert--block mb-0 text-[0.8rem]">
                 ⚠ Sản phẩm đích có giá cao hơn sản phẩm hiện tại. Thường chỉ chuyển từ tiêu chuẩn xuống tiết kiệm.
               </div>
             )}
 
             <div>
-              <label style={{ fontSize: "0.78rem", fontWeight: 700, color: "var(--color-bark)", display: "block", marginBottom: "5px" }}>3. Lý do chuyển loại</label>
-              <textarea value={reason} onChange={(e) => setReason(e.target.value)} rows={2}
+              <label className="adm-label--sub">3. Lý do chuyển loại</label>
+              <textarea
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                rows={2}
                 placeholder="VD: Thiết bị đã qua 20+ lần thuê, độ mòn đáng kể, chuyển về sản phẩm Tiết kiệm"
-                style={{ width: "100%", border: "1px solid var(--color-bone)", borderRadius: "8px", padding: "9px 12px", fontSize: "0.85rem", resize: "none" }}
+                className="adm-field adm-field--compact adm-field--no-resize"
               />
             </div>
 
             {/* Impact preview */}
             {eq && targetProduct && (
-              <div style={{ background: impactPreview && !impactPreview.coTheApDungHienTai ? "#FEF2F2" : "#EFF6FF", borderRadius: "8px", padding: "12px 16px", fontSize: "0.82rem", color: impactPreview && !impactPreview.coTheApDungHienTai ? "#991B1B" : "#1E40AF" }}>
+              /* Đổi màu hộp phân tích ảnh hưởng nếu bị chặn lịch đặt */
+              <div className={`adm-impact-box ${impactPreview && !impactPreview.coTheApDungHienTai ? "is-blocked" : ""}`}>
                 <strong>Ảnh hưởng {loadingImpact ? "(Đang kiểm tra lịch đặt...)" : ""}:</strong>
                 <div className="flex flex-col gap-1 mt-1">
                   <div>· Sản phẩm <strong>{currentProduct?.name}</strong>: khả dụng {app.getAvailable(eq.productId)} → {Math.max(0, app.getAvailable(eq.productId) - 1)} chiếc</div>
                   <div>· Sản phẩm <strong>{targetProduct.name}</strong>: khả dụng {app.getAvailable(targetProductId)} → {app.getAvailable(targetProductId) + 1} chiếc</div>
                   <div>· Lịch sử nhập kho ({eq.importReceiptId}) được giữ nguyên</div>
                   {impactPreview?.vuongMac?.map((vm, i) => (
-                    <div key={`vm-${i}`} style={{ color: "#B91C1C", fontWeight: 600 }}>⚠ {vm}</div>
+                    <div key={`vm-${i}`} className="text-[#B91C1C] font-semibold">⚠ {vm}</div>
                   ))}
                   {impactPreview?.thieuSoLuongTheoLich?.map((ts, i) => (
-                    <div key={`ts-${i}`} style={{ color: "#B45309" }}>• {ts}</div>
+                    <div key={`ts-${i}`} className="text-[#B45309]">• {ts}</div>
                   ))}
                 </div>
               </div>
             )}
 
-          {error && <div role="alert" style={{ background: "#FEE2E2", color: "#B91C1C", borderRadius: 8, padding: 10, fontSize: "0.8rem" }}>{error}</div>}
-          <button
+            {error && <div role="alert" className="adm-alert is-error-solid adm-alert--block mb-0">{error}</div>}
+            <button
               disabled={!canTransfer || submitting}
               onClick={handleTransfer}
-              style={{ background: canTransfer && !submitting ? "var(--color-forest)" : "#9CA3AF", color: "white", padding: "12px", borderRadius: "8px", border: "none", cursor: canTransfer && !submitting ? "pointer" : "not-allowed", fontWeight: 700, fontSize: "0.95rem" }}
+              className="btn btn-primary btn-md w-full font-bold disabled:bg-[#9CA3AF] disabled:border-[#9CA3AF]"
             >
               {submitting ? "Đang gửi yêu cầu..." : "✓ Xác nhận chuyển loại thiết bị"}
             </button>
-            {!canTransfer && equipId && <p style={{ fontSize: "0.72rem", color: "#9CA3AF" }}>Thiếu sản phẩm đích, lý do, hoặc đang có vướng mắc lịch đặt. Chỉ chuyển được thiết bị đang Sẵn sàng.</p>}
+            {!canTransfer && equipId && <p className="adm-muted-note">Thiếu sản phẩm đích, lý do, hoặc đang có vướng mắc lịch đặt. Chỉ chuyển được thiết bị đang Sẵn sàng.</p>}
           </div>
         </div>
       )}

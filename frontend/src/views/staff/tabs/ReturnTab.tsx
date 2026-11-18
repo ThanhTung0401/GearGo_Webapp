@@ -569,23 +569,23 @@ export function ReturnTab({
   };
 
   return (
-    <div className="responsive-staff-grid grid gap-6" style={{ gridTemplateColumns: "300px 1fr" }}>
+    <div className="responsive-staff-grid so-split-layout">
       {/* Cột trái: Danh sách đơn */}
       <div>
-        <h3 style={{ fontFamily: "var(--font-display)", fontSize: "1rem", color: "var(--color-bark)", marginBottom: "8px" }}>
+        <h3 className="so-queue-title-lg">
           Đơn nhận trả & đối soát
         </h3>
 
         {(app.realApi || isRealApiEnabled()) && (
-          <div style={{ background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: 8, padding: "8px 10px", marginBottom: 10, fontSize: "0.74rem", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 6 }}>
-            <span style={{ color: "#991B1B", fontWeight: 600 }}>
+          <div className="so-overdue-scan-bar">
+            <span className="so-overdue-scan-text">
               ⏰ Quá hạn hệ thống: <strong>{overdueOrdersBackend.length}</strong> đơn
             </span>
             <button
               type="button"
               disabled={scanningOverdue}
               onClick={() => void handleScanOverdueReminders()}
-              style={{ background: "#DC2626", color: "white", border: "none", borderRadius: 6, padding: "4px 8px", fontSize: "0.7rem", fontWeight: 700, cursor: "pointer" }}
+              className="so-overdue-scan-btn"
             >
               {scanningOverdue ? "Đang quét..." : "Quét nhắc"}
             </button>
@@ -593,7 +593,7 @@ export function ReturnTab({
         )}
 
         {/* Bộ lọc trạng thái đơn */}
-        <div className="flex gap-1 mb-3">
+        <div className="flex gap-1 mb-3 flex-wrap">
           {[
             { key: "active", label: "Đang xử lý", count: app.orders.filter((o) => ["Đang thuê", "Đã nhận trả", "Chờ đối soát"].includes(o.status)).length },
             { key: "completed", label: "Hoàn tất", count: app.orders.filter((o) => o.status === "Hoàn tất").length },
@@ -603,18 +603,7 @@ export function ReturnTab({
               key={f.key}
               type="button"
               onClick={() => setStatusFilter(f.key as typeof statusFilter)}
-              style={{
-                flex: 1,
-                padding: "5px 6px",
-                borderRadius: 6,
-                fontSize: "0.72rem",
-                fontWeight: statusFilter === f.key ? 700 : 500,
-                border: "1px solid",
-                borderColor: statusFilter === f.key ? "var(--color-forest)" : "var(--color-bone)",
-                background: statusFilter === f.key ? "var(--color-forest)" : "white",
-                color: statusFilter === f.key ? "white" : "var(--color-bark)",
-                cursor: "pointer",
-              }}
+              className={`so-filter-tab-btn ${statusFilter === f.key ? "is-active" : ""}`}
             >
               {f.label} ({f.count})
             </button>
@@ -623,7 +612,7 @@ export function ReturnTab({
 
         <div className="flex flex-col gap-2">
           {eligibleOrders.length === 0 ? (
-            <div style={{ background: "white", borderRadius: 10, padding: "20px 14px", border: "1px solid var(--color-bone)", fontSize: "0.82rem", color: "#6B7280", textAlign: "center" }}>
+            <div className="so-queue-empty-box">
               Không có đơn nào trong nhóm lọc này.
             </div>
           ) : (
@@ -632,6 +621,7 @@ export function ReturnTab({
               const isOd = app.checkOrderOverdue(o).isOverdue;
               const retCnt = o.assignedEquipment.filter((ae) => ae.returnedAt).length;
               const isPart = o.status === "Đang thuê" && retCnt > 0 && retCnt < o.assignedEquipment.length;
+              const isSelected = selectedOrder?.id === o.id;
 
               return (
                 <button
@@ -641,24 +631,18 @@ export function ReturnTab({
                     setSelectedItemsToReturn({});
                     void hydrateOperationalOrder(o.id);
                   }}
-                  style={{
-                    background: selectedOrder?.id === o.id ? "var(--color-forest)" : "white",
-                    color: selectedOrder?.id === o.id ? "white" : "var(--color-bark)",
-                    borderRadius: "10px",
-                    padding: "12px 14px",
-                    border: `1px solid ${selectedOrder?.id === o.id ? "var(--color-forest)" : "var(--color-bone)"}`,
-                    cursor: "pointer",
-                    textAlign: "left",
-                  }}
+                  /* Đánh dấu đơn đang chọn bằng .is-selected */
+                  className={`so-queue-card ${isSelected ? "is-selected" : ""}`}
                 >
-                  <div style={{ fontFamily: "var(--font-mono)", fontSize: "0.75rem", opacity: 0.85 }}>{o.displayCode || o.id}</div>
-                  <div style={{ fontWeight: 700, fontSize: "0.88rem" }}>{o.customerName}</div>
+                  <div className="so-queue-code-plain">{o.displayCode || o.id}</div>
+                  <div className="so-queue-name">{o.customerName}</div>
                   <div className="flex gap-1 mt-1 flex-wrap">
-                    <span style={{ background: selectedOrder?.id === o.id ? "rgba(255,255,255,0.2)" : sc.bg, color: selectedOrder?.id === o.id ? "white" : sc.text, padding: "2px 7px", borderRadius: "8px", fontSize: "0.68rem", fontWeight: 600 }}>
+                    {/* Màu badge lấy động từ statusColors khi chưa chọn; khi đang chọn dùng CSS .is-selected */}
+                    <span className="so-queue-badge" style={isSelected ? undefined : { background: sc.bg, color: sc.text }}>
                       {o.status}
                     </span>
-                    {isPart && <span style={{ background: "#FFF7ED", color: "#C2410C", padding: "2px 6px", borderRadius: 6, fontSize: "0.65rem", fontWeight: 700 }}>Trả 1 phần</span>}
-                    {isOd && <span style={{ background: "#FEE2E2", color: "#DC2626", padding: "2px 6px", borderRadius: 6, fontSize: "0.65rem", fontWeight: 700 }}>Quá hạn</span>}
+                    {isPart && <span className="so-badge-partial-sm">Trả 1 phần</span>}
+                    {isOd && <span className="so-badge-overdue-sm">Quá hạn</span>}
                   </div>
                 </button>
               );
@@ -670,19 +654,19 @@ export function ReturnTab({
       {/* Cột phải: Xử lý nhận trả từng đợt & Đối soát */}
       <div>
         {returnError && (
-          <div style={{ background: "#FEF2F2", border: "1px solid #FECACA", color: "#B91C1C", borderRadius: 8, padding: "10px 14px", marginBottom: 14, fontSize: "0.82rem", fontWeight: 600 }}>
+          <div className="so-alert-error">
             {returnError}
           </div>
         )}
         {returnSuccess && (
-          <div style={{ background: "#F0FDF4", border: "1px solid #BBF7D0", color: "#15803D", borderRadius: 8, padding: "10px 14px", marginBottom: 14, fontSize: "0.82rem", fontWeight: 600 }}>
+          <div className="so-alert-success">
             {returnSuccess}
           </div>
         )}
 
         {!order ? (
-          <div style={{ textAlign: "center", padding: "60px", color: "#9CA3AF", background: "white", borderRadius: 12, border: "1px solid var(--color-bone)" }}>
-            <div style={{ display: "flex", justifyContent: "center", marginBottom: 10, color: "var(--color-moss)" }}>
+          <div className="so-empty-panel">
+            <div className="so-empty-icon-wrap">
               <Icon name="arrow-down" size={36} />
             </div>
             <p>Chọn một đơn thuê ở bên trái để lập phiếu nhận trả hoặc đối soát cọc.</p>
@@ -701,33 +685,33 @@ export function ReturnTab({
         ) : (
           <div>
             {/* Header info đơn */}
-            <div style={{ background: "var(--color-parchment)", borderRadius: "10px", padding: "14px 18px", marginBottom: "16px", border: "1px solid var(--color-bone)" }}>
+            <div className="so-order-header">
               <div className="flex justify-between items-start gap-3 flex-wrap">
                 <div>
-                  <div style={{ fontFamily: "var(--font-mono)", fontSize: "0.78rem", color: "var(--color-moss)", fontWeight: 700 }}>
+                  <div className="so-order-code">
                     {order.displayCode || order.id}
                   </div>
-                  <div style={{ fontWeight: 700, fontSize: "1.1rem" }}>
+                  <div className="so-order-customer">
                     {order.customerName} {order.customerPhone ? `· ${order.customerPhone}` : ""}
                   </div>
-                  <div style={{ fontSize: "0.82rem", color: "#6B7280" }}>
-                    Hẹn trả dự kiến: <strong style={{ color: overdueInfo.isOverdue ? "#DC2626" : "inherit" }}>{order.returnTime}</strong>
+                  <div className="so-order-meta">
+                    Hẹn trả dự kiến: <strong className={`so-overdue-date ${overdueInfo.isOverdue ? "is-overdue" : ""}`}>{order.returnTime}</strong>
                   </div>
                 </div>
-                <div style={{ textAlign: "right" }}>
-                  <div style={{ fontSize: "0.78rem", color: "#6B7280" }}>
+                <div className="so-order-stats">
+                  <div className="so-order-stat-muted">
                     Tổng thiết bị đã giao: <strong>{order.assignedEquipment.length}</strong>
                   </div>
-                  <div style={{ fontSize: "0.78rem", color: "#15803D" }}>
+                  <div className="so-order-stat-ok">
                     Đã trả / xử lý: <strong>{app.realApi ? Math.max(0, order.assignedEquipment.length - debtRows.length) : returnedEquipment.length}</strong>
                   </div>
-                  <div style={{ fontSize: "0.85rem", color: debtRows.length > 0 ? "#DC2626" : "#15803D", fontWeight: 700 }}>
+                  <div className={`so-order-stat-debt ${debtRows.length > 0 ? "is-debt" : ""}`}>
                     Còn nợ: {debtRows.length} chiếc
                   </div>
                 </div>
               </div>
               {returnLoading && (
-                <div style={{ marginTop: 8, fontSize: "0.76rem", color: "#6B7280" }}>
+                <div className="so-loading-inline">
                   Đang đồng bộ danh sách thiết bị còn nợ và phiếu nhận trả từ máy chủ...
                 </div>
               )}
@@ -735,23 +719,23 @@ export function ReturnTab({
 
             {/* Banner Cảnh báo quá hạn & Đơn kế tiếp bị ảnh hưởng */}
             {overdueInfo.isOverdue && (
-              <div style={{ background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: 10, padding: "14px 18px", marginBottom: 16 }}>
+              <div className="so-overdue-banner">
                 <div className="flex justify-between items-start flex-wrap gap-2 mb-2">
                   <div>
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span style={{ fontWeight: 700, color: "#DC2626", fontSize: "0.95rem" }}>
+                      <span className="so-overdue-banner-title">
                         <span className="icon-label">
                           <Icon name="alert-circle" size={16} />
                           ĐƠN THUÊ QUÁ HẠN: Trễ {overdueInfo.overdueDays} ngày
                         </span>
                       </span>
                       {(overdueConflicts.length > 0 || affectedOrdersBackend.length > 0) && (
-                        <span style={{ background: "#DC2626", color: "white", padding: "1px 6px", borderRadius: 4, fontSize: "0.68rem", fontWeight: 700 }}>
+                        <span className="so-overdue-badge-impact">
                           ẢNH HƯỞNG {app.realApi ? affectedOrdersBackend.length : overdueConflicts.length} ĐƠN SAU
                         </span>
                       )}
                     </div>
-                    <div style={{ fontSize: "0.78rem", color: "#991B1B", marginTop: 2 }}>
+                    <div className="so-overdue-banner-sub">
                       Phạt trễ 150% đơn giá ngày = <strong>+{fmt(overdueInfo.surcharge)}</strong>.
                     </div>
                   </div>
@@ -761,14 +745,14 @@ export function ReturnTab({
                         setContactNotice(null);
                         setShowContactModal(true);
                       }}
-                      style={{ background: "#1E40AF", color: "white", border: "none", borderRadius: 6, padding: "6px 12px", fontWeight: 700, fontSize: "0.8rem", cursor: "pointer" }}
+                      className="so-btn-blue-sm"
                     >
                       Nhật ký gọi ({order.contactLogs?.length || 0})
                     </button>
                     <button
                       disabled={returnBusy}
                       onClick={handleApplyOverdueFee}
-                      style={{ background: "#DC2626", color: "white", border: "none", borderRadius: 6, padding: "6px 14px", fontWeight: 700, fontSize: "0.8rem", cursor: returnBusy ? "not-allowed" : "pointer" }}
+                      className="so-btn-danger-action"
                     >
                       + Lập phụ phí trễ
                     </button>
@@ -776,19 +760,19 @@ export function ReturnTab({
                 </div>
 
                 {overdueConflicts.length > 0 && (
-                  <div style={{ background: "white", border: "1px solid #FCA5A5", borderRadius: 8, padding: "8px 12px", marginTop: 8 }}>
-                    <div style={{ fontSize: "0.75rem", fontWeight: 700, color: "#B91C1C", marginBottom: 4 }}>
+                  <div className="so-conflict-box">
+                    <div className="so-conflict-title">
                       CẢNH BÁO KẸT THIẾT BỊ ĐƠN TIẾP THEO:
                     </div>
                     {overdueConflicts.map((c, idx) => (
-                      <div key={idx} style={{ fontSize: "0.75rem", color: "#374151", marginBottom: 2 }}>
-                        • Thiết bị <strong style={{ color: "var(--color-forest)" }}>{c.equipmentId}</strong> đang bị trễ cho đơn kế tiếp: <strong>{c.nextOrderId}</strong> ({c.nextCustomerName} - Hẹn nhận: {c.nextPickupTime}).
+                      <div key={idx} className="so-conflict-row">
+                        • Thiết bị <strong className="so-conflict-equip">{c.equipmentId}</strong> đang bị trễ cho đơn kế tiếp: <strong>{c.nextOrderId}</strong> ({c.nextCustomerName} - Hẹn nhận: {c.nextPickupTime}).
                         {c.availableSubstitutes.length > 0 ? (
-                          <span style={{ color: "#15803D", marginLeft: 6 }}>
+                          <span className="so-conflict-sub-ok">
                             Gợi ý mã thay thế: <strong>{c.availableSubstitutes.slice(0, 3).join(", ")}</strong>
                           </span>
                         ) : (
-                          <span style={{ color: "#DC2626", marginLeft: 6, fontWeight: 700 }}>
+                          <span className="so-conflict-sub-bad">
                             (Kho không còn mã thay thế)
                           </span>
                         )}
@@ -798,12 +782,12 @@ export function ReturnTab({
                 )}
 
                 {app.realApi && affectedOrdersBackend.length > 0 && (
-                  <div style={{ background: "white", border: "1px solid #FCA5A5", borderRadius: 8, padding: "8px 12px", marginTop: 8 }}>
-                    <div style={{ fontSize: "0.75rem", fontWeight: 700, color: "#B91C1C", marginBottom: 4 }}>
+                  <div className="so-conflict-box">
+                    <div className="so-conflict-title">
                       ĐƠN ĐẶT KẾ TIẾP BỊ ẢNH HƯỞNG BỞI THIẾT BỊ TRỄ HẠN:
                     </div>
                     {affectedOrdersBackend.map((item, idx) => (
-                      <div key={idx} style={{ fontSize: "0.75rem", color: "#374151", marginBottom: 2 }}>
+                      <div key={idx} className="so-conflict-row">
                         • {String(item.maDonHienThi || item.maDonThue || `Đơn #${idx + 1}`)} — {String(item.tenSanPham || item.tenKhachHang || "Cần điều phối thiết bị dự phòng")}
                       </div>
                     ))}
@@ -814,13 +798,13 @@ export function ReturnTab({
 
             {/* Form Lập Phiếu Nhận Trả Từng Đợt (khi còn thiết bị nợ) */}
             {debtRows.length > 0 && (
-              <div style={{ background: "white", borderRadius: 12, border: "1px solid var(--color-forest)", padding: "18px", marginBottom: 20 }}>
+              <div className="so-return-form-box">
                 <div className="flex justify-between items-center mb-3 flex-wrap gap-2">
                   <div>
-                    <span style={{ background: "var(--color-forest)", color: "white", padding: "2px 8px", borderRadius: 6, fontSize: "0.72rem", fontWeight: 700 }}>
+                    <span className="so-badge-forest-sm">
                       ĐỢT TRẢ SỐ {currentReturnRound}
                     </span>
-                    <h4 style={{ fontFamily: "var(--font-display)", fontSize: "1.15rem", color: "var(--color-bark)", margin: "4px 0 0" }}>
+                    <h4 className="so-return-form-title">
                       Lập Phiếu Nhận Trả ({order.displayCode || order.id})
                     </h4>
                   </div>
@@ -832,13 +816,13 @@ export function ReturnTab({
                       });
                       setSelectedItemsToReturn(allSel);
                     }}
-                    style={{ background: "var(--color-parchment)", border: "1px solid var(--color-bone)", borderRadius: 6, padding: "4px 10px", fontSize: "0.75rem", cursor: "pointer", fontWeight: 600 }}
+                    className="so-btn-parchment-sm"
                   >
                     Chọn tất cả {debtRows.length} món nợ
                   </button>
                 </div>
 
-                <p style={{ fontSize: "0.8rem", color: "#6B7280", marginBottom: 12 }}>
+                <p className="so-return-form-desc">
                   Tick chọn những thiết bị khách mang đến trả lần này. Những món chưa chọn sẽ giữ nguyên trạng thái nợ thiết bị.
                 </p>
 
@@ -849,47 +833,38 @@ export function ReturnTab({
                     const fee = itemSurcharges[row.key] || 0;
 
                     return (
-                      <div key={row.key} style={{ background: isSelected ? "#F0FDF4" : "#F9FAFB", border: `1px solid ${isSelected ? "#86EFAC" : "var(--color-bone)"}`, borderRadius: 10, padding: "12px 14px" }}>
+                      /* Đổi màu viền & nền thẻ thiết bị khi được tick chọn nhận trả */
+                      <div key={row.key} className={`so-debt-card ${isSelected ? "is-selected" : ""}`}>
                         <div className="flex items-center gap-3">
                           <input
                             type="checkbox"
                             checked={isSelected}
                             onChange={() => handleToggleSelect(row.key, row.compensation, row.maChiTietBanGiao)}
-                            style={{ width: 18, height: 18, accentColor: "var(--color-forest)", cursor: "pointer" }}
+                            className="so-checkbox-lg"
                           />
-                          <div style={{ flex: 1 }}>
+                          <div className="so-flex-1">
                             <div className="flex items-center gap-2 flex-wrap">
-                              <span style={{ fontFamily: "var(--font-mono)", fontWeight: 700, color: "var(--color-forest)", fontSize: "0.85rem" }}>
+                              <span className="so-debt-code">
                                 {row.displayCode}
                               </span>
-                              <span style={{ fontWeight: 600, fontSize: "0.9rem" }}>{row.productName}</span>
+                              <span className="so-debt-name">{row.productName}</span>
                             </div>
-                            <div style={{ fontSize: "0.72rem", color: "#9CA3AF" }}>
+                            <div className="so-debt-comp">
                               Giá trị bồi thường tham chiếu: {fmt(row.compensation)}
                             </div>
                           </div>
                         </div>
 
                         {isSelected && (
-                          <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1px dashed #CBD5E1" }}>
+                          <div className="so-debt-expand">
                             <div className="flex flex-wrap gap-2 items-center mb-2">
-                              <span style={{ fontSize: "0.78rem", fontWeight: 600, color: "var(--color-bark)" }}>Tình trạng nhận lại:</span>
+                              <span className="so-cond-label">Tình trạng nhận lại:</span>
                               {(["Bình thường", "Cần vệ sinh", "Hỏng nhẹ", "Hỏng nặng", "Thiếu phụ kiện", "Mất thiết bị"] as ReturnReceiptItem["condition"][]).map((c) => (
                                 <button
                                   key={c}
                                   type="button"
                                   onClick={() => handleConditionChange(row.key, c, row.compensation)}
-                                  style={{
-                                    border: "1px solid",
-                                    borderColor: cond === c ? "var(--color-forest)" : "var(--color-bone)",
-                                    background: cond === c ? "var(--color-forest)" : "white",
-                                    color: cond === c ? "white" : "var(--color-bark)",
-                                    borderRadius: 6,
-                                    padding: "3px 8px",
-                                    fontSize: "0.72rem",
-                                    cursor: "pointer",
-                                    fontWeight: cond === c ? 700 : 500,
-                                  }}
+                                  className={`so-cond-btn ${cond === c ? "is-active" : ""}`}
                                 >
                                   {c}
                                 </button>
@@ -901,17 +876,17 @@ export function ReturnTab({
                                 placeholder="Ghi chú chi tiết lỗi/hư hỏng hoặc tình trạng..."
                                 value={itemNotes[row.key] || ""}
                                 onChange={(e) => setItemNotes((prev) => ({ ...prev, [row.key]: e.target.value }))}
-                                style={{ flex: 1, minWidth: 200, border: "1px solid var(--color-bone)", borderRadius: 6, padding: "5px 8px", fontSize: "0.8rem", background: "white" }}
+                                className="so-note-input"
                               />
                               <div className="flex items-center gap-1">
-                                <span style={{ fontSize: "0.75rem", color: "#6B7280" }}>Phụ phí:</span>
+                                <span className="so-fee-label">Phụ phí:</span>
                                 <input
                                   type="number"
                                   value={fee}
                                   onChange={(e) => setItemSurcharges((prev) => ({ ...prev, [row.key]: Number(e.target.value) }))}
-                                  style={{ width: 110, border: "1px solid var(--color-bone)", borderRadius: 6, padding: "5px 8px", fontSize: "0.8rem", fontFamily: "var(--font-mono)", fontWeight: 700, color: fee > 0 ? "#DC2626" : "inherit" }}
+                                  className={`so-fee-input ${fee > 0 ? "is-nonzero" : ""}`}
                                 />
-                                <span style={{ fontSize: "0.75rem" }}>đ</span>
+                                <span className="so-fee-unit">đ</span>
                               </div>
                             </div>
                           </div>
@@ -921,12 +896,12 @@ export function ReturnTab({
                   })}
                 </div>
 
-                <div style={{ marginTop: 12 }}>
+                <div className="so-staff-note-wrap">
                   <input
                     placeholder="Ghi chú chung của nhân viên nhận trả đợt này (tùy chọn)..."
                     value={returnStaffNote}
                     onChange={(e) => setReturnStaffNote(e.target.value)}
-                    style={{ width: "100%", border: "1px solid var(--color-bone)", borderRadius: 8, padding: "7px 10px", fontSize: "0.82rem", background: "white" }}
+                    className="so-staff-note-input"
                   />
                 </div>
 
@@ -934,7 +909,8 @@ export function ReturnTab({
                   const selCount = debtRows.filter((r) => selectedItemsToReturn[r.key]).length;
                   const remainAfter = debtRows.length - selCount;
                   return (
-                    <div style={{ marginTop: 12, background: remainAfter > 0 ? "#FFF7ED" : "#DCFCE7", border: `1px solid ${remainAfter > 0 ? "#FFEDD5" : "#BBF7D0"}`, borderRadius: 8, padding: "10px 14px", fontSize: "0.82rem", color: remainAfter > 0 ? "#C2410C" : "#15803D" }}>
+                    /* Phân biệt trạng thái trả một phần vs hoàn tất thu hồi */
+                    <div className={`so-return-summary ${remainAfter > 0 ? "is-partial" : "is-final"}`}>
                       {remainAfter > 0 ? (
                         <>
                           <strong>Nhận trả một phần:</strong> Khách trả {selCount} món, còn nợ lại <strong>{remainAfter} món</strong>. Đơn vẫn giữ trạng thái <strong>Đang thuê</strong> cho đến khi thu hồi đủ.
@@ -951,7 +927,7 @@ export function ReturnTab({
                 <button
                   disabled={returnBusy}
                   onClick={handleCreateReceipt}
-                  style={{ marginTop: 14, background: "var(--color-forest)", color: "white", padding: "10px 22px", borderRadius: 8, border: "none", cursor: returnBusy ? "not-allowed" : "pointer", fontWeight: 700, fontSize: "0.9rem" }}
+                  className="so-btn-primary-lg"
                 >
                   {returnBusy ? "Đang xử lý..." : `✓ Xác nhận lập Phiếu Nhận Trả Đợt ${currentReturnRound}`}
                 </button>
@@ -960,28 +936,28 @@ export function ReturnTab({
 
             {/* Lịch sử các đợt nhận trả đã lập (Backend realApi) */}
             {app.realApi && returnReceiptsBackend.length > 0 && (
-              <div style={{ background: "white", borderRadius: 10, border: "1px solid var(--color-bone)", padding: 16, marginBottom: 20 }}>
-                <h4 style={{ fontWeight: 700, color: "var(--color-bark)", marginBottom: 12 }}>
+              <div className="so-card-panel-lg">
+                <h4 className="so-sub-heading-lg">
                   Lịch sử các đợt nhận trả ({returnReceiptsBackend.length} phiếu)
                 </h4>
                 <div className="flex flex-col gap-2">
                   {returnReceiptsBackend.map((rc) => {
                     const isClosed = rc.trangThai === "DaChot";
                     return (
-                      <div key={rc.maPhieu} style={{ background: "var(--color-parchment)", borderRadius: 8, padding: "10px 14px", border: "1px solid var(--color-bone)", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                      <div key={rc.maPhieu} className="so-receipt-row">
                         <div>
                           <div className="flex items-center gap-2 flex-wrap">
-                            <strong style={{ fontFamily: "var(--font-mono)", color: "var(--color-forest)", fontSize: "0.85rem" }}>
+                            <strong className="so-receipt-code">
                               {rc.maPhieuHienThi}
                             </strong>
-                            <span style={{ fontSize: "0.72rem", background: rc.laLanTraCuoi ? "#DCFCE7" : "#FFF7ED", color: rc.laLanTraCuoi ? "#15803D" : "#C2410C", padding: "2px 6px", borderRadius: 6, fontWeight: 700 }}>
+                            <span className={`so-badge-tag ${rc.laLanTraCuoi ? "is-green" : "is-orange"}`}>
                               {rc.laLanTraCuoi ? "Lần trả cuối" : `Đợt ${rc.lanTra}`}
                             </span>
-                            <span style={{ fontSize: "0.7rem", background: isClosed ? "#DCFCE7" : "#FEF3C7", color: isClosed ? "#15803D" : "#B45309", padding: "2px 6px", borderRadius: 6, fontWeight: 700 }}>
+                            <span className={`so-badge-tag ${isClosed ? "is-green" : "is-amber"}`}>
                               {isClosed ? "Đã chốt" : rc.trangThai}
                             </span>
                           </div>
-                          <div style={{ fontSize: "0.75rem", color: "#6B7280", marginTop: 2 }}>
+                          <div className="so-receipt-meta">
                             {rc.thoiDiemChot || rc.thoiDiemLap} · {rc.tenNhanVienLucNhan || "Nhân viên kho"} · {rc.chiTiet.length} thiết bị
                           </div>
                         </div>
@@ -990,14 +966,14 @@ export function ReturnTab({
                             <button
                               disabled={returnBusy}
                               onClick={() => handleCloseBackendReceipt(rc.maPhieu)}
-                              style={{ background: "var(--color-forest)", color: "white", border: "none", borderRadius: 6, padding: "4px 10px", fontSize: "0.74rem", cursor: "pointer", fontWeight: 700 }}
+                              className="so-btn-primary-xs"
                             >
                               Chốt phiếu
                             </button>
                           )}
                           <button
                             onClick={() => setViewingBackendReceipt(rc)}
-                            style={{ background: "white", border: "1px solid var(--color-bone)", borderRadius: 6, padding: "4px 10px", fontSize: "0.75rem", cursor: "pointer", fontWeight: 600 }}
+                            className="so-btn-outline-xs"
                           >
                             Xem phiếu
                           </button>
@@ -1011,25 +987,25 @@ export function ReturnTab({
 
             {/* Lịch sử các đợt nhận trả (Mock mode) */}
             {!app.realApi && (order.returnReceipts?.length || 0) > 0 && (
-              <div style={{ background: "white", borderRadius: 10, border: "1px solid var(--color-bone)", padding: 16, marginBottom: 20 }}>
-                <h4 style={{ fontWeight: 700, color: "var(--color-bark)", marginBottom: 12 }}>
+              <div className="so-card-panel-lg">
+                <h4 className="so-sub-heading-lg">
                   Lịch sử các đợt nhận trả ({order.returnReceipts?.length} phiếu)
                 </h4>
                 <div className="flex flex-col gap-2">
                   {order.returnReceipts?.map((rc) => (
-                    <div key={rc.id} style={{ background: "var(--color-parchment)", borderRadius: 8, padding: "10px 14px", border: "1px solid var(--color-bone)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div key={rc.id} className="so-receipt-row">
                       <div>
                         <div className="flex items-center gap-2">
-                          <strong style={{ fontFamily: "var(--font-mono)", color: "var(--color-forest)", fontSize: "0.85rem" }}>{rc.id}</strong>
-                          <span style={{ fontSize: "0.72rem", background: rc.isFinalReturn ? "#DCFCE7" : "#FFF7ED", color: rc.isFinalReturn ? "#15803D" : "#C2410C", padding: "2px 6px", borderRadius: 6, fontWeight: 700 }}>
+                          <strong className="so-receipt-code">{rc.id}</strong>
+                          <span className={`so-badge-tag ${rc.isFinalReturn ? "is-green" : "is-orange"}`}>
                             {rc.isFinalReturn ? "Lần trả cuối" : `Đợt ${rc.returnRound}`}
                           </span>
                         </div>
-                        <div style={{ fontSize: "0.75rem", color: "#6B7280" }}>
+                        <div className="so-receipt-meta-mock">
                           {rc.returnedAt} · Người nhận: {rc.staffName} · {rc.items.length} thiết bị
                         </div>
                       </div>
-                      <button onClick={() => setViewingReceipt(rc)} style={{ background: "white", border: "1px solid var(--color-bone)", borderRadius: 6, padding: "4px 10px", fontSize: "0.75rem", cursor: "pointer", fontWeight: 600 }}>
+                      <button onClick={() => setViewingReceipt(rc)} className="so-btn-outline-xs">
                         Xem phiếu
                       </button>
                     </div>
@@ -1040,81 +1016,90 @@ export function ReturnTab({
 
             {/* Danh sách phụ phí đã đề xuất */}
             {displaySurcharges.length > 0 && (
-              <div style={{ background: "white", borderRadius: 10, border: "1px solid var(--color-bone)", padding: 16, marginBottom: 20 }}>
-                <h4 style={{ fontWeight: 700, color: "var(--color-bark)", marginBottom: 10 }}>Phụ phí bồi thường & trễ hạn</h4>
-                {displaySurcharges.map((s) => (
-                  <div key={s.id} style={{ background: "#FFF7ED", borderRadius: 8, padding: "10px 14px", border: "1px solid #FED7AA", marginBottom: 8 }}>
-                    <div className="flex justify-between items-center gap-3 flex-wrap">
-                      <div>
-                        <div style={{ fontWeight: 600, fontSize: "0.85rem" }}>{s.type} — {s.equipmentId}</div>
-                        <div style={{ fontSize: "0.75rem", color: "#6B7280" }}>{s.reason}</div>
-                      </div>
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span style={{ fontFamily: "var(--font-mono)", fontWeight: 700, color: "#DC2626" }}>+{fmt(s.amount)}</span>
-                        <span style={{ background: s.status === "Đã duyệt" ? "#DCFCE7" : s.status === "Từ chối" ? "#FEE2E2" : "#FEF3C7", color: s.status === "Đã duyệt" ? "#15803D" : s.status === "Từ chối" ? "#B91C1C" : "#B45309", padding: "3px 8px", borderRadius: 8, fontSize: "0.7rem", fontWeight: 600 }}>
-                          {s.status}
-                        </span>
-                        {s.status === "Chờ duyệt" && (
-                          <>
-                            <button
-                              disabled={returnBusy}
-                              onClick={() => handleApproveSurcharge(s)}
-                              style={{ background: "#15803D", color: "white", border: "none", borderRadius: 6, padding: "3px 8px", fontSize: "0.7rem", cursor: "pointer", fontWeight: 700 }}
-                            >
-                              Duyệt
-                            </button>
-                            {app.realApi && s.backendId && (
+              <div className="so-card-panel-lg">
+                <h4 className="so-sub-heading-md">Phụ phí bồi thường & trễ hạn</h4>
+                {displaySurcharges.map((s) => {
+                  /* Ánh xạ trạng thái duyệt phụ phí sang modifier CSS hữu hạn */
+                  const surchargeMod =
+                    s.status === "Đã duyệt"
+                      ? "is-approved"
+                      : s.status === "Từ chối"
+                      ? "is-rejected"
+                      : "is-pending";
+                  return (
+                    <div key={s.id} className="so-surcharge-card">
+                      <div className="flex justify-between items-center gap-3 flex-wrap">
+                        <div>
+                          <div className="so-surcharge-title">{s.type} — {s.equipmentId}</div>
+                          <div className="so-surcharge-reason">{s.reason}</div>
+                        </div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="so-surcharge-amount">+{fmt(s.amount)}</span>
+                          <span className={`so-surcharge-status ${surchargeMod}`}>
+                            {s.status}
+                          </span>
+                          {s.status === "Chờ duyệt" && (
+                            <>
                               <button
                                 disabled={returnBusy}
-                                onClick={() => {
-                                  setRejectingSurchargeId(s.id);
-                                  setRejectReason("");
-                                }}
-                                style={{ background: "white", color: "#B91C1C", border: "1px solid #FCA5A5", borderRadius: 6, padding: "3px 8px", fontSize: "0.7rem", cursor: "pointer", fontWeight: 700 }}
+                                onClick={() => handleApproveSurcharge(s)}
+                                className="so-btn-green-xs"
                               >
-                                Từ chối
+                                Duyệt
                               </button>
-                            )}
-                          </>
-                        )}
+                              {app.realApi && s.backendId && (
+                                <button
+                                  disabled={returnBusy}
+                                  onClick={() => {
+                                    setRejectingSurchargeId(s.id);
+                                    setRejectReason("");
+                                  }}
+                                  className="so-btn-danger-outline-xs"
+                                >
+                                  Từ chối
+                                </button>
+                              )}
+                            </>
+                          )}
+                        </div>
                       </div>
+                      {rejectingSurchargeId === s.id && (
+                        <div className="flex gap-2 items-center mt-2 pt-2 flex-wrap so-reject-row">
+                          <input
+                            placeholder="Nhập lý do từ chối phụ phí..."
+                            value={rejectReason}
+                            onChange={(e) => setRejectReason(e.target.value)}
+                            className="so-reject-input"
+                          />
+                          <button
+                            disabled={returnBusy}
+                            onClick={() => handleRejectSurcharge(s)}
+                            className="so-btn-danger-xs"
+                          >
+                            Xác nhận từ chối
+                          </button>
+                          <button
+                            onClick={() => setRejectingSurchargeId(null)}
+                            className="so-btn-cancel-xs"
+                          >
+                            Hủy
+                          </button>
+                        </div>
+                      )}
                     </div>
-                    {rejectingSurchargeId === s.id && (
-                      <div className="flex gap-2 items-center mt-2 pt-2" style={{ borderTop: "1px dashed #FDBA74" }}>
-                        <input
-                          placeholder="Nhập lý do từ chối phụ phí..."
-                          value={rejectReason}
-                          onChange={(e) => setRejectReason(e.target.value)}
-                          style={{ flex: 1, border: "1px solid var(--color-bone)", borderRadius: 6, padding: "4px 8px", fontSize: "0.78rem", background: "white" }}
-                        />
-                        <button
-                          disabled={returnBusy}
-                          onClick={() => handleRejectSurcharge(s)}
-                          style={{ background: "#DC2626", color: "white", border: "none", borderRadius: 6, padding: "4px 10px", fontSize: "0.74rem", cursor: "pointer", fontWeight: 700 }}
-                        >
-                          Xác nhận từ chối
-                        </button>
-                        <button
-                          onClick={() => setRejectingSurchargeId(null)}
-                          style={{ background: "white", border: "1px solid var(--color-bone)", borderRadius: 6, padding: "4px 8px", fontSize: "0.74rem", cursor: "pointer" }}
-                        >
-                          Hủy
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
 
             {/* Chuyển sang Chờ đối soát (mock) hoặc mở bảng đối soát trực tiếp (realApi / Chờ đối soát) */}
             {!app.realApi && order.status === "Đã nhận trả" && (
-              <div style={{ background: "#EFF6FF", borderRadius: "10px", padding: "14px 18px", marginBottom: "16px", border: "1px solid #BFDBFE" }}>
-                <div style={{ fontWeight: 700, color: "#1D4ED8", marginBottom: "4px" }}>✓ Toàn bộ thiết bị đã nhận trả xong</div>
-                <div style={{ fontSize: "0.82rem", color: "#1E40AF", marginBottom: "10px" }}>Chuyển đơn sang Chờ đối soát để lập lệnh hoàn cọc hoặc thu thêm.</div>
+              <div className="so-ready-reconcile-box">
+                <div className="so-ready-reconcile-title">✓ Toàn bộ thiết bị đã nhận trả xong</div>
+                <div className="so-ready-reconcile-desc">Chuyển đơn sang Chờ đối soát để lập lệnh hoàn cọc hoặc thu thêm.</div>
                 <button
                   onClick={() => app.advanceOrderStatus(order.id, "Chờ đối soát")}
-                  style={{ background: "#1D4ED8", color: "white", padding: "8px 18px", borderRadius: 8, border: "none", cursor: "pointer", fontWeight: 700 }}
+                  className="so-btn-blue-md"
                 >
                   Chuyển sang Chờ đối soát →
                 </button>
@@ -1122,7 +1107,7 @@ export function ReturnTab({
             )}
 
             {(order.status === "Chờ đối soát" || (app.realApi && order.status === "Đã nhận trả")) && (
-              <div style={{ marginTop: 20 }}>
+              <div className="so-reconcile-wrap">
                 <ReconciliationSheet
                   order={order}
                   app={app}

@@ -147,24 +147,14 @@ export function LoginView() {
         <div className="auth-card">
           {/* Cảnh báo tài khoản bị khóa theo đặc tả UC1.2 Dòng 2.2 */}
           {lockedAccount && (
-            <div
-              style={{
-                background: "#FEF2F2",
-                border: "1px solid #F87171",
-                borderRadius: 10,
-                padding: "12px 14px",
-                marginBottom: 16,
-                color: "#991B1B",
-                fontSize: "0.82rem",
-              }}
-            >
-              <div style={{ fontWeight: 700, fontSize: "0.88rem", marginBottom: 4, display: "flex", alignItems: "center", gap: 6 }}>
+            <div className="auth-locked-alert">
+              <div className="auth-locked-alert-title">
                 <span>🔒</span> Tài khoản của bạn hiện đang bị khóa!
               </div>
-              <p style={{ margin: "0 0 6px 0", lineHeight: 1.4 }}>
+              <p className="auth-locked-alert-reason">
                 <strong>Lý do:</strong> {lockedAccount.reason}
               </p>
-              <div style={{ fontSize: "0.76rem", color: "#B91C1C", borderTop: "1px dashed #FECACA", paddingTop: 6 }}>
+              <div className="auth-locked-alert-support">
                 Vui lòng liên hệ Hotline <strong>1900 6868</strong> hoặc gửi email tới <strong>support@geargo.vn</strong> để được nhân viên hỗ trợ đối soát và mở khóa.
               </div>
             </div>
@@ -240,42 +230,42 @@ export function LoginView() {
           </form>
 
           {/* Phím tắt đăng nhập nhanh demo theo chuẩn Impeccable */}
-          <div style={{ marginTop: 18, paddingTop: 14, borderTop: "1px solid var(--color-bone)" }}>
-            <div style={{ fontSize: "0.72rem", color: "#6B7280", fontWeight: 700, marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.5px" }}>
+          <div className="auth-quick-login">
+            <div className="auth-quick-login-title">
               💡 Chọn nhanh tài khoản kiểm thử nghiệp vụ:
             </div>
-            <div className="grid gap-2" style={{ gridTemplateColumns: "1fr 1fr" }}>
+            <div className="auth-quick-login-grid">
               <button
                 type="button"
                 onClick={() => fillQuickAccount("admin@geargo.vn", "admin123")}
-                style={{ textAlign: "left", padding: "6px 8px", background: "#FEF3C7", border: "1px solid #FDE68A", borderRadius: 8, fontSize: "0.73rem", cursor: "pointer", color: "#92400E" }}
+                className="auth-quick-btn auth-quick-btn--amber"
               >
-                <div style={{ fontWeight: 700 }}>👑 Quản trị viên</div>
-                <div style={{ fontSize: "0.68rem", opacity: 0.85 }}>admin@geargo.vn / admin123</div>
+                <div className="auth-quick-btn-role">👑 Quản trị viên</div>
+                <div className="auth-quick-btn-cred">admin@geargo.vn / admin123</div>
               </button>
               <button
                 type="button"
                 onClick={() => fillQuickAccount("mai.lt@geargo.vn", "staff123")}
-                style={{ textAlign: "left", padding: "6px 8px", background: "#E0E7FF", border: "1px solid #C7D2FE", borderRadius: 8, fontSize: "0.73rem", cursor: "pointer", color: "#3730A3" }}
+                className="auth-quick-btn auth-quick-btn--indigo"
               >
-                <div style={{ fontWeight: 700 }}>📦 Nhân viên kho</div>
-                <div style={{ fontSize: "0.68rem", opacity: 0.85 }}>mai.lt@geargo.vn / staff123</div>
+                <div className="auth-quick-btn-role">📦 Nhân viên kho</div>
+                <div className="auth-quick-btn-cred">mai.lt@geargo.vn / staff123</div>
               </button>
               <button
                 type="button"
                 onClick={() => fillQuickAccount("an.nguyen@gmail.com", "123456")}
-                style={{ textAlign: "left", padding: "6px 8px", background: "#DCFCE7", border: "1px solid #BBF7D0", borderRadius: 8, fontSize: "0.73rem", cursor: "pointer", color: "#166534" }}
+                className="auth-quick-btn auth-quick-btn--green"
               >
-                <div style={{ fontWeight: 700 }}>🏕️ Khách hàng</div>
-                <div style={{ fontSize: "0.68rem", opacity: 0.85 }}>an.nguyen@gmail.com / 123456</div>
+                <div className="auth-quick-btn-role">🏕️ Khách hàng</div>
+                <div className="auth-quick-btn-cred">an.nguyen@gmail.com / 123456</div>
               </button>
               <button
                 type="button"
                 onClick={() => fillQuickAccount("nam.hd@yahoo.com", "123456")}
-                style={{ textAlign: "left", padding: "6px 8px", background: "#FEE2E2", border: "1px solid #FECACA", borderRadius: 8, fontSize: "0.73rem", cursor: "pointer", color: "#991B1B" }}
+                className="auth-quick-btn auth-quick-btn--red"
               >
-                <div style={{ fontWeight: 700 }}>🔒 TK Bị khóa (UC1.2)</div>
-                <div style={{ fontSize: "0.68rem", opacity: 0.85 }}>nam.hd@yahoo.com / 123456</div>
+                <div className="auth-quick-btn-role">🔒 TK Bị khóa (UC1.2)</div>
+                <div className="auth-quick-btn-cred">nam.hd@yahoo.com / 123456</div>
               </button>
             </div>
           </div>

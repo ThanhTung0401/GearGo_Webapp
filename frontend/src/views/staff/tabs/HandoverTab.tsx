@@ -428,22 +428,11 @@ export function HandoverTab({ app, selectedOrder, setSelectedOrderId, hydrateOpe
         <button
           type="button"
           onClick={() => { setSubTab("prep"); setSelectedOrderId(null); }}
-          style={{
-            padding: "8px 18px",
-            borderRadius: "8px",
-            border: subTab === "prep" ? "2px solid var(--color-forest)" : "1px solid var(--color-bone)",
-            background: subTab === "prep" ? "var(--color-forest)" : "white",
-            color: subTab === "prep" ? "white" : "var(--color-bark)",
-            fontWeight: 700,
-            fontSize: "0.88rem",
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-          }}
+          /* Dùng .is-active để làm nổi bật phân hệ đang chọn (Chuẩn bị kho vs Bàn giao) */
+          className={`so-subtab-btn ${subTab === "prep" ? "is-active" : ""}`}
         >
           <span>📦 1. Chuẩn bị kho (UC4.1)</span>
-          <span style={{ background: subTab === "prep" ? "rgba(255,255,255,0.25)" : "#FEF3C7", color: subTab === "prep" ? "white" : "#B45309", padding: "1px 7px", borderRadius: 12, fontSize: "0.72rem" }}>
+          <span className="so-subtab-count is-amber">
             {eligiblePrep.length}
           </span>
         </button>
@@ -451,33 +440,21 @@ export function HandoverTab({ app, selectedOrder, setSelectedOrderId, hydrateOpe
         <button
           type="button"
           onClick={() => { setSubTab("handover"); setSelectedOrderId(null); }}
-          style={{
-            padding: "8px 18px",
-            borderRadius: "8px",
-            border: subTab === "handover" ? "2px solid var(--color-forest)" : "1px solid var(--color-bone)",
-            background: subTab === "handover" ? "var(--color-forest)" : "white",
-            color: subTab === "handover" ? "white" : "var(--color-bark)",
-            fontWeight: 700,
-            fontSize: "0.88rem",
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-          }}
+          className={`so-subtab-btn ${subTab === "handover" ? "is-active" : ""}`}
         >
           <span>🤝 2. Tiếp khách & Bàn giao (UC4.2)</span>
-          <span style={{ background: subTab === "handover" ? "rgba(255,255,255,0.25)" : "#DCFCE7", color: subTab === "handover" ? "white" : "#15803D", padding: "1px 7px", borderRadius: 12, fontSize: "0.72rem" }}>
+          <span className="so-subtab-count is-green">
             {eligibleHandover.length}
           </span>
         </button>
       </div>
 
-      <div className="grid gap-6" style={{ gridTemplateColumns: "300px 1fr" }}>
+      <div className="so-split-layout">
         {/* Left Column: Order Picker & QR scanner */}
         <div>
           {subTab === "handover" && (
             <form onSubmit={handleQrSearch} className="mb-3">
-              <label style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--color-bark)", display: "block", marginBottom: 4 }}>
+              <label className="so-qr-label">
                 📷 Quét QR / Tra nhanh mã đơn tại quầy:
               </label>
               <div className="flex gap-1">
@@ -485,16 +462,16 @@ export function HandoverTab({ app, selectedOrder, setSelectedOrderId, hydrateOpe
                   placeholder="Quét mã QR hoặc nhập #ORD..."
                   value={qrCodeSearch}
                   onChange={(e) => setQrCodeSearch(e.target.value)}
-                  style={{ flex: 1, border: "1px solid var(--color-bone)", borderRadius: 6, padding: "6px 10px", fontSize: "0.82rem" }}
+                  className="so-qr-input"
                 />
-                <button type="submit" style={{ background: "var(--color-forest)", color: "white", border: "none", borderRadius: 6, padding: "6px 12px", fontSize: "0.8rem", fontWeight: 700, cursor: "pointer" }}>
+                <button type="submit" className="so-qr-btn">
                   Tìm
                 </button>
               </div>
             </form>
           )}
 
-          <h3 style={{ fontFamily: "var(--font-display)", fontSize: "0.95rem", color: "var(--color-bark)", marginBottom: "10px" }}>
+          <h3 className="so-queue-title">
             {subTab === "prep" ? "Danh sách đơn cần chuẩn bị" : "Đơn sẵn sàng chờ giao khách"}
           </h3>
 
@@ -506,31 +483,24 @@ export function HandoverTab({ app, selectedOrder, setSelectedOrderId, hydrateOpe
                 <button
                   key={o.id}
                   onClick={() => { setSelectedOrderId(o.id); setShowHandoverModal(false); }}
-                  style={{
-                    background: isSelected ? "var(--color-forest)" : "white",
-                    color: isSelected ? "white" : "var(--color-bark)",
-                    borderRadius: "10px",
-                    padding: "12px 14px",
-                    border: `1px solid ${isSelected ? "var(--color-forest)" : "var(--color-bone)"}`,
-                    cursor: "pointer",
-                    textAlign: "left",
-                    transition: "all 0.15s ease",
-                  }}
+                  /* Đánh dấu thẻ đơn hàng đang chọn ở cột trái bằng .is-selected */
+                  className={`so-queue-card ${isSelected ? "is-selected" : ""}`}
                 >
                   <div className="flex justify-between items-center mb-1">
-                    <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.75rem", fontWeight: 700, opacity: isSelected ? 0.9 : 1, color: isSelected ? "white" : "var(--color-moss)" }}>
+                    <span className="so-queue-code">
                       {o.displayCode || o.id}
                     </span>
-                    <span style={{ background: isSelected ? "rgba(255,255,255,0.2)" : sc.bg, color: isSelected ? "white" : sc.text, padding: "2px 7px", borderRadius: "8px", fontSize: "0.68rem", fontWeight: 600 }}>
+                    {/* Khi chưa chọn, màu badge lấy động từ statusColors; khi đang chọn, CSS .is-selected ghi đè nền trắng mờ */}
+                    <span className="so-queue-badge" style={isSelected ? undefined : { background: sc.bg, color: sc.text }}>
                       {o.status}
                     </span>
                   </div>
-                  <div style={{ fontWeight: 700, fontSize: "0.88rem" }}>{o.customerName}</div>
-                  <div style={{ fontSize: "0.72rem", opacity: isSelected ? 0.85 : 0.7 }}>
+                  <div className="so-queue-name">{o.customerName}</div>
+                  <div className="so-queue-time">
                     Hẹn nhận: {o.pickupTime}
                   </div>
                   {o.shortageReported && (
-                    <div style={{ marginTop: 4, background: isSelected ? "rgba(220,38,38,0.3)" : "#FEE2E2", color: isSelected ? "#FECACA" : "#DC2626", padding: "2px 6px", borderRadius: 4, fontSize: "0.68rem", fontWeight: 700 }}>
+                    <div className="so-queue-shortage">
                       ⚠️ Đã báo thiếu: {o.shortageReported.note}
                     </div>
                   )}
@@ -538,7 +508,7 @@ export function HandoverTab({ app, selectedOrder, setSelectedOrderId, hydrateOpe
               );
             })}
             {(subTab === "prep" ? eligiblePrep : eligibleHandover).length === 0 && (
-              <p style={{ fontSize: "0.85rem", color: "#9CA3AF", padding: 12 }}>
+              <p className="so-queue-empty">
                 {subTab === "prep" ? "Hiện không có đơn nào cần soạn hàng." : "Hiện không có đơn nào chờ nhận tại quầy."}
               </p>
             )}
@@ -548,36 +518,36 @@ export function HandoverTab({ app, selectedOrder, setSelectedOrderId, hydrateOpe
         {/* Right Column: Workflows */}
         <div>
           {handoverError && (
-            <div role="alert" style={{ background: "#FEF2F2", color: "#B91C1C", border: "1px solid #FECACA", borderRadius: 10, padding: "10px 14px", fontSize: "0.82rem", marginBottom: 12 }}>
+            <div role="alert" className="so-alert-error-box">
               {handoverError}
             </div>
           )}
           {handoverSuccess && (
-            <div style={{ background: "#DCFCE7", color: "#15803D", border: "1px solid #BBF7D0", borderRadius: 10, padding: "10px 14px", fontSize: "0.82rem", fontWeight: 600, marginBottom: 12 }}>
+            <div className="so-alert-success-box">
               {handoverSuccess}
             </div>
           )}
           {!order ? (
-            <div style={{ textAlign: "center", padding: "60px", color: "#9CA3AF", background: "white", borderRadius: 12, border: "1px solid var(--color-bone)" }}>
-              <div style={{ fontSize: "3rem", marginBottom: "8px" }}>{subTab === "prep" ? "📦" : "🤝"}</div>
+            <div className="so-empty-panel">
+              <div className="so-empty-icon">{subTab === "prep" ? "📦" : "🤝"}</div>
               <p>{subTab === "prep" ? "Chọn đơn ở danh sách bên trái để phân công mã serial và soạn hàng" : "Chọn đơn hoặc quét mã QR ở bên trái để tiến hành bàn giao đồ tại quầy"}</p>
             </div>
           ) : subTab === "prep" ? (
             /* ─── PHÂN HỆ 4.1: CHUẨN BỊ KHO & PHÂN CÔNG SERIAL ─── */
             <div>
-              <div style={{ background: "var(--color-parchment)", borderRadius: "10px", padding: "14px 18px", marginBottom: "16px", border: "1px solid var(--color-bone)" }}>
+              <div className="so-order-header">
                 <div className="flex justify-between items-start flex-wrap gap-2">
                   <div>
-                    <div style={{ fontFamily: "var(--font-mono)", fontSize: "0.78rem", color: "var(--color-moss)", fontWeight: 700 }}>{order.displayCode || order.id}</div>
-                    <div style={{ fontWeight: 700, fontSize: "1.1rem" }}>{order.customerName} · {order.customerPhone}</div>
-                    <div style={{ fontSize: "0.82rem", color: "#6B7280" }}>📤 Hẹn nhận: <strong>{order.pickupTime}</strong> → 📥 Hẹn trả: <strong>{order.returnTime}</strong></div>
+                    <div className="so-order-code">{order.displayCode || order.id}</div>
+                    <div className="so-order-customer">{order.customerName} · {order.customerPhone}</div>
+                    <div className="so-order-meta">📤 Hẹn nhận: <strong>{order.pickupTime}</strong> → 📥 Hẹn trả: <strong>{order.returnTime}</strong></div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span style={{ background: "var(--color-forest)", color: "white", padding: "4px 10px", borderRadius: 8, fontSize: "0.75rem", fontWeight: 700 }}>
+                    <span className="so-badge-forest">
                       {order.status}
                     </span>
                     {order.status === "Đã xác nhận" && (
-                      <button disabled={handoverBusy} onClick={() => void handleStartPreparation()} style={{ background: "var(--color-amber)", color: "white", border: "none", padding: "4px 10px", borderRadius: 6, fontSize: "0.75rem", fontWeight: 700, cursor: handoverBusy ? "wait" : "pointer" }}>
+                      <button disabled={handoverBusy} onClick={() => void handleStartPreparation()} className="so-btn-amber-sm">
                         {handoverBusy ? "Đang xử lý..." : "Nhận soạn hàng →"}
                       </button>
                     )}
@@ -586,15 +556,15 @@ export function HandoverTab({ app, selectedOrder, setSelectedOrderId, hydrateOpe
               </div>
 
               {order.shortageReported && (
-                <div style={{ background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: 8, padding: "10px 14px", marginBottom: 14, color: "#991B1B", fontSize: "0.82rem" }}>
+                <div className="so-alert-danger">
                   <strong>⚠️ CẢNH BÁO THIẾU HÀNG (UC4.1.5.1):</strong> {order.shortageReported.note}
-                  <div style={{ fontSize: "0.75rem", color: "#B91C1C", marginTop: 2 }}>Đang chờ Quản trị viên can thiệp xử lý với khách hàng. Không tự ý giảm lượng hoặc đổi sản phẩm.</div>
+                  <div className="so-alert-danger-note">Đang chờ Quản trị viên can thiệp xử lý với khách hàng. Không tự ý giảm lượng hoặc đổi sản phẩm.</div>
                 </div>
               )}
 
-              <div className="flex justify-between items-center mb-3">
-                <h4 style={{ fontWeight: 700, color: "var(--color-bark)" }}>Gán mã thiết bị (Serial) & Kiểm tra phụ kiện</h4>
-                <button onClick={() => setShowShortageModal(true)} style={{ background: "#FEE2E2", color: "#DC2626", border: "1px solid #FECACA", borderRadius: 6, padding: "4px 10px", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer" }}>
+              <div className="flex justify-between items-center mb-3 flex-wrap gap-2">
+                <h4 className="so-sub-heading">Gán mã thiết bị (Serial) & Kiểm tra phụ kiện</h4>
+                <button onClick={() => setShowShortageModal(true)} className="so-btn-danger-soft">
                   ⚠️ Báo thiếu hàng cho QTV
                 </button>
               </div>
@@ -605,12 +575,12 @@ export function HandoverTab({ app, selectedOrder, setSelectedOrderId, hydrateOpe
                   (e) => e.productId === item.productId && (e.equipmentStatus === "Sẵn sàng" || chosenForItem.includes(e.id))
                 );
                 return (
-                  <div key={item.productId} style={{ background: "white", borderRadius: "10px", border: "1px solid var(--color-bone)", padding: "14px 16px", marginBottom: "12px" }}>
-                    <div className="flex justify-between items-center mb-2">
-                      <div style={{ fontWeight: 700, color: "var(--color-bark)" }}>
-                        {item.productName} — Yêu cầu: <span style={{ color: "var(--color-forest)" }}>{item.qty} chiếc</span>
+                  <div key={item.productId} className="so-prep-card">
+                    <div className="flex justify-between items-center mb-2 flex-wrap gap-1">
+                      <div className="so-prep-title">
+                        {item.productName} — Yêu cầu: <span className="so-prep-req">{item.qty} chiếc</span>
                       </div>
-                      <span style={{ fontSize: "0.75rem", color: avail.length >= item.qty ? "#15803D" : "#DC2626", fontWeight: 600 }}>
+                      <span className={`so-prep-avail ${avail.length >= item.qty ? "is-ok" : ""}`}>
                         Kho sẵn sàng: {avail.length} chiếc
                       </span>
                     </div>
@@ -619,11 +589,11 @@ export function HandoverTab({ app, selectedOrder, setSelectedOrderId, hydrateOpe
                       const currentChosen = assignments[item.productId]?.[idx];
                       return (
                         <div key={idx} className="flex items-center gap-3 mb-2 flex-wrap">
-                          <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.78rem", color: "#9CA3AF", width: 60 }}>Món {idx + 1}:</span>
+                          <span className="so-slot-label">Món {idx + 1}:</span>
                           <select
                             value={currentChosen || ""}
                             onChange={(e) => pickEquipment(item.productId, idx, e.target.value)}
-                            style={{ flex: 1, minWidth: 200, border: "1px solid var(--color-bone)", borderRadius: "6px", padding: "6px 10px", fontSize: "0.85rem", background: "white" }}
+                            className="so-slot-select"
                           >
                             <option value="">-- Chọn mã thiết bị sẵn sàng --</option>
                             {avail.map((e) => (
@@ -632,16 +602,16 @@ export function HandoverTab({ app, selectedOrder, setSelectedOrderId, hydrateOpe
                           </select>
                           {currentChosen && (
                             <div className="flex items-center gap-2">
-                              <span style={{ color: "#15803D", fontSize: "0.82rem", fontWeight: 700 }}>✓ Đã gán</span>
+                              <span className="so-assigned-ok">✓ Đã gán</span>
                               <button onClick={() => setChangingEquip({ productId: item.productId, oldId: currentChosen })}
-                                style={{ background: "#F3F4F6", border: "1px solid var(--color-bone)", borderRadius: 6, padding: "4px 8px", fontSize: "0.72rem", cursor: "pointer" }}>
+                                className="so-btn-soft-sm">
                                 Đổi mã
                               </button>
                               <button
                                 type="button"
                                 disabled={handoverBusy}
                                 onClick={() => void handleCancelAssignment(item.productId, currentChosen)}
-                                style={{ background: "#FEF2F2", color: "#DC2626", border: "1px solid #FECACA", borderRadius: 6, padding: "4px 8px", fontSize: "0.72rem", cursor: "pointer" }}
+                                className="so-btn-danger-outline-sm"
                               >
                                 Hủy gán
                               </button>
@@ -652,7 +622,7 @@ export function HandoverTab({ app, selectedOrder, setSelectedOrderId, hydrateOpe
                     })}
 
                     {avail.length < item.qty && (
-                      <div style={{ background: "#FEE2E2", borderRadius: "6px", padding: "6px 10px", fontSize: "0.75rem", color: "#DC2626", marginTop: "4px" }}>
+                      <div className="so-shortage-warn">
                         ⚠️ Kho không đủ số lượng sẵn sàng cho đơn này! Vui lòng báo Quản trị viên.
                       </div>
                     )}
@@ -662,10 +632,10 @@ export function HandoverTab({ app, selectedOrder, setSelectedOrderId, hydrateOpe
 
               {/* Modal Đổi serial thay thế (Dòng phụ 3.1) */}
               {changingEquip && (
-                <div style={{ background: "#FEF3C7", border: "1px solid #FCD34D", borderRadius: 8, padding: 14, marginBottom: 14 }}>
-                  <strong style={{ color: "#92400E", fontSize: "0.85rem" }}>Đổi serial thiết bị {app.equipment.find((x) => x.id === changingEquip.oldId)?.displayCode || changingEquip.oldId} trước khi giao:</strong>
-                  <div className="flex gap-2 mt-2">
-                    <select id="swapSelect" style={{ flex: 1, border: "1px solid #FCD34D", borderRadius: 6, padding: "6px 10px", background: "white", fontSize: "0.85rem" }}>
+                <div className="so-swap-box">
+                  <strong className="so-swap-title">Đổi serial thiết bị {app.equipment.find((x) => x.id === changingEquip.oldId)?.displayCode || changingEquip.oldId} trước khi giao:</strong>
+                  <div className="flex gap-2 mt-2 flex-wrap">
+                    <select id="swapSelect" className="so-swap-select">
                       {app.equipment.filter((e) => e.productId === changingEquip.productId && e.equipmentStatus === "Sẵn sàng" && e.id !== changingEquip.oldId).map((e) => (
                         <option key={e.id} value={e.id}>{e.displayCode || e.id} ({e.condition})</option>
                       ))}
@@ -673,10 +643,10 @@ export function HandoverTab({ app, selectedOrder, setSelectedOrderId, hydrateOpe
                     <button disabled={handoverBusy} onClick={() => {
                       const sel = (document.getElementById("swapSelect") as HTMLSelectElement)?.value;
                       if (sel) void handleSwapEquipment(changingEquip.productId, changingEquip.oldId, sel);
-                    }} style={{ background: "var(--color-forest)", color: "white", border: "none", borderRadius: 6, padding: "6px 14px", fontWeight: 700, cursor: "pointer" }}>
+                    }} className="so-btn-primary-confirm">
                       {handoverBusy ? "Đang đổi..." : "Xác nhận đổi"}
                     </button>
-                    <button onClick={() => setChangingEquip(null)} style={{ background: "white", border: "1px solid var(--color-bone)", borderRadius: 6, padding: "6px 12px", cursor: "pointer" }}>
+                    <button onClick={() => setChangingEquip(null)} className="so-btn-cancel">
                       Hủy
                     </button>
                   </div>
@@ -687,11 +657,7 @@ export function HandoverTab({ app, selectedOrder, setSelectedOrderId, hydrateOpe
                 <button
                   disabled={!allAssigned || handoverBusy}
                   onClick={() => void handleCompletePreparation()}
-                  style={{
-                    background: allAssigned && !handoverBusy ? "var(--color-forest)" : "#9CA3AF",
-                    color: "white", padding: "10px 24px", borderRadius: 8, border: "none",
-                    cursor: allAssigned && !handoverBusy ? "pointer" : "not-allowed", fontWeight: 700, fontSize: "0.95rem"
-                  }}
+                  className="so-btn-submit-lg"
                 >
                   {handoverBusy ? "Đang lưu & xác nhận..." : "✓ Hoàn tất chuẩn bị & Chuyển \"Sẵn sàng nhận\" (UC4.1)"}
                 </button>
@@ -699,12 +665,12 @@ export function HandoverTab({ app, selectedOrder, setSelectedOrderId, hydrateOpe
 
               {/* Modal Báo thiếu thiết bị */}
               {showShortageModal && (
-                <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 9999, display: "grid", placeItems: "center", padding: 20 }}>
-                  <div style={{ background: "white", borderRadius: 12, maxWidth: 480, width: "100%", padding: 20 }}>
-                    <h3 style={{ fontFamily: "var(--font-display)", fontSize: "1.1rem", color: "#DC2626", marginBottom: 8 }}>
+                <div className="so-modal-overlay is-dim">
+                  <div className="so-modal-card-shortage">
+                    <h3 className="so-modal-title-shortage">
                       ⚠️ Báo thiếu thiết bị soạn hàng (UC4.1.5.1)
                     </h3>
-                    <p style={{ fontSize: "0.82rem", color: "#4B5563", marginBottom: 12 }}>
+                    <p className="so-modal-desc-dark">
                       Ghi nhận tình trạng kho không đủ thiết bị thay thế hoặc mã bị hỏng để Quản trị viên liên hệ thỏa thuận với khách.
                     </p>
                     <textarea
@@ -712,11 +678,11 @@ export function HandoverTab({ app, selectedOrder, setSelectedOrderId, hydrateOpe
                       value={shortageNote}
                       onChange={(e) => setShortageNote(e.target.value)}
                       rows={3}
-                      style={{ width: "100%", border: "1px solid var(--color-bone)", borderRadius: 8, padding: "8px 12px", fontSize: "0.85rem", marginBottom: 14 }}
+                      className="so-textarea-shortage"
                     />
                     <div className="flex justify-end gap-2">
-                      <button onClick={() => setShowShortageModal(false)} style={{ background: "white", border: "1px solid var(--color-bone)", borderRadius: 6, padding: "6px 12px", cursor: "pointer" }}>Hủy</button>
-                      <button disabled={handoverBusy} onClick={() => void handleReportShortage()} style={{ background: "#DC2626", color: "white", border: "none", borderRadius: 6, padding: "6px 16px", fontWeight: 700, cursor: "pointer" }}>
+                      <button onClick={() => setShowShortageModal(false)} className="so-btn-cancel">Hủy</button>
+                      <button disabled={handoverBusy} onClick={() => void handleReportShortage()} className="so-btn-danger-modal">
                         {handoverBusy ? "Đang gửi..." : "Gửi cảnh báo QTV"}
                       </button>
                     </div>
@@ -727,22 +693,22 @@ export function HandoverTab({ app, selectedOrder, setSelectedOrderId, hydrateOpe
           ) : (
             /* ─── PHÂN HỆ 4.2: TIẾP KHÁCH & BÀN GIAO TẠI QUẦY ─── */
             <div>
-              <div style={{ background: "var(--color-parchment)", borderRadius: "10px", padding: "14px 18px", marginBottom: "16px", border: "1px solid var(--color-bone)" }}>
-                <div className="flex justify-between items-start">
+              <div className="so-order-header">
+                <div className="flex justify-between items-start flex-wrap gap-2">
                   <div>
-                    <span style={{ fontSize: "0.72rem", background: "#DCFCE7", color: "#15803D", padding: "2px 8px", borderRadius: 6, fontWeight: 700 }}>
+                    <span className="so-modal-tag is-green">
                       SẴN SÀNG BÀN GIAO
                     </span>
-                    <h3 style={{ fontFamily: "var(--font-display)", fontSize: "1.2rem", color: "var(--color-bark)", marginTop: 4 }}>
+                    <h3 className="so-order-title">
                       Đơn #{order.displayCode || order.id} — {order.customerName}
                     </h3>
-                    <div style={{ fontSize: "0.82rem", color: "#6B7280" }}>
+                    <div className="so-order-meta">
                       📤 Hẹn nhận: <strong>{order.pickupTime}</strong> · 📥 Hẹn trả: <strong>{order.returnTime}</strong>
                     </div>
                   </div>
-                  <div style={{ textAlign: "right" }}>
-                    <div style={{ fontSize: "0.75rem", color: "#15803D", fontWeight: 700 }}>✓ ĐÃ THU ĐỦ 100% TIỀN & CỌC</div>
-                    <div style={{ fontFamily: "var(--font-mono)", fontWeight: 700, color: "var(--color-forest)", fontSize: "1rem" }}>
+                  <div className="so-order-stats">
+                    <div className="so-paid-badge">✓ ĐÃ THU ĐỦ 100% TIỀN & CỌC</div>
+                    <div className="so-order-total">
                       {fmt(order.rental - order.discount + order.depositTotal)}
                     </div>
                   </div>
@@ -750,55 +716,55 @@ export function HandoverTab({ app, selectedOrder, setSelectedOrderId, hydrateOpe
               </div>
 
               {/* Cảnh báo nhận sớm (Dòng phụ 1.2) */}
-              <div style={{ background: "#FFFBEB", border: "1px solid #FDE68A", borderRadius: 8, padding: "10px 14px", marginBottom: 14 }}>
+              <div className="so-alert-warn">
                 <div className="flex items-center justify-between flex-wrap gap-2">
-                  <div style={{ fontSize: "0.82rem", color: "#92400E" }}>
+                  <div className="so-early-text">
                     🕒 <strong>Khách nhận đồ tại quầy:</strong> Kiểm tra thời điểm nhận hợp lệ và sự chấp thuận của cửa hàng.
                   </div>
-                  <label className="flex items-center gap-2" style={{ fontSize: "0.78rem", color: "#92400E", cursor: "pointer", fontWeight: 600 }}>
-                    <input type="checkbox" checked={earlyPickupAccepted} onChange={(e) => setEarlyPickupAccepted(e.target.checked)} style={{ accentColor: "var(--color-forest)" }} />
+                  <label className="flex items-center gap-2 so-early-check">
+                    <input type="checkbox" checked={earlyPickupAccepted} onChange={(e) => setEarlyPickupAccepted(e.target.checked)} className="so-check-box" />
                     Quản lý ca đã duyệt bàn giao
                   </label>
                 </div>
               </div>
 
               {/* UC4.2 Bước 2: Đối chiếu người nhận thực tế tại quầy */}
-              <div style={{ background: "white", borderRadius: 10, border: "1px solid var(--color-bone)", padding: 16, marginBottom: 16 }}>
-                <h4 style={{ fontWeight: 700, color: "var(--color-bark)", marginBottom: 10 }}>1. Đối chiếu người nhận thực tế (UC4.2.2)</h4>
+              <div className="so-card-panel">
+                <h4 className="so-sub-heading-md">1. Đối chiếu người nhận thực tế (UC4.2.2)</h4>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
                   <div>
-                    <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "#6B7280", display: "block", marginBottom: 2 }}>Họ tên người nhận tại quầy *</label>
-                    <input value={receiverName} onChange={(e) => setReceiverName(e.target.value)} style={{ width: "100%", border: "1px solid var(--color-bone)", borderRadius: 6, padding: "6px 10px", fontSize: "0.85rem" }} />
+                    <label className="so-field-label-muted">Họ tên người nhận tại quầy *</label>
+                    <input value={receiverName} onChange={(e) => setReceiverName(e.target.value)} className="so-input-sm" />
                   </div>
                   <div>
-                    <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "#6B7280", display: "block", marginBottom: 2 }}>Số điện thoại người nhận *</label>
-                    <input value={receiverPhone} onChange={(e) => setReceiverPhone(e.target.value)} style={{ width: "100%", border: "1px solid var(--color-bone)", borderRadius: 6, padding: "6px 10px", fontSize: "0.85rem" }} />
+                    <label className="so-field-label-muted">Số điện thoại người nhận *</label>
+                    <input value={receiverPhone} onChange={(e) => setReceiverPhone(e.target.value)} className="so-input-sm" />
                   </div>
                   <div>
-                    <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "#6B7280", display: "block", marginBottom: 2 }}>Số CCCD / Mã định danh</label>
-                    <input value={receiverIdCard} onChange={(e) => setReceiverIdCard(e.target.value)} style={{ width: "100%", border: "1px solid var(--color-bone)", borderRadius: 6, padding: "6px 10px", fontSize: "0.85rem" }} />
+                    <label className="so-field-label-muted">Số CCCD / Mã định danh</label>
+                    <input value={receiverIdCard} onChange={(e) => setReceiverIdCard(e.target.value)} className="so-input-sm" />
                   </div>
                 </div>
-                <label className="flex items-center gap-2" style={{ fontSize: "0.82rem", color: "var(--color-bark)", cursor: "pointer" }}>
-                  <input type="checkbox" checked={isAuthorized} onChange={(e) => setIsAuthorized(e.target.checked)} style={{ accentColor: "var(--color-forest)" }} />
+                <label className="flex items-center gap-2 so-check-label">
+                  <input type="checkbox" checked={isAuthorized} onChange={(e) => setIsAuthorized(e.target.checked)} className="so-check-box" />
                   <span>Người nhận thay có giấy ủy quyền / tin nhắn ủy quyền hợp lệ từ chính chủ đơn (Dòng phụ 1.1)</span>
                 </label>
               </div>
 
               {/* Danh sách thiết bị đã phân công sẵn */}
-              <div style={{ background: "white", borderRadius: 10, border: "1px solid var(--color-bone)", padding: 16, marginBottom: 16 }}>
-                <h4 style={{ fontWeight: 700, color: "var(--color-bark)", marginBottom: 10 }}>2. Kiểm tra cùng khách từng thiết bị & phụ kiện</h4>
+              <div className="so-card-panel">
+                <h4 className="so-sub-heading-md">2. Kiểm tra cùng khách từng thiết bị & phụ kiện</h4>
                 <div className="flex flex-col gap-2">
                   {order.items.flatMap((i) => (assignments[i.productId] || []).map((code) => ({
                     code: app.equipment.find((e) => e.id === code)?.displayCode || code,
                     item: i,
                   }))).map(({ code, item }) => (
-                    <div key={code} style={{ background: "#F9FAFB", border: "1px solid var(--color-bone)", borderRadius: 8, padding: "8px 12px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div key={code} className="so-assigned-row">
                       <div>
-                        <span style={{ fontFamily: "var(--font-mono)", fontWeight: 700, color: "var(--color-forest)", fontSize: "0.88rem" }}>{code}</span>
-                        <span style={{ fontSize: "0.82rem", color: "#374151", marginLeft: 8 }}>— {item.productName}</span>
+                        <span className="so-assigned-code">{code}</span>
+                        <span className="so-assigned-name">— {item.productName}</span>
                       </div>
-                      <span style={{ fontSize: "0.75rem", background: "#DCFCE7", color: "#15803D", padding: "2px 8px", borderRadius: 6, fontWeight: 700 }}>
+                      <span className="so-assigned-cond">
                         ✓ Ngoại quan tốt
                       </span>
                     </div>
@@ -807,47 +773,43 @@ export function HandoverTab({ app, selectedOrder, setSelectedOrderId, hydrateOpe
               </div>
 
               {/* Checklist phụ kiện & Bằng chứng ảnh chụp (UC4.2.3) */}
-              <div style={{ background: "white", borderRadius: 10, border: "1px solid var(--color-bone)", padding: 16, marginBottom: 16 }}>
-                <h4 style={{ fontWeight: 700, color: "var(--color-bark)", marginBottom: 10 }}>3. Checklist bàn giao & Bằng chứng ảnh</h4>
+              <div className="so-card-panel">
+                <h4 className="so-sub-heading-md">3. Checklist bàn giao & Bằng chứng ảnh</h4>
                 <div className="flex flex-col gap-2 mb-3">
                   {Object.entries(checklist).map(([name, checked]) => (
-                    <label key={name} className="flex items-center gap-2" style={{ fontSize: "0.85rem", cursor: "pointer", color: "var(--color-bark)" }}>
-                      <input type="checkbox" checked={checked} onChange={(e) => setChecklist((prev) => ({ ...prev, [name]: e.target.checked }))} style={{ accentColor: "var(--color-forest)", width: 16, height: 16 }} />
+                    <label key={name} className="flex items-center gap-2 so-check-label-lg">
+                      <input type="checkbox" checked={checked} onChange={(e) => setChecklist((prev) => ({ ...prev, [name]: e.target.checked }))} className="so-check-box-md" />
                       <span>{name}</span>
                     </label>
                   ))}
                 </div>
 
                 <div className="mb-3">
-                  <span style={{ fontSize: "0.78rem", fontWeight: 600, color: "#6B7280", display: "block", marginBottom: 4 }}>
+                  <span className="so-photo-label">
                     Ảnh bằng chứng hiện trạng trước thuê (UC4.2 Dòng 747):
                   </span>
-                  <div className="flex gap-2 items-center">
+                  <div className="flex gap-2 items-center flex-wrap">
                     {evidencePhotos.map((url, i) => (
-                      <img key={i} src={url} alt="Bằng chứng giao" style={{ width: 60, height: 60, objectFit: "cover", borderRadius: 6, border: "1px solid var(--color-bone)" }} />
+                      <img key={i} src={url} alt="Bằng chứng giao" className="so-photo-thumb" />
                     ))}
-                    <button type="button" onClick={() => alert("Đã chụp thêm 1 ảnh bằng chứng thiết bị tại quầy!")} style={{ width: 60, height: 60, border: "1px dashed #9CA3AF", borderRadius: 6, background: "none", cursor: "pointer", fontSize: "1.2rem", color: "#6B7280" }}>
+                    <button type="button" onClick={() => alert("Đã chụp thêm 1 ảnh bằng chứng thiết bị tại quầy!")} className="so-photo-add-btn">
                       📷+
                     </button>
                   </div>
                 </div>
 
-                <label style={{ fontSize: "0.78rem", fontWeight: 600, color: "#6B7280", display: "block", marginBottom: 4 }}>
+                <label className="so-field-label-note">
                   Ghi chú hiện trạng bàn giao:
                 </label>
                 <textarea placeholder="Ghi nhận phụ kiện dây đai, tem bảo hành, số lượng đinh cọc..." value={handoverNote} onChange={(e) => setHandoverNote(e.target.value)} rows={2}
-                  style={{ width: "100%", border: "1px solid var(--color-bone)", borderRadius: 8, padding: "8px 12px", fontSize: "0.85rem", resize: "none" }}
+                  className="so-textarea-static"
                 />
               </div>
 
               <button
                 disabled={handoverBusy}
                 onClick={() => void handleCompleteHandover()}
-                style={{
-                  background: handoverBusy ? "#9CA3AF" : "var(--color-forest)",
-                  color: "white", padding: "12px 28px", borderRadius: 8, border: "none",
-                  cursor: handoverBusy ? "wait" : "pointer", fontWeight: 700, fontSize: "0.95rem", width: "100%"
-                }}
+                className="so-btn-submit-full"
               >
                 {handoverBusy ? "Đang lập & chốt BBBG..." : "✓ Bàn giao thiết bị cho khách & Lập Biên bản (BBBG)"}
               </button>
@@ -856,20 +818,20 @@ export function HandoverTab({ app, selectedOrder, setSelectedOrderId, hydrateOpe
 
           {/* Modal xem Biên bản bàn giao vừa tạo (BBBG) */}
           {showHandoverModal && order && (
-            <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 9999, display: "grid", placeItems: "center", padding: 20 }}>
-              <div style={{ background: "white", borderRadius: 16, maxWidth: 640, width: "100%", padding: 24, boxShadow: "0 20px 25px -5px rgba(0,0,0,0.2)" }}>
+            <div className="so-modal-overlay">
+              <div className="so-modal-card-bbbg">
                 <div className="flex justify-between items-start mb-4">
                   <div>
-                    <span style={{ fontSize: "0.72rem", background: "#DCFCE7", color: "#15803D", padding: "3px 8px", borderRadius: 6, fontWeight: 700 }}>ĐÃ BÀN GIAO THÀNH CÔNG</span>
-                    <h3 style={{ fontFamily: "var(--font-display)", fontSize: "1.3rem", color: "var(--color-bark)", marginTop: 4 }}>
+                    <span className="so-modal-tag is-pill is-green">ĐÃ BÀN GIAO THÀNH CÔNG</span>
+                    <h3 className="so-modal-title">
                       Biên bản Bàn giao BBBG-{order.displayCode || order.id}
                     </h3>
                   </div>
-                  <button onClick={() => setShowHandoverModal(false)} style={{ border: "none", background: "none", fontSize: "1.2rem", cursor: "pointer" }}>✕</button>
+                  <button onClick={() => setShowHandoverModal(false)} className="so-modal-close-sm">✕</button>
                 </div>
 
-                <div style={{ background: "var(--color-parchment)", borderRadius: 10, padding: 14, fontSize: "0.85rem", marginBottom: 14 }}>
-                  <div className="grid grid-cols-2 gap-2">
+                <div className="so-info-box-lg">
+                  <div className="so-bbbg-grid">
                     <div><strong>Khách đặt hàng:</strong> {order.customerName}</div>
                     <div><strong>Người nhận thực tế:</strong> {receiverName} {isAuthorized ? "(Người nhận thay)" : ""}</div>
                     <div><strong>SĐT người nhận:</strong> {receiverPhone}</div>
@@ -879,26 +841,26 @@ export function HandoverTab({ app, selectedOrder, setSelectedOrderId, hydrateOpe
                   </div>
                 </div>
 
-                <div style={{ marginBottom: 14 }}>
-                  <strong style={{ fontSize: "0.82rem", color: "var(--color-bark)" }}>Danh sách thiết bị giao:</strong>
+                <div className="so-field-group-md">
+                  <strong className="so-bbbg-heading">Danh sách thiết bị giao:</strong>
                   <div className="flex flex-col gap-1 mt-1">
                     {order.items.flatMap((i) => assignments[i.productId] || []).map((code) => (
-                      <div key={code} style={{ fontSize: "0.8rem", color: "#374151", background: "#F3F4F6", padding: "4px 8px", borderRadius: 6 }}>
-                        • Mã thiết bị: <strong style={{ color: "var(--color-forest)" }}>{app.equipment.find((e) => e.id === code)?.displayCode || code}</strong> (Tình trạng: Tốt, hoạt động chuẩn)
+                      <div key={code} className="so-bbbg-equip-item">
+                        • Mã thiết bị: <strong className="so-bbbg-equip-code">{app.equipment.find((e) => e.id === code)?.displayCode || code}</strong> (Tình trạng: Tốt, hoạt động chuẩn)
                       </div>
                     ))}
                   </div>
                 </div>
 
-                <div style={{ fontSize: "0.8rem", color: "#4B5563", marginBottom: 16 }}>
+                <div className="so-bbbg-checklist-note">
                   <strong>Checklist đã kiểm:</strong> Tất cả 4 hạng mục an toàn, vệ sinh và phụ kiện đã được xác nhận đạt chuẩn cùng khách hàng.
                 </div>
 
                 <div className="flex justify-end gap-2">
-                  <button onClick={() => window.print()} style={{ background: "white", border: "1px solid var(--color-bone)", borderRadius: 8, padding: "8px 16px", cursor: "pointer", fontWeight: 600, fontSize: "0.85rem" }}>
+                  <button onClick={() => window.print()} className="so-btn-outline-print">
                     🖨 In Biên bản
                   </button>
-                  <button onClick={() => { setShowHandoverModal(false); setSelectedOrderId(null); }} style={{ background: "var(--color-forest)", color: "white", border: "none", borderRadius: 8, padding: "8px 20px", cursor: "pointer", fontWeight: 700, fontSize: "0.85rem" }}>
+                  <button onClick={() => { setShowHandoverModal(false); setSelectedOrderId(null); }} className="so-btn-primary-md">
                     Đóng & Hoàn tất
                   </button>
                 </div>

@@ -172,7 +172,7 @@ public static class BangTinhHuy
                        new { v.MaChinhSach, khoa = "huyDon.tyLeGiuLaiDuoi24Gio" });
         }
 
-        var giuLai = TienTe.LamTronVnd(thueHopLe * tyLe.Value);
+        var giuLai = CalculationHelpers.LamTronVnd(thueHopLe * tyLe.Value);
         var thueHoan = thueHopLe - giuLai;
         var dau = DauVanTay(v.MaDonThue, v.TrangThaiDon, v.LoaiHuy, nhanh, giuLai, thueHoan, cocHopLe, v.TienThueDaThu, v.TienCocDaThu);
         return new BangHuy(nhanh, v.DaThanhToan ? tyLe : null, soGio, giuLai, thueHoan, cocHopLe, vuot, dau);

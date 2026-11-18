@@ -243,71 +243,82 @@ export default function ReconciliationSheet({ order, app, userRole = "staff", on
     app.rejectSurcharge(order.id, ps.id);
   };
 
+  // Xác định lớp CSS trạng thái chênh lệch quyết toán: cân bằng / hoàn cọc / thu thêm
+  const netStateClass = isBalanced ? "" : netDifference > 0 ? "is-refund" : "is-collect";
+
   return (
-    <div style={{ background: "white", borderRadius: 16, border: "1px solid var(--color-bone)", overflow: "hidden", boxShadow: "0 2px 12px rgba(17,35,27,0.04)" }}>
+    <div className="recon-sheet">
       {/* ─── Header: Tên nghiệp vụ & Trạng thái ────────────────────────────── */}
-      <div style={{ background: "var(--color-parchment)", padding: "18px 24px", borderBottom: "1px solid var(--color-bone)", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
+      <div className="recon-header">
         <div>
-          <div className="flex items-center gap-2">
-            <span style={{ fontSize: "0.72rem", background: isOrderCompleted ? "#DCFCE7" : "var(--color-forest)", color: isOrderCompleted ? "#15803D" : "white", padding: "2px 8px", borderRadius: 6, fontWeight: 700 }}>
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Đổi màu nhãn UC5.4 sang xanh lá khi đơn đã khóa hoàn tất */}
+            <span className={`recon-uc-badge ${isOrderCompleted ? "is-completed" : ""}`}>
               UC5.4: ĐỐI SOÁT CỌC & HOÀN TẤT ĐƠN
             </span>
-            <span style={{ fontSize: "0.75rem", color: "#6B7280" }}>Tác nhân: {userRole === "admin" ? "Quản trị viên" : "Nhân viên kho"}</span>
+            <span className="recon-role-meta">Tác nhân: {userRole === "admin" ? "Quản trị viên" : "Nhân viên kho"}</span>
           </div>
-          <h3 style={{ fontFamily: "var(--font-display)", fontSize: "1.35rem", color: "var(--color-bark)", margin: "4px 0 2px" }}>
+          <h3 className="recon-header-title">
             Bảng Đối Soát Cọc & Quyết Toán: Đơn {order.displayCode || order.id}
           </h3>
-          <div style={{ fontSize: "0.82rem", color: "#4B5563" }}>
+          <div className="recon-header-sub">
             Khách hàng: <strong>{order.customerName}</strong> {order.customerPhone ? `(${order.customerPhone})` : ""} · Nhận: {order.pickupTime} · Hẹn trả: {order.returnTime}
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           {isOrderCompleted ? (
             <div className="locked-seal">
               <span>🔒</span> ĐÃ KHÓA & HOÀN TẤT
             </div>
           ) : (
-            <span style={{ background: statusColors[order.status]?.bg || "#F3F4F6", color: statusColors[order.status]?.text || "#374151", padding: "6px 12px", borderRadius: 8, fontSize: "0.8rem", fontWeight: 700 }}>
+            <span
+              className="recon-status-pill"
+              style={{
+                background: statusColors[order.status]?.bg || "#F3F4F6",
+                color: statusColors[order.status]?.text || "#374151",
+              }}
+            >
               {order.status}
             </span>
           )}
           {onClose && (
-            <button onClick={onClose} style={{ border: "1px solid var(--color-bone)", background: "white", borderRadius: 8, padding: "6px 12px", cursor: "pointer", fontSize: "0.85rem", fontWeight: 600 }}>
+            <button onClick={onClose} className="recon-close-btn">
               Đóng
             </button>
           )}
         </div>
       </div>
 
-      <div style={{ padding: 24 }}>
+      <div className="recon-body">
         {reconError && (
-          <div style={{ background: "#FEF2F2", border: "1px solid #FECACA", color: "#B91C1C", borderRadius: 8, padding: "10px 14px", marginBottom: 14, fontSize: "0.82rem", fontWeight: 600 }}>
+          <div className="recon-alert-error">
             {reconError}
           </div>
         )}
         {reconSuccess && (
-          <div style={{ background: "#F0FDF4", border: "1px solid #BBF7D0", color: "#15803D", borderRadius: 8, padding: "10px 14px", marginBottom: 14, fontSize: "0.82rem", fontWeight: 600 }}>
+          <div className="recon-alert-success">
             {reconSuccess}
           </div>
         )}
         {reconLoading && (
-          <div style={{ fontSize: "0.78rem", color: "#6B7280", marginBottom: 10 }}>
+          <div className="recon-loading-note">
             Đang tải dữ liệu đối soát & hoàn tiền từ máy chủ...
           </div>
         )}
         {/* ─── Thanh tiến trình 3 bước UC5.4 ─────────────────────────────────── */}
-        <div className="reconcile-step-flow">
+        <div className="reconcile-step-flow recon-step-flow">
           <div className={`reconcile-step-item ${isBlocked ? "active" : "completed"}`}>
             <span className="reconcile-step-badge">{isBlocked ? "1" : "✓"}</span>
             <span>1. Kiểm tra thiết bị & Phụ phí</span>
           </div>
-          <span style={{ color: "var(--color-bone)" }}>→</span>
+          <span className="recon-step-arrow">→</span>
+          {/* Bước 2 active khi đủ tiền điều kiện và chưa khóa; completed khi đơn đã hoàn tất */}
           <div className={`reconcile-step-item ${!isBlocked && !isOrderCompleted ? "active" : isOrderCompleted ? "completed" : ""}`}>
             <span className="reconcile-step-badge">{isOrderCompleted ? "✓" : "2"}</span>
             <span>2. Bảng đối soát & Xác nhận</span>
           </div>
-          <span style={{ color: "var(--color-bone)" }}>→</span>
+          <span className="recon-step-arrow">→</span>
           <div className={`reconcile-step-item ${isOrderCompleted ? "active completed" : ""}`}>
             <span className="reconcile-step-badge">{isOrderCompleted ? "✓" : "3"}</span>
             <span>3. Quyết toán tiền & Khóa đối soát</span>
@@ -316,22 +327,22 @@ export default function ReconciliationSheet({ order, app, userRole = "staff", on
 
         {/* ─── DÒNG SỰ KIỆN PHỤ 1.1: CẢNH BÁO CHƯA ĐỦ ĐIỀU KIỆN ──────────────── */}
         {isBlocked ? (
-          <div style={{ background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: 12, padding: "16px 20px", marginBottom: 20 }}>
+          <div className="recon-blocker-box">
             <div className="flex items-center gap-2 mb-2">
-              <span style={{ fontSize: "1.2rem" }}>⛔</span>
-              <strong style={{ color: "#DC2626", fontSize: "0.95rem" }}>
+              <span className="recon-blocker-icon">⛔</span>
+              <strong className="recon-blocker-title">
                 Chưa cho phép chốt đối soát (Dòng sự kiện phụ 1.1)
               </strong>
             </div>
-            <p style={{ fontSize: "0.82rem", color: "#991B1B", marginBottom: 12 }}>
+            <p className="recon-blocker-desc">
               Đơn hàng chưa thỏa mãn tiền điều kiện. Hệ thống yêu cầu giải quyết dứt điểm các mục còn tồn đọng sau đây trước khi đối soát:
             </p>
 
             <div className="flex flex-col gap-2">
               {app.realApi && previewBackend && previewBackend.vuongMac.length > 0 && (
-                <div style={{ background: "white", border: "1px solid #FCA5A5", borderRadius: 8, padding: "10px 14px" }}>
-                  <strong style={{ color: "#B91C1C", fontSize: "0.84rem" }}>Kiểm tra điều kiện từ máy chủ:</strong>
-                  <ul style={{ margin: "4px 0 0", paddingLeft: 18, fontSize: "0.78rem", color: "#7F1D1D" }}>
+                <div className="recon-blocker-item">
+                  <strong className="recon-blocker-item-title">Kiểm tra điều kiện từ máy chủ:</strong>
+                  <ul className="recon-blocker-list">
                     {previewBackend.vuongMac.map((msg, i) => (
                       <li key={i}>{msg}</li>
                     ))}
@@ -340,37 +351,37 @@ export default function ReconciliationSheet({ order, app, userRole = "staff", on
               )}
 
               {debtEquipment.length > 0 && (
-                <div style={{ background: "white", border: "1px solid #FCA5A5", borderRadius: 8, padding: "10px 14px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div className="recon-blocker-item-row">
                   <div>
-                    <strong style={{ color: "#B91C1C", fontSize: "0.85rem" }}>
+                    <strong className="recon-blocker-item-heading">
                       Thiết bị chưa nhận trả / chưa có kết luận: {debtEquipment.length} thiết bị
                     </strong>
-                    <div style={{ fontSize: "0.75rem", color: "#6B7280" }}>
+                    <div className="recon-muted-xs">
                       Mã: {debtEquipment.map((d) => d.equipmentDisplayCode || d.equipmentId).join(", ")}
                     </div>
                   </div>
-                  <span style={{ fontSize: "0.75rem", background: "#FEE2E2", color: "#991B1B", padding: "3px 8px", borderRadius: 6, fontWeight: 700 }}>
+                  <span className="recon-pill-danger">
                     Cần lập Phiếu nhận trả
                   </span>
                 </div>
               )}
 
               {pendingSurcharges.map((ps) => (
-                <div key={ps.id} style={{ background: "white", border: "1px solid #FCA5A5", borderRadius: 8, padding: "10px 14px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
+                <div key={ps.id} className="recon-blocker-item-row">
                   <div>
-                    <div className="flex items-center gap-2">
-                      <span style={{ background: "#FEF3C7", color: "#B45309", padding: "2px 6px", borderRadius: 4, fontSize: "0.72rem", fontWeight: 700 }}>Phụ phí chờ duyệt</span>
-                      <strong style={{ fontSize: "0.85rem" }}>{ps.type} ({ps.equipmentId})</strong>
-                      <span style={{ fontFamily: "var(--font-mono)", color: "#DC2626", fontWeight: 700 }}>+{fmt(ps.amount)}</span>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="recon-pill-warning-sm">Phụ phí chờ duyệt</span>
+                      <strong className="recon-surcharge-name">{ps.type} ({ps.equipmentId})</strong>
+                      <span className="recon-mono-danger">+{fmt(ps.amount)}</span>
                     </div>
-                    <div style={{ fontSize: "0.75rem", color: "#6B7280" }}>Lý do: {ps.reason} · Người đề xuất: {ps.createdBy}</div>
+                    <div className="recon-muted-xs">Lý do: {ps.reason} · Người đề xuất: {ps.createdBy}</div>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <button
                       type="button"
                       disabled={reconBusy}
                       onClick={() => handleApproveSurchargeInline(ps)}
-                      style={{ background: "var(--color-forest)", color: "white", border: "none", borderRadius: 6, padding: "5px 12px", fontSize: "0.78rem", fontWeight: 700, cursor: "pointer" }}
+                      className="recon-btn-approve-inline"
                     >
                       ✓ Duyệt phụ phí
                     </button>
@@ -378,7 +389,7 @@ export default function ReconciliationSheet({ order, app, userRole = "staff", on
                       type="button"
                       disabled={reconBusy}
                       onClick={() => handleRejectSurchargeInline(ps)}
-                      style={{ background: "white", color: "#DC2626", border: "1px solid #FCA5A5", borderRadius: 6, padding: "5px 12px", fontSize: "0.78rem", fontWeight: 600, cursor: "pointer" }}
+                      className="recon-btn-reject-inline"
                     >
                       ✕ Từ chối
                     </button>
@@ -387,12 +398,12 @@ export default function ReconciliationSheet({ order, app, userRole = "staff", on
               ))}
 
               {disputedSurcharges.map((ds) => (
-                <div key={ds.id} style={{ background: "white", border: "1px solid #FCA5A5", borderRadius: 8, padding: "10px 14px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div key={ds.id} className="recon-blocker-item-row">
                   <div>
-                    <strong style={{ color: "#B45309", fontSize: "0.85rem" }}>Phụ phí đang tranh chấp: {ds.type} ({fmt(ds.amount)})</strong>
-                    <div style={{ fontSize: "0.75rem", color: "#6B7280" }}>Khách hàng phản hồi: {ds.customerResponse || "Chưa đồng thuận mức phí"}</div>
+                    <strong className="recon-dispute-title">Phụ phí đang tranh chấp: {ds.type} ({fmt(ds.amount)})</strong>
+                    <div className="recon-muted-xs">Khách hàng phản hồi: {ds.customerResponse || "Chưa đồng thuận mức phí"}</div>
                   </div>
-                  <span style={{ fontSize: "0.75rem", background: "#FEF3C7", color: "#B45309", padding: "3px 8px", borderRadius: 6, fontWeight: 700 }}>
+                  <span className="recon-pill-warning">
                     Cần thương lượng xong
                   </span>
                 </div>
@@ -400,9 +411,9 @@ export default function ReconciliationSheet({ order, app, userRole = "staff", on
             </div>
           </div>
         ) : (
-          <div style={{ background: "#F0FDF4", border: "1px solid #BBF7D0", borderRadius: 10, padding: "10px 16px", marginBottom: 20, display: "flex", alignItems: "center", gap: 10 }}>
-            <span style={{ fontSize: "1.1rem", color: "#16A34A" }}>✓</span>
-            <div style={{ fontSize: "0.82rem", color: "#15803D" }}>
+          <div className="recon-ready-box">
+            <span className="recon-ready-icon">✓</span>
+            <div className="recon-ready-text">
               <strong>Đủ điều kiện đối soát (Tiền điều kiện đạt):</strong> 100% thiết bị đã kết luận nhận trả; toàn bộ phụ phí đã được duyệt/xử lý.
             </div>
           </div>
@@ -410,12 +421,12 @@ export default function ReconciliationSheet({ order, app, userRole = "staff", on
 
         {/* ─── DÒNG 2 & LƯU Ý: BẢNG ĐỐI SOÁT CỌC & QUYẾT TOÁN TỔNG HỢP ─────────── */}
         <div className="reconcile-sheet-card">
-          <div className="reconcile-sheet-header">
+          <div className="reconcile-sheet-header recon-sheet-header">
             <div>
-              <strong style={{ fontSize: "0.95rem", color: "var(--color-bark)" }}>
+              <strong className="recon-sheet-heading">
                 Bảng Kê Quyết Toán Đối Soát Cọc
               </strong>
-              <div style={{ fontSize: "0.75rem", color: "#6B7280" }}>
+              <div className="recon-muted-xs">
                 Số dư = Nghĩa vụ hợp lệ trừ tiền đã xử lý (Không cộng cọc vào doanh thu)
               </div>
             </div>
@@ -424,7 +435,7 @@ export default function ReconciliationSheet({ order, app, userRole = "staff", on
                 <button
                   type="button"
                   onClick={() => setShowPrintModal(true)}
-                  style={{ background: "white", border: "1px solid var(--color-bone)", borderRadius: 8, padding: "5px 12px", fontSize: "0.78rem", fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}
+                  className="recon-print-btn"
                 >
                   🖨️ In biên bản A4
                 </button>
@@ -433,9 +444,9 @@ export default function ReconciliationSheet({ order, app, userRole = "staff", on
           </div>
 
           {/* Dòng 1: Cọc thực thu ban đầu */}
-          <div className="reconcile-sheet-row" style={{ background: "#FAFAFA" }}>
+          <div className="reconcile-sheet-row recon-sheet-row recon-row-subtle">
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <strong>1. Tiền cọc thực thu ban đầu:</strong>
                 {initialTransaction && (
                   <button
@@ -448,32 +459,32 @@ export default function ReconciliationSheet({ order, app, userRole = "staff", on
                   </button>
                 )}
               </div>
-              <div style={{ fontSize: "0.75rem", color: "#6B7280" }}>
+              <div className="recon-muted-xs">
                 Thanh toán lúc đặt đơn qua Cổng thanh toán / Chuyển khoản
               </div>
             </div>
-            <div style={{ fontFamily: "var(--font-mono)", fontWeight: 700, fontSize: "1rem", color: "var(--color-forest)" }}>
+            <div className="recon-amount-positive">
               +{fmt(depositCollected)}
             </div>
           </div>
 
           {/* Dòng 2: Chi tiết các khoản phụ phí đã duyệt (Căn cứ điều chỉnh) */}
-          <div style={{ padding: "12px 18px", borderBottom: "1px solid #F3F4F6" }}>
-            <div className="flex justify-between items-center mb-2">
-              <strong style={{ fontSize: "0.86rem", color: "var(--color-bark)" }}>
+          <div className="recon-surcharges-section">
+            <div className="flex justify-between items-center mb-2 gap-2 flex-wrap">
+              <strong className="recon-row-label">
                 2. Các khoản phụ phí đã duyệt (Căn cứ điều chỉnh):
               </strong>
-              <span style={{ fontFamily: "var(--font-mono)", fontWeight: 700, color: totalApprovedSurcharges > 0 ? "#DC2626" : "#6B7280" }}>
+              <span className={`recon-surcharge-total ${totalApprovedSurcharges > 0 ? "has-amount" : ""}`}>
                 −{fmt(totalApprovedSurcharges)}
               </span>
             </div>
 
             {approvedSurcharges.length === 0 ? (
-              <div style={{ fontSize: "0.78rem", color: "#9CA3AF", fontStyle: "italic", paddingLeft: 12 }}>
+              <div className="recon-empty-surcharge">
                 ✓ Thiết bị hoàn trả đầy đủ, nguyên vẹn — Không phát sinh phụ phí bồi thường hoặc trễ hạn.
               </div>
             ) : (
-              <div className="flex flex-col gap-1.5" style={{ paddingLeft: 12 }}>
+              <div className="flex flex-col gap-1.5 recon-surcharge-list">
                 {approvedSurcharges.map((s) => {
                   // Tìm phiếu nhận trả liên quan (Dòng 3: Truy về chứng từ gốc)
                   const relatedReceipt = (order.returnReceipts || []).find((r) =>
@@ -481,12 +492,12 @@ export default function ReconciliationSheet({ order, app, userRole = "staff", on
                   );
 
                   return (
-                    <div key={s.id} style={{ background: "#FFF7ED", border: "1px solid #FED7AA", borderRadius: 6, padding: "6px 12px", display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.8rem" }}>
+                    <div key={s.id} className="recon-surcharge-item">
                       <div>
-                        <span style={{ fontWeight: 600 }}>{s.type}</span> — Thiết bị: <span style={{ fontFamily: "var(--font-mono)", fontWeight: 700 }}>{s.equipmentId}</span>
-                        <span style={{ color: "#6B7280", marginLeft: 6 }}>({s.reason})</span>
+                        <span className="recon-surcharge-type">{s.type}</span> — Thiết bị: <span className="recon-mono-bold">{s.equipmentId}</span>
+                        <span className="recon-surcharge-reason">({s.reason})</span>
                       </div>
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-3 flex-wrap">
                         {relatedReceipt && (
                           <button
                             type="button"
@@ -505,7 +516,7 @@ export default function ReconciliationSheet({ order, app, userRole = "staff", on
                         >
                           🔍 Chi tiết phí
                         </button>
-                        <span style={{ fontFamily: "var(--font-mono)", fontWeight: 700, color: "#DC2626" }}>
+                        <span className="recon-mono-danger">
                           −{fmt(s.amount)}
                         </span>
                       </div>
@@ -517,42 +528,43 @@ export default function ReconciliationSheet({ order, app, userRole = "staff", on
           </div>
 
           {/* Dòng 3: Các khoản đã thu bổ sung / hoàn trước đó (nếu có) */}
-          <div className="reconcile-sheet-row" style={{ background: "#FAFAFA" }}>
+          <div className="reconcile-sheet-row recon-sheet-row recon-row-subtle">
             <div>
               <strong>3. Các khoản đã thu thêm / hoàn cọc trước đó:</strong>
-              <div style={{ fontSize: "0.75rem", color: "#6B7280" }}>
+              <div className="recon-muted-xs">
                 Thu thêm trước đó: {fmt(priorCollect)} · Đã hoàn trước đó: {fmt(priorRefund)}
               </div>
             </div>
-            <div style={{ fontFamily: "var(--font-mono)", fontWeight: 600, fontSize: "0.9rem", color: "#4B5563" }}>
+            <div className="recon-prior-amount">
               {priorSettled !== 0 ? (priorSettled > 0 ? `+${fmt(priorSettled)}` : `−${fmt(Math.abs(priorSettled))}`) : "0 đ"}
             </div>
           </div>
 
           {/* Dòng 4: TỔNG KẾT CHÊNH LỆCH ĐỐI SOÁT (Net Settlement Difference) */}
-          <div style={{ background: isBalanced ? "#F0FDF4" : netDifference > 0 ? "#F0FDF4" : "#FEF2F2", padding: "16px 20px", borderTop: "2px solid var(--color-bone)" }}>
+          {/* Nền đỏ nhạt khi cần thu thêm, nền xanh lá nhạt khi cân bằng hoặc hoàn cọc */}
+          <div className={`recon-net-box ${!isBalanced && netDifference <= 0 ? "is-collect" : ""}`}>
             <div className="flex justify-between items-center flex-wrap gap-3">
               <div>
-                <span style={{ fontSize: "0.75rem", textTransform: "uppercase", fontWeight: 700, color: "#6B7280" }}>
+                <span className="recon-net-eyebrow">
                   Kết luận chênh lệch đối soát:
                 </span>
-                <div style={{ fontSize: "1.1rem", fontWeight: 800, color: isBalanced ? "#15803D" : netDifference > 0 ? "var(--color-forest)" : "#DC2626", marginTop: 2 }}>
+                <div className={`recon-net-title ${netStateClass}`}>
                   {isBalanced
                     ? "✓ Cân bằng tuyệt đối (0 đ) — Không phát sinh nghĩa vụ tiền"
                     : netDifference > 0
                     ? `Cửa hàng phải HOÀN TRẢ CỌC cho khách: +${fmt(refundAmount)}`
                     : `Khách hàng cần THANH TOÁN BỔ SUNG: −${fmt(extraAmount)}`}
                 </div>
-                <div style={{ fontSize: "0.75rem", color: "#6B7280", marginTop: 4 }}>
+                <div className="recon-net-formula">
                   Căn cứ tính: Cọc {fmt(depositCollected)} − Phụ phí {fmt(totalApprovedSurcharges)} {priorSettled !== 0 ? `− Đã xử lý ${fmt(priorSettled)}` : ""} = {fmt(Math.abs(netDifference))}
                 </div>
               </div>
 
-              <div style={{ textAlign: "right" }}>
-                <div style={{ fontFamily: "var(--font-mono)", fontSize: "1.6rem", fontWeight: 800, color: isBalanced ? "#15803D" : netDifference > 0 ? "var(--color-forest)" : "#DC2626" }}>
+              <div className="recon-net-right">
+                <div className={`recon-net-value ${netStateClass}`}>
                   {fmt(Math.abs(netDifference))}
                 </div>
-                <span style={{ fontSize: "0.72rem", background: "white", padding: "2px 8px", borderRadius: 6, border: "1px solid var(--color-bone)", fontWeight: 600 }}>
+                <span className="recon-net-code">
                   {isBalanced ? "Dòng 5.1" : netDifference > 0 ? "EP5.4-HOAN (UC5.6)" : "EP5.4-THU (UC5.5)"}
                 </span>
               </div>
@@ -562,15 +574,15 @@ export default function ReconciliationSheet({ order, app, userRole = "staff", on
 
         {/* ─── DÒNG 4: XÁC NHẬN BẢNG ĐỐI SOÁT & THỰC HIỆN NGHĨA VỤ TIỀN ────────── */}
         {!isOrderCompleted && (
-          <div style={{ background: "var(--color-parchment)", borderRadius: 12, padding: "18px 20px", border: "1px solid var(--color-bone)", marginTop: 16 }}>
+          <div className="recon-action-panel">
             {/* Trạng thái xác nhận bảng đối soát (Bước 4) */}
             <div className="flex justify-between items-center mb-3 flex-wrap gap-2">
               <div>
-                <strong style={{ fontSize: "0.9rem", color: "var(--color-bark)" }}>
+                <strong className="recon-action-heading">
                   Quy trình chốt đối soát & tất toán đơn:
                 </strong>
                 {isConfirmed ? (
-                  <div style={{ fontSize: "0.78rem", color: "#15803D", marginTop: 2 }}>
+                  <div className="recon-status-confirmed">
                     ✓ Đã xác nhận bảng đối soát{" "}
                     {doiSoatBackend?.thoiDiemLap || order.reconciliation?.confirmedAt
                       ? `lúc ${doiSoatBackend?.thoiDiemLap || order.reconciliation?.confirmedAt}`
@@ -581,7 +593,7 @@ export default function ReconciliationSheet({ order, app, userRole = "staff", on
                     . (Sẵn sàng bước quyết toán tiền / khóa đối soát)
                   </div>
                 ) : (
-                  <div style={{ fontSize: "0.78rem", color: "#6B7280", marginTop: 2 }}>
+                  <div className="recon-status-pending">
                     Bước 4: Xác nhận căn cứ số liệu trước khi tiến hành giao dịch tiền.
                   </div>
                 )}
@@ -592,16 +604,7 @@ export default function ReconciliationSheet({ order, app, userRole = "staff", on
                   type="button"
                   disabled={isBlocked || reconBusy}
                   onClick={handleConfirmStep4}
-                  style={{
-                    background: isBlocked ? "#E5E7EB" : "var(--color-moss)",
-                    color: isBlocked ? "#9CA3AF" : "white",
-                    border: "none",
-                    borderRadius: 8,
-                    padding: "8px 16px",
-                    fontWeight: 700,
-                    fontSize: "0.82rem",
-                    cursor: isBlocked || reconBusy ? "not-allowed" : "pointer",
-                  }}
+                  className={`recon-confirm-btn ${isBlocked || reconBusy ? "is-disabled" : ""}`}
                 >
                   {reconBusy ? "Đang xác nhận..." : "Xác nhận bảng đối soát (Bước 4)"}
                 </button>
@@ -610,69 +613,78 @@ export default function ReconciliationSheet({ order, app, userRole = "staff", on
 
             {/* Chi tiết các lệnh hoàn tiền & thu bổ sung backend đang mở */}
             {app.realApi && refundsBackend && refundsBackend.items.length > 0 && (
-              <div style={{ background: "white", border: "1px solid var(--color-bone)", borderRadius: 10, padding: "12px 14px", marginBottom: 12 }}>
-                <div style={{ fontSize: "0.8rem", fontWeight: 700, color: "var(--color-bark)", marginBottom: 8 }}>
+              <div className="recon-refunds-box">
+                <div className="recon-refunds-title">
                   Lệnh hoàn tiền trên máy chủ ({refundsBackend.items.length} lệnh · Đã hoàn: {fmt(refundsBackend.tongDaHoan)})
                 </div>
                 <div className="flex flex-col gap-2">
-                  {refundsBackend.items.map((ht) => (
-                    <div key={ht.maHoanTien} style={{ background: "#F9FAFB", border: "1px solid var(--color-bone)", borderRadius: 8, padding: "8px 12px", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, flexWrap: "wrap", fontSize: "0.78rem" }}>
-                      <div>
-                        <strong style={{ fontFamily: "var(--font-mono)", color: "var(--color-forest)" }}>{ht.maYeuCau || `HT-${ht.maHoanTien}`}</strong>
-                        <span style={{ marginLeft: 8 }}>{ht.nhanHienThi}</span>
-                        <span style={{ marginLeft: 8, fontFamily: "var(--font-mono)", fontWeight: 700 }}>{fmt(ht.soTien)}</span>
+                  {refundsBackend.items.map((ht) => {
+                    // Ánh xạ trạng thái lệnh hoàn tiền sang modifier class
+                    const txBadgeClass =
+                      ht.trangThai === "ThanhCong"
+                        ? "is-success"
+                        : ht.trangThai === "ThatBai"
+                        ? "is-failed"
+                        : "";
+                    return (
+                      <div key={ht.maHoanTien} className="recon-refund-row">
+                        <div>
+                          <strong className="recon-mono-forest">{ht.maYeuCau || `HT-${ht.maHoanTien}`}</strong>
+                          <span className="recon-refund-label">{ht.nhanHienThi}</span>
+                          <span className="recon-refund-amt">{fmt(ht.soTien)}</span>
+                        </div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className={`recon-tx-badge ${txBadgeClass}`}>
+                            {ht.trangThai}
+                          </span>
+                          {ht.trangThai !== "ThanhCong" && (
+                            <>
+                              <button
+                                type="button"
+                                disabled={reconBusy}
+                                onClick={async () => {
+                                  setReconBusy(true);
+                                  setReconError(null);
+                                  try {
+                                    await refundApi.xuLyHoan(ht.maHoanTien, refundNote || "Thực hiện hoàn tiền cọc từ bảng đối soát");
+                                    setReconSuccess(`Đã xử lý hoàn tiền ${ht.maYeuCau || ht.maHoanTien}.`);
+                                    await syncAfterMutation();
+                                  } catch (err) {
+                                    setReconError(err instanceof Error ? err.message : "Không thể xử lý hoàn tiền.");
+                                  } finally {
+                                    setReconBusy(false);
+                                  }
+                                }}
+                                className="recon-btn-process-refund"
+                              >
+                                Xử lý hoàn
+                              </button>
+                              <button
+                                type="button"
+                                disabled={reconBusy}
+                                onClick={async () => {
+                                  setReconBusy(true);
+                                  setReconError(null);
+                                  try {
+                                    await refundApi.doiChieuHoan(ht.maHoanTien);
+                                    setReconSuccess(`Đã đối chiếu trạng thái hoàn tiền ${ht.maYeuCau || ht.maHoanTien}.`);
+                                    await syncAfterMutation();
+                                  } catch (err) {
+                                    setReconError(err instanceof Error ? err.message : "Không thể đối chiếu hoàn tiền.");
+                                  } finally {
+                                    setReconBusy(false);
+                                  }
+                                }}
+                                className="recon-btn-check-refund"
+                              >
+                                Đối chiếu
+                              </button>
+                            </>
+                          )}
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <span style={{ background: ht.trangThai === "ThanhCong" ? "#DCFCE7" : ht.trangThai === "ThatBai" ? "#FEE2E2" : "#FEF3C7", color: ht.trangThai === "ThanhCong" ? "#15803D" : ht.trangThai === "ThatBai" ? "#DC2626" : "#B45309", padding: "2px 8px", borderRadius: 6, fontWeight: 700, fontSize: "0.7rem" }}>
-                          {ht.trangThai}
-                        </span>
-                        {ht.trangThai !== "ThanhCong" && (
-                          <>
-                            <button
-                              type="button"
-                              disabled={reconBusy}
-                              onClick={async () => {
-                                setReconBusy(true);
-                                setReconError(null);
-                                try {
-                                  await refundApi.xuLyHoan(ht.maHoanTien, refundNote || "Thực hiện hoàn tiền cọc từ bảng đối soát");
-                                  setReconSuccess(`Đã xử lý hoàn tiền ${ht.maYeuCau || ht.maHoanTien}.`);
-                                  await syncAfterMutation();
-                                } catch (err) {
-                                  setReconError(err instanceof Error ? err.message : "Không thể xử lý hoàn tiền.");
-                                } finally {
-                                  setReconBusy(false);
-                                }
-                              }}
-                              style={{ background: "var(--color-forest)", color: "white", border: "none", borderRadius: 6, padding: "4px 10px", fontSize: "0.72rem", fontWeight: 700, cursor: "pointer" }}
-                            >
-                              Xử lý hoàn
-                            </button>
-                            <button
-                              type="button"
-                              disabled={reconBusy}
-                              onClick={async () => {
-                                setReconBusy(true);
-                                setReconError(null);
-                                try {
-                                  await refundApi.doiChieuHoan(ht.maHoanTien);
-                                  setReconSuccess(`Đã đối chiếu trạng thái hoàn tiền ${ht.maYeuCau || ht.maHoanTien}.`);
-                                  await syncAfterMutation();
-                                } catch (err) {
-                                  setReconError(err instanceof Error ? err.message : "Không thể đối chiếu hoàn tiền.");
-                                } finally {
-                                  setReconBusy(false);
-                                }
-                              }}
-                              style={{ background: "white", color: "var(--color-bark)", border: "1px solid var(--color-bone)", borderRadius: 6, padding: "4px 10px", fontSize: "0.72rem", fontWeight: 600, cursor: "pointer" }}
-                            >
-                              Đối chiếu
-                            </button>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -684,16 +696,7 @@ export default function ReconciliationSheet({ order, app, userRole = "staff", on
                   type="button"
                   disabled={isBlocked || reconBusy}
                   onClick={handleFinalizeBalanced}
-                  style={{
-                    background: isBlocked ? "#9CA3AF" : "var(--color-forest)",
-                    color: "white",
-                    border: "none",
-                    borderRadius: 8,
-                    padding: "10px 24px",
-                    fontWeight: 700,
-                    fontSize: "0.88rem",
-                    cursor: isBlocked || reconBusy ? "not-allowed" : "pointer",
-                  }}
+                  className={`recon-btn-settle is-balanced ${isBlocked || reconBusy ? "is-disabled" : ""}`}
                 >
                   ✓ Chốt đối soát & Chuyển Hoàn tất đơn (Chênh lệch 0 đ) →
                 </button>
@@ -705,16 +708,7 @@ export default function ReconciliationSheet({ order, app, userRole = "staff", on
                     setCashTendered(extraAmount);
                     setShowCollectModal(true);
                   }}
-                  style={{
-                    background: isBlocked ? "#9CA3AF" : "#DC2626",
-                    color: "white",
-                    border: "none",
-                    borderRadius: 8,
-                    padding: "10px 22px",
-                    fontWeight: 700,
-                    fontSize: "0.88rem",
-                    cursor: isBlocked || reconBusy ? "not-allowed" : "pointer",
-                  }}
+                  className={`recon-btn-settle is-collect ${isBlocked || reconBusy ? "is-disabled" : ""}`}
                 >
                   Thu thêm bổ sung: {fmt(extraAmount)} (UC5.5) →
                 </button>
@@ -726,16 +720,7 @@ export default function ReconciliationSheet({ order, app, userRole = "staff", on
                     setBankHolder(order.customerName.toUpperCase());
                     setShowRefundModal(true);
                   }}
-                  style={{
-                    background: isBlocked ? "#9CA3AF" : "var(--color-forest)",
-                    color: "white",
-                    border: "none",
-                    borderRadius: 8,
-                    padding: "10px 22px",
-                    fontWeight: 700,
-                    fontSize: "0.88rem",
-                    cursor: isBlocked || reconBusy ? "not-allowed" : "pointer",
-                  }}
+                  className={`recon-btn-settle ${isBlocked || reconBusy ? "is-disabled" : ""}`}
                 >
                   Lập & xử lý hoàn tiền cọc: {fmt(refundAmount)} (UC5.6) →
                 </button>
@@ -758,16 +743,7 @@ export default function ReconciliationSheet({ order, app, userRole = "staff", on
                       setReconBusy(false);
                     }
                   }}
-                  style={{
-                    background: "var(--color-bark)",
-                    color: "white",
-                    border: "none",
-                    borderRadius: 8,
-                    padding: "10px 18px",
-                    fontWeight: 700,
-                    fontSize: "0.84rem",
-                    cursor: reconBusy ? "not-allowed" : "pointer",
-                  }}
+                  className="recon-btn-lock"
                 >
                   Khóa đối soát & Hoàn tất đơn
                 </button>
@@ -779,16 +755,7 @@ export default function ReconciliationSheet({ order, app, userRole = "staff", on
                   onClick={() => {
                     app.settleOrder(order.id, false, { note: "Khách chưa đủ tiền / Ngân hàng báo lỗi giao dịch" });
                   }}
-                  style={{
-                    background: "white",
-                    color: "#B91C1C",
-                    border: "1px solid #FECACA",
-                    borderRadius: 8,
-                    padding: "10px 16px",
-                    fontWeight: 600,
-                    fontSize: "0.82rem",
-                    cursor: "pointer",
-                  }}
+                  className="recon-btn-sim-fail"
                   title="Mô phỏng khoản thu bổ sung chưa đủ hoặc giao dịch hoàn tiền thất bại (Dòng 5.2)"
                 >
                   Mô phỏng GD thất bại (Dòng 5.2)
@@ -800,19 +767,19 @@ export default function ReconciliationSheet({ order, app, userRole = "staff", on
 
         {/* ─── DÒNG 7: XEM KẾT QUẢ CHỐT & KHÓA ĐỐI SOÁT (ĐƠN HOÀN TẤT) ────────── */}
         {isOrderCompleted && (
-          <div style={{ background: "#F0FDF4", border: "1.5px solid #86EFAC", borderRadius: 12, padding: "20px 24px", marginTop: 18 }}>
+          <div className="recon-completed-box">
             <div className="flex justify-between items-start flex-wrap gap-3">
               <div>
                 <div className="flex items-center gap-2">
-                  <span style={{ fontSize: "1.4rem" }}>🎉</span>
-                  <strong style={{ fontSize: "1.15rem", color: "var(--color-forest)" }}>
+                  <span className="recon-completed-icon">🎉</span>
+                  <strong className="recon-completed-title">
                     Đơn hàng Đã Khóa Đối Soát & Hoàn Tất Thành Công (Dòng 7)
                   </strong>
                 </div>
-                <div style={{ fontSize: "0.84rem", color: "#166534", marginTop: 4 }}>
+                <div className="recon-completed-meta">
                   Thời điểm khóa: <strong>{order.reconciledAt}</strong> · Người chốt: <strong>{order.reconciliation?.lockedBy || "Nhân viên"}</strong>
                 </div>
-                <div style={{ fontSize: "0.78rem", color: "#6B7280", marginTop: 4 }}>
+                <div className="recon-completed-desc">
                   Mọi nghĩa vụ thiết bị và tiền cọc đã được quyết toán triệt để. Dữ liệu đã khóa để phục vụ 4 trụ cột báo cáo tài chính.
                 </div>
               </div>
@@ -821,7 +788,7 @@ export default function ReconciliationSheet({ order, app, userRole = "staff", on
                 <button
                   type="button"
                   onClick={() => setShowPrintModal(true)}
-                  style={{ background: "var(--color-forest)", color: "white", border: "none", borderRadius: 8, padding: "10px 18px", fontWeight: 700, fontSize: "0.85rem", cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}
+                  className="recon-btn-print-a4"
                 >
                   🖨️ In Biên Bản Đối Soát A4
                 </button>
@@ -834,7 +801,7 @@ export default function ReconciliationSheet({ order, app, userRole = "staff", on
                       setAdjMessage("");
                       setShowAdjustmentModal(true);
                     }}
-                    style={{ background: "#FFFBEB", border: "1px solid #FCD34D", color: "#B45309", borderRadius: 8, padding: "10px 16px", fontWeight: 700, fontSize: "0.85rem", cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}
+                    className="recon-btn-adjust"
                     title="Sửa sai tài chính sau khi đã đối soát có liên kết chứng từ gốc (UC5.7)"
                   >
                     📑 Lập điều chỉnh sau chốt (UC5.7)
@@ -844,26 +811,31 @@ export default function ReconciliationSheet({ order, app, userRole = "staff", on
             </div>
 
             {/* Lịch sử giao dịch tiền của đơn */}
-            <div style={{ marginTop: 16, paddingTop: 14, borderTop: "1px dashed #86EFAC" }}>
-              <strong style={{ fontSize: "0.82rem", color: "#166534" }}>Lịch sử chứng từ tiền liên quan ({order.transactions?.length || 0} giao dịch):</strong>
+            <div className="recon-tx-history">
+              <strong className="recon-tx-history-title">Lịch sử chứng từ tiền liên quan ({order.transactions?.length || 0} giao dịch):</strong>
               <div className="flex flex-col gap-1.5 mt-2">
-                {order.transactions?.map((tx) => (
-                  <div key={tx.id} style={{ background: "white", border: "1px solid #BBF7D0", borderRadius: 6, padding: "6px 12px", display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.78rem" }}>
-                    <div className="flex items-center gap-2">
-                      <span style={{ fontFamily: "var(--font-mono)", fontWeight: 700, color: "var(--color-forest)" }}>{tx.id}</span>
-                      <span style={{ fontWeight: 600 }}>{tx.type}</span>
-                      <span style={{ color: "#6B7280" }}>({tx.note})</span>
+                {order.transactions?.map((tx) => {
+                  // Phân loại màu số tiền theo loại giao dịch (hoàn cọc / thu thêm / mặc định)
+                  const txAmountClass =
+                    tx.type === "Hoàn cọc" ? "is-refund" : tx.type === "Thu thêm" ? "is-collect" : "";
+                  return (
+                    <div key={tx.id} className="recon-tx-row">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="recon-mono-forest-bold">{tx.id}</span>
+                        <span className="recon-tx-type">{tx.type}</span>
+                        <span className="recon-tx-note">({tx.note})</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className={`recon-tx-amount ${txAmountClass}`}>
+                          {fmt(tx.amount)}
+                        </span>
+                        <span className={`recon-tx-status-pill ${tx.status === "Thành công" ? "is-success" : ""}`}>
+                          {tx.status}
+                        </span>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span style={{ fontFamily: "var(--font-mono)", fontWeight: 700, color: tx.type === "Hoàn cọc" ? "var(--color-forest)" : tx.type === "Thu thêm" ? "#DC2626" : "inherit" }}>
-                        {fmt(tx.amount)}
-                      </span>
-                      <span style={{ background: tx.status === "Thành công" ? "#DCFCE7" : "#FEE2E2", color: tx.status === "Thành công" ? "#15803D" : "#DC2626", padding: "1px 6px", borderRadius: 4, fontSize: "0.7rem", fontWeight: 700 }}>
-                        {tx.status}
-                      </span>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           </div>

@@ -120,7 +120,7 @@ public partial class HoanTienService : IHoanTienService
             throw new ArgumentException("Hoàn cọc theo đối soát phải có mã đối soát.");
         if (string.IsNullOrWhiteSpace(c.KhoaNghiaVu) || HoanTienTongHop.TaoMaYeuCau(c.KhoaNghiaVu, long.MaxValue, 99).Length > 100)
             throw new ArgumentException("Khóa nghĩa vụ hoàn thiếu hoặc quá dài.");
-        var tong = TienTe.LamTronVnd(c.TongSoTien);
+        var tong = CalculationHelpers.LamTronVnd(c.TongSoTien);
         if (tong <= 0)
             throw new ArgumentException("Không lập khoản hoàn 0 đồng; bên gọi bỏ qua nghĩa vụ không cần hoàn.");
         if (c.NguonUngVien.Count == 0)

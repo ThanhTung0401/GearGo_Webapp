@@ -19,25 +19,25 @@ public class NhanVienController : BaseApiController
 
     [HttpGet]
     public async Task<IActionResult> Tim([FromQuery] TimNhanVienRequest request, CancellationToken ct)
-        => HandleResult(await _service.TimNhanVienAsync(request, User.LayMaTaiKhoan(), ct));
+        => HandleResult(await _service.TimNhanVienAsync(request, MaTaiKhoanHienTai, ct));
 
     [HttpPost]
     public async Task<IActionResult> Tao([FromBody] TaoNhanVienRequest request, CancellationToken ct)
-        => HandleCreatedResult(await _service.TaoNhanVienAsync(request, User.LayMaTaiKhoan(), ct));
+        => HandleCreatedResult(await _service.TaoNhanVienAsync(request, MaTaiKhoanHienTai, ct));
 
     [HttpGet("{id:long}")]
     public async Task<IActionResult> Lay(long id, CancellationToken ct)
-        => HandleResult(await _service.LayNhanVienAsync(id, User.LayMaTaiKhoan(), ct));
+        => HandleResult(await _service.LayNhanVienAsync(id, MaTaiKhoanHienTai, ct));
 
     [HttpPut("{id:long}")]
     public async Task<IActionResult> CapNhat(long id, [FromBody] CapNhatNhanVienRequest request, CancellationToken ct)
-        => HandleResult(await _service.CapNhatNhanVienAsync(id, request, User.LayMaTaiKhoan(), ct));
+        => HandleResult(await _service.CapNhatNhanVienAsync(id, request, MaTaiKhoanHienTai, ct));
 
     [HttpPost("{id:long}/doi-vai-tro")]
     public async Task<IActionResult> DoiVaiTro(long id, [FromBody] DoiVaiTroRequest request, CancellationToken ct)
-        => HandleResult(await _service.DoiVaiTroAsync(id, request, User.LayMaTaiKhoan(), ct));
+        => HandleResult(await _service.DoiVaiTroAsync(id, request, MaTaiKhoanHienTai, ct));
 
     [HttpPost("{id:long}/nghi-viec")]
     public async Task<IActionResult> NghiViec(long id, [FromBody] NghiViecRequest request, CancellationToken ct)
-        => HandleResult(await _service.GhiNhanNghiViecAsync(id, request, User.LayMaTaiKhoan(), ct));
+        => HandleResult(await _service.GhiNhanNghiViecAsync(id, request, MaTaiKhoanHienTai, ct));
 }

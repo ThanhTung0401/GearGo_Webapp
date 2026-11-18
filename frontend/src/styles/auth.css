@@ -163,3 +163,128 @@
   font-size: 2rem;
   margin-bottom: 16px;
 }
+
+/* === Biến thể biểu tượng & ô nhập OTP (ForgotPasswordView) === */
+.auth-icon-badge--moss {
+  background: var(--color-moss);
+}
+
+.auth-otp-input {
+  text-align: center;
+  font-size: 1.3rem;
+  letter-spacing: 6px;
+  font-family: var(--font-mono);
+  font-weight: 700;
+}
+
+/* === Thông báo lỗi tổng & cảnh báo khóa tài khoản === */
+.auth-general-error {
+  background: #FEE2E2;
+  color: #B91C1C;
+  font-size: 0.82rem;
+}
+
+.auth-locked-alert {
+  background: #FEF2F2;
+  border: 1px solid #F87171;
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-bottom: 16px;
+  color: #991B1B;
+  font-size: 0.82rem;
+}
+
+.auth-locked-alert-title {
+  font-weight: 700;
+  font-size: 0.88rem;
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.auth-locked-alert-reason {
+  margin: 0 0 6px 0;
+  line-height: 1.4;
+}
+
+.auth-locked-alert-support {
+  font-size: 0.76rem;
+  color: #B91C1C;
+  border-top: 1px dashed #FECACA;
+  padding-top: 6px;
+}
+
+/* === Khối phím tắt đăng nhập nhanh kiểm thử (LoginView) === */
+.auth-quick-login {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--color-bone);
+}
+
+.auth-quick-login-title {
+  font-size: 0.72rem;
+  color: #6B7280;
+  font-weight: 700;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.auth-quick-login-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.auth-quick-btn {
+  text-align: left;
+  padding: 6px 8px;
+  border-radius: 8px;
+  font-size: 0.73rem;
+  cursor: pointer;
+}
+
+.auth-quick-btn--amber {
+  background: #FEF3C7;
+  border: 1px solid #FDE68A;
+  color: #92400E;
+}
+
+.auth-quick-btn--indigo {
+  background: #E0E7FF;
+  border: 1px solid #C7D2FE;
+  color: #3730A3;
+}
+
+.auth-quick-btn--green {
+  background: #DCFCE7;
+  border: 1px solid #BBF7D0;
+  color: #166534;
+}
+
+.auth-quick-btn--red {
+  background: #FEE2E2;
+  border: 1px solid #FECACA;
+  color: #991B1B;
+}
+
+.auth-quick-btn-role {
+  font-weight: 700;
+}
+
+.auth-quick-btn-cred {
+  font-size: 0.68rem;
+  opacity: 0.85;
+  word-break: break-word;
+}
+
+@media (max-width: 640px) {
+  .auth-card {
+    padding: 24px 18px;
+  }
+
+  .auth-quick-login-grid {
+    grid-template-columns: 1fr;
+  }
+}

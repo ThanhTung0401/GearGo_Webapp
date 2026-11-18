@@ -47,24 +47,24 @@ public static class NhanTraValidationRules
         foreach (var ct in phieu.ChiTietNhanTras)
         {
             if (string.IsNullOrEmpty(ct.KetLuan))
-                return Result<bool>.Loi(KietDomainConstants.ErrorCodes.KetLuanChuaDu, $"Thiết bị #{ct.MaChiTietBanGiao} chưa có kết luận kiểm tra.");
+                return Result<bool>.Loi(DomainConstants.Errors.IncompleteConclusion, $"Thiết bị #{ct.MaChiTietBanGiao} chưa có kết luận kiểm tra.");
 
-            if (ct.KetLuan == KietDomainConstants.KetLuanKiemTra.MatThietBi)
+            if (ct.KetLuan == DomainConstants.InspectionConclusions.Lost)
             {
                 if (!ct.ThoiDiemDuyetMat.HasValue || !ct.MaNguoiDuyetMat.HasValue)
                 {
-                    return Result<bool>.Loi(KietDomainConstants.ErrorCodes.KetLuanMatChuaDu,
+                    return Result<bool>.Loi(DomainConstants.Errors.LostConclusionIncomplete,
                         $"Thiết bị #{ct.MaChiTietBanGiao} được báo mất nhưng chưa được Quản trị viên phê duyệt kết luận mất.");
                 }
 
                 bool coPhiDuyet = await context.PhuPhis.AnyAsync(p =>
                     p.MaChiTietBanGiao == ct.MaChiTietBanGiao &&
-                    p.LoaiPhi == KietDomainConstants.KetLuanKiemTra.MatThietBi &&
-                    p.TrangThaiDuyet == KietDomainConstants.PhieuStatus.DaDuyet);
+                    p.LoaiPhi == DomainConstants.InspectionConclusions.Lost &&
+                    p.TrangThaiDuyet == DomainConstants.Status.Approved);
 
                 if (!coPhiDuyet)
                 {
-                    return Result<bool>.Loi(KietDomainConstants.ErrorCodes.KetLuanMatChuaDu,
+                    return Result<bool>.Loi(DomainConstants.Errors.LostConclusionIncomplete,
                         $"Thiết bị #{ct.MaChiTietBanGiao} chưa có phụ phí bồi thường mất thiết bị được phê duyệt.");
                 }
             }

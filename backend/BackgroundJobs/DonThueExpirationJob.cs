@@ -28,7 +28,7 @@ public class DonThueExpirationJob : BackgroundService
             try
             {
                 await QuetDonHetHan(stoppingToken);
-                await Task.Delay(TimeSpan.FromMinutes(KietDomainConstants.PolicyConfig.ChuKyQuetJobPhut), stoppingToken);
+                await Task.Delay(TimeSpan.FromMinutes(DomainConstants.Policies.JobScanIntervalMinutes), stoppingToken);
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
@@ -45,7 +45,7 @@ public class DonThueExpirationJob : BackgroundService
                 _logger.LogError(e, "Lỗi xảy ra trong quá trình quét đơn hết hạn.");
                 try
                 {
-                    await Task.Delay(TimeSpan.FromSeconds(KietDomainConstants.PolicyConfig.DelayRetryJobGiay), stoppingToken);
+                    await Task.Delay(TimeSpan.FromSeconds(DomainConstants.Policies.DelayRetryJobSeconds), stoppingToken);
                 }
                 catch (OperationCanceledException)
                 {
@@ -82,7 +82,7 @@ public class DonThueExpirationJob : BackgroundService
             // Cập nhật trạng thái Đơn
             don.TrangThai = TrangThaiDonThue.HetHan;
             don.ThoiDiemHuy = thoiDiemHienTai;
-            don.LyDoHuy = $"Hệ thống tự động hủy do quá hạn thanh toán {KietDomainConstants.PolicyConfig.ThoiGianGiuChoPhut} phút.";
+            don.LyDoHuy = $"Hệ thống tự động hủy do quá hạn thanh toán {DomainConstants.Policies.HoldTimeMinutes} phút.";
 
             // Cập nhật trạng thái Giữ chỗ để nhả hàng ra
             foreach (var chiTiet in don.ChiTietDonThues)
@@ -95,9 +95,9 @@ public class DonThueExpirationJob : BackgroundService
             }
 
             // Giải phóng lượt sử dụng khuyến mãi nếu có đang giữ
-            if (don.LuotSuDungKhuyenMai != null && don.LuotSuDungKhuyenMai.TrangThai == KietDomainConstants.PhieuStatus.DangGiu)
+            if (don.LuotSuDungKhuyenMai != null && don.LuotSuDungKhuyenMai.TrangThai == DomainConstants.Status.Holding)
             {
-                don.LuotSuDungKhuyenMai.TrangThai = KietDomainConstants.PhieuStatus.HetHan;
+                don.LuotSuDungKhuyenMai.TrangThai = DomainConstants.Status.Expired;
                 don.LuotSuDungKhuyenMai.ThoiDiemGiaiPhong = thoiDiemHienTai;
             }
 

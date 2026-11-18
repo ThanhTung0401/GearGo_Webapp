@@ -1,3 +1,5 @@
+using System.Globalization;
+
 namespace GearGo.Helpers;
 
 public static class CalculationHelpers
@@ -12,12 +14,20 @@ public static class CalculationHelpers
     }
 
     /// <summary>
-    /// Chuẩn hóa tham số phân trang an toàn
+    /// Chuẩn hóa tham số phân trang an toàn:
+    /// - Trang tối thiểu là 1.
+    /// - Khi dungMacDinhKhiKhongDuong = true: soMoiTrang &lt;= 0 dùng DefaultPageSize (20), sau đó chặn trong [1, MaxPageSize].
+    /// - Khi dungMacDinhKhiKhongDuong = false: giữ hành vi Clamp(soMoiTrang, 1, MaxPageSize).
     /// </summary>
-    public static (int Trang, int SoMoiTrang) ChuanHoaPhanTrang(int trang, int soMoiTrang)
+    public static (int Trang, int SoMoiTrang) ChuanHoaPhanTrang(
+        int trang,
+        int soMoiTrang,
+        bool dungMacDinhKhiKhongDuong = true)
     {
         int validTrang = Math.Max(1, trang);
-        int rawPageSize = soMoiTrang <= 0 ? DomainConstants.Policies.DefaultPageSize : soMoiTrang;
+        int rawPageSize = (dungMacDinhKhiKhongDuong && soMoiTrang <= 0)
+            ? DomainConstants.Policies.DefaultPageSize
+            : soMoiTrang;
         int validSoMoiTrang = Math.Clamp(rawPageSize, 1, DomainConstants.Policies.MaxPageSize);
         return (validTrang, validSoMoiTrang);
     }
@@ -32,4 +42,19 @@ public static class CalculationHelpers
             (double)phanTu / tongSo * DomainConstants.Policies.PercentageMultiplier,
             DomainConstants.Policies.DecimalRoundingDigits);
     }
+
+    /// <summary>
+    /// Quy tắc làm tròn tiền VND dùng chung khi tạo khoản thu/hoàn/phụ phí:
+    /// làm tròn đến đơn vị đồng (0 chữ số thập phân), nửa đồng làm tròn lên (AwayFromZero).
+    /// </summary>
+    public static decimal LamTronVnd(decimal soTien)
+        => Math.Round(soTien, 0, MidpointRounding.AwayFromZero);
+
+    /// <summary>
+    /// Định dạng tiền VND kiểu "1.000.000đ" bằng InvariantCulture để không phụ thuộc culture của server.
+    /// </summary>
+    public static string HienThiVnd(decimal soTien)
+        => LamTronVnd(soTien)
+            .ToString("#,0", CultureInfo.InvariantCulture)
+            .Replace(',', '.') + "đ";
 }

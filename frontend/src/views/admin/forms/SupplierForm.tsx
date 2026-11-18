@@ -6,7 +6,7 @@ import { supplierApi } from "../../../services/api/supplierApi";
 
 import { type Supplier } from "../../../store";
 
-import { FormModal, FormActions, fieldStyle, labelStyle } from "./FormModal";
+import { FormModal, FormActions } from "./FormModal";
 
 export function toDatetimeLocalInput(val?: string): string {
   if (!val) return "";
@@ -86,18 +86,19 @@ export function SupplierForm({ app, supplier, onClose }: { app: ReturnType<typeo
 
   return <FormModal title={supplier ? "Sửa nhà cung cấp" : "Thêm nhà cung cấp"} description="Thông tin này được dùng để lập phiếu nhập và lưu snapshot khi xác nhận." onClose={onClose}>
     <form onSubmit={handleSubmit} className="grid gap-4 mt-5">
-      <div className="responsive-two-column grid gap-4" style={{ gridTemplateColumns: "1fr 1fr" }}>
-        <label style={labelStyle}>Mã nhà cung cấp<input value={form.displayCode} disabled={!!supplier && (app.realApi || isRealApiEnabled())} onChange={(e) => set("displayCode", e.target.value)} placeholder="NCC001" style={{ ...fieldStyle, background: supplier && (app.realApi || isRealApiEnabled()) ? "var(--color-parchment)" : "white" }} /></label>
-        <label style={labelStyle}>Tên nhà cung cấp<input value={form.name} onChange={(e) => set("name", e.target.value)} style={fieldStyle} /></label>
-        <label style={labelStyle}>Người liên hệ<input value={form.contactPerson} onChange={(e) => set("contactPerson", e.target.value)} style={fieldStyle} /></label>
-        <label style={labelStyle}>Số điện thoại<input value={form.phone} onChange={(e) => set("phone", e.target.value)} style={fieldStyle} /></label>
-        <label style={labelStyle}>Email<input type="email" value={form.email} onChange={(e) => set("email", e.target.value)} style={fieldStyle} /></label>
-        <label style={labelStyle}>Mã số thuế<input value={form.taxCode} onChange={(e) => set("taxCode", e.target.value)} style={fieldStyle} /></label>
-        <label style={labelStyle}>Trạng thái<select value={form.cooperationStatus} onChange={(e) => set("cooperationStatus", e.target.value as Supplier["cooperationStatus"])} style={fieldStyle}><option value="active">Đang hợp tác</option><option value="inactive">Ngừng hợp tác</option></select></label>
+      <div className="responsive-two-column adm-grid-2">
+        {/* Khóa ô mã NCC khi đang sửa ở chế độ API thật */}
+        <label className="adm-label">Mã nhà cung cấp<input value={form.displayCode} disabled={!!supplier && (app.realApi || isRealApiEnabled())} onChange={(e) => set("displayCode", e.target.value)} placeholder="NCC001" className={`adm-field ${supplier && (app.realApi || isRealApiEnabled()) ? "adm-field--readonly" : ""}`} /></label>
+        <label className="adm-label">Tên nhà cung cấp<input value={form.name} onChange={(e) => set("name", e.target.value)} className="adm-field" /></label>
+        <label className="adm-label">Người liên hệ<input value={form.contactPerson} onChange={(e) => set("contactPerson", e.target.value)} className="adm-field" /></label>
+        <label className="adm-label">Số điện thoại<input value={form.phone} onChange={(e) => set("phone", e.target.value)} className="adm-field" /></label>
+        <label className="adm-label">Email<input type="email" value={form.email} onChange={(e) => set("email", e.target.value)} className="adm-field" /></label>
+        <label className="adm-label">Mã số thuế<input value={form.taxCode} onChange={(e) => set("taxCode", e.target.value)} className="adm-field" /></label>
+        <label className="adm-label">Trạng thái<select value={form.cooperationStatus} onChange={(e) => set("cooperationStatus", e.target.value as Supplier["cooperationStatus"])} className="adm-field"><option value="active">Đang hợp tác</option><option value="inactive">Ngừng hợp tác</option></select></label>
       </div>
-      <label style={labelStyle}>Địa chỉ<textarea rows={2} value={form.address} onChange={(e) => set("address", e.target.value)} style={fieldStyle} /></label>
-      <label style={labelStyle}>Ghi chú<textarea rows={2} value={form.note} onChange={(e) => set("note", e.target.value)} style={fieldStyle} /></label>
-      {error && <div role="alert" style={{ color: "#B91C1C", background: "#FEE2E2", padding: 10, borderRadius: 8 }}>{error}</div>}
+      <label className="adm-label">Địa chỉ<textarea rows={2} value={form.address} onChange={(e) => set("address", e.target.value)} className="adm-field" /></label>
+      <label className="adm-label">Ghi chú<textarea rows={2} value={form.note} onChange={(e) => set("note", e.target.value)} className="adm-field" /></label>
+      {error && <div role="alert" className="adm-alert is-error-solid adm-alert--block mb-0">{error}</div>}
       <FormActions onClose={onClose} loading={loading} />
     </form>
   </FormModal>;

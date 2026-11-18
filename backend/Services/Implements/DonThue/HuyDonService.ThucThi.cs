@@ -147,7 +147,7 @@ public partial class HuyDonService
             MaSuKienThongBao.HuyDon(don.MaDonThue, ls.MaLichSuDon),
             trangThaiDich == TrangThaiDonThue.CuaHangHuy ? "Cửa hàng đã hủy đơn" : "Đơn thuê đã được hủy",
             bang.TongHoan > 0
-                ? $"Đơn {don.MaDonHienThi} đã hủy. Tiền thuê giữ lại {TienTe.HienThi(bang.TienThueGiuLai)}; khoản hoàn {TienTe.HienThi(bang.TongHoan)} đang được xử lý."
+                ? $"Đơn {don.MaDonHienThi} đã hủy. Tiền thuê giữ lại {CalculationHelpers.HienThiVnd(bang.TienThueGiuLai)}; khoản hoàn {CalculationHelpers.HienThiVnd(bang.TongHoan)} đang được xử lý."
                 : $"Đơn {don.MaDonHienThi} đã hủy. Không phát sinh khoản hoàn."));
         await _context.SaveChangesAsync(ct);
     }
@@ -204,7 +204,7 @@ public partial class HuyDonService
     {
         var canhBao = new List<string>();
         if (b.TienThuVuot > 0)
-            canhBao.Add($"Có {TienTe.HienThi(b.TienThuVuot)} thu vượt nghĩa vụ đơn; khoản này xử lý theo luồng thu thừa, không nằm trong bảng hủy.");
+            canhBao.Add($"Có {CalculationHelpers.HienThiVnd(b.TienThuVuot)} thu vượt nghĩa vụ đơn; khoản này xử lý theo luồng thu thừa, không nằm trong bảng hủy.");
         if (b.TongHoan > 0)
             canhBao.Add("Số tiền hoàn là dự kiến; tiền về tài khoản sau khi cổng thanh toán xác nhận.");
         return new XemTruocHuyResponse(don.MaDonThue, don.TrangThai.ToString(), loaiHuy, true, null, now, don.GioNhanDuKien,

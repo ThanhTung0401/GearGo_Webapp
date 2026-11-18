@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using GearGo.Exceptions;
+using GearGo.Helpers;
 using GearGo.Models.Common;
 using GearGo.Models.DTOs.ChuanBiDon;
 using GearGo.Models.DTOs.ThongBao;
@@ -26,7 +27,7 @@ public partial class ChuanBiDonService
         if (request.ThietBiIds.Distinct().Count() != request.ThietBiIds.Count)
             throw new DuLieuKhongHopLeException("DU_LIEU_KHONG_HOP_LE", "Danh sách thiết bị có mã trùng nhau.");
 
-        var nhanVien = await LayNhanVienAsync(maTaiKhoan, ct);
+        var nhanVien = await ActorGuard.LayNhanVienDangLamViecAsync(_db, maTaiKhoan, ct);
         await using var tx = await _db.Database.BeginTransactionAsync(IsolationLevel.RepeatableRead, ct);
         try
         {
@@ -84,7 +85,7 @@ public partial class ChuanBiDonService
         if (string.IsNullOrWhiteSpace(request.LyDo))
             throw new DuLieuKhongHopLeException("DU_LIEU_KHONG_HOP_LE", "Lý do hủy phân công là bắt buộc.");
 
-        var nhanVien = await LayNhanVienAsync(maTaiKhoan, ct);
+        var nhanVien = await ActorGuard.LayNhanVienDangLamViecAsync(_db, maTaiKhoan, ct);
         await using var tx = await _db.Database.BeginTransactionAsync(IsolationLevel.RepeatableRead, ct);
         try
         {
@@ -122,7 +123,7 @@ public partial class ChuanBiDonService
         if (string.IsNullOrWhiteSpace(request.LyDo))
             throw new DuLieuKhongHopLeException("DU_LIEU_KHONG_HOP_LE", "Lý do thay thế là bắt buộc.");
 
-        var nhanVien = await LayNhanVienAsync(maTaiKhoan, ct);
+        var nhanVien = await ActorGuard.LayNhanVienDangLamViecAsync(_db, maTaiKhoan, ct);
         await using var tx = await _db.Database.BeginTransactionAsync(IsolationLevel.RepeatableRead, ct);
         try
         {

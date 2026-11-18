@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useApp } from "../../../App";
 import { isRealApiEnabled } from "../../../services/apiClient";
 
@@ -230,10 +230,10 @@ export function AuditLogTab({ app }: { app: ReturnType<typeof useApp> }) {
     <div>
       <div className="flex justify-between items-center mb-4 flex-wrap gap-3">
         <div>
-          <h2 style={{ fontFamily: "var(--font-display)", fontSize: "1.4rem", color: "var(--color-bark)", marginBottom: 4 }}>
+          <h2 className="adm-page-title">
             Nhật ký hệ thống — Audit Log (UC10.4 & UC10.4.2)
           </h2>
-          <p style={{ color: "#6B7280", fontSize: "0.85rem" }}>
+          <p className="adm-page-subtitle">
             Truy vết toàn bộ thao tác quan trọng: phân quyền, đổi trạng thái đơn, sửa xóa chứng từ, đổi chính sách. Không cho phép sửa xóa qua giao diện tra cứu (Read-only).
           </p>
         </div>
@@ -259,14 +259,14 @@ export function AuditLogTab({ app }: { app: ReturnType<typeof useApp> }) {
       </div>
 
       {logsError && (
-        <div role="alert" style={{ background: "#FEF2F2", border: "1px solid #FECACA", color: "#B91C1C", borderRadius: 8, padding: "10px 14px", marginBottom: 14, fontSize: "0.82rem", display: "flex", alignItems: "center", gap: 8 }}>
+        <div role="alert" className="adm-alert is-error">
           <Icon name="alert-circle" size={16} />
           <span>{logsError}</span>
         </div>
       )}
 
       {exportNotice && (
-        <div role="status" style={{ background: "#DCFCE7", border: "1px solid #A7F3D0", color: "#15803D", borderRadius: 8, padding: "10px 14px", marginBottom: 14, fontSize: "0.82rem", display: "flex", alignItems: "center", gap: 8 }}>
+        <div role="status" className="adm-alert is-success">
           <Icon name="check" size={16} />
           <span>{exportNotice}</span>
         </div>
@@ -274,7 +274,7 @@ export function AuditLogTab({ app }: { app: ReturnType<typeof useApp> }) {
 
       {/* Filter kết hợp thời gian (UC10.4 Dòng sự kiện 2) */}
       <div className="flex gap-3 mb-4 flex-wrap items-center">
-        <div style={{ position: "relative", minWidth: 260, flex: 1 }}>
+        <div className="adm-input-icon-wrap">
           <input
             type="text"
             placeholder="Tìm theo người thực hiện, hành động, chứng từ..."
@@ -283,15 +283,15 @@ export function AuditLogTab({ app }: { app: ReturnType<typeof useApp> }) {
               setSearch(e.target.value);
               setPage(1);
             }}
-            style={{ width: "100%", border: "1px solid var(--color-bone)", borderRadius: 8, padding: "8px 12px 8px 32px", fontSize: "0.85rem", background: "white" }}
+            className="adm-input-with-icon"
           />
-          <div style={{ position: "absolute", left: 10, top: 9, color: "#9CA3AF" }}><Icon name="search" size={16} /></div>
+          <div className="adm-input-icon"><Icon name="search" size={16} /></div>
         </div>
 
         <select
           value={roleFilter}
           onChange={(e) => setRoleFilter(e.target.value)}
-          style={{ border: "1px solid var(--color-bone)", borderRadius: 8, padding: "8px 12px", fontSize: "0.85rem", background: "white" }}
+          className="adm-select"
         >
           <option value="all">Tất cả vai trò</option>
           <option value="Quản trị viên">Quản trị viên</option>
@@ -299,8 +299,8 @@ export function AuditLogTab({ app }: { app: ReturnType<typeof useApp> }) {
           <option value="Khách hàng">Khách hàng</option>
         </select>
 
-        <div className="flex items-center gap-1.5 bg-white border border-bone rounded-lg p-1.5 px-3 text-xs shadow-xs">
-          <span style={{ color: "var(--color-forest)", fontWeight: 700 }}>Thời gian:</span>
+        <div className="adm-date-range">
+          <span className="adm-date-range-label">Thời gian:</span>
           <input
             type="date"
             value={fromDate}
@@ -308,7 +308,7 @@ export function AuditLogTab({ app }: { app: ReturnType<typeof useApp> }) {
               setFromDate(e.target.value);
               setPage(1);
             }}
-            style={{ border: "1px solid var(--color-bone)", borderRadius: 4, padding: "2px 5px", fontSize: "0.75rem" }}
+            className="adm-date-input adm-date-input--xs"
           />
           <span>→</span>
           <input
@@ -318,93 +318,87 @@ export function AuditLogTab({ app }: { app: ReturnType<typeof useApp> }) {
               setToDate(e.target.value);
               setPage(1);
             }}
-            style={{ border: "1px solid var(--color-bone)", borderRadius: 4, padding: "2px 5px", fontSize: "0.75rem" }}
+            className="adm-date-input adm-date-input--xs"
           />
         </div>
       </div>
 
       {/* Bảng timeline audit */}
-      <div style={{ background: "white", borderRadius: 12, border: "1px solid var(--color-bone)", overflow: "hidden" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse" }}>
-          <thead>
-            <tr style={{ background: "var(--color-parchment)", fontSize: "0.8rem", fontWeight: 600, color: "var(--color-bark)" }}>
-              {["Thời gian", "Người thực hiện", "Vai trò", "Hành động", "Đối tượng tác động (UC10.4.2)", "Chi tiết nội dung", "Thao tác"].map((h) => (
-                <th key={h} style={{ padding: "11px 14px", textAlign: "left" }}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {logsLoading ? (
+      <div className="adm-table-wrap">
+        <div className="adm-table-scroll">
+          <table className="adm-table adm-table--zebra adm-table--md">
+            <thead>
               <tr>
-                <td colSpan={7} style={{ padding: "36px 0", textAlign: "center", color: "#6B7280", fontSize: "0.85rem" }}>
-                  Đang tải nhật ký thao tác hệ thống...
-                </td>
+                {["Thời gian", "Người thực hiện", "Vai trò", "Hành động", "Đối tượng tác động (UC10.4.2)", "Chi tiết nội dung", "Thao tác"].map((h) => (
+                  <th key={h}>{h}</th>
+                ))}
               </tr>
-            ) : filtered.length === 0 ? (
-              <tr>
-                <td colSpan={7} style={{ padding: "36px 0", textAlign: "center", color: "#6B7280", fontSize: "0.85rem" }}>
-                  Không tìm thấy nhật ký biến động phù hợp với bộ lọc đã chọn.
-                </td>
-              </tr>
-            ) : (
-              filtered.map((log, i) => (
-                <tr key={log.id} style={{ borderTop: "1px solid var(--color-bone)", background: i % 2 === 0 ? "white" : "var(--color-cream)" }}>
-                  <td style={{ padding: "11px 14px", fontFamily: "var(--font-mono)", fontSize: "0.75rem", color: "#6B7280", whiteSpace: "nowrap" }}>
-                    {log.timestamp}
-                  </td>
-                  <td style={{ padding: "11px 14px", fontWeight: 700, fontSize: "0.85rem", color: "var(--color-bark)" }}>
-                    {log.actor}
-                  </td>
-                  <td style={{ padding: "11px 14px" }}>
-                    <span style={{
-                      fontSize: "0.7rem",
-                      fontWeight: 700,
-                      padding: "2px 8px",
-                      borderRadius: 6,
-                      background: matchRoleValue(log.role, "Quản trị viên") ? "#FEF3C7" : matchRoleValue(log.role, "Nhân viên") ? "#E0E7FF" : "#F3F4F6",
-                      color: matchRoleValue(log.role, "Quản trị viên") ? "#B45309" : matchRoleValue(log.role, "Nhân viên") ? "#3730A3" : "#4B5563"
-                    }}>
-                      {log.role}
-                    </span>
-                  </td>
-                  <td style={{ padding: "11px 14px", fontSize: "0.82rem", fontWeight: 600, color: "var(--color-forest)" }}>
-                    {log.action}
-                  </td>
-                  {/* Nhấn vào để mở chứng từ liên quan (UC10.4.2) */}
-                  <td style={{ padding: "11px 14px", fontFamily: "var(--font-mono)", fontSize: "0.78rem" }}>
-                    <button
-                      type="button"
-                      onClick={() => void handleOpenRelatedDoc(log.targetEntity, log.targetId, log)}
-                      style={{ background: "none", border: "none", cursor: "pointer", textAlign: "left", padding: 0 }}
-                      title="Nhấn để mở chứng từ đối chiếu (UC10.4.2)"
-                    >
-                      <span style={{ color: "#6B7280" }}>{log.targetEntity}:</span>{" "}
-                      <strong style={{ color: "var(--color-forest)", textDecoration: "underline" }}>
-                        {log.targetId}
-                      </strong>
-                    </button>
-                  </td>
-                  <td style={{ padding: "11px 14px", fontSize: "0.8rem", color: "#374151" }}>
-                    {log.detail}
-                  </td>
-                  <td style={{ padding: "11px 14px" }}>
-                    <button
-                      type="button"
-                      onClick={() => setSelectedEvent(log)}
-                      className="btn btn-secondary btn-sm"
-                      style={{ padding: "3px 8px", fontSize: "0.72rem" }}
-                    >
-                      Chi tiết
-                    </button>
+            </thead>
+            <tbody>
+              {logsLoading ? (
+                <tr>
+                  <td colSpan={7} className="adm-table-empty py-9">
+                    Đang tải nhật ký thao tác hệ thống...
                   </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+              ) : filtered.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="adm-table-empty py-9">
+                    Không tìm thấy nhật ký biến động phù hợp với bộ lọc đã chọn.
+                  </td>
+                </tr>
+              ) : (
+                filtered.map((log) => (
+                  <tr key={log.id}>
+                    <td className="adm-cell-mono adm-hint-text whitespace-nowrap">
+                      {log.timestamp}
+                    </td>
+                    <td className="adm-cell-title">
+                      {log.actor}
+                    </td>
+                    <td>
+                      <span className={`adm-pill ${matchRoleValue(log.role, "Quản trị viên") ? "is-warning" : matchRoleValue(log.role, "Nhân viên") ? "is-purple" : "is-neutral"}`}>
+                        {log.role}
+                      </span>
+                    </td>
+                    <td className="text-[0.82rem] font-semibold text-[var(--color-forest)]">
+                      {log.action}
+                    </td>
+                    {/* Nhấn vào để mở chứng từ liên quan (UC10.4.2) */}
+                    <td className="adm-cell-mono text-[0.78rem]">
+                      <button
+                        type="button"
+                        onClick={() => void handleOpenRelatedDoc(log.targetEntity, log.targetId, log)}
+                        className="adm-btn-link"
+                        title="Nhấn để mở chứng từ đối chiếu (UC10.4.2)"
+                      >
+                        <span className="text-[#6B7280]">{log.targetEntity}:</span>{" "}
+                        <strong className="text-[var(--color-forest)] underline">
+                          {log.targetId}
+                        </strong>
+                      </button>
+                    </td>
+                    <td className="text-[0.8rem] text-[#374151]">
+                      {log.detail}
+                    </td>
+                    <td>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedEvent(log)}
+                        className="btn btn-secondary btn-sm adm-btn-xs"
+                      >
+                        Chi tiết
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
 
         {realApi && totalLogs > 50 && (
-          <div className="flex justify-between items-center p-3" style={{ borderTop: "1px solid var(--color-bone)", background: "var(--color-cream)", fontSize: "0.78rem" }}>
+          <div className="adm-table-pagination">
             <span>Trang {page} · Tổng {totalLogs} bản ghi</span>
             <div className="flex gap-2">
               <button type="button" disabled={page <= 1 || logsLoading} onClick={() => setPage((p) => Math.max(1, p - 1))} className="btn btn-secondary btn-sm">
@@ -420,32 +414,32 @@ export function AuditLogTab({ app }: { app: ReturnType<typeof useApp> }) {
 
       {/* ─── MODAL XEM CHI TIẾT SỰ KIỆN BIẾN ĐỘNG (UC10.4 Bước 4) ───────────── */}
       {selectedEvent && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
-          <div style={{ background: "white", borderRadius: 12, maxWidth: 640, width: "100%", overflow: "hidden", display: "flex", flexDirection: "column", boxShadow: "0 20px 25px -5px rgba(0,0,0,0.2)" }}>
-            <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--color-bone)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div className="adm-modal-overlay">
+          <div className="adm-modal-dialog is-lg max-w-[640px]">
+            <div className="adm-modal-header-clean">
               <div>
-                <h3 style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: "1.1rem", color: "var(--color-bark)" }}>
+                <h3 className="adm-card-title">
                   Chi tiết sự kiện truy vết (Audit Event #{selectedEvent.id})
                 </h3>
-                <div style={{ fontSize: "0.75rem", color: "#6B7280" }}>Thời điểm: {selectedEvent.timestamp}</div>
+                <div className="adm-hint-text">Thời điểm: {selectedEvent.timestamp}</div>
               </div>
-              <button type="button" onClick={() => setSelectedEvent(null)} style={{ border: "none", background: "none", cursor: "pointer", padding: 4 }}>
+              <button type="button" onClick={() => setSelectedEvent(null)} className="adm-btn-ghost">
                 <Icon name="close" size={20} />
               </button>
             </div>
 
-            <div style={{ padding: 20, overflowY: "auto", fontSize: "0.85rem", maxHeight: "75vh" }}>
-              <div className="grid gap-3 mb-4" style={{ gridTemplateColumns: "1fr 1fr" }}>
-                <div style={{ background: "var(--color-parchment)", borderRadius: 8, padding: 12 }}>
-                  <div style={{ fontSize: "0.75rem", color: "#6B7280" }}>Người thực hiện:</div>
-                  <strong style={{ color: "var(--color-bark)" }}>{selectedEvent.actor}</strong>
-                  <div style={{ fontSize: "0.72rem", color: "var(--color-forest)", marginTop: 2 }}>Vai trò: {selectedEvent.role}</div>
+            <div className="adm-modal-body-scroll text-[0.85rem]">
+              <div className="adm-grid-2 mb-4">
+                <div className="adm-card--parchment">
+                  <div className="adm-hint-text">Người thực hiện:</div>
+                  <strong className="text-[var(--color-bark)]">{selectedEvent.actor}</strong>
+                  <div className="text-[0.72rem] text-[var(--color-forest)] mt-0.5">Vai trò: {selectedEvent.role}</div>
                 </div>
 
-                <div style={{ background: "var(--color-parchment)", borderRadius: 8, padding: 12 }}>
-                  <div style={{ fontSize: "0.75rem", color: "#6B7280" }}>Đối tượng biến động:</div>
-                  <strong style={{ fontFamily: "var(--font-mono)" }}>{selectedEvent.targetEntity}: {selectedEvent.targetId}</strong>
-                  <div style={{ marginTop: 4 }}>
+                <div className="adm-card--parchment">
+                  <div className="adm-hint-text">Đối tượng biến động:</div>
+                  <strong className="adm-cell-mono">{selectedEvent.targetEntity}: {selectedEvent.targetId}</strong>
+                  <div className="mt-1">
                     <button
                       type="button"
                       onClick={() => {
@@ -453,8 +447,7 @@ export function AuditLogTab({ app }: { app: ReturnType<typeof useApp> }) {
                         setSelectedEvent(null);
                         void handleOpenRelatedDoc(ev.targetEntity, ev.targetId, ev);
                       }}
-                      className="btn btn-secondary btn-sm"
-                      style={{ padding: "2px 8px", fontSize: "0.7rem" }}
+                      className="btn btn-secondary btn-sm adm-btn-xs text-[0.7rem]"
                     >
                       Mở chứng từ đối chiếu (UC10.4.2)
                     </button>
@@ -462,40 +455,40 @@ export function AuditLogTab({ app }: { app: ReturnType<typeof useApp> }) {
                 </div>
               </div>
 
-              <div style={{ background: "#F9FAFB", border: "1px solid var(--color-bone)", borderRadius: 8, padding: 14 }}>
-                <div style={{ fontSize: "0.75rem", color: "#6B7280", fontWeight: 700, marginBottom: 4 }}>HÀNH ĐỘNG & NỘI DUNG BIẾN ĐỘNG:</div>
-                <div style={{ fontWeight: 600, color: "var(--color-forest)", marginBottom: 6 }}>{selectedEvent.action}</div>
-                <div style={{ color: "#374151", lineHeight: 1.5 }}>{selectedEvent.detail}</div>
+              <div className="adm-card--soft p-3.5">
+                <div className="text-[0.75rem] text-[#6B7280] font-bold mb-1">HÀNH ĐỘNG & NỘI DUNG BIẾN ĐỘNG:</div>
+                <div className="font-semibold text-[var(--color-forest)] mb-1.5">{selectedEvent.action}</div>
+                <div className="text-[#374151] leading-relaxed">{selectedEvent.detail}</div>
                 {selectedEvent.lyDo && (
-                  <div style={{ marginTop: 8, fontSize: "0.78rem", color: "#4B5563" }}>
+                  <div className="mt-2 text-[0.78rem] text-[#4B5563]">
                     <strong>Lý do ghi nhận:</strong> {selectedEvent.lyDo}
                   </div>
                 )}
               </div>
 
               {(selectedEvent.duLieuTruoc || selectedEvent.duLieuSau) && (
-                <div className="grid gap-3 mt-3" style={{ gridTemplateColumns: "1fr 1fr" }}>
+                <div className="adm-grid-2 mt-3">
                   {selectedEvent.duLieuTruoc && (
-                    <div style={{ background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: 8, padding: 10, fontSize: "0.75rem" }}>
-                      <div style={{ fontWeight: 700, color: "#991B1B", marginBottom: 4 }}>Dữ liệu trước</div>
-                      <pre style={{ margin: 0, whiteSpace: "pre-wrap", wordBreak: "break-word", fontFamily: "var(--font-mono)" }}>{selectedEvent.duLieuTruoc}</pre>
+                    <div className="adm-audit-diff-before">
+                      <div className="font-bold text-[#991B1B] mb-1">Dữ liệu trước</div>
+                      <pre className="adm-audit-pre">{selectedEvent.duLieuTruoc}</pre>
                     </div>
                   )}
                   {selectedEvent.duLieuSau && (
-                    <div style={{ background: "#F0FDF4", border: "1px solid #BBF7D0", borderRadius: 8, padding: 10, fontSize: "0.75rem" }}>
-                      <div style={{ fontWeight: 700, color: "#166534", marginBottom: 4 }}>Dữ liệu sau</div>
-                      <pre style={{ margin: 0, whiteSpace: "pre-wrap", wordBreak: "break-word", fontFamily: "var(--font-mono)" }}>{selectedEvent.duLieuSau}</pre>
+                    <div className="adm-audit-diff-after">
+                      <div className="font-bold text-[#166534] mb-1">Dữ liệu sau</div>
+                      <pre className="adm-audit-pre">{selectedEvent.duLieuSau}</pre>
                     </div>
                   )}
                 </div>
               )}
 
-              <div style={{ marginTop: 14, fontSize: "0.75rem", color: "#9CA3AF", fontStyle: "italic" }}>
+              <div className="adm-audit-seal-note">
                 🔒 Nhật ký kiểm toán được niêm phong bất biến. Chức năng tra cứu chỉ hỗ trợ đọc (Read-only) và không cung cấp thao tác sửa/xóa theo chuẩn an toàn thông tin (UC10.4 Dòng phụ 4.2).
               </div>
             </div>
 
-            <div style={{ padding: "12px 20px", borderTop: "1px solid var(--color-bone)", display: "flex", justifyContent: "flex-end" }}>
+            <div className="adm-modal-footer-clean">
               <button type="button" onClick={() => setSelectedEvent(null)} className="btn btn-secondary btn-sm">Đóng</button>
             </div>
           </div>
@@ -504,156 +497,148 @@ export function AuditLogTab({ app }: { app: ReturnType<typeof useApp> }) {
 
       {/* ─── MODAL XEM CHỨNG TỪ LIÊN QUAN TỪ NHẬT KÝ (UC10.4.2) ─────────────── */}
       {inspectDoc && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
-          <div style={{ background: "white", borderRadius: 12, maxWidth: 760, width: "100%", maxHeight: "85vh", overflow: "hidden", display: "flex", flexDirection: "column", boxShadow: "0 20px 25px -5px rgba(0,0,0,0.2)" }}>
-            <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--color-bone)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div className="adm-modal-overlay">
+          <div className="adm-modal-dialog is-xl">
+            <div className="adm-modal-header-clean">
               <div>
-                <h3 style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: "1.1rem", color: "var(--color-bark)" }}>
+                <h3 className="adm-card-title">
                   {inspectDoc.title}
                 </h3>
-                <div style={{ fontSize: "0.75rem", color: "var(--color-forest)", fontWeight: 600 }}>Chế độ tra cứu chứng từ gốc (Read-only — UC10.4.2)</div>
+                <div className="text-[0.75rem] text-[var(--color-forest)] font-semibold">Chế độ tra cứu chứng từ gốc (Read-only — UC10.4.2)</div>
               </div>
-              <button type="button" onClick={() => setInspectDoc(null)} style={{ border: "none", background: "none", cursor: "pointer", padding: 4 }}>
+              <button type="button" onClick={() => setInspectDoc(null)} className="adm-btn-ghost">
                 <Icon name="close" size={20} />
               </button>
             </div>
 
-            <div style={{ padding: 20, overflowY: "auto", flex: 1, fontSize: "0.82rem" }}>
+            <div className="adm-modal-body-scroll text-[0.82rem]">
               {inspectDoc.type === "order" && (
                 <div>
-                  <div className="grid gap-3 mb-4" style={{ gridTemplateColumns: "repeat(3, 1fr)" }}>
-                    <div style={{ background: "var(--color-parchment)", borderRadius: 8, padding: 10 }}>
-                      <div style={{ fontSize: "0.72rem", color: "#6B7280" }}>Khách hàng</div>
+                  <div className="adm-grid-3 mb-4">
+                    <div className="adm-card--parchment p-2.5">
+                      <div className="adm-hint-text">Khách hàng</div>
                       <strong>{inspectDoc.data.customerName}</strong>
-                      <div style={{ color: "#6B7280" }}>{inspectDoc.data.customerPhone}</div>
+                      <div className="text-[#6B7280]">{inspectDoc.data.customerPhone}</div>
                     </div>
-                    <div style={{ background: "var(--color-parchment)", borderRadius: 8, padding: 10 }}>
-                      <div style={{ fontSize: "0.72rem", color: "#6B7280" }}>Trạng thái</div>
-                      <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--color-forest)" }}>{inspectDoc.data.status}</span>
-                      <div style={{ color: "#6B7280" }}>Tạo lúc: {inspectDoc.data.createdAt}</div>
+                    <div className="adm-card--parchment p-2.5">
+                      <div className="adm-hint-text">Trạng thái</div>
+                      <span className="text-[0.75rem] font-bold text-[var(--color-forest)]">{inspectDoc.data.status}</span>
+                      <div className="text-[#6B7280]">Tạo lúc: {inspectDoc.data.createdAt}</div>
                     </div>
-                    <div style={{ background: "var(--color-parchment)", borderRadius: 8, padding: 10 }}>
-                      <div style={{ fontSize: "0.72rem", color: "#6B7280" }}>Tổng tiền thanh toán</div>
-                      <strong style={{ fontFamily: "var(--font-mono)", color: "var(--color-forest)", fontSize: "1.1rem" }}>{fmt(inspectDoc.data.rental - inspectDoc.data.discount + inspectDoc.data.depositTotal)}</strong>
-                      <div style={{ color: "#6B7280" }}>Cọc: {fmt(inspectDoc.data.depositTotal)}</div>
+                    <div className="adm-card--parchment p-2.5">
+                      <div className="adm-hint-text">Tổng tiền thanh toán</div>
+                      <strong className="adm-cell-mono text-[var(--color-forest)] text-[1.1rem]">{fmt(inspectDoc.data.rental - inspectDoc.data.discount + inspectDoc.data.depositTotal)}</strong>
+                      <div className="text-[#6B7280]">Cọc: {fmt(inspectDoc.data.depositTotal)}</div>
                     </div>
                   </div>
 
-                  <h4 style={{ fontWeight: 700, marginBottom: 8 }}>Danh sách thiết bị thuê:</h4>
-                  <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: 16 }}>
-                    <thead>
-                      <tr style={{ background: "var(--color-parchment)", textAlign: "left" }}>
-                        <th style={{ padding: "6px 8px" }}>Tên sản phẩm</th>
-                        <th style={{ padding: "6px 8px" }}>Số lượng</th>
-                        <th style={{ padding: "6px 8px" }}>Số ngày</th>
-                        <th style={{ padding: "6px 8px" }}>Đơn giá</th>
-                        <th style={{ padding: "6px 8px" }}>Thành tiền</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {inspectDoc.data.items.map((it: any, idx: number) => (
-                        <tr key={idx} style={{ borderTop: "1px solid var(--color-bone)" }}>
-                          <td style={{ padding: "6px 8px", fontWeight: 600 }}>{it.productName}</td>
-                          <td style={{ padding: "6px 8px" }}>{it.qty}</td>
-                          <td style={{ padding: "6px 8px" }}>{it.days} ngày</td>
-                          <td style={{ padding: "6px 8px", fontFamily: "var(--font-mono)" }}>{fmt(it.pricePerDay)}</td>
-                          <td style={{ padding: "6px 8px", fontFamily: "var(--font-mono)", fontWeight: 700 }}>{fmt(it.pricePerDay * it.qty * it.days)}</td>
+                  <h4 className="font-bold mb-2">Danh sách thiết bị thuê:</h4>
+                  <div className="adm-table-scroll mb-4">
+                    <table className="adm-table adm-table--sm">
+                      <thead>
+                        <tr>
+                          <th>Tên sản phẩm</th>
+                          <th>Số lượng</th>
+                          <th>Số ngày</th>
+                          <th>Đơn giá</th>
+                          <th>Thành tiền</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {inspectDoc.data.items.map((it: any, idx: number) => (
+                          <tr key={idx}>
+                            <td className="font-semibold">{it.productName}</td>
+                            <td>{it.qty}</td>
+                            <td>{it.days} ngày</td>
+                            <td className="adm-cell-mono">{fmt(it.pricePerDay)}</td>
+                            <td className="adm-cell-mono font-bold">{fmt(it.pricePerDay * it.qty * it.days)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               )}
 
               {inspectDoc.type === "import" && (
                 <div>
-                  <div className="grid gap-3 mb-4" style={{ gridTemplateColumns: "1fr 1fr" }}>
-                    <div style={{ background: "var(--color-parchment)", borderRadius: 8, padding: 10 }}>
-                      <div style={{ fontSize: "0.72rem", color: "#6B7280" }}>Nhà cung cấp</div>
+                  <div className="adm-grid-2 mb-4">
+                    <div className="adm-card--parchment p-2.5">
+                      <div className="adm-hint-text">Nhà cung cấp</div>
                       <strong>{inspectDoc.data.supplierName} ({inspectDoc.data.supplierId})</strong>
                     </div>
-                    <div style={{ background: "var(--color-parchment)", borderRadius: 8, padding: 10 }}>
-                      <div style={{ fontSize: "0.72rem", color: "#6B7280" }}>Trạng thái & Ngày xác nhận</div>
-                      <strong style={{ color: "var(--color-forest)" }}>{inspectDoc.data.status}</strong> — {inspectDoc.data.confirmedAt || inspectDoc.data.createdAt}
+                    <div className="adm-card--parchment p-2.5">
+                      <div className="adm-hint-text">Trạng thái & Ngày xác nhận</div>
+                      <strong className="text-[var(--color-forest)]">{inspectDoc.data.status}</strong> — {inspectDoc.data.confirmedAt || inspectDoc.data.createdAt}
                     </div>
                   </div>
 
-                  <h4 style={{ fontWeight: 700, marginBottom: 8 }}>Vật phẩm nhập kho:</h4>
-                  <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                    <thead>
-                      <tr style={{ background: "var(--color-parchment)", textAlign: "left" }}>
-                        <th style={{ padding: "6px 8px" }}>Sản phẩm</th>
-                        <th style={{ padding: "6px 8px" }}>Số lượng</th>
-                        <th style={{ padding: "6px 8px" }}>Đơn giá</th>
-                        <th style={{ padding: "6px 8px" }}>Thành tiền</th>
-                        <th style={{ padding: "6px 8px" }}>Mã sinh ra</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {inspectDoc.data.lines.map((l: any, idx: number) => (
-                        <tr key={idx} style={{ borderTop: "1px solid var(--color-bone)" }}>
-                          <td style={{ padding: "6px 8px", fontWeight: 600 }}>{l.productNameSnapshot || l.productId}</td>
-                          <td style={{ padding: "6px 8px" }}>{l.quantity}</td>
-                          <td style={{ padding: "6px 8px", fontFamily: "var(--font-mono)" }}>{fmt(l.unitPrice)}</td>
-                          <td style={{ padding: "6px 8px", fontFamily: "var(--font-mono)", fontWeight: 700 }}>{fmt(l.quantity * l.unitPrice)}</td>
-                          <td style={{ padding: "6px 8px", fontFamily: "var(--font-mono)", color: "var(--color-amber)" }}>{l.equipmentCodes.join(", ")}</td>
+                  <h4 className="font-bold mb-2">Vật phẩm nhập kho:</h4>
+                  <div className="adm-table-scroll">
+                    <table className="adm-table adm-table--sm">
+                      <thead>
+                        <tr>
+                          <th>Sản phẩm</th>
+                          <th>Số lượng</th>
+                          <th>Đơn giá</th>
+                          <th>Thành tiền</th>
+                          <th>Mã sinh ra</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {inspectDoc.data.lines.map((l: any, idx: number) => (
+                          <tr key={idx}>
+                            <td className="font-semibold">{l.productNameSnapshot || l.productId}</td>
+                            <td>{l.quantity}</td>
+                            <td className="adm-cell-mono">{fmt(l.unitPrice)}</td>
+                            <td className="adm-cell-mono font-bold">{fmt(l.quantity * l.unitPrice)}</td>
+                            <td className="adm-cell-mono text-[var(--color-amber)]">{l.equipmentCodes.join(", ")}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               )}
 
               {inspectDoc.type === "equipment" && (
-                <div style={{ background: "var(--color-parchment)", borderRadius: 8, padding: 14 }}>
-                  <div style={{ fontSize: "0.75rem", color: "#6B7280" }}>Mã định danh thiết bị:</div>
-                  <strong style={{ fontFamily: "var(--font-mono)", fontSize: "1.2rem", color: "var(--color-forest)" }}>{inspectDoc.data.id}</strong>
-                  <div style={{ marginTop: 8 }}>Tình trạng hiện tại: <strong>{inspectDoc.data.condition}</strong> · Trạng thái kho: <strong>{inspectDoc.data.equipmentStatus}</strong></div>
-                  <div style={{ marginTop: 4 }}>Số lượt cho thuê lũy kế: <strong>{inspectDoc.data.rentCount} lượt</strong> · Ngày nhập kho: {inspectDoc.data.importDate}</div>
+                <div className="adm-card--parchment p-3.5">
+                  <div className="adm-hint-text text-[0.75rem]">Mã định danh thiết bị:</div>
+                  <strong className="adm-cell-mono text-[1.2rem] text-[var(--color-forest)]">{inspectDoc.data.id}</strong>
+                  <div className="mt-2">Tình trạng hiện tại: <strong>{inspectDoc.data.condition}</strong> · Trạng thái kho: <strong>{inspectDoc.data.equipmentStatus}</strong></div>
+                  <div className="mt-1">Số lượt cho thuê lũy kế: <strong>{inspectDoc.data.rentCount} lượt</strong> · Ngày nhập kho: {inspectDoc.data.importDate}</div>
                 </div>
               )}
 
               {inspectDoc.type === "generic" && (
-                <div style={{ background: "var(--color-parchment)", borderRadius: 8, padding: 14 }}>
+                <div className="adm-card--parchment p-3.5">
                   <div>Chứng từ tham chiếu: <strong>{inspectDoc.data.entity}</strong></div>
-                  <div>Mã định danh: <strong style={{ fontFamily: "var(--font-mono)" }}>{inspectDoc.data.id}</strong></div>
+                  <div>Mã định danh: <strong className="adm-cell-mono">{inspectDoc.data.id}</strong></div>
                   {inspectDoc.data.thamChieuUrl && (
-                    <div style={{ fontSize: "0.75rem", color: "#6B7280", marginTop: 4 }}>
-                      Đường dẫn máy chủ: <code style={{ fontFamily: "var(--font-mono)" }}>{inspectDoc.data.thamChieuUrl}</code>
+                    <div className="adm-hint-text text-[0.75rem] mt-1">
+                      Đường dẫn máy chủ: <code className="adm-cell-mono">{inspectDoc.data.thamChieuUrl}</code>
                     </div>
                   )}
                   {docLoading && (
-                    <div style={{ marginTop: 10, color: "#6B7280" }}>Đang tải dữ liệu chứng từ gốc từ máy chủ...</div>
+                    <div className="mt-2.5 text-[#6B7280]">Đang tải dữ liệu chứng từ gốc từ máy chủ...</div>
                   )}
                   {docError && (
-                    <div role="alert" style={{ marginTop: 10, color: "#B91C1C" }}>{docError}</div>
+                    <div role="alert" className="mt-2.5 text-[#B91C1C]">{docError}</div>
                   )}
                   {inspectDoc.data.serverDoc ? (
-                    <pre
-                      style={{
-                        marginTop: 10,
-                        background: "white",
-                        border: "1px solid var(--color-bone)",
-                        borderRadius: 8,
-                        padding: 12,
-                        maxHeight: 280,
-                        overflow: "auto",
-                        fontSize: "0.75rem",
-                        fontFamily: "var(--font-mono)",
-                      }}
-                    >
+                    <pre className="adm-audit-pre-box">
                       {JSON.stringify(inspectDoc.data.serverDoc, null, 2)}
                     </pre>
                   ) : (
                     !docLoading && (
-                      <div style={{ marginTop: 8, color: "#6B7280" }}>Dữ liệu gốc được lưu trữ trong cơ sở dữ liệu hệ thống.</div>
+                      <div className="mt-2 text-[#6B7280]">Dữ liệu gốc được lưu trữ trong cơ sở dữ liệu hệ thống.</div>
                     )
                   )}
                 </div>
               )}
             </div>
 
-            <div style={{ padding: "12px 20px", borderTop: "1px solid var(--color-bone)", display: "flex", justifyContent: "flex-end" }}>
+            <div className="adm-modal-footer-clean">
               <button type="button" onClick={() => setInspectDoc(null)} className="btn btn-secondary btn-sm">Đóng</button>
             </div>
           </div>

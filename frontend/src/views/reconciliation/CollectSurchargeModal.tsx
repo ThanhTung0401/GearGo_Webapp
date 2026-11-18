@@ -40,37 +40,39 @@ export function CollectSurchargeModal(props: Props) {
   } = props;
   const showCollectModal = true;
   const setShowCollectModal = (open: boolean) => { if (!open) onClose(); };
+  // Điều kiện vô hiệu hóa nút xác nhận thu bổ sung
+  const isSubmitDisabled = (collectMethod === "cash" && cashTendered < extraAmount) || reconBusy;
   return (
     <>
       {showCollectModal && (
-        <div role="dialog" aria-modal="true" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 9999, display: "grid", placeItems: "center", padding: 20 }}>
-          <div style={{ background: "white", borderRadius: 16, maxWidth: 520, width: "100%", padding: 24, boxShadow: "0 8px 30px rgba(0,0,0,0.2)" }}>
+        <div role="dialog" aria-modal="true" className="recon-modal-backdrop">
+          <div className="recon-modal-card">
             <div className="flex justify-between items-start mb-3">
               <div>
-                <span style={{ fontSize: "0.72rem", background: "#FEE2E2", color: "#DC2626", padding: "2px 8px", borderRadius: 6, fontWeight: 700 }}>
+                <span className="recon-modal-badge-danger">
                   EP5.4-THU → GỌI UC5.5
                 </span>
-                <h3 style={{ fontFamily: "var(--font-display)", fontSize: "1.25rem", color: "var(--color-bark)", marginTop: 4 }}>
+                <h3 className="recon-modal-title">
                   Thu Tiền Bổ Sung: Đơn {order.id}
                 </h3>
               </div>
-              <button type="button" onClick={() => setShowCollectModal(false)} style={{ border: "none", background: "none", fontSize: "1.2rem", cursor: "pointer" }}>✕</button>
+              <button type="button" onClick={() => setShowCollectModal(false)} className="recon-modal-close-icon">✕</button>
             </div>
 
-            <div style={{ background: "var(--color-parchment)", borderRadius: 10, padding: 12, marginBottom: 16, border: "1px solid var(--color-bone)" }}>
-              <div className="flex justify-between items-center">
-                <span style={{ fontSize: "0.85rem", color: "#4B5563" }}>Số tiền cần thu thêm:</span>
-                <strong style={{ fontFamily: "var(--font-mono)", fontSize: "1.3rem", color: "#DC2626" }}>{fmt(extraAmount)}</strong>
+            <div className="recon-modal-summary">
+              <div className="flex justify-between items-center gap-2 flex-wrap">
+                <span className="recon-modal-summary-label">Số tiền cần thu thêm:</span>
+                <strong className="recon-modal-amount-danger">{fmt(extraAmount)}</strong>
               </div>
-              <div style={{ fontSize: "0.75rem", color: "#6B7280", marginTop: 4 }}>
+              <div className="recon-modal-subtext">
                 Khách hàng: <strong>{order.customerName}</strong> ({order.customerPhone})
               </div>
             </div>
 
             {/* Chọn kênh thu tiền */}
-            <div style={{ marginBottom: 14 }}>
-              <label style={{ fontSize: "0.8rem", fontWeight: 700, display: "block", marginBottom: 6 }}>Phương thức thanh toán:</label>
-              <div className="grid grid-cols-3 gap-2">
+            <div className="recon-field-group">
+              <label className="recon-field-label-bold">Phương thức thanh toán:</label>
+              <div className="grid grid-cols-3 gap-2 recon-method-grid-3">
                 {[
                   { key: "cash", label: "💵 Tiền mặt" },
                   { key: "pos", label: "💳 Thẻ POS" },
@@ -80,15 +82,7 @@ export function CollectSurchargeModal(props: Props) {
                     key={m.key}
                     type="button"
                     onClick={() => setCollectMethod(m.key as typeof collectMethod)}
-                    style={{
-                      padding: "8px 6px",
-                      borderRadius: 8,
-                      border: collectMethod === m.key ? "2px solid var(--color-forest)" : "1px solid var(--color-bone)",
-                      background: collectMethod === m.key ? "#F0FDF4" : "white",
-                      fontWeight: collectMethod === m.key ? 700 : 500,
-                      fontSize: "0.8rem",
-                      cursor: "pointer",
-                    }}
+                    className={`recon-method-btn ${collectMethod === m.key ? "is-active" : ""}`}
                   >
                     {m.label}
                   </button>
@@ -97,17 +91,17 @@ export function CollectSurchargeModal(props: Props) {
             </div>
 
             {collectMethod === "cash" && (
-              <div style={{ background: "#F9FAFB", borderRadius: 8, padding: 12, border: "1px solid var(--color-bone)", marginBottom: 14 }}>
-                <label style={{ fontSize: "0.78rem", fontWeight: 600, display: "block", marginBottom: 4 }}>Số tiền khách đưa (đ):</label>
+              <div className="recon-method-panel">
+                <label className="recon-field-label-sm">Số tiền khách đưa (đ):</label>
                 <input
                   type="number"
                   value={cashTendered}
                   onChange={(e) => setCashTendered(Number(e.target.value))}
-                  style={{ width: "100%", padding: "8px 10px", borderRadius: 6, border: "1px solid var(--color-bone)", fontFamily: "var(--font-mono)", fontSize: "0.95rem", fontWeight: 700, marginBottom: 8 }}
+                  className="recon-input-cash"
                 />
-                <div className="flex justify-between text-xs pt-1 border-t border-gray-200">
-                  <span style={{ color: "#6B7280" }}>Tiền thối lại cho khách:</span>
-                  <strong style={{ fontFamily: "var(--font-mono)", color: cashTendered >= extraAmount ? "var(--color-forest)" : "#DC2626" }}>
+                <div className="flex justify-between text-xs pt-1 border-t border-gray-200 gap-2 flex-wrap">
+                  <span className="recon-text-muted">Tiền thối lại cho khách:</span>
+                  <strong className={`recon-change-val ${cashTendered >= extraAmount ? "is-enough" : ""}`}>
                     {cashTendered >= extraAmount ? fmt(cashTendered - extraAmount) : "Chưa đủ tiền (Dòng 5.2)"}
                   </strong>
                 </div>
@@ -115,60 +109,60 @@ export function CollectSurchargeModal(props: Props) {
             )}
 
             {collectMethod === "pos" && (
-              <div style={{ background: "#F9FAFB", borderRadius: 8, padding: 12, border: "1px solid var(--color-bone)", marginBottom: 14 }}>
-                <div className="grid grid-cols-2 gap-2 mb-2">
+              <div className="recon-method-panel">
+                <div className="grid grid-cols-2 gap-2 mb-2 recon-pos-grid">
                   <div>
-                    <label style={{ fontSize: "0.75rem", color: "#6B7280", display: "block" }}>Mã máy POS:</label>
+                    <label className="recon-field-label-xs">Mã máy POS:</label>
                     <input
                       value={posTerminalCode}
                       onChange={(e) => setPosTerminalCode(e.target.value)}
-                      style={{ width: "100%", padding: "6px 8px", borderRadius: 6, border: "1px solid var(--color-bone)", fontSize: "0.82rem" }}
+                      className="recon-input-sm"
                     />
                   </div>
                   <div>
-                    <label style={{ fontSize: "0.75rem", color: "#6B7280", display: "block" }}>Mã chuẩn chi (Auth Code):</label>
+                    <label className="recon-field-label-xs">Mã chuẩn chi (Auth Code):</label>
                     <input
                       value={posAuthCode}
                       onChange={(e) => setPosAuthCode(e.target.value)}
-                      style={{ width: "100%", padding: "6px 8px", borderRadius: 6, border: "1px solid var(--color-bone)", fontSize: "0.82rem" }}
+                      className="recon-input-sm"
                     />
                   </div>
                 </div>
-                <div style={{ fontSize: "0.75rem", color: "#15803D" }}>✓ Đã kết nối POS tại quầy tiếp tân</div>
+                <div className="recon-pos-status">✓ Đã kết nối POS tại quầy tiếp tân</div>
               </div>
             )}
 
             {collectMethod === "qr" && (
-              <div style={{ background: "#F9FAFB", borderRadius: 8, padding: 14, border: "1px solid var(--color-bone)", marginBottom: 14, textAlign: "center" }}>
-                <div style={{ width: 110, height: 110, margin: "0 auto 8px", background: "white", border: "1px solid var(--color-bone)", borderRadius: 8, display: "grid", placeItems: "center", fontSize: "2rem" }}>
+              <div className="recon-method-panel is-qr">
+                <div className="recon-qr-box">
                   📱
                 </div>
-                <div style={{ fontSize: "0.8rem", fontWeight: 700, color: "var(--color-bark)" }}>Quét mã VietQR chuyển khoản nhanh</div>
-                <div style={{ fontSize: "0.72rem", color: "#6B7280", fontFamily: "var(--font-mono)" }}>Nội dung: GG {order.id} THUTHEM</div>
+                <div className="recon-qr-title">Quét mã VietQR chuyển khoản nhanh</div>
+                <div className="recon-qr-code">Nội dung: GG {order.id} THUTHEM</div>
               </div>
             )}
 
-            <div style={{ marginBottom: 16 }}>
-              <label style={{ fontSize: "0.78rem", fontWeight: 600, display: "block", marginBottom: 4 }}>Ghi chú chứng từ thu:</label>
+            <div className="recon-field-group-lg">
+              <label className="recon-field-label-sm">Ghi chú chứng từ thu:</label>
               <input
                 placeholder="Ví dụ: Khách thanh toán phụ phí hỏng thiết bị tại quầy..."
                 value={collectNote}
                 onChange={(e) => setCollectNote(e.target.value)}
-                style={{ width: "100%", padding: "8px 10px", borderRadius: 6, border: "1px solid var(--color-bone)", fontSize: "0.82rem" }}
+                className="recon-input-note"
               />
             </div>
 
             {pendingCollectReq && (
-              <div style={{ background: "#EFF6FF", border: "1px solid #BFDBFE", borderRadius: 8, padding: 12, marginBottom: 14, fontSize: "0.8rem" }}>
-                <div className="flex justify-between items-center mb-1">
+              <div className="recon-pending-req-box">
+                <div className="flex justify-between items-center mb-1 gap-2 flex-wrap">
                   <strong>Mã yêu cầu thu bổ sung: {pendingCollectReq.maYeuCau}</strong>
-                  <span style={{ fontWeight: 700, color: pendingCollectReq.trangThai === "ThanhCong" ? "#15803D" : "#B45309" }}>
+                  <span className={`recon-req-status ${pendingCollectReq.trangThai === "ThanhCong" ? "is-success" : ""}`}>
                     {pendingCollectReq.trangThai}
                   </span>
                 </div>
                 {pendingCollectReq.paymentUrl && (
-                  <div style={{ marginTop: 6 }}>
-                    <a href={pendingCollectReq.paymentUrl} target="_blank" rel="noreferrer" style={{ color: "#1D4ED8", textDecoration: "underline", fontWeight: 600 }}>
+                  <div className="recon-vnpay-wrap">
+                    <a href={pendingCollectReq.paymentUrl} target="_blank" rel="noreferrer" className="recon-vnpay-link">
                       Mở cổng thanh toán VNPAY →
                     </a>
                   </div>
@@ -195,7 +189,7 @@ export function CollectSurchargeModal(props: Props) {
                         setReconBusy(false);
                       }
                     }}
-                    style={{ background: "var(--color-forest)", color: "white", border: "none", borderRadius: 6, padding: "5px 10px", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer" }}
+                    className="recon-btn-check-tx"
                   >
                     Kiểm tra trạng thái GD
                   </button>
@@ -203,13 +197,13 @@ export function CollectSurchargeModal(props: Props) {
               </div>
             )}
 
-            <div className="flex justify-end gap-2">
-              <button type="button" onClick={() => setShowCollectModal(false)} style={{ background: "white", border: "1px solid var(--color-bone)", borderRadius: 8, padding: "8px 16px", cursor: "pointer", fontSize: "0.85rem" }}>
+            <div className="flex justify-end gap-2 flex-wrap">
+              <button type="button" onClick={() => setShowCollectModal(false)} className="recon-modal-btn-cancel">
                 Hủy
               </button>
               <button
                 type="button"
-                disabled={(collectMethod === "cash" && cashTendered < extraAmount) || reconBusy}
+                disabled={isSubmitDisabled}
                 onClick={async () => {
                   const methodStr = collectMethod === "cash" ? "Tiền mặt tại quầy" : collectMethod === "pos" ? `Thẻ POS (${posTerminalCode}/${posAuthCode})` : "Quét VietQR";
                   if (app.realApi) {
@@ -249,16 +243,7 @@ export function CollectSurchargeModal(props: Props) {
                   });
                   setShowCollectModal(false);
                 }}
-                style={{
-                  background: (collectMethod === "cash" && cashTendered < extraAmount) || reconBusy ? "#9CA3AF" : "var(--color-forest)",
-                  color: "white",
-                  border: "none",
-                  borderRadius: 8,
-                  padding: "8px 20px",
-                  fontWeight: 700,
-                  fontSize: "0.85rem",
-                  cursor: (collectMethod === "cash" && cashTendered < extraAmount) || reconBusy ? "not-allowed" : "pointer",
-                }}
+                className={`recon-modal-btn-submit ${isSubmitDisabled ? "is-disabled" : ""}`}
               >
                 {reconBusy ? "Đang xử lý..." : "✓ Xác nhận thu bổ sung → Khóa & Hoàn tất"}
               </button>

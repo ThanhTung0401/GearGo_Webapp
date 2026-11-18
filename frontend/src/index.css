@@ -14,3 +14,10 @@
 @import './styles/customer.css';
 @import './styles/staff.css';
 @import './styles/admin.css';
+
+/* Tầng giao diện chi tiết theo phân khu (Phase 2) */
+@import './styles/views/landing-products.css';
+@import './styles/views/customer-portal.css';
+@import './styles/views/staff-ops.css';
+@import './styles/views/admin-dashboard.css';
+@import './styles/views/reconciliation.css';

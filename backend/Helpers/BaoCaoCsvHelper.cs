@@ -39,14 +39,9 @@ public static class BaoCaoCsvHelper
         return (new KhoangNgayBaoCao(tu, den, tuUtc, denUtc), null);
     }
 
-    /// <summary>Chuẩn hóa tham số phân trang về giới hạn hợp lệ.</summary>
+    /// <summary>Chuẩn hóa tham số phân trang về giới hạn hợp lệ qua CalculationHelpers.</summary>
     public static (int Trang, int SoMoiTrang) ChuanHoaPhanTrang(int trang, int soMoiTrang)
-    {
-        int size = soMoiTrang <= 0
-            ? DomainConstants.Policies.DefaultPageSize
-            : Math.Min(soMoiTrang, DomainConstants.Policies.MaxPageSize);
-        return (Math.Max(1, trang), size);
-    }
+        => CalculationHelpers.ChuanHoaPhanTrang(trang, soMoiTrang);
 
     /// <summary>Chuyển thời điểm UTC sang chuỗi giờ Việt Nam (UTC+7).</summary>
     public static string? DinhDangGioVn(DateTime? utc) =>

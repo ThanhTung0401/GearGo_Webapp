@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using GearGo.Helpers;
 using GearGo.Models.DTOs.Admin;
 using GearGo.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -14,7 +15,7 @@ namespace GearGo.Controllers.Admin;
 [ApiController]
 [Authorize(Policy = "AdminOnly")]
 [Route("api/admin/san-pham")]
-public class SanPhamController : ControllerBase
+public class SanPhamController : BaseApiController
 {
     private readonly IAdminSanPhamService _adminSanPhamService;
 

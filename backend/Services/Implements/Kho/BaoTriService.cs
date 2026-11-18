@@ -45,7 +45,7 @@ public partial class BaoTriService : IBaoTriService
         {
             MaThietBi = maThietBi, MaDonThue = maDonThue, MaNguoiLap = maNhanVienLap,
             LoaiXuLy = loaiXuLy, MoTaLoi = moTaLoi, MucDo = mucDo,
-            NgayBatDau = DateTime.UtcNow, TrangThai = KietDomainConstants.BaoTriConfig.TrangThaiChoXuLy
+            NgayBatDau = DateTime.UtcNow, TrangThai = DomainConstants.Status.PendingProcessing
         };
         thietBi.TrangThaiSuDung = TrangThaiThietBi.DangBaoTri;
         _context.PhieuBaoTris.Add(phieuMoi);
@@ -121,11 +121,11 @@ public partial class BaoTriService : IBaoTriService
             var phieuMoi = new PhieuBaoTri
             {
                 MaThietBi = request.MaThietBi, MaDonThue = request.MaDonThue, MaNguoiLap = nvCheck.DuLieu!.MaNhanVien,
-                LoaiXuLy = string.IsNullOrWhiteSpace(request.LoaiXuLy) ? KietDomainConstants.BaoTriConfig.LoaiSuaChua : request.LoaiXuLy,
+                LoaiXuLy = string.IsNullOrWhiteSpace(request.LoaiXuLy) ? DomainConstants.Maintenance.TypeRepair : request.LoaiXuLy,
                 MoTaLoi = request.MoTaLoi,
-                MucDo = string.IsNullOrWhiteSpace(request.MucDo) ? KietDomainConstants.BaoTriConfig.MucDoNhe : request.MucDo,
+                MucDo = string.IsNullOrWhiteSpace(request.MucDo) ? DomainConstants.Maintenance.LevelMinor : request.MucDo,
                 NgayBatDau = DateTime.UtcNow, NgayDuKienHoanThanh = request.NgayDuKienHoanThanh,
-                BangChung = request.BangChung, TrangThai = KietDomainConstants.BaoTriConfig.TrangThaiChoXuLy
+                BangChung = request.BangChung, TrangThai = DomainConstants.Status.PendingProcessing
             };
             _context.PhieuBaoTris.Add(phieuMoi);
 
@@ -144,13 +144,13 @@ public partial class BaoTriService : IBaoTriService
     private Task<PhieuBaoTri?> TimPhieuDangMoAsync(long maThietBi) =>
         _context.PhieuBaoTris.FirstOrDefaultAsync(p =>
             p.MaThietBi == maThietBi &&
-            (p.TrangThai == KietDomainConstants.BaoTriConfig.TrangThaiChoXuLy ||
-             p.TrangThai == KietDomainConstants.BaoTriConfig.TrangThaiDangXuLy ||
-             p.TrangThai == KietDomainConstants.BaoTriConfig.TrangThaiChoKiemTra));
+            (p.TrangThai == DomainConstants.Status.PendingProcessing ||
+             p.TrangThai == DomainConstants.Status.InProgress ||
+             p.TrangThai == DomainConstants.Status.PendingInspection));
 
     private static bool DaKetThuc(PhieuBaoTri phieu) =>
-        phieu.TrangThai == KietDomainConstants.BaoTriConfig.TrangThaiHoanThanh ||
-        phieu.TrangThai == KietDomainConstants.BaoTriConfig.TrangThaiKhongDat;
+        phieu.TrangThai == DomainConstants.Status.Completed ||
+        phieu.TrangThai == DomainConstants.Status.Failed;
 
     private async Task<PhieuBaoTri?> LayPhieuBaoTriDayDuAsync(long maPhieuBaoTri) =>
         await _context.PhieuBaoTris

@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using GearGo.Exceptions;
+using GearGo.Helpers;
 using GearGo.Models.Common;
 using GearGo.Models.DTOs.ChuanBiDon;
 using GearGo.Models.DTOs.ThongBao;
@@ -20,7 +21,7 @@ public partial class ChuanBiDonService
         if (string.IsNullOrWhiteSpace(request.LyDo))
             throw new DuLieuKhongHopLeException("DU_LIEU_KHONG_HOP_LE", "Lý do báo thiếu thiết bị là bắt buộc.");
 
-        var nhanVien = await LayNhanVienAsync(maTaiKhoan, ct);
+        var nhanVien = await ActorGuard.LayNhanVienDangLamViecAsync(_db, maTaiKhoan, ct);
         var don = await _db.DonThues.Include(d => d.ChiTietDonThues)
             .FirstOrDefaultAsync(d => d.MaDonThue == donId, ct)
             ?? throw new KhongTimThayException($"Không tìm thấy đơn thuê #{donId}.");
