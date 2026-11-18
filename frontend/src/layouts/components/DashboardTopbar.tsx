@@ -36,19 +36,19 @@ export default function DashboardTopbar({
     : visibleNotifs.filter((n) => !n.isRead).length;
 
   return (
-    <header className="internal-topbar bg-white border-b border-[var(--color-bone)] px-4 md:px-6 py-3 flex items-center justify-between sticky top-0 z-30">
+    <header className="bg-white border-b border-[var(--color-bone)] px-4 md:px-6 py-3 flex items-center justify-between gap-3 sticky top-0 z-30">
       {/* Title & Breadcrumb */}
-      <div>
-        <div className="text-[0.7rem] font-semibold text-gray-400 uppercase tracking-wider">
+      <div className="min-w-0 flex-1">
+        <div className="text-[0.68rem] sm:text-[0.7rem] font-semibold text-gray-400 uppercase tracking-wider truncate">
           {subtitle}
         </div>
-        <h2 className="font-[family-name:var(--font-display)] font-bold text-lg text-[var(--color-bark)]">
+        <h2 className="font-[family-name:var(--font-display)] font-bold text-base sm:text-lg text-[var(--color-bark)] truncate">
           {title}
         </h2>
       </div>
 
       {/* Topbar Right Actions */}
-      <div className="flex items-center gap-2.5">
+      <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
         {/* User Info Badge */}
         {currentUser && (
           <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[var(--color-parchment)] border border-[var(--color-bone)]">
@@ -152,7 +152,7 @@ export default function DashboardTopbar({
         {/* Back to Customer Button */}
         <button
           onClick={() => setRole("customer")}
-          className="text-xs font-semibold px-3 py-1.5 rounded-xl border border-[var(--color-bone)] bg-white hover:bg-gray-50 text-[var(--color-bark)] transition-colors cursor-pointer"
+          className="text-xs font-semibold px-2.5 sm:px-3 py-1.5 rounded-xl border border-[var(--color-bone)] bg-white hover:bg-gray-50 text-[var(--color-bark)] transition-colors cursor-pointer whitespace-nowrap shrink-0"
           title="Trở về giao diện người thuê"
         >
           Trang khách →
@@ -160,6 +160,7 @@ export default function DashboardTopbar({
 
         {/* Mobile Sidebar Toggle Button */}
         <button
+          type="button"
           onClick={onToggleSidebar}
           className="lg:hidden w-9 h-9 rounded-xl border border-[var(--color-bone)] bg-white flex items-center justify-center text-[var(--color-bark)] cursor-pointer"
           aria-label="Mở menu quản trị"

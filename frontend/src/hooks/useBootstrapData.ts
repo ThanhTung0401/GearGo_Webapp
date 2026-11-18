@@ -159,7 +159,19 @@ export function useBootstrapData(params: UseBootstrapDataParams) {
               maDanhMuc: range?.maDanhMuc,
               soMoiTrang: 100,
             })
-            .catch(() => []),
+            .catch(async () => {
+              // Nếu lọc theo khoảng ngày bị từ chối (vd: ngày quá khứ -> 400), tải lại danh sách không kèm ngày để không trắng trang
+              if (range?.gioNhan || range?.gioTra) {
+                return catalogApi
+                  .layDanhSachSanPham({
+                    tuKhoa: range?.tuKhoa,
+                    maDanhMuc: range?.maDanhMuc,
+                    soMoiTrang: 100,
+                  })
+                  .catch(() => []);
+              }
+              return [];
+            }),
           role === "admin" && !range?.gioNhan
             ? catalogApi
                 .adminLayDanhSachSanPham({ soMoiTrang: 100 })

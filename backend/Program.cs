@@ -153,12 +153,15 @@ builder.Services.AddAuthorization(opt =>
 builder.Services.AddCors(opt =>
     opt.AddPolicy("ReactApp", p =>
         p.WithOrigins(
+            "http://localhost:8443",   // Cổng Vite dev server hiện tại (vite.config.ts)
+            "http://127.0.0.1:8443",   // Địa chỉ loopback tương ứng cổng 8443
             "http://localhost:5173",   // Cổng mặc định của Vite (React)
             "http://localhost:3000"    // Cổng mặc định của Create React App
         )
         .AllowAnyMethod()
         .AllowAnyHeader()
-        .AllowCredentials())); // Cho phép gửi kèm cookie/token (nếu có)
+        .AllowCredentials() // Cho phép gửi credentials/cookie kèm Bearer token từ Frontend
+    ));
 
 // ── 6. Application Services (Dependency Injection) ────────────────────────────
 // Bỏ comment khi hoàn thành từng Task tương ứng theo Plan

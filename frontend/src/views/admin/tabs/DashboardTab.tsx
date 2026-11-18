@@ -137,19 +137,19 @@ export function DashboardTab({ app }: { app: ReturnType<typeof useApp> }) {
 
       {/* UC5.3: Trung tâm xử lý tranh chấp & Duyệt phụ phí */}
       <div className="card-panel p-0 overflow-hidden mb-5">
-        <div className="flex justify-between items-center bg-parchment p-3 px-4 border-b border-bone">
-          <div>
-            <div className="flex items-center gap-2">
-              <span style={{ fontSize: "0.72rem", background: "var(--color-forest)", color: "white", padding: "2px 8px", borderRadius: 4, fontWeight: 700 }}>
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 bg-parchment p-3 px-4 border-b border-bone">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="shrink-0" style={{ fontSize: "0.72rem", background: "var(--color-forest)", color: "white", padding: "2px 8px", borderRadius: 4, fontWeight: 700 }}>
                 UC5.3
               </span>
               <strong className="text-sm text-bark">Trung tâm xử lý tranh chấp & Duyệt phụ phí</strong>
             </div>
-            <div className="text-xs text-gray-500 mt-0.5">
+            <div className="text-xs text-gray-500 mt-1">
               Đối chiếu chứng cứ bàn giao (BBBG) vs nhận trả (PNT), xem phản hồi khiếu nại của khách để kết luận mức phí hợp lệ.
             </div>
           </div>
-          <span className={`badge ${pendingSurcharges.length ? "badge-warning" : "badge-success"}`}>
+          <span className={`badge shrink-0 self-start sm:self-center whitespace-nowrap ${pendingSurcharges.length ? "badge-warning" : "badge-success"}`}>
             {pendingSurcharges.length} khoản cần xử lý
           </span>
         </div>
@@ -201,7 +201,7 @@ export function DashboardTab({ app }: { app: ReturnType<typeof useApp> }) {
         })}
       </div>
 
-      <div className="grid gap-5" style={{ gridTemplateColumns: "1fr 1fr" }}>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         <div style={{ background: "white", borderRadius: "12px", border: "1px solid var(--color-bone)", overflow: "hidden" }}>
           <div style={{ background: "var(--color-parchment)", padding: "12px 16px", fontWeight: 700, fontSize: "0.88rem", color: "var(--color-bark)" }}>Đơn thuê gần đây</div>
           {app.orders.slice(-5).reverse().map((o) => {

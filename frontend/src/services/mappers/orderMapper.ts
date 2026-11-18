@@ -89,7 +89,8 @@ export function mapDonChiTietToOrder(
 ): Order {
   const items: OrderItem[] = (dto.dong ?? []).map((d) => ({
     productId: String(d.maSanPham),
-    productName: d.tenSanPhamLucDat,
+    // Fallback sang tenSanPham hoặc "Thiết bị" nếu endpoint tóm tắt chưa trả về tenSanPhamLucDat
+    productName: d.tenSanPhamLucDat || (d as { tenSanPham?: string }).tenSanPham || "Thiết bị",
     qty: d.soLuong,
     days: d.soNgayTinhTien,
     pricePerDay: Number(d.donGiaThueMoiNgay),

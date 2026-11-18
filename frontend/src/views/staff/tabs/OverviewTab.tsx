@@ -108,12 +108,12 @@ export function OverviewTab({ app, openOrder }: { app: ReturnType<typeof useApp>
                 </div>
                 <div style={{ fontWeight: 600, fontSize: "0.9rem", color: "var(--color-bark)" }}>{o.customerName} · {o.customerPhone}</div>
                 <div style={{ fontSize: "0.75rem", color: "#6B7280" }}>
-                  {o.items.length > 0 ? o.items.map((i) => `${i.productName} ×${i.qty}`).join(", ") : `Đã gán ${o.assignedEquipment.length} thiết bị`}
+                  {o.items.length > 0 ? o.items.map((i) => `${i.productName || "Thiết bị"} ×${i.qty}`).join(", ") : `Đã gán ${o.assignedEquipment.length} thiết bị`}
                 </div>
               </div>
               <div style={{ textAlign: "right" }}>
-                <div style={{ fontSize: "0.75rem", color: "#6B7280" }}>Hẹn nhận: {o.pickupTime}</div>
-                <div style={{ fontSize: "0.75rem", color: "#6B7280" }}>Hẹn trả: {o.returnTime}</div>
+                <div style={{ fontSize: "0.75rem", color: "#6B7280" }}>Hẹn nhận: {o.pickupTime ? o.pickupTime.replace("T", " ").slice(0, 16) : "—"}</div>
+                <div style={{ fontSize: "0.75rem", color: "#6B7280" }}>Hẹn trả: {o.returnTime ? o.returnTime.replace("T", " ").slice(0, 16) : "—"}</div>
                 {o.total !== undefined && <div style={{ fontFamily: "var(--font-mono)", fontWeight: 700, color: "var(--color-forest)", marginTop: 2 }}>{fmt(o.rental - o.discount + o.depositTotal)}</div>}
               </div>
               <span style={{ color: "var(--color-forest)", fontSize: "1.1rem" }}>→</span>

@@ -127,7 +127,9 @@ export function mapSanPhamToProduct(sp: SanPhamBackend, categories: Category[] =
     compensation: Number(sp.giaTriBoiThuong ?? 0),
     image: sp.hinhAnhChinh || images[0] || FALLBACK_PRODUCT_IMAGE,
     images,
-    status: sp.trangThaiKinhDoanh === "DangKinhDoanh" ? "active" : "inactive",
+    // Endpoint public /api/san-pham chỉ trả sản phẩm đang kinh doanh và có thể lược bỏ trangThaiKinhDoanh;
+    // chỉ đánh dấu inactive khi backend trả rõ trạng thái khác "DangKinhDoanh".
+    status: !sp.trangThaiKinhDoanh || sp.trangThaiKinhDoanh === "DangKinhDoanh" ? "active" : "inactive",
     rating: Number(sp.diemTrungBinh ?? 0),
     reviews: Number(sp.soLuongDanhGia ?? 0),
     availableCount: sp.soLuongKhaDung,

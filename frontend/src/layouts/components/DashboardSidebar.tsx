@@ -27,10 +27,12 @@ export default function DashboardSidebar({
   brandSubtitle = "Quản trị hệ thống"
 }: DashboardSidebarProps) {
   return (
+    // Sidebar điều hướng: bản tĩnh hiển thị trên Desktop (>=1024px); trên Mobile hiển thị qua Portal trong DashboardLayout
     <aside
-      className={`internal-nav fixed lg:static inset-y-0 left-0 z-50 w-64 bg-white border-r border-[var(--color-bone)] flex flex-col transition-transform duration-300 ease-in-out ${
-        isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
-      }`}
+      data-open={isOpen ? "true" : "false"}
+      className={`${
+        isOpen ? "flex h-full shadow-2xl" : "hidden"
+      } lg:flex lg:static lg:shadow-none w-[264px] shrink-0 bg-white border-r border-[var(--color-bone)] flex-col`}
       aria-label="Thanh điều hướng quản trị"
     >
       {/* Brand Header */}
@@ -73,9 +75,9 @@ export default function DashboardSidebar({
                   : "text-[var(--color-bark)] hover:bg-[var(--color-parchment)]"
               }`}
             >
-              <div className="flex items-center gap-2.5">
-                <Icon name={item.icon} size={18} />
-                <span>{item.label}</span>
+              <div className="flex items-center gap-2.5 min-w-0">
+                <Icon name={item.icon} size={18} className="shrink-0" />
+                <span className="whitespace-nowrap truncate">{item.label}</span>
               </div>
               {item.badge !== undefined && item.badge !== 0 && (
                 <span

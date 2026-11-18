@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { createPortal } from "react-dom";
 import DashboardSidebar, { type NavItem } from "./components/DashboardSidebar";
 import DashboardTopbar from "./components/DashboardTopbar";
 import DemoRoleBanner from "./components/DemoRoleBanner";
@@ -32,15 +33,7 @@ export default function DashboardLayout({
       <DemoRoleBanner />
 
       <div className="flex-1 flex overflow-hidden relative">
-        {/* 2. Mobile Backdrop */}
-        {sidebarOpen && (
-          <div
-            className="fixed inset-0 bg-black/40 backdrop-blur-xs z-40 lg:hidden"
-            onClick={() => setSidebarOpen(false)}
-          />
-        )}
-
-        {/* 3. Reusable Sidebar */}
+        {/* 2. Desktop Sidebar */}
         <DashboardSidebar
           isOpen={sidebarOpen}
           navItems={navItems}
@@ -53,6 +46,47 @@ export default function DashboardLayout({
           brandTitle={brandTitle}
           brandSubtitle={brandSubtitle}
         />
+
+        {/* 3. Mobile Drawer qua Portal ra document.body để không bị overflow-hidden của shell cắt */}
+        {sidebarOpen &&
+          typeof document !== "undefined" &&
+          createPortal(
+            <>
+              <div
+                onClick={() => setSidebarOpen(false)}
+                style={{
+                  position: "fixed",
+                  inset: 0,
+                  backgroundColor: "rgba(0, 0, 0, 0.45)",
+                  zIndex: 9998,
+                }}
+              />
+              <div
+                style={{
+                  position: "fixed",
+                  top: 0,
+                  bottom: 0,
+                  left: 0,
+                  zIndex: 9999,
+                  display: "flex",
+                }}
+              >
+                <DashboardSidebar
+                  isOpen={true}
+                  navItems={navItems}
+                  activeKey={activeKey}
+                  onSelect={(key) => {
+                    onSelectNav(key);
+                    setSidebarOpen(false);
+                  }}
+                  onClose={() => setSidebarOpen(false)}
+                  brandTitle={brandTitle}
+                  brandSubtitle={brandSubtitle}
+                />
+              </div>
+            </>,
+            document.body
+          )}
 
         {/* 4. Main Viewport & Topbar */}
         <div className="internal-content flex-1 flex flex-col min-w-0 overflow-y-auto">

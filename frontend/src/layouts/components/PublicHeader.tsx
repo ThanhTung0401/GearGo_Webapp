@@ -86,11 +86,11 @@ export default function PublicHeader({
             <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[var(--color-amber)] to-[#D46931] text-white flex items-center justify-center shadow-md">
               <Icon name="tent" size={22} />
             </div>
-            <div>
-              <div className="font-[family-name:var(--font-display)] text-white text-xl font-extrabold leading-none tracking-tight">
+            <div className="min-w-0">
+              <div className="font-[family-name:var(--font-display)] text-white text-lg sm:text-xl font-extrabold leading-none tracking-tight whitespace-nowrap">
                 GearGo
               </div>
-              <div className="text-[0.65rem] text-[#D1DDD5] font-medium mt-0.5">
+              <div className="text-[0.62rem] sm:text-[0.65rem] text-[#D1DDD5] font-medium mt-0.5 whitespace-nowrap">
                 Outdoor Rental & Gear
               </div>
             </div>
@@ -246,34 +246,37 @@ export default function PublicHeader({
               </button>
             </div>
           ) : (
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5 shrink-0">
               <button
                 onClick={() => setPage("login")}
-                className="text-xs font-semibold text-white px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 border border-white/15 transition-colors cursor-pointer"
+                className="text-xs font-semibold text-white px-2.5 sm:px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 border border-white/15 transition-colors cursor-pointer whitespace-nowrap shrink-0"
               >
                 Đăng nhập
               </button>
               <button
                 onClick={() => setPage("register")}
-                className="hidden sm:inline-block text-xs font-bold text-white px-3 py-1.5 rounded-xl bg-gradient-to-r from-[var(--color-amber)] to-[#D46931] shadow-xs cursor-pointer hover:brightness-105"
+                className="hidden sm:inline-block text-xs font-bold text-white px-3 py-1.5 rounded-xl bg-gradient-to-r from-[var(--color-amber)] to-[#D46931] shadow-xs cursor-pointer hover:brightness-105 whitespace-nowrap shrink-0"
               >
                 Đăng ký
               </button>
             </div>
           )}
 
-          {/* Reset Demo Quick Button */}
-          <button
-            onClick={onOpenResetConfirm}
-            className="hidden xl:flex items-center gap-1 text-[0.72rem] font-semibold text-rose-300 hover:text-rose-100 bg-rose-900/30 border border-rose-500/30 px-2 py-1 rounded-lg cursor-pointer"
-            title="Đặt lại dữ liệu demo"
-          >
-            <Icon name="refresh" size={13} />
-            <span>Reset</span>
-          </button>
+          {/* Chỉ hiển thị nút Reset dữ liệu mẫu khi chạy ở chế độ Demo */}
+          {!app.realApi && (
+            <button
+              onClick={onOpenResetConfirm}
+              className="hidden xl:flex items-center gap-1 text-[0.72rem] font-semibold text-rose-300 hover:text-rose-100 bg-rose-900/30 border border-rose-500/30 px-2 py-1 rounded-lg cursor-pointer whitespace-nowrap shrink-0"
+              title="Đặt lại dữ liệu demo"
+            >
+              <Icon name="refresh" size={13} />
+              <span>Reset</span>
+            </button>
+          )}
 
           {/* Mobile Hamburger Toggle */}
           <button
+            type="button"
             onClick={onOpenMobileMenu}
             className="lg:hidden w-9 h-9 rounded-xl border border-white/15 bg-white/5 flex items-center justify-center text-white cursor-pointer"
             aria-label="Mở menu"

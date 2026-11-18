@@ -173,11 +173,12 @@ export function OrdersTab({ app, openOrder, hydrateOperationalOrder }: { app: Re
                     <div style={{ fontSize: "0.72rem", color: "#9CA3AF" }}>{o.customerPhone}</div>
                   </td>
                   <td style={{ padding: "11px 14px", fontSize: "0.8rem", color: "#6B7280" }}>
-                    {o.items.length > 0 ? o.items.map((it) => `${it.productName.split("–")[0].trim()} ×${it.qty}`).join(", ") : `${o.assignedEquipment.length} thiết bị đã gán`}
+                    {/* Bảo vệ an toàn khi API chi tiết chưa trả về tên sản phẩm trên dòng đơn */}
+                    {o.items.length > 0 ? o.items.map((it) => `${(it.productName || "Thiết bị").split("–")[0].trim()} ×${it.qty}`).join(", ") : `${o.assignedEquipment.length} thiết bị đã gán`}
                   </td>
-                  <td style={{ padding: "11px 14px", fontSize: "0.75rem", color: "#6B7280" }}>
-                    <div>📤 {o.pickupTime}</div>
-                    <div style={{ color: isOverdue ? "#DC2626" : "#6B7280", fontWeight: isOverdue ? 700 : 400 }}>📥 {o.returnTime}</div>
+                  <td style={{ padding: "11px 14px", fontSize: "0.75rem", color: "#6B7280", whiteSpace: "nowrap" }}>
+                    <div>📤 {o.pickupTime ? o.pickupTime.replace("T", " ").slice(0, 16) : "—"}</div>
+                    <div style={{ color: isOverdue ? "#DC2626" : "#6B7280", fontWeight: isOverdue ? 700 : 400 }}>📥 {o.returnTime ? o.returnTime.replace("T", " ").slice(0, 16) : "—"}</div>
                   </td>
                   <td style={{ padding: "11px 14px", fontFamily: "var(--font-mono)", fontSize: "0.85rem", fontWeight: 700 }}>
                     {fmt(o.rental - o.discount + o.depositTotal)}
