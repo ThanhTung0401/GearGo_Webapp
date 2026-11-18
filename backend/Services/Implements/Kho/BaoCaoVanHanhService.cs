@@ -33,13 +33,21 @@ public class BaoCaoVanHanhService : IBaoCaoVanHanhService
 
     private async Task<TongQuanChiSoVanHanhResponse> TinhTongQuanVanHanhAsync(DateTime tuNgay, DateTime denNgay)
     {
-        var danhSachDon = await _context.DonThues.AsNoTracking()
+        // Lấy thông tin ngày nhận và trả về client để tính khoảng ngày bằng C# (tránh DateDiffDay không tương thích in-memory/SQLite test)
+        var danhSachDonRaw = await _context.DonThues.AsNoTracking()
             .Where(d => d.NgayDat >= tuNgay && d.NgayDat <= denNgay)
             .Select(d => new
             {
                 d.TrangThai,
-                SoNgay = (double)EF.Functions.DateDiffDay(d.GioNhanDuKien, d.GioTraDuKien)
+                d.GioNhanDuKien,
+                d.GioTraDuKien
             }).ToListAsync();
+
+        var danhSachDon = danhSachDonRaw.Select(d => new
+        {
+            d.TrangThai,
+            SoNgay = Math.Max(0.0, (d.GioTraDuKien.Date - d.GioNhanDuKien.Date).TotalDays)
+        }).ToList();
 
         int tongDon = danhSachDon.Count;
         int tongDonHuy = danhSachDon.Count(d =>

@@ -1,0 +1,174 @@
+name: GearGo CI
+
+on:
+  push:
+    branches:
+      - "**"
+  pull_request:
+    branches:
+      - main
+
+# Hủy lượt chạy CI cũ nếu cùng một nhánh có commit mới được đẩy lên liên tiếp
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ── Job 1: Kiểm thử Unit & Integration (.NET 10 xUnit) ─────────────────────
+  backend-unit:
+    name: Backend Unit & Integration Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 10 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Restore Backend dependencies
+        run: dotnet restore backend/test/GearGo.Tests/GearGo.Tests.csproj
+
+      - name: Run Backend xUnit tests
+        run: dotnet test backend/test/GearGo.Tests/GearGo.Tests.csproj --no-restore --verbosity normal
+
+  # ── Job 2: Kiểm thử Component (Vitest) & Build Frontend (Vite) ───────────────
+  frontend-unit-and-build:
+    name: Frontend Unit Tests & Build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install Frontend dependencies
+        run: npm ci
+
+      - name: Run Frontend Vitest unit tests
+        run: npm test
+
+      - name: Build Frontend production bundle
+        env:
+          VITE_API_URL: http://localhost:5000
+          VITE_USE_MOCK: "false"
+        run: npm run build
+
+  # ── Job 3: Kiểm thử E2E Playwright 10 phân hệ kèm SQL Server container ────────
+  playwright-e2e:
+    name: Playwright E2E (10 Subsystems)
+    runs-on: ubuntu-latest
+    services:
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: "Y"
+          MSSQL_SA_PASSWORD: "GearGo@123"
+        ports:
+          - 1433:1433
+        options: >-
+          --health-cmd "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'GearGo@123' -C -Q 'SELECT 1' || exit 1"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 10 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install Frontend & Playwright dependencies
+        run: |
+          npm --prefix frontend ci
+          npm --prefix tests/playwright ci
+          npx --prefix tests/playwright playwright install chromium --with-deps
+
+      - name: Build Backend
+        run: dotnet build backend/GearGo.csproj -c Release
+
+      - name: Wait for SQL Server & Start Backend + Frontend
+        env:
+          ASPNETCORE_ENVIRONMENT: Development
+          ASPNETCORE_URLS: http://localhost:5000
+          ConnectionStrings__DefaultConnection: "Server=localhost,1433;Database=GearGoDb;User Id=sa;Password=GearGo@123;TrustServerCertificate=True;MultipleActiveResultSets=true"
+          VITE_API_URL: http://localhost:5000
+          VITE_USE_MOCK: "false"
+        run: |
+          # Chờ cổng TCP 1433 của SQL Server container mở hoàn toàn
+          for i in $(seq 1 30); do
+            if (echo > /dev/tcp/localhost/1433) >/dev/null 2>&1; then
+              echo "SQL Server đã sẵn sàng."
+              break
+            fi
+            sleep 2
+          done
+
+          # Khởi chạy Backend ở chế độ nền; Program.cs sẽ tự động chạy Migrate và SeedAllAsync
+          nohup dotnet run --project backend/GearGo.csproj -c Release --no-build > /tmp/backend.log 2>&1 &
+
+          # Chờ API /api/test trả HTTP 200 (tối đa 90s để hoàn tất migrate + seed dữ liệu mẫu)
+          for i in $(seq 1 45); do
+            if curl -sf http://localhost:5000/api/test >/dev/null; then
+              echo "Backend API đã sẵn sàng."
+              break
+            fi
+            if [ "$i" -eq 45 ]; then
+              echo "Backend không khởi động kịp. Log:"
+              cat /tmp/backend.log
+              exit 1
+            fi
+            sleep 2
+          done
+
+          # Khởi chạy Frontend Vite trên cổng 8443 đúng với cấu hình CORS & Playwright
+          nohup npm --prefix frontend run dev -- --port 8443 --host > /tmp/frontend.log 2>&1 &
+
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:8443 >/dev/null; then
+              echo "Frontend đã sẵn sàng."
+              break
+            fi
+            if [ "$i" -eq 30 ]; then
+              echo "Frontend không khởi động kịp. Log:"
+              cat /tmp/frontend.log
+              exit 1
+            fi
+            sleep 2
+          done
+
+      - name: Run Playwright 10-subsystem test suite
+        working-directory: tests/playwright
+        env:
+          API_URL: http://localhost:5000
+          APP_URL: http://localhost:8443
+        run: npm test
+
+      - name: Upload Playwright report, videos & failure traces
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            tests/playwright/playwright-report/
+            tests/playwright/test-results/
+            tests/playwright/videos/all/
+            tests/playwright/videos/failed/
+          retention-days: 7

@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useApp } from "../../../context/AppContext";
 import { isRealApiEnabled } from "../../../services/apiClient";
 import { orderApi, type XemTruocHuyBackend } from "../../../services/api";

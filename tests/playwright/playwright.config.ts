@@ -8,7 +8,7 @@ import { defineConfig } from "@playwright/test";
  * - Chạy riêng 1 phân hệ: npx playwright test backend/phan_he_01_tai_khoan_nhan_vien
  */
 export default defineConfig({
-  timeout: 45_000,
+  timeout: 120_000,
   expect: {
     timeout: 10_000,
   },
@@ -37,6 +37,11 @@ export default defineConfig({
       use: {
         baseURL: process.env.APP_URL || "http://localhost:8443",
         viewport: { width: 1440, height: 900 },
+        // Local mở trình duyệt có giao diện + slowMo 500ms để quan sát & quay video mượt; CI chạy headless
+        headless: Boolean(process.env.CI),
+        launchOptions: {
+          slowMo: process.env.CI ? 0 : 500,
+        },
         screenshot: "only-on-failure",
         trace: "retain-on-failure",
       },

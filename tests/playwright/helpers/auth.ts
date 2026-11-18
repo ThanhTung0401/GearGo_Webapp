@@ -34,16 +34,36 @@ export function authHeaders(token: string): Record<string, string> {
 
 /**
  * Đăng nhập trên giao diện Frontend qua form LoginView thật.
+ * Chuyển tài khoản trực tiếp bằng thao tác SPA (Trang khách -> Thoát) để tránh reload gây chớp trắng video.
  */
 export async function loginUi(page: Page, role: RoleKey = "customer"): Promise<void> {
   const acc = TEST_ACCOUNTS[role];
-  await page.goto("/");
-  // Mở form đăng nhập từ PublicHeader
-  const loginBtn = page.getByRole("button", { name: "Đăng nhập" }).first();
-  await loginBtn.click();
+  if (!page.url() || page.url() === "about:blank") {
+    await page.goto("/");
+  }
+
+  // Nếu đang ở cổng Admin/Staff -> bấm "Trang khách" về giao diện công khai (không reload trang)
+  const backPublicBtn = page.getByRole("button", { name: /Trang khách/i }).first();
+  if (await backPublicBtn.isVisible().catch(() => false)) {
+    await backPublicBtn.click();
+  }
+
+  // Nếu đang đăng nhập -> bấm "Thoát" để đăng xuất sạch trên SPA
+  const logoutBtn = page.getByRole("button", { name: "Thoát" }).first();
+  if (await logoutBtn.isVisible().catch(() => false)) {
+    await logoutBtn.click();
+    await expect(page.getByRole("button", { name: "Đăng nhập" }).first()).toBeVisible({ timeout: 15_000 });
+  }
+
+  // Mở form đăng nhập từ PublicHeader nếu chưa đang ở đúng form Đăng nhập (tránh nhầm form Quên mật khẩu/Đăng ký)
+  const form = page.locator("form.auth-form");
+  const isLoginForm = await form.locator('input[type="password"]').isVisible().catch(() => false);
+  if (!isLoginForm) {
+    const loginBtn = page.getByRole("button", { name: "Đăng nhập" }).first();
+    await loginBtn.click();
+  }
 
   // Điền form đăng nhập (input đầu là tài khoản, input thứ 2 là mật khẩu)
-  const form = page.locator("form.auth-form");
   await expect(form).toBeVisible({ timeout: 10_000 });
   await form.locator("input").nth(0).fill(acc.email);
   await form.locator("input").nth(1).fill(acc.password);

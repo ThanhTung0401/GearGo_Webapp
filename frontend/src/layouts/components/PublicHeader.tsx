@@ -215,6 +215,7 @@ export default function PublicHeader({
           {totalCartQty > 0 && (
             <button
               onClick={() => setPage("cart")}
+              aria-label="Giỏ thuê"
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-[var(--color-amber)] to-[#D46931] text-white font-bold text-xs shadow-md cursor-pointer hover:brightness-105 active:scale-95 transition-all"
             >
               <Icon name="cart" size={16} />
