@@ -13,3 +13,4 @@ backend/global.json
 node_modules/
 graphify-out/
 .archify/
+frontend/env.development
