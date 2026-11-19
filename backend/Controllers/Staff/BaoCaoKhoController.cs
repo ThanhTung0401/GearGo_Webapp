@@ -1,5 +1,6 @@
 using System.Threading.Tasks;
 using GearGo.Helpers;
+using GearGo.Helpers.Authorization;
 using GearGo.Models.DTOs.BaoCao.Kho;
 using GearGo.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -12,7 +13,7 @@ namespace GearGo.Controllers.Staff;
 /// Chỉ số liệu vận hành: nhân viên không nhận giá trị nhập hay chi phí (service kiểm tra lại quyền từ DB).
 /// </summary>
 [ApiController]
-[Authorize(Policy = "StaffOrAdmin")]
+[Authorize]
 [Route("api/bao-cao/kho")]
 [Route("api/v1/bao-cao/kho")]
 public class BaoCaoKhoController : BaseApiController
@@ -26,11 +27,13 @@ public class BaoCaoKhoController : BaseApiController
 
     /// <summary>Hiện trạng kho hiện tại theo sản phẩm hiện tại (không dựng lại kho quá khứ).</summary>
     [HttpGet("hien-trang")]
+    [RequirePermission(DomainConstants.Permissions.BaoCaoKho_Xem)]
     public async Task<IActionResult> LayHienTrang([FromQuery] LocHienTrangKhoRequest filter)
         => HandleResult(await _baoCaoKhoService.LayHienTrangKhoAsync(filter, MaTaiKhoanHienTai));
 
     /// <summary>Thống kê bảo trì: vệ sinh/sửa chữa tách riêng; chi phí chỉ hiện với quản trị viên.</summary>
     [HttpGet("bao-tri")]
+    [RequirePermission(DomainConstants.Permissions.BaoCaoKho_Xem)]
     public async Task<IActionResult> LayThongKeBaoTri([FromQuery] LocBaoTriRequest filter)
         => HandleResult(await _baoCaoKhoService.LayThongKeBaoTriAsync(filter, MaTaiKhoanHienTai));
 }

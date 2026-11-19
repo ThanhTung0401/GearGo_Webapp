@@ -1,4 +1,5 @@
 using GearGo.Helpers;
+using GearGo.Helpers.Authorization;
 using GearGo.Models.DTOs.ChinhSach;
 using GearGo.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -10,7 +11,7 @@ namespace GearGo.Controllers.Admin;
 /// Controller Quản trị chính sách (W6-T1 - UC26 - Thanh Tùng).
 /// </summary>
 [ApiController]
-[Authorize(Policy = "AdminOnly")]
+[Authorize]
 [Route("api/admin/chinh-sach")]
 [Route("api/v1/admin/chinh-sach")]
 public class ChinhSachController : BaseApiController
@@ -20,20 +21,24 @@ public class ChinhSachController : BaseApiController
     public ChinhSachController(IChinhSachService service) => _service = service;
 
     [HttpGet]
+    [RequirePermission(DomainConstants.Permissions.ChinhSach_Xem)]
     public async Task<IActionResult> LayDanhSach([FromQuery] int trang = 1, [FromQuery] int kichThuoc = 20, CancellationToken ct = default)
         => HandleResult(await _service.LayDanhSachAsync(trang, kichThuoc, ct), LayStatusCode);
 
     [HttpGet("{id:long}")]
+    [RequirePermission(DomainConstants.Permissions.ChinhSach_Xem)]
     public async Task<IActionResult> LayChiTiet([FromRoute] long id, CancellationToken ct = default)
         => HandleResult(await _service.LayChiTietAsync(id, ct), LayStatusCode);
 
     [HttpPost("kiem-tra")]
+    [RequirePermission(DomainConstants.Permissions.ChinhSach_Quan)]
     public async Task<IActionResult> KiemTra([FromBody] TaoChinhSachRequest request, CancellationToken ct = default)
         => ModelState.IsValid
             ? HandleResult(await _service.KiemTraNoiDungAsync(request, MaTaiKhoanHienTai, ct), LayStatusCode)
             : BadRequest(ModelState);
 
     [HttpPost]
+    [RequirePermission(DomainConstants.Permissions.ChinhSach_Quan)]
     public async Task<IActionResult> TaoMoi([FromBody] TaoChinhSachRequest request, CancellationToken ct = default)
         => ModelState.IsValid
             ? HandleCreatedResult(await _service.TaoPhienBanAsync(request, MaTaiKhoanHienTai, ct), LayStatusCode)

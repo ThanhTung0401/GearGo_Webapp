@@ -108,6 +108,14 @@ public partial class PermissionService : IPermissionService
             return Result<QuyenCuaVaiTroResponse>.Loi(DomainConstants.Errors.PermissionNotFound,
                 "Có quyền không nằm trong catalog.", new { khongHopLe });
 
+        if (roleName == DomainConstants.Roles.Staff)
+        {
+            var thieu = DomainConstants.Permissions.MinStaff.Except(moi).ToList();
+            if (thieu.Count > 0)
+                return Result<QuyenCuaVaiTroResponse>.Loi("THIEU_QUYEN_TOI_THIEU",
+                    $"Role NhanVien bắt buộc có: {string.Join(", ", thieu)}", new { thieu });
+        }
+
         return await TransactionExecutionWrapper.ExecuteInTransactionAsync(_context, async () =>
         {
             var role = await _context.Roles.FirstOrDefaultAsync(r => r.Name == roleName, ct);

@@ -1,4 +1,5 @@
 using GearGo.Helpers;
+using GearGo.Helpers.Authorization;
 using GearGo.Models.DTOs.ThietBi;
 using GearGo.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -8,7 +9,7 @@ namespace GearGo.Controllers.Staff;
 
 [ApiController]
 [Route("api/thiet-bi")]
-[Authorize(Roles = "NhanVien, QuanTriVien")]
+[Authorize]
 public class ThietBiController : BaseApiController
 {
     private readonly IThietBiService _thietBiService;
@@ -16,6 +17,7 @@ public class ThietBiController : BaseApiController
     public ThietBiController(IThietBiService thietBiService) => _thietBiService = thietBiService;
 
     [HttpGet]
+    [RequirePermission(DomainConstants.Permissions.VongDoiThietBi_Xem)]
     public async Task<IActionResult> TimKiem([FromQuery] TimThietBiRequest request)
     {
         var result = await _thietBiService.TimKiemThietBiAsync(request, MaTaiKhoanHienTai);
@@ -23,6 +25,7 @@ public class ThietBiController : BaseApiController
     }
 
     [HttpGet("{id}")]
+    [RequirePermission(DomainConstants.Permissions.VongDoiThietBi_Xem)]
     public async Task<IActionResult> LayChiTiet(long id)
     {
         var result = await _thietBiService.LayChiTietThietBiAsync(id, MaTaiKhoanHienTai);
@@ -30,6 +33,7 @@ public class ThietBiController : BaseApiController
     }
 
     [HttpGet("{id}/lich")]
+    [RequirePermission(DomainConstants.Permissions.VongDoiThietBi_Xem)]
     public async Task<IActionResult> LayLich(long id, [FromQuery] DateTime? tuNgay, [FromQuery] DateTime? denNgay)
     {
         var result = await _thietBiService.LayLichThietBiAsync(id, tuNgay, denNgay, MaTaiKhoanHienTai);
@@ -37,6 +41,7 @@ public class ThietBiController : BaseApiController
     }
 
     [HttpGet("phu-hop")]
+    [RequirePermission(DomainConstants.Permissions.VongDoiThietBi_Xem)]
     public async Task<IActionResult> LayPhuHop([FromQuery] long maChiTietDon)
     {
         var result = await _thietBiService.LayThietBiPhuHopChoDonAsync(maChiTietDon, MaTaiKhoanHienTai);

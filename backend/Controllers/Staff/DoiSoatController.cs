@@ -1,4 +1,5 @@
 using GearGo.Helpers;
+using GearGo.Helpers.Authorization;
 using GearGo.Models.DTOs.DoiSoat;
 using GearGo.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -20,20 +21,22 @@ public class DoiSoatController : BaseApiController
     public DoiSoatController(IDoiSoatService doiSoatService) => _doiSoatService = doiSoatService;
 
     [HttpGet("theo-don/{donId:long}/xem-truoc")]
-    [Authorize(Policy = "StaffOrAdmin")]
+    [RequirePermission(DomainConstants.Permissions.DoiSoat_Xem)]
     public async Task<IActionResult> XemTruoc(long donId)
         => HandleResult(await _doiSoatService.XemTruocAsync(donId, MaTaiKhoanHienTai), LayStatusCode);
 
     [HttpGet("theo-don/{donId:long}")]
+    [RequirePermission(DomainConstants.Permissions.DoiSoat_Xem)]
     public async Task<IActionResult> LayTheoDon(long donId)
         => HandleResult(await _doiSoatService.LayTheoDonAsync(donId, MaTaiKhoanHienTai), LayStatusCode);
 
     [HttpGet("{id:long}")]
+    [RequirePermission(DomainConstants.Permissions.DoiSoat_Xem)]
     public async Task<IActionResult> LayTheoId(long id)
         => HandleResult(await _doiSoatService.LayTheoIdAsync(id, MaTaiKhoanHienTai), LayStatusCode);
 
     [HttpPost("theo-don/{donId:long}")]
-    [Authorize(Policy = "StaffOrAdmin")]
+    [RequirePermission(DomainConstants.Permissions.DoiSoat_Chot)]
     public async Task<IActionResult> LapDoiSoat(long donId, [FromBody] LapDoiSoatRequest? request)
     {
         var dto = request ?? new LapDoiSoatRequest { MaDonThue = donId };
@@ -42,22 +45,22 @@ public class DoiSoatController : BaseApiController
     }
 
     [HttpPost("{id:long}/xac-nhan")]
-    [Authorize(Policy = "StaffOrAdmin")]
+    [RequirePermission(DomainConstants.Permissions.DoiSoat_Chot)]
     public async Task<IActionResult> XacNhanBangTinh(long id, [FromBody] XacNhanDoiSoatRequest? request)
         => HandleResult(await _doiSoatService.XacNhanBangTinhAsync(id, request ?? new XacNhanDoiSoatRequest(), MaTaiKhoanHienTai), LayStatusCode);
 
     [HttpPost("{id:long}/xu-ly-tien")]
-    [Authorize(Policy = "StaffOrAdmin")]
+    [RequirePermission(DomainConstants.Permissions.DoiSoat_Chot)]
     public async Task<IActionResult> YeuCauXuLyTien(long id)
         => HandleResult(await _doiSoatService.YeuCauXuLyTienAsync(id, MaTaiKhoanHienTai), LayStatusCode);
 
     [HttpPost("{id:long}/chot")]
-    [Authorize(Policy = "StaffOrAdmin")]
+    [RequirePermission(DomainConstants.Permissions.DoiSoat_Chot)]
     public async Task<IActionResult> ChotDoiSoat(long id)
         => HandleResult(await _doiSoatService.ChotDoiSoatAsync(id, MaTaiKhoanHienTai), LayStatusCode);
 
     [HttpPost("{id:long}/dieu-chinh")]
-    [Authorize(Policy = "AdminOnly")]
+    [RequirePermission(DomainConstants.Permissions.DoiSoat_Chot)]
     public async Task<IActionResult> LapDoiSoatDieuChinh(long id, [FromBody] DieuChinhDoiSoatRequest request)
         => HandleCreatedResult(await _doiSoatService.LapDoiSoatDieuChinhAsync(id, request, MaTaiKhoanHienTai), LayStatusCode);
 

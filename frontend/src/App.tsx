@@ -47,6 +47,7 @@ import CustomerPortal from "./views/CustomerPortal";
 import StaffView from "./views/StaffView";
 import AdminView from "./views/AdminView";
 import { LoginView, RegisterView, ForgotPasswordView } from "./views/AuthViews";
+import { PermissionsProvider } from "./features/permissions/PermissionsContext";
 import { PublicLayout, AuthLayout } from "./layouts";
 import Icon from "./components/Icon";
 import {
@@ -542,8 +543,12 @@ export default function App() {
         </AuthLayout>
       )}
 
-      {page === "staff" && <StaffView />}
-      {page === "admin" && <AdminView />}
+      {(page === "staff" || page === "admin") && (
+        <PermissionsProvider userId={currentUser?.id != null ? Number(currentUser.id) || 0 : null}>
+          {page === "staff" && <StaffView />}
+          {page === "admin" && <AdminView />}
+        </PermissionsProvider>
+      )}
 
       {page !== "login" && page !== "register" && page !== "forgot-password" && page !== "staff" && page !== "admin" && (
         <PublicLayout>

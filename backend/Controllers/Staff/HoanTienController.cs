@@ -1,4 +1,5 @@
 using GearGo.Helpers;
+using GearGo.Helpers.Authorization;
 using GearGo.Models.DTOs.HoanTien;
 using GearGo.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -18,21 +19,23 @@ public class HoanTienController : BaseApiController
     /// <summary>Chủ đơn hoặc nhân viên/quản trị viên; đơn của người khác trả 404.</summary>
     [HttpGet("theo-don/{donId:long}")]
     [Authorize]
+    [RequirePermission(DomainConstants.Permissions.HoanTien_Xem)]
     public async Task<IActionResult> LayTheoDon(long donId, CancellationToken ct)
         => Ok(await _hoanTienService.LayDanhSachTheoDonAsync(donId, MaTaiKhoanHienTai, ct));
 
     [HttpPost("{id:long}/xu-ly")]
-    [Authorize(Policy = "StaffOrAdmin")]
+    [RequirePermission(DomainConstants.Permissions.HoanTien_Duyet)]
     public async Task<IActionResult> XuLy(long id, [FromBody] XuLyHoanRequest? request, CancellationToken ct)
         => Ok(await _hoanTienService.XuLyYeuCauHoanAsync(id, request ?? new XuLyHoanRequest(), MaTaiKhoanHienTai, ct));
 
     [HttpPost("{id:long}/doi-chieu")]
-    [Authorize(Policy = "StaffOrAdmin")]
+    [RequirePermission(DomainConstants.Permissions.HoanTien_Duyet)]
     public async Task<IActionResult> DoiChieu(long id, CancellationToken ct)
         => Ok(await _hoanTienService.DoiChieuKetQuaHoanAsync(id, MaTaiKhoanHienTai, ct));
 
     /// <summary>Callback gateway: xác thực bằng chữ ký trong body (adapter), không bằng JWT người dùng.</summary>
     [HttpPost("ket-qua")]
+    // v2 §8.9+§8.10 — callback gateway, KHÔNG thêm [RequirePermission] (bị override thầm lặng); KHÔNG dùng MaTaiKhoanHienTai (throw).
     [AllowAnonymous]
     public async Task<IActionResult> KetQua([FromBody] KetQuaHoanCallbackRequest request, CancellationToken ct)
     {

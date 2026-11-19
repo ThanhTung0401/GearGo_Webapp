@@ -1,6 +1,7 @@
 using GearGo.Data;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using System.Text;
@@ -85,7 +86,6 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                     }
                 }
 
-                var db = ctx.HttpContext.RequestServices.GetRequiredService<ApplicationDbContext>();
                 var raw = ctx.Principal?.FindFirst("MaTaiKhoan")?.Value
                           ?? ctx.Principal?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
                 if (!long.TryParse(raw, out var maTaiKhoan))
@@ -94,18 +94,33 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                     return;
                 }
 
-                var tk = await db.TaiKhoans.AsNoTracking()
-                    .Where(t => t.MaTaiKhoan == maTaiKhoan)
-                    .Select(t => new
+                // v2 §8.2 — cache trạng thái tài khoản TTL 60s, không query DB mỗi request.
+                // Key: account_state:{maTaiKhoan}; invalidation ở service đổi vai trò/khóa tài khoản.
+                var memoryCache = ctx.HttpContext.RequestServices.GetRequiredService<Microsoft.Extensions.Caching.Memory.IMemoryCache>();
+                var cacheKey = $"account_state:{maTaiKhoan}";
+                if (!memoryCache.TryGetValue<(string VaiTro, string TrangThai, string? TrangThaiLamViec)>(cacheKey, out var tk))
+                {
+                    var db = ctx.HttpContext.RequestServices.GetRequiredService<ApplicationDbContext>();
+                    var row = await db.TaiKhoans.AsNoTracking()
+                        .Where(t => t.MaTaiKhoan == maTaiKhoan)
+                        .Select(t => new
+                        {
+                            t.VaiTro,
+                            t.TrangThai,
+                            TrangThaiLamViec = t.NhanVien != null ? t.NhanVien.TrangThaiLamViec : null
+                        })
+                        .FirstOrDefaultAsync(ctx.HttpContext.RequestAborted);
+                    if (row == null)
                     {
-                        t.VaiTro,
-                        t.TrangThai,
-                        TrangThaiLamViec = t.NhanVien != null ? t.NhanVien.TrangThaiLamViec : null
-                    })
-                    .FirstOrDefaultAsync(ctx.HttpContext.RequestAborted);
+                        ctx.Fail("Tài khoản không còn hiệu lực.");
+                        return;
+                    }
+                    tk = (row.VaiTro, row.TrangThai, row.TrangThaiLamViec);
+                    memoryCache.Set(cacheKey, tk, TimeSpan.FromSeconds(60));
+                }
 
-                // Tài khoản không còn / bị khóa / nhân sự đã nghỉ việc: token không còn hợp lệ (401).
-                if (tk == null || tk.TrangThai != "HoatDong" || tk.TrangThaiLamViec == "DaNghiViec")
+                // Tài khoản bị khóa / nhân sự đã nghỉ việc: token không còn hợp lệ (401).
+                if (tk.TrangThai != "HoatDong" || tk.TrangThaiLamViec == "DaNghiViec")
                 {
                     ctx.Fail("Tài khoản không còn hiệu lực.");
                     return;
@@ -125,16 +140,13 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             },
             OnForbidden = async ctx =>
             {
-                // Token còn hạn nhưng vai trò hiện tại không đủ quyền: báo QUYEN_DA_THAY_DOI để UI đăng nhập lại.
-                if (ctx.HttpContext.Items.ContainsKey("QuyenDaThayDoi") && !ctx.Response.HasStarted)
-                {
-                    ctx.Response.ContentType = "application/json";
-                    await ctx.Response.WriteAsync(System.Text.Json.JsonSerializer.Serialize(new
-                    {
-                        maLoi = "QUYEN_DA_THAY_DOI",
-                        thongDiep = "Quyền của tài khoản đã thay đổi; vui lòng đăng nhập lại."
-                    }));
-                }
+                // v2 §8.11 — luôn trả body JSON cho 403; FE phân nhánh theo maLoi.
+                if (ctx.Response.HasStarted) return;
+                ctx.Response.ContentType = "application/json";
+                var payload = ctx.HttpContext.Items.ContainsKey("QuyenDaThayDoi")
+                    ? new { maLoi = "QUYEN_DA_THAY_DOI", thongDiep = "Quyền của tài khoản đã thay đổi; vui lòng đăng nhập lại." }
+                    : new { maLoi = "KHONG_DU_QUYEN",   thongDiep = "Bạn không có quyền thực hiện thao tác này." };
+                await ctx.Response.WriteAsync(System.Text.Json.JsonSerializer.Serialize(payload));
             }
         };
     });

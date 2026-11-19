@@ -1,4 +1,5 @@
 using GearGo.Helpers;
+using GearGo.Helpers.Authorization;
 using GearGo.Models.DTOs.PhuPhi;
 using GearGo.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -20,31 +21,32 @@ public class PhuPhiController : BaseApiController
     public PhuPhiController(IPhuPhiService phuPhiService) => _phuPhiService = phuPhiService;
 
     [HttpGet("theo-don/{donId:long}")]
+    [RequirePermission(DomainConstants.Permissions.PhuPhi_Xem)]
     public async Task<IActionResult> LayTheoDon(long donId)
         => HandleResult(await _phuPhiService.LayDanhSachPhuPhiTheoDonAsync(donId, MaTaiKhoanHienTai), LayStatusCode);
 
     [HttpGet("goi-y")]
-    [Authorize(Policy = "StaffOrAdmin")]
+    [RequirePermission(DomainConstants.Permissions.PhuPhi_Xem)]
     public async Task<IActionResult> GoiYPhi([FromQuery] long maChiTietBanGiao)
         => HandleResult(await _phuPhiService.GoiYPhiAsync(maChiTietBanGiao, MaTaiKhoanHienTai), LayStatusCode);
 
     [HttpPost]
-    [Authorize(Policy = "StaffOrAdmin")]
+    [RequirePermission(DomainConstants.Permissions.PhuPhi_Tao)]
     public async Task<IActionResult> LapPhi([FromBody] LapPhuPhiRequest request)
         => HandleCreatedResult(await _phuPhiService.LapPhiAsync(request, MaTaiKhoanHienTai), LayStatusCode);
 
     [HttpPut("{id:long}")]
-    [Authorize(Policy = "StaffOrAdmin")]
+    [RequirePermission(DomainConstants.Permissions.PhuPhi_Tao)]
     public async Task<IActionResult> CapNhatPhi(long id, [FromBody] CapNhatPhuPhiRequest request)
         => HandleResult(await _phuPhiService.CapNhatPhiChuaDuyetAsync(id, request, MaTaiKhoanHienTai), LayStatusCode);
 
     [HttpPost("{id:long}/duyet")]
-    [Authorize(Policy = "StaffOrAdmin")]
+    [RequirePermission(DomainConstants.Permissions.PhuPhi_Duyet)]
     public async Task<IActionResult> DuyetPhi(long id, [FromBody] DuyetPhuPhiRequest request)
         => HandleResult(await _phuPhiService.DuyetPhiAsync(id, request, MaTaiKhoanHienTai), LayStatusCode);
 
     [HttpPost("{id:long}/tu-choi")]
-    [Authorize(Policy = "StaffOrAdmin")]
+    [RequirePermission(DomainConstants.Permissions.PhuPhi_Duyet)]
     public async Task<IActionResult> TuChoiPhi(long id, [FromBody] DuyetPhuPhiRequest request)
         => HandleResult(await _phuPhiService.TuChoiPhiAsync(id, request, MaTaiKhoanHienTai), LayStatusCode);
 
@@ -54,12 +56,12 @@ public class PhuPhiController : BaseApiController
         => HandleResult(await _phuPhiService.TaoTranhChapAsync(id, request, MaTaiKhoanHienTai), LayStatusCode);
 
     [HttpPost("{id:long}/giai-quyet-tranh-chap")]
-    [Authorize(Policy = "AdminOnly")]
+    [RequirePermission(DomainConstants.Permissions.PhuPhi_Duyet)]
     public async Task<IActionResult> GiaiQuyetTranhChap(long id, [FromBody] GiaiQuyetTranhChapRequest request)
         => HandleResult(await _phuPhiService.GiaiQuyetTranhChapAsync(id, request, MaTaiKhoanHienTai), LayStatusCode);
 
     [HttpPost("{id:long}/dieu-chinh")]
-    [Authorize(Policy = "AdminOnly")]
+    [RequirePermission(DomainConstants.Permissions.PhuPhi_Duyet)]
     public async Task<IActionResult> LapDieuChinhPhi(long id, [FromBody] DieuChinhPhiRequest request)
         => HandleCreatedResult(await _phuPhiService.LapDieuChinhPhiAsync(id, request, MaTaiKhoanHienTai), LayStatusCode);
 

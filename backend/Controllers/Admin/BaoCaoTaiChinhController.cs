@@ -1,5 +1,6 @@
 using System.Threading.Tasks;
 using GearGo.Helpers;
+using GearGo.Helpers.Authorization;
 using GearGo.Models.DTOs.BaoCao.TaiChinh;
 using GearGo.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -13,7 +14,7 @@ namespace GearGo.Controllers.Admin;
 /// Các endpoint chỉ đọc số liệu và xuất CSV, không thay đổi trạng thái chứng từ hoặc giao dịch.
 /// </summary>
 [ApiController]
-[Authorize(Policy = "AdminOnly")]
+[Authorize]
 [Route("api/admin/bao-cao/tai-chinh")]
 [Route("api/v1/admin/bao-cao/tai-chinh")]
 public class BaoCaoTaiChinhController : BaseApiController
@@ -29,6 +30,7 @@ public class BaoCaoTaiChinhController : BaseApiController
     /// Doanh thu đơn thuê hoàn tất (tiền thuê sau giảm + phụ phí đối soát ban đầu; không cộng cọc).
     /// </summary>
     [HttpGet("doanh-thu-hoan-tat")]
+    [RequirePermission(DomainConstants.Permissions.BaoCaoTaiChinh_Xem)]
     public async Task<IActionResult> LayDoanhThuHoanTat([FromQuery] LocTaiChinhRequest filter)
         => HandleResult(await _baoCaoTaiChinhService.LayDoanhThuHoanTatAsync(filter, MaTaiKhoanHienTai));
 
@@ -36,6 +38,7 @@ public class BaoCaoTaiChinhController : BaseApiController
     /// Phí hủy giữ lại từ tiền thuê thực thu theo quy tắc hủy.
     /// </summary>
     [HttpGet("phi-huy")]
+    [RequirePermission(DomainConstants.Permissions.BaoCaoTaiChinh_Xem)]
     public async Task<IActionResult> LayPhiHuy([FromQuery] LocTaiChinhRequest filter)
         => HandleResult(await _baoCaoTaiChinhService.LayPhiHuyAsync(filter, MaTaiKhoanHienTai));
 
@@ -44,6 +47,7 @@ public class BaoCaoTaiChinhController : BaseApiController
     /// </summary>
     [HttpGet("dieu-chinh")]
     [HttpGet("dieu-chinh-doanh-thu")]
+    [RequirePermission(DomainConstants.Permissions.BaoCaoTaiChinh_Xem)]
     public async Task<IActionResult> LayDieuChinhDoanhThu([FromQuery] LocTaiChinhRequest filter)
         => HandleResult(await _baoCaoTaiChinhService.LayDieuChinhDoanhThuAsync(filter, MaTaiKhoanHienTai));
 
@@ -52,6 +56,7 @@ public class BaoCaoTaiChinhController : BaseApiController
     /// </summary>
     [HttpGet("thu-hoan")]
     [HttpGet("dong-tien")]
+    [RequirePermission(DomainConstants.Permissions.BaoCaoTaiChinh_Xem)]
     public async Task<IActionResult> LayThuHoan([FromQuery] LocTaiChinhRequest filter)
         => HandleResult(await _baoCaoTaiChinhService.LayThuHoanAsync(filter, MaTaiKhoanHienTai));
 
@@ -59,6 +64,7 @@ public class BaoCaoTaiChinhController : BaseApiController
     /// Số dư cọc hiện tại còn phải xử lý (xét cọc thực thu - hoàn cọc - cọc đã bù phụ phí).
     /// </summary>
     [HttpGet("coc-chua-tat-toan")]
+    [RequirePermission(DomainConstants.Permissions.BaoCaoTaiChinh_Xem)]
     public async Task<IActionResult> LayCocChuaTatToan([FromQuery] LocTaiChinhRequest filter)
         => HandleResult(await _baoCaoTaiChinhService.LayCocChuaTatToanAsync(filter, MaTaiKhoanHienTai));
 
@@ -66,6 +72,7 @@ public class BaoCaoTaiChinhController : BaseApiController
     /// Danh sách các khoản pending / cần đối chiếu / chưa phân loại / chênh lệch chứng từ.
     /// </summary>
     [HttpGet("can-xu-ly")]
+    [RequirePermission(DomainConstants.Permissions.BaoCaoTaiChinh_Xem)]
     public async Task<IActionResult> LayKhoanCanXuLy([FromQuery] LocTaiChinhRequest filter)
         => HandleResult(await _baoCaoTaiChinhService.LayKhoanCanXuLyAsync(filter, MaTaiKhoanHienTai));
 
@@ -73,6 +80,7 @@ public class BaoCaoTaiChinhController : BaseApiController
     /// Xuất CSV UTF-8 BOM, an toàn chống CSV injection theo cùng bộ lọc và quyền.
     /// </summary>
     [HttpGet("xuat-csv")]
+    [RequirePermission(DomainConstants.Permissions.BaoCaoTaiChinh_Xuat)]
     public async Task<IActionResult> XuatCsv([FromQuery] XuatCsvTaiChinhRequest request)
     {
         var result = await _baoCaoTaiChinhService.XuatCsvAsync(request, MaTaiKhoanHienTai);

@@ -64,6 +64,10 @@ async function apiGet<T>(path: string): Promise<T | null> {
   }
 }
 
+export async function fetchQuyenCuaToi(): Promise<QuyenCuaToiResponse | null> {
+  return apiGet<QuyenCuaToiResponse>("/api/auth/quyen-cua-toi");
+}
+
 async function apiPut<T>(path: string, body: unknown): Promise<T | null> {
   if (!isRealApiEnabled()) return null;
   try {

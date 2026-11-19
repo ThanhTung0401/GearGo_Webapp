@@ -1,6 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using GearGo.Helpers;
+using GearGo.Helpers.Authorization;
 using GearGo.Models.DTOs.Admin;
 using GearGo.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -12,7 +13,7 @@ namespace GearGo.Controllers.Admin;
 /// Controller quản lý Danh mục sản phẩm dành riêng cho Quản trị viên (Admin)
 /// </summary>
 [ApiController]
-[Authorize(Policy = "AdminOnly")]
+[Authorize]
 [Route("api/admin/danh-muc")]
 public class DanhMucController : BaseApiController
 {
@@ -27,6 +28,7 @@ public class DanhMucController : BaseApiController
     /// Lấy toàn bộ danh mục sản phẩm (bao gồm cả trạng thái ẩn)
     /// </summary>
     [HttpGet]
+    [RequirePermission(DomainConstants.Permissions.DanhMuc_Xem)]
     public async Task<IActionResult> LayDanhSach()
     {
         var result = await _adminDanhMucService.LayDanhSachAsync();
@@ -37,6 +39,7 @@ public class DanhMucController : BaseApiController
     /// Tạo mới một danh mục sản phẩm
     /// </summary>
     [HttpPost]
+    [RequirePermission(DomainConstants.Permissions.DanhMuc_Quan)]
     public async Task<IActionResult> TaoMoi([FromBody] TaoDanhMucRequest request)
     {
         var result = await _adminDanhMucService.TaoMoiAsync(request);
@@ -47,6 +50,7 @@ public class DanhMucController : BaseApiController
     /// Cập nhật thông tin danh mục sản phẩm
     /// </summary>
     [HttpPut("{id:long}")]
+    [RequirePermission(DomainConstants.Permissions.DanhMuc_Quan)]
     public async Task<IActionResult> CapNhat([FromRoute] long id, [FromBody] CapNhatDanhMucRequest request)
     {
         var result = await _adminDanhMucService.CapNhatAsync(id, request);
@@ -57,6 +61,7 @@ public class DanhMucController : BaseApiController
     /// Đổi trạng thái hiển thị của danh mục (HienThi / TamAn)
     /// </summary>
     [HttpPatch("{id:long}/trang-thai")]
+    [RequirePermission(DomainConstants.Permissions.DanhMuc_Quan)]
     public async Task<IActionResult> DoiTrangThai([FromRoute] long id, [FromBody] DoiTrangThaiRequest request)
     {
         await _adminDanhMucService.DoiTrangThaiAsync(id, request.TrangThaiMoi);
@@ -67,6 +72,7 @@ public class DanhMucController : BaseApiController
     /// Xóa danh mục sản phẩm (Chỉ xóa khi không có sản phẩm và không có danh mục con)
     /// </summary>
     [HttpDelete("{id:long}")]
+    [RequirePermission(DomainConstants.Permissions.DanhMuc_Quan)]
     public async Task<IActionResult> Xoa([FromRoute] long id)
     {
         await _adminDanhMucService.XoaAsync(id);

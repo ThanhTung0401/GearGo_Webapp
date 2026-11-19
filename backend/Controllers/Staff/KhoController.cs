@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using System.Threading.Tasks;
 using GearGo.Helpers;
+using GearGo.Helpers.Authorization;
 using GearGo.Models.DTOs.Kho;
 using GearGo.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -14,7 +15,7 @@ namespace GearGo.Controllers.Staff;
 [ApiController]
 [Route("api/kho")]
 [Route("api/v1/kho")]
-[Authorize(Policy = "StaffOrAdmin")]
+[Authorize]
 public class KhoController : BaseApiController
 {
     private readonly IKhoService _khoService;
@@ -28,6 +29,7 @@ public class KhoController : BaseApiController
     /// Thống kê tổng quan số lượng thiết bị theo trạng thái
     /// </summary>
     [HttpGet("tong-quan")]
+    [RequirePermission(DomainConstants.Permissions.Kho_Xem)]
     public async Task<IActionResult> LayTongQuanKho([FromQuery] LocKhoRequest request)
     {
         bool laAdmin = User.FindFirstValue(ClaimTypes.Role) == "QuanTriVien";
@@ -38,6 +40,7 @@ public class KhoController : BaseApiController
     /// Danh sách thiết bị trong kho phân trang kèm bộ lọc
     /// </summary>
     [HttpGet("thiet-bi")]
+    [RequirePermission(DomainConstants.Permissions.Kho_Xem)]
     public async Task<IActionResult> TimThietBi([FromQuery] LocKhoRequest request)
     {
         bool laAdmin = User.FindFirstValue(ClaimTypes.Role) == "QuanTriVien";
@@ -48,6 +51,7 @@ public class KhoController : BaseApiController
     /// Đối chiếu quét mã kiểm kê thực tế tại kho (chỉ phân tích, không sửa DB)
     /// </summary>
     [HttpPost("kiem-ke/doi-chieu")]
+    [RequirePermission(DomainConstants.Permissions.Kho_Quan)]
     public async Task<IActionResult> DoiChieuKiemKe([FromBody] DoiChieuKiemKeRequest request)
     {
         return HandleResult(await _khoService.LayDoiChieuKiemKeAsync(request, MaTaiKhoanHienTai));
@@ -57,6 +61,7 @@ public class KhoController : BaseApiController
     /// Giả lập và phân tích ảnh hưởng cam kết đơn thuê khi loại trừ thiết bị hoặc giáng cấp
     /// </summary>
     [HttpPost("dieu-chinh/xem-anh-huong")]
+    [RequirePermission(DomainConstants.Permissions.Kho_Quan)]
     public async Task<IActionResult> XemAnhHuongThayDoi([FromBody] PhanTichAnhHuongRequest request)
     {
         return HandleResult(await _khoService.PhanTichAnhHuongAsync(request, MaTaiKhoanHienTai));

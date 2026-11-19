@@ -1,5 +1,6 @@
 using System.Threading.Tasks;
 using GearGo.Helpers;
+using GearGo.Helpers.Authorization;
 using GearGo.Models.DTOs.BaoCao.Kho;
 using GearGo.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -12,7 +13,7 @@ namespace GearGo.Controllers.Admin;
 /// Các endpoint chỉ đọc: không đổi giá thuê, THIET_BI.gia_nhap hay trạng thái chứng từ.
 /// </summary>
 [ApiController]
-[Authorize(Policy = "AdminOnly")]
+[Authorize]
 [Route("api/admin/bao-cao/kho")]
 [Route("api/v1/admin/bao-cao/kho")]
 public class BaoCaoKhoController : BaseApiController
@@ -26,21 +27,25 @@ public class BaoCaoKhoController : BaseApiController
 
     /// <summary>Nhập hàng theo lô nhập: gốc, điều chỉnh, hiệu lực (chỉ phiếu đã nhập kho).</summary>
     [HttpGet("nhap-hang")]
+    [RequirePermission(DomainConstants.Permissions.BaoCaoKho_Xem)]
     public async Task<IActionResult> LayNhapHang([FromQuery] LocNhapHangRequest filter)
         => HandleResult(await _baoCaoKhoService.LayNhapHangAsync(filter, MaTaiKhoanHienTai));
 
     /// <summary>Phát sinh điều chỉnh nhập trong kỳ theo thời điểm áp dụng.</summary>
     [HttpGet("dieu-chinh-nhap")]
+    [RequirePermission(DomainConstants.Permissions.BaoCaoKho_Xem)]
     public async Task<IActionResult> LayDieuChinhNhap([FromQuery] LocNhapHangRequest filter)
         => HandleResult(await _baoCaoKhoService.LayDieuChinhNhapAsync(filter, MaTaiKhoanHienTai));
 
     /// <summary>Lịch sử đơn giá nhập và đơn giá bình quân gia quyền theo sản phẩm nguồn.</summary>
     [HttpGet("lich-su-don-gia")]
+    [RequirePermission(DomainConstants.Permissions.BaoCaoKho_Xem)]
     public async Task<IActionResult> LayLichSuDonGia([FromQuery] LocNhapHangRequest filter)
         => HandleResult(await _baoCaoKhoService.LayLichSuDonGiaAsync(filter, MaTaiKhoanHienTai));
 
     /// <summary>Xuất CSV UTF-8 cùng bộ lọc và quyền với báo cáo tương ứng.</summary>
     [HttpGet("xuat-csv")]
+    [RequirePermission(DomainConstants.Permissions.BaoCaoKho_Xuat)]
     public async Task<IActionResult> XuatCsv([FromQuery] XuatCsvKhoRequest request)
     {
         var result = await _baoCaoKhoService.XuatCsvAsync(request, MaTaiKhoanHienTai);

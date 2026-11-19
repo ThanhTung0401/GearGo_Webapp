@@ -4,6 +4,8 @@
  * và chuẩn hóa thông điệp lỗi `{ maLoi, thongDiep }` từ API.
  */
 
+import { permissionsRef } from "../features/permissions/PermissionsContext";
+
 const env = (import.meta as unknown as { env?: Record<string, string | undefined> }).env ?? {};
 
 export const API_BASE = (env.VITE_API_URL ?? "").replace(/\/+$/, "");
@@ -86,9 +88,15 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<{ data:
       setAuthToken(null);
     }
     // Khi backend báo quyền/vai trò trong token đã lệch với DB, phát sự kiện để App và hook phân quyền làm mới ngay
-    if (response.status === 403 && code === "QUYEN_DA_THAY_DOI" && typeof window !== "undefined") {
-      window.dispatchEvent(new CustomEvent("geargo:permissions-changed", { detail: { code, message: msg } }));
-      window.dispatchEvent(new CustomEvent("geargo-permissions-changed"));
+    if (response.status === 403 && typeof window !== "undefined") {
+      if (code === "QUYEN_DA_THAY_DOI") {
+        window.dispatchEvent(new CustomEvent("geargo:permissions-changed", { detail: { code, message: msg } }));
+        window.dispatchEvent(new CustomEvent("geargo-permissions-changed"));
+        setAuthToken(null);
+      } else {
+        // v2 §P3: bị từ chối do thiếu quyền → refetch quyền hiện tại để UI đồng bộ
+        void permissionsRef.current?.();
+      }
     }
     throw new ApiError(msg, response.status, code, detail);
   }

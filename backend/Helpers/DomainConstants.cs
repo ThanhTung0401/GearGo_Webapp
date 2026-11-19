@@ -235,6 +235,69 @@ public static class DomainConstants
         public const string PhanQuyen_Xem = "PhanQuyen.Xem";
         public const string PhanQuyen_Quan = "PhanQuyen.Quan";
 
+        // v2 §P0 — mở rộng catalog theo §1.4 (gap analysis)
+        public const string PhuPhi_Xem = "PhuPhi.Xem";
+        public const string PhuPhi_Tao = "PhuPhi.Tao";
+        public const string PhuPhi_Duyet = "PhuPhi.Duyet";
+        public const string PhuPhi_Huy = "PhuPhi.Huy";
+
+        public const string DoiSoat_Xem = "DoiSoat.Xem";
+        public const string DoiSoat_Chot = "DoiSoat.Chot";
+
+        public const string QuaHan_Xem = "QuaHan.Xem";
+        public const string QuaHan_XuLy = "QuaHan.XuLy";
+
+        public const string VongDoiThietBi_Xem = "VongDoiThietBi.Xem";
+        public const string VongDoiThietBi_CapNhat = "VongDoiThietBi.CapNhat";
+
+        public const string PhieuNhap_Xem = "PhieuNhap.Xem";
+        public const string PhieuNhap_Tao = "PhieuNhap.Tao";
+        public const string PhieuNhap_Duyet = "PhieuNhap.Duyet";
+        public const string PhieuNhap_Huy = "PhieuNhap.Huy";
+
+        public const string ChuanBiDon_Xem = "ChuanBiDon.Xem";
+        public const string ChuanBiDon_Thao = "ChuanBiDon.Thao";
+
+        public const string BanGiao_Xem = "BanGiao.Xem";
+        public const string BanGiao_Thao = "BanGiao.Thao";
+
+        public const string BaoTri_Xem = "BaoTri.Xem";
+        public const string BaoTri_Tao = "BaoTri.Tao";
+        public const string BaoTri_Duyet = "BaoTri.Duyet";
+
+        public const string NhanTra_Xem = "NhanTra.Xem";
+        public const string NhanTra_Thao = "NhanTra.Thao";
+
+        public const string HoanTien_Xem = "HoanTien.Xem";
+        public const string HoanTien_Duyet = "HoanTien.Duyet";
+
+        public const string NhaCungCap_Xem = "NhaCungCap.Xem";
+        public const string NhaCungCap_Quan = "NhaCungCap.Quan";
+
+        public const string Kho_Xem = "Kho.Xem";
+        public const string Kho_Quan = "Kho.Quan";
+
+        public const string DieuChinhKho_Xem = "DieuChinhKho.Xem";
+        public const string DieuChinhKho_Duyet = "DieuChinhKho.Duyet";
+
+        public const string BaoCaoKho_Xem = "BaoCaoKho.Xem";
+        public const string BaoCaoKho_Xuat = "BaoCaoKho.Xuat";
+
+        public const string BaoCaoVanHanh_Xem = "BaoCaoVanHanh.Xem";
+        public const string BaoCaoVanHanh_Xuat = "BaoCaoVanHanh.Xuat";
+
+        public const string BaoCaoTaiChinh_Xem = "BaoCaoTaiChinh.Xem";
+        public const string BaoCaoTaiChinh_Xuat = "BaoCaoTaiChinh.Xuat";
+
+        public const string ThongBao_Xem = "ThongBao.Xem";
+        public const string ThongBao_Gui = "ThongBao.Gui";
+
+        public const string NhatKy_Xem = "NhatKy.Xem";
+
+        public const string DanhGia_Xem = "DanhGia.Xem";
+        public const string DanhGia_Duyet = "DanhGia.Duyet";
+        public const string DanhGia_Xoa = "DanhGia.Xoa";
+
         public static readonly string[] All =
         {
             DonThue_Xem, DonThue_Tao, DonThue_CapNhat, DonThue_Xoa, DonThue_Huy,
@@ -245,15 +308,72 @@ public static class DomainConstants
             BaoCao_Xem, BaoCao_Xuat,
             TaiKhoan_Xem, TaiKhoan_Quan, NhanVien_Xem, NhanVien_Quan,
             PhanQuyen_Xem, PhanQuyen_Quan,
+            // v2 §P0 mở rộng
+            PhuPhi_Xem, PhuPhi_Tao, PhuPhi_Duyet, PhuPhi_Huy,
+            DoiSoat_Xem, DoiSoat_Chot,
+            QuaHan_Xem, QuaHan_XuLy,
+            VongDoiThietBi_Xem, VongDoiThietBi_CapNhat,
+            PhieuNhap_Xem, PhieuNhap_Tao, PhieuNhap_Duyet, PhieuNhap_Huy,
+            ChuanBiDon_Xem, ChuanBiDon_Thao,
+            BanGiao_Xem, BanGiao_Thao,
+            BaoTri_Xem, BaoTri_Tao, BaoTri_Duyet,
+            NhanTra_Xem, NhanTra_Thao,
+            HoanTien_Xem, HoanTien_Duyet,
+            NhaCungCap_Xem, NhaCungCap_Quan,
+            Kho_Xem, Kho_Quan,
+            DieuChinhKho_Xem, DieuChinhKho_Duyet,
+            BaoCaoKho_Xem, BaoCaoKho_Xuat,
+            BaoCaoVanHanh_Xem, BaoCaoVanHanh_Xuat,
+            BaoCaoTaiChinh_Xem, BaoCaoTaiChinh_Xuat,
+            ThongBao_Xem, ThongBao_Gui,
+            NhatKy_Xem,
+            DanhGia_Xem, DanhGia_Duyet, DanhGia_Xoa,
         };
 
         public static readonly string[] DefaultStaff =
         {
-            DonThue_Xem, DonThue_CapNhat,
-            SanPham_Xem, DanhMuc_Xem, KhuyenMai_Xem, ChinhSach_Xem,
-            BaoCao_Xem,
+            DonThue_Xem, DonThue_Tao, DonThue_CapNhat, DonThue_Huy,
+            SanPham_Xem, DanhMuc_Xem,
+            KhuyenMai_Xem, ChinhSach_Xem, BaoCao_Xem,
+            PhuPhi_Xem, PhuPhi_Tao, PhuPhi_Duyet,
+            DoiSoat_Xem, DoiSoat_Chot,
+            QuaHan_Xem, QuaHan_XuLy,
+            PhieuNhap_Xem, PhieuNhap_Tao, PhieuNhap_Duyet,
+            ChuanBiDon_Xem, ChuanBiDon_Thao,
+            BanGiao_Xem, BanGiao_Thao,
+            BaoTri_Xem, BaoTri_Tao,
+            NhanTra_Xem, NhanTra_Thao,
+            HoanTien_Xem,
+            NhaCungCap_Xem,
+            Kho_Xem, DieuChinhKho_Xem,
+            BaoCaoKho_Xem, BaoCaoVanHanh_Xem,
+            ThongBao_Xem,
+            // KHÔNG seed cho NhanVien (chỉ Admin): PhanQuyen.*, TaiKhoan.*, NhanVien.*, BaoCaoTaiChinh.*, NhatKy.*, DanhGia.Duyet/Xoa
         };
 
         public static readonly string[] DefaultCustomer = System.Array.Empty<string>();
+
+        /// <summary>
+        /// v2 §8.5 — tập quyền NhanVien **không thể gỡ**. Admin PUT bộ quyền thiếu
+        /// bất kỳ mã nào trong danh sách này sẽ bị chặn.
+        /// </summary>
+        public static readonly string[] MinStaff =
+        {
+            DonThue_Xem,
+        };
+    }
+
+    /// <summary>
+    /// v2 §P1 + §8.10 — danh định tài khoản "hệ thống" dùng làm actor cho hành động không có JWT:
+    /// seeder, migration, callback payment gateway. Row <c>TaiKhoan</c> tương ứng được seed sẵn,
+    /// role <c>SYSTEM</c>, không cấp permission quản trị nào → không vi phạm FK <c>NhatKyThaoTac.MaTaiKhoan</c>.
+    /// </summary>
+    public static class SystemActors
+    {
+        public const long Seeder = 1;
+        public const long Gateway = 2;
+        public const string SystemRole = "SYSTEM";
+
+        public static readonly long[] All = { Seeder, Gateway };
     }
 }
