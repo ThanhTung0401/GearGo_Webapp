@@ -32,18 +32,18 @@ internal static class DanhMucSanPhamSeeder
         var spLeu4 = await EnsureSanPhamAsync(context, dmLeu.MaDanhMuc, "SP-LEU-001", "Lều Cắm Trại 4 Người Naturehike P-Series",
             "Naturehike", "Lều chống mưa gió UPF50+, chống thấm 3000mm, khung hợp kim nhôm 7001 siêu nhẹ.", 4,
             "210 x 210 x 130 cm", "Trọng lượng 2.8kg, vải 210T Polyester", 120000, 500000, 1600000,
-            ("https://storage.geargo.vn/sp/leu4_main.jpg", true, 1),
-            ("https://storage.geargo.vn/sp/leu4_inside.jpg", false, 2));
+            ("https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?w=600", true, 1),
+            ("https://images.unsplash.com/photo-1478131143081-80f7f84ca84d?w=600", false, 2));
 
         var spBepGa = await EnsureSanPhamAsync(context, dmBep.MaDanhMuc, "SP-BEP-001", "Bếp Ga Dã Ngoại Gấp Gọn Kovea Spider",
             "Kovea", "Bếp ga mini công suất cao, đầu đốt tỏa nhiệt đều, chân đế chống trượt gập gọn.", 2,
             "10 x 10 x 12 cm", "Trọng lượng 168g, công suất 2800W", 50000, 200000, 750000,
-            ("https://storage.geargo.vn/sp/bep_main.jpg", true, 1));
+            ("https://images.unsplash.com/photo-1571863533956-01c88e79957e?w=600", true, 1));
 
         var spGhe = await EnsureSanPhamAsync(context, dmBanGhe.MaDanhMuc, "SP-GHE-001", "Ghế Xếp Dã Ngoại Kermit Naturehike",
             "Naturehike", "Ghế cắm trại khung vân gỗ cao cấp, vải Oxford 600D chịu lực 120kg.", 1,
             "62 x 52 x 43 cm", "Chịu tải 120kg", 35000, 150000, 450000,
-            ("https://storage.geargo.vn/sp/ghe_main.jpg", true, 1));
+            ("https://images.unsplash.com/photo-1537905569824-f89f14cceb68?w=600", true, 1));
 
         var spDen = await EnsureSanPhamAsync(context, dmBanGhe.MaDanhMuc, "SP-DEN-001", "Đèn Bão LED Vintage Dã Ngoại Barebones",
             "Barebones", "Đèn LED ánh sáng vàng ấm vintage, pin dùng liên tục 20 giờ, chống nước nhẹ IPX4", 1,

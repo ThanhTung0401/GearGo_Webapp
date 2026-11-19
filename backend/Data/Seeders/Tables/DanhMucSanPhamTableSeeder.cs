@@ -56,5 +56,32 @@ internal static class DanhMucSanPhamTableSeeder
             context.HinhAnhSanPhams.Add(new HinhAnhSanPham { MaSanPham = sp.MaSanPham, DuongDan = img, LaAnhChinh = true, ThuTu = 1 });
             await context.SaveChangesAsync();
         }
+
+        // Đồng bộ sửa các URL ảnh cũ dùng domain giả storage.geargo.vn trong DB sang ảnh Unsplash thật
+        var brokenImgs = await context.HinhAnhSanPhams
+            .Where(h => h.DuongDan.Contains("storage.geargo.vn"))
+            .ToListAsync();
+        foreach (var h in brokenImgs)
+        {
+            if (h.DuongDan.Contains("leu4_inside"))
+                h.DuongDan = "https://images.unsplash.com/photo-1478131143081-80f7f84ca84d?w=600";
+            else if (h.DuongDan.Contains("bep_main"))
+                h.DuongDan = "https://images.unsplash.com/photo-1571863533956-01c88e79957e?w=600";
+            else if (h.DuongDan.Contains("ghe_main"))
+                h.DuongDan = "https://images.unsplash.com/photo-1537905569824-f89f14cceb68?w=600";
+            else
+                h.DuongDan = "https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?w=600";
+        }
+        var brokenRevImgs = await context.DanhGias
+            .Where(d => d.DanhSachAnh != null && d.DanhSachAnh.Contains("storage.geargo.vn"))
+            .ToListAsync();
+        foreach (var d in brokenRevImgs)
+        {
+            d.DanhSachAnh = "[\"https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?w=600\"]";
+        }
+        if (brokenImgs.Count > 0 || brokenRevImgs.Count > 0)
+        {
+            await context.SaveChangesAsync();
+        }
     }
 }

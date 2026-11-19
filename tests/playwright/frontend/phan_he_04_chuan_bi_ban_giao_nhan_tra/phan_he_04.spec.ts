@@ -33,14 +33,26 @@ test.describe.serial("Frontend PH4: Cổng Nhân viên - Chuẩn bị, Bàn giao
     }
   });
 
-  test("UC4.1, UC4.2, UC4.3 - Mở tab Chuẩn bị & Bàn giao, Nhận trả & Phụ phí", async () => {
+  test("UC4.1, UC4.2, UC4.3 - Mở tab Chuẩn bị & Bàn giao, chọn đơn & Nhận trả", async () => {
     const page = getPage();
     await page.getByRole("button", { name: "Chuẩn bị & Bàn giao" }).first().click();
     await expect(page.getByText(/Chuẩn bị|Bàn giao/i).first()).toBeVisible();
+    const prepItem = page.locator('button:has-text("Đã xác nhận"), button:has-text("ORD-")').first();
+    if (await prepItem.isVisible().catch(() => false)) {
+      await prepItem.click();
+    }
+    const handoverTab = page.getByRole("button", { name: /2\. Tiếp khách & Bàn giao/i }).first();
+    if (await handoverTab.isVisible().catch(() => false)) {
+      await handoverTab.click();
+    }
     await pauseForViewer(page);
 
     await page.getByRole("button", { name: "Nhận trả & Phụ phí" }).first().click();
     await expect(page.getByText(/Nhận trả|Phụ phí/i).first()).toBeVisible();
+    const retItem = page.locator('button:has-text("Đang thuê"), button:has-text("Quá hạn")').first();
+    if (await retItem.isVisible().catch(() => false)) {
+      await retItem.click();
+    }
     await pauseForViewer(page);
   });
 });

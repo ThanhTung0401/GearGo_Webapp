@@ -1,0 +1,2558 @@
+[
+  {
+    "scr": "SCR-01",
+    "name": "Giao diện Đăng nhập và Khôi phục mật khẩu",
+    "ucs": "UC1.2, UC1.4",
+    "a": [
+      [
+        "1",
+        "accountInput",
+        "Input (text)",
+        "Nhập Email, SĐT hoặc Tên đăng nhập",
+        "String",
+        "Rỗng",
+        "autoFocus, bắt buộc nhập"
+      ],
+      [
+        "2",
+        "pass",
+        "Input (password/text)",
+        "Nhập mật khẩu tài khoản",
+        "String (≥ 6 ký tự)",
+        "Rỗng",
+        "Đổi type theo state showPass"
+      ],
+      [
+        "3",
+        "showPass toggle",
+        "Button",
+        "Bật/tắt hiển thị ký tự mật khẩu (Hiện / Ẩn)",
+        "Boolean",
+        "false (Ẩn)",
+        "Nút nằm trong .auth-pwd-wrapper"
+      ],
+      [
+        "4",
+        "Quên mật khẩu?",
+        "Button",
+        "Điều hướng sang màn hình ForgotPasswordView (page = \"forgot-password\")",
+        "Null",
+        "Kích hoạt",
+        "Không mở Modal"
+      ],
+      [
+        "5",
+        "Đăng nhập hệ thống →",
+        "Button (submit)",
+        "Gửi biểu mẫu xác thực đăng nhập (hàm submit)",
+        "Null",
+        "Kích hoạt",
+        "Gọi POST /api/auth/dang-nhap"
+      ],
+      [
+        "6",
+        "Đăng ký ngay",
+        "Button",
+        "Điều hướng sang màn hình Đăng ký (page = \"register\")",
+        "Null",
+        "Kích hoạt",
+        "Link chuyển trang"
+      ],
+      [
+        "7",
+        "fillQuickAccount buttons",
+        "Group Button (4 nút)",
+        "Điền nhanh tài khoản mẫu (Quản trị viên, Nhân viên kho, Khách hàng, TK Bị khóa)",
+        "Preset",
+        "Kích hoạt",
+        "Hỗ trợ kiểm thử nhanh"
+      ],
+      [
+        "8",
+        "lockedAccount alert",
+        "Alert Box",
+        "Hiển thị cảnh báo khi tài khoản bị khóa kèm lý do và hotline hỗ trợ",
+        "Object | null",
+        "null (Ẩn)",
+        "Hiện khi lỗi TAI_KHOAN_BI_KHOA / TAM_KHO"
+      ],
+      [
+        "9",
+        "contact (ForgotStepInput)",
+        "Input (text)",
+        "Nhập Email hoặc SĐT đã đăng ký ở Bước 1 khôi phục mật khẩu",
+        "String",
+        "Rỗng",
+        "Bước 1 của ForgotPasswordView"
+      ],
+      [
+        "10",
+        "otp (ForgotStepOtp)",
+        "Input (OTP)",
+        "Nhập mã xác minh OTP 6 ký tự có thời hạn ở Bước 2",
+        "String (6)",
+        "Rỗng",
+        "Kèm nút gửi lại mã & đổi liên hệ"
+      ],
+      [
+        "11",
+        "newPass & confirm (ForgotStepReset)",
+        "Input (password)",
+        "Nhập mật khẩu mới và xác nhận lại mật khẩu ở Bước 3",
+        "String (≥ 6 ký tự)",
+        "Rỗng",
+        "Bước 4 (ForgotStepSuccess) xác nhận xong"
+      ]
+    ],
+    "b": [
+      [
+        "1",
+        "Sự kiện onSubmit biểu mẫu đăng nhập (submit)",
+        "Kiểm tra failedAttempts >= 5, validate accountInput không rỗng và pass.length >= 6. Gọi POST /api/auth/dang-nhap (authApi.dangNhap), lưu token/thông tin qua app.login(...) và điều hướng vào WorkspaceView hoặc LandingView theo quyền từ DB."
+      ],
+      [
+        "2",
+        "Đăng nhập thất bại hoặc tài khoản bị khóa (TAI_KHOAN_BI_KHOA / TAM_KHO)",
+        "Tăng bộ đếm failedAttempts (chặn thử khi đạt 5 lần), hiển thị thông báo lỗi err hoặc bật hộp cảnh báo lockedAccount kèm lý do khóa và thông tin liên hệ 1900 6868 / support@geargo.vn."
+      ],
+      [
+        "3",
+        "Nhấp nút Quên mật khẩu? (app.setPage(\"forgot-password\"))",
+        "Chuyển sang màn hình ForgotPasswordView (4 bước: input → otp → reset → success)."
+      ],
+      [
+        "4",
+        "Gửi contact (handleSubmitContact) & xác minh otp (handleVerifyOtp / handleResendOtp)",
+        "Gọi API gửi mã OTP qua kênh liên hệ đã đăng ký và xác thực mã OTP 6 ký tự trước khi cho phép chuyển sang bước đặt lại mật khẩu."
+      ],
+      [
+        "5",
+        "Gửi newPass & confirm (handleResetPassword)",
+        "Kiểm tra khớp mật khẩu, cập nhật mật khẩu mới trên hệ thống, chuyển sang bước success (ForgotStepSuccess) và cung cấp nút goToLogin quay lại màn hình Đăng nhập."
+      ],
+      [
+        "6",
+        "Nhấp một trong 4 nút fillQuickAccount",
+        "Tự động điền sẵn accountInput và pass tương ứng, đồng thời xóa thông báo lỗi err và cảnh báo lockedAccount hiện tại."
+      ]
+    ]
+  },
+  {
+    "scr": "SCR-02",
+    "name": "Giao diện Đăng ký tài khoản khách hàng",
+    "ucs": "UC1.1",
+    "a": [
+      [
+        "1",
+        "hoTenInput",
+        "Input (text)",
+        "Nhập họ và tên đầy đủ của khách hàng",
+        "String",
+        "Rỗng",
+        "Lưu vào KHACH_HANG.hoTen"
+      ],
+      [
+        "2",
+        "emailInput",
+        "Input (email)",
+        "Nhập địa chỉ email định danh duy nhất",
+        "Email",
+        "Rỗng",
+        "Kiểm tra trùng UNIQUE"
+      ],
+      [
+        "3",
+        "soDienThoaiInput",
+        "Input (tel)",
+        "Nhập số điện thoại liên hệ duy nhất",
+        "Phone (10 số)",
+        "Rỗng",
+        "Kiểm tra trùng UNIQUE"
+      ],
+      [
+        "4",
+        "diaChiInput",
+        "Input (text)",
+        "Nhập địa chỉ cư trú hoặc liên hệ",
+        "String",
+        "Rỗng",
+        "Tùy chọn"
+      ],
+      [
+        "5",
+        "ngaySinhPicker",
+        "DatePicker",
+        "Chọn ngày tháng năm sinh của khách hàng",
+        "Date",
+        "Rỗng",
+        "Lưu vào ngaySinh"
+      ],
+      [
+        "6",
+        "matKhauInput",
+        "Input (password)",
+        "Nhập mật khẩu bảo vệ tài khoản",
+        "String",
+        "Rỗng",
+        "Tối thiểu 8 ký tự"
+      ],
+      [
+        "7",
+        "xacNhanMatKhauInput",
+        "Input (password)",
+        "Nhập lại mật khẩu để đối chiếu trùng khớp",
+        "String",
+        "Rỗng",
+        "Validate khớp matKhauInput"
+      ],
+      [
+        "8",
+        "dangKyBtn",
+        "Button",
+        "Gửi yêu cầu tạo tài khoản khách hàng (UC1.1)",
+        "Null",
+        "Kích hoạt",
+        "Không tự cấp quyền nội bộ"
+      ]
+    ],
+    "b": [
+      [
+        "1",
+        "Sự kiện onSubmit biểu mẫu đăng ký (dangKyBtn)",
+        "Kiểm tra ràng buộc dữ liệu phía client và server: định dạng email/SĐT, khớp mật khẩu và tính duy nhất trong bảng TAI_KHOAN."
+      ],
+      [
+        "2",
+        "Dữ liệu hợp lệ và chưa tồn tại trên hệ thống",
+        "Tạo đồng bộ bản ghi TAI_KHOAN (vaiTro = KhachHang, trangThai = HoatDong) và KHACH_HANG trong một transaction; hiển thị Toast thành công và chuyển hướng sang SCR-01."
+      ],
+      [
+        "3",
+        "Email hoặc số điện thoại đã tồn tại hoặc sai định dạng",
+        "Từ chối tạo bản ghi dở dang, giữ lại các state dữ liệu không nhạy cảm đã nhập và hiển thị thông báo lỗi tại trường tương ứng."
+      ]
+    ]
+  },
+  {
+    "scr": "SCR-03",
+    "name": "Giao diện Hồ sơ cá nhân và Đổi mật khẩu",
+    "ucs": "UC1.3, UC1.5, UC1.6, UC1.12",
+    "a": [
+      [
+        "1",
+        "anhDaiDienUpload",
+        "Avatar / FileUpload",
+        "Hiển thị và tải lên ảnh đại diện cá nhân",
+        "Image (JPG/PNG)",
+        "Mặc định",
+        "Lưu vào anhDaiDien"
+      ],
+      [
+        "2",
+        "vaiTroBadge",
+        "Badge / Text",
+        "Hiển thị vai trò và trạng thái hoạt động tài khoản",
+        "String",
+        "Theo phiên",
+        "Chỉ đọc, chặn tự sửa quyền"
+      ],
+      [
+        "3",
+        "hoTenInput",
+        "Input (text)",
+        "Hiển thị và cho phép sửa họ và tên người dùng",
+        "String",
+        "Theo hồ sơ",
+        "Bắt buộc nhập"
+      ],
+      [
+        "4",
+        "emailInput",
+        "Input (email)",
+        "Hiển thị và cập nhật địa chỉ email",
+        "Email",
+        "Theo hồ sơ",
+        "Yêu cầu xác minh nếu đổi"
+      ],
+      [
+        "5",
+        "soDienThoaiInput",
+        "Input (tel)",
+        "Hiển thị và cập nhật số điện thoại liên hệ",
+        "Phone",
+        "Theo hồ sơ",
+        "Yêu cầu xác minh nếu đổi"
+      ],
+      [
+        "6",
+        "diaChiInput",
+        "Input (text)",
+        "Hiển thị và cập nhật địa chỉ liên hệ",
+        "String",
+        "Theo hồ sơ",
+        "Tùy chọn"
+      ],
+      [
+        "7",
+        "luuHoSoBtn",
+        "Button",
+        "Lưu cập nhật thông tin cá nhân (UC1.6)",
+        "Null",
+        "Kích hoạt",
+        "Không sửa chứng từ đã chốt"
+      ],
+      [
+        "8",
+        "matKhauHienTaiInput",
+        "Input (password)",
+        "Nhập mật khẩu hiện tại trong tab Đổi mật khẩu",
+        "String",
+        "Rỗng",
+        "Xác minh chủ tài khoản"
+      ],
+      [
+        "9",
+        "matKhauMoiInput",
+        "Input (password)",
+        "Nhập mật khẩu mới hai lần (UC1.12)",
+        "String",
+        "Rỗng",
+        "Kiểm tra độ mạnh mật khẩu"
+      ],
+      [
+        "10",
+        "doiMatKhauBtn",
+        "Button",
+        "Xác nhận đổi mật khẩu và đăng xuất phiên cũ",
+        "Null",
+        "Kích hoạt",
+        "Ghi nhật ký thao tác"
+      ],
+      [
+        "11",
+        "dangXuatBtn",
+        "Button",
+        "Kết thúc phiên đăng nhập hiện tại (UC1.3)",
+        "Null",
+        "Kích hoạt",
+        "Xóa token và về trang chủ"
+      ]
+    ],
+    "b": [
+      [
+        "1",
+        "Mount component Hồ sơ cá nhân (UC1.5)",
+        "Gọi API lấy thông tin từ TAI_KHOAN và KHACH_HANG / NHAN_VIEN theo phiên đăng nhập hiện tại để đổ vào state biểu mẫu."
+      ],
+      [
+        "2",
+        "Nhấp luuHoSoBtn (UC1.6)",
+        "Kiểm tra trùng lặp email/SĐT; nếu thay đổi thông tin xác thực thì kích hoạt bước xác minh trước khi ghi nhận; giữ nguyên dữ liệu đã chốt trên các đơn thuê cũ."
+      ],
+      [
+        "3",
+        "Nhấp doiMatKhauBtn (UC1.12)",
+        "Xác minh matKhauHienTaiInput; lưu matKhauBam mới, vô hiệu phiên hiện tại và điều hướng về SCR-01 để đăng nhập lại."
+      ],
+      [
+        "4",
+        "Nhấp dangXuatBtn (UC1.3)",
+        "Vô hiệu hóa phiên truy cập trên server và client, đưa người dùng về khu vực công khai."
+      ]
+    ]
+  },
+  {
+    "scr": "SCR-04",
+    "name": "Giao diện Quản lý tài khoản và Phân quyền nhân sự",
+    "ucs": "UC1.7 – UC1.11, UC1.13",
+    "a": [
+      [
+        "1",
+        "loaiTaiKhoanTabs",
+        "Tabs",
+        "Chuyển đổi giữa tab Nhân viên (UC1.9) và Khách hàng (UC1.13)",
+        "NhanVien | KhachHang",
+        "NhanVien",
+        "Dành cho Quản trị viên"
+      ],
+      [
+        "2",
+        "timKiemInput",
+        "Input (search)",
+        "Tìm kiếm theo họ tên, email hoặc số điện thoại",
+        "String",
+        "Rỗng",
+        "Hỗ trợ debounce"
+      ],
+      [
+        "3",
+        "trangThaiSelect",
+        "Select",
+        "Lọc danh sách theo trạng thái hoạt động",
+        "TatCa | HoatDong | TamKhoa",
+        "TatCa",
+        "Áp dụng cho cả 2 tab"
+      ],
+      [
+        "4",
+        "taiKhoanDataTable",
+        "DataTable",
+        "Hiển thị danh sách tài khoản, vai trò, trạng thái làm việc",
+        "List",
+        "Dữ liệu CSDL",
+        "Không hiển thị mật khẩu"
+      ],
+      [
+        "5",
+        "themNhanVienBtn",
+        "Button",
+        "Mở Modal tạo tài khoản nhân viên mới (UC1.7)",
+        "Null",
+        "Kích hoạt",
+        "Gắn kèm phân quyền ban đầu"
+      ],
+      [
+        "6",
+        "suaNhanVienBtn",
+        "Button",
+        "Mở Modal cập nhật hồ sơ nhân viên (UC1.8)",
+        "Null",
+        "Kích hoạt",
+        "Truy vết chứng từ cũ"
+      ],
+      [
+        "7",
+        "phanQuyenCheckboxGroup",
+        "CheckboxGroup",
+        "Chọn danh sách quyền nghiệp vụ cấp cho nhân viên",
+        "List<Permission>",
+        "Theo vai trò",
+        "Ánh xạ UC1.7.1 & UC1.10"
+      ],
+      [
+        "8",
+        "khoaMoKhoaBtn",
+        "Button",
+        "Mở Modal khóa hoặc mở khóa tài khoản (UC1.11)",
+        "Null",
+        "Kích hoạt",
+        "Cảnh báo đơn đang thuê"
+      ],
+      [
+        "9",
+        "lyDoKhoaTextArea",
+        "TextArea",
+        "Nhập lý do khóa/mở khóa tài khoản",
+        "String",
+        "Rỗng",
+        "Lưu vào TAI_KHOAN.lyDoKhoa"
+      ]
+    ],
+    "b": [
+      [
+        "1",
+        "Thay đổi tab, nhập timKiemInput hoặc chọn trangThaiSelect",
+        "Truy vấn danh sách nhân viên (UC1.9) hoặc khách hàng (UC1.13) theo bộ lọc và cập nhật taiKhoanDataTable."
+      ],
+      [
+        "2",
+        "Mở Modal thêm nhân viên, nhập thông tin, chọn phanQuyenCheckboxGroup và Lưu",
+        "Thực hiện UC1.7 và UC1.7.1: kiểm tra tính duy nhất của email/SĐT, tạo đồng bộ TAI_KHOAN, NHAN_VIEN, gán quyền ban đầu và ghi NHAT_KY_THAO_TAC."
+      ],
+      [
+        "3",
+        "Cập nhật quyền trên phanQuyenCheckboxGroup và xác nhận (UC1.10)",
+        "Kiểm tra thẩm quyền của Quản trị viên, cập nhật quyền mới và ghi nhận người thực hiện, thời điểm."
+      ],
+      [
+        "4",
+        "Nhấp khoaMoKhoaBtn và xác nhận kèm lyDoKhoaTextArea (UC1.11)",
+        "Cập nhật trangThai tài khoản (TamKhoa/HoatDong), chặn phát sinh đơn thuê mới nhưng vẫn giữ nguyên các đơn đang thuê để cửa hàng tiếp tục giao nhận và quyết toán."
+      ]
+    ]
+  },
+  {
+    "scr": "SCR-05",
+    "name": "Giao diện Trang chủ và Danh mục sản phẩm",
+    "ucs": "UC2.1",
+    "a": [
+      [
+        "1",
+        "timKiemSanPhamInput",
+        "Input (search)",
+        "Tìm kiếm sản phẩm theo tên hoặc từ khóa (UC2.1)",
+        "String",
+        "Rỗng",
+        "Tìm trên SAN_PHAM"
+      ],
+      [
+        "2",
+        "danhMucSidebar",
+        "TreeMenu / Sidebar",
+        "Hiển thị cây danh mục dụng cụ phân cấp",
+        "List<DanhMuc>",
+        "Tất cả",
+        "Chỉ hiện danh mục HienThi"
+      ],
+      [
+        "3",
+        "khoangGiaSelect",
+        "Select",
+        "Lọc sản phẩm theo đơn giá thuê mỗi ngày",
+        "Tất cả | <100k | 100k-300k | >300k",
+        "Tất cả",
+        "Lọc theo giaThueMoiNgay"
+      ],
+      [
+        "4",
+        "sucChuaSelect",
+        "Select",
+        "Lọc dụng cụ theo sức chứa số người",
+        "Tất cả | 1-2 | 3-4 | >4 người",
+        "Tất cả",
+        "Lọc theo sucChua"
+      ],
+      [
+        "5",
+        "sanPhamCardGrid",
+        "Grid / Cards",
+        "Hiển thị danh sách thẻ sản phẩm (ảnh, tên, giá/ngày)",
+        "List<SanPham>",
+        "DangChoThue",
+        "Chỉ hiện SP đang kinh doanh"
+      ],
+      [
+        "6",
+        "moTuVanAIBtn",
+        "Button",
+        "Điều hướng sang Trợ lý AI tư vấn bộ dụng cụ",
+        "Null",
+        "Kích hoạt",
+        "Chuyển sang SCR-07"
+      ]
+    ],
+    "b": [
+      [
+        "1",
+        "Tải trang chủ hoặc chọn danh mục trên danhMucSidebar",
+        "Truy vấn các sản phẩm có trangThaiKinhDoanh = DangChoThue từ SAN_PHAM kèm ảnh chính từ HINH_ANH_SAN_PHAM."
+      ],
+      [
+        "2",
+        "Nhập từ khóa vào timKiemSanPhamInput hoặc đổi bộ lọc",
+        "Lọc và hiển thị danh sách sản phẩm phù hợp kèm giá thuê tham khảo (chưa khẳng định số lượng khả dụng khi chưa chọn lịch)."
+      ],
+      [
+        "3",
+        "Nhấp vào một thẻ sản phẩm trên sanPhamCardGrid",
+        "Điều hướng sang giao diện Chi tiết sản phẩm (SCR-06) theo maSanPham."
+      ]
+    ]
+  },
+  {
+    "scr": "SCR-06",
+    "name": "Giao diện Chi tiết sản phẩm và Kiểm tra khả dụng",
+    "ucs": "UC2.2, UC2.3",
+    "a": [
+      [
+        "1",
+        "hinhAnhCarousel",
+        "ImageCarousel",
+        "Hiển thị ảnh chính và thư viện ảnh chi tiết sản phẩm",
+        "List<HinhAnh>",
+        "Ảnh chính",
+        "Từ HINH_ANH_SAN_PHAM"
+      ],
+      [
+        "2",
+        "thongTinChiTietPanel",
+        "DescriptionList",
+        "Hiển thị tên, thương hiệu, sức chứa, kích thước, thông số",
+        "Object",
+        "Dữ liệu SP",
+        "Từ bảng SAN_PHAM"
+      ],
+      [
+        "3",
+        "giaVaCocCard",
+        "Card / Text",
+        "Hiển thị tách bạch đơn giá thuê/ngày, mức cọc và bồi thường",
+        "Decimal (VND)",
+        "Theo SP",
+        "Định dạng tiền VND"
+      ],
+      [
+        "4",
+        "gioNhanPicker",
+        "DateTimePicker",
+        "Chọn ngày và giờ dự kiến nhận dụng cụ",
+        "DateTime",
+        "Rỗng",
+        "Giờ nghiệp vụ Việt Nam"
+      ],
+      [
+        "5",
+        "gioTraPicker",
+        "DateTimePicker",
+        "Chọn ngày và giờ dự kiến trả dụng cụ",
+        "DateTime",
+        "Rỗng",
+        "Phải sau gioNhanPicker"
+      ],
+      [
+        "6",
+        "soLuongInput",
+        "InputNumber",
+        "Nhập số lượng thiết bị muốn kiểm tra/đặt thuê",
+        "Integer (>=1)",
+        "1",
+        "Số nguyên dương"
+      ],
+      [
+        "7",
+        "kiemTraKhaDungBtn",
+        "Button",
+        "Kiểm tra số lượng đáp ứng xuyên suốt khoảng thuê (UC2.3)",
+        "Null",
+        "Kích hoạt",
+        "Mở rộng tại EP2.2-LICH"
+      ],
+      [
+        "8",
+        "ketQuaKhaDungAlert",
+        "Alert / Badge",
+        "Hiển thị kết luận đủ hàng hoặc số lượng tối đa hiện có",
+        "String",
+        "Chưa kiểm tra",
+        "Không giữ chỗ ở bước này"
+      ],
+      [
+        "9",
+        "themVaoGioBtn",
+        "Button",
+        "Thêm sản phẩm, số lượng và lịch thuê vào giỏ thuê",
+        "Null",
+        "Disabled",
+        "Chỉ bật khi đủ khả dụng"
+      ],
+      [
+        "10",
+        "danhGiaList",
+        "CommentList",
+        "Hiển thị điểm sao và nhận xét đã được kiểm duyệt",
+        "List<DanhGia>",
+        "CongKhai",
+        "Từ bảng DANH_GIA"
+      ]
+    ],
+    "b": [
+      [
+        "1",
+        "Tải trang chi tiết sản phẩm (UC2.2)",
+        "Hiển thị đầy đủ thông số kỹ thuật, giá thuê/cọc, chính sách và danh sách đánh giá có trangThaiHienThi = CongKhai."
+      ],
+      [
+        "2",
+        "Chọn lịch nhận/trả, số lượng và nhấn kiemTraKhaDungBtn (UC2.3)",
+        "Kiểm tra gioNhan < gioTra; đối chiếu tổng thiết bị SanSang trừ đi giữ chỗ còn hạn và đơn xác nhận chồng lịch (không trừ lặp phân công); trả về kết luận đủ/thiếu và số lượng tối đa hiện có."
+      ],
+      [
+        "3",
+        "Nhấn themVaoGioBtn sau khi kiểm tra đủ khả dụng",
+        "Nếu chưa đăng nhập thì chuyển sang SCR-01; nếu đã đăng nhập thì cập nhật GIO_THUE / CHI_TIET_GIO_THUE và thông báo thành công."
+      ]
+    ]
+  },
+  {
+    "scr": "SCR-07",
+    "name": "Giao diện Trợ lý AI tư vấn bộ dụng cụ",
+    "ucs": "UC2.4",
+    "a": [
+      [
+        "1",
+        "nhuCauChuyenDiTextArea",
+        "TextArea",
+        "Nhập mô tả chuyến đi (địa điểm, số người, số ngày, nhu cầu)",
+        "String",
+        "Rỗng",
+        "Bắt buộc nhập tiêu chí"
+      ],
+      [
+        "2",
+        "lichDuKienRangePicker",
+        "RangePicker",
+        "Chọn khoảng thời gian nhận và trả dự kiến (tùy chọn)",
+        "DateTimeRange",
+        "Rỗng",
+        "Để đối chiếu khả dụng thật"
+      ],
+      [
+        "3",
+        "guiTuVanAIBtn",
+        "Button",
+        "Gửi yêu cầu đề xuất bộ dụng cụ tới dịch vụ AI (UC2.4.1)",
+        "Null",
+        "Kích hoạt",
+        "Hiển thị trạng thái đang xử lý"
+      ],
+      [
+        "4",
+        "boDoDeXuatTable",
+        "DataTable",
+        "Hiển thị danh sách sản phẩm AI gợi ý, số lượng, lý do và cảnh báo",
+        "List",
+        "Rỗng",
+        "Đánh dấu dòng thiếu hàng"
+      ],
+      [
+        "5",
+        "uocTinhChiPhiSummary",
+        "SummaryCard",
+        "Hiển thị tách biệt ước tính tiền thuê, tiền cọc và tổng cộng",
+        "Decimal (VND)",
+        "0 đ",
+        "Cập nhật theo số lượng"
+      ],
+      [
+        "6",
+        "duaVaoGioThueBtn",
+        "Button",
+        "Chuyển bộ dụng cụ hợp lệ vào giỏ thuê (UC2.4.2)",
+        "Null",
+        "Disabled",
+        "Mở rộng tại EP2.4-GIO"
+      ]
+    ],
+    "b": [
+      [
+        "1",
+        "Nhập nhu cầu chuyến đi và nhấn guiTuVanAIBtn (UC2.4.1)",
+        "Hệ thống gửi tiêu chí kèm danh mục sản phẩm DangChoThue sang dịch vụ AI và nhận về danh sách đề xuất kèm lý do."
+      ],
+      [
+        "2",
+        "Hệ thống GearGo đối chiếu kết quả gợi ý từ AI (BR21)",
+        "Kiểm tra lại đơn giá từ SAN_PHAM và tồn kho khả dụng (nếu đã chọn lichDuKienRangePicker); tự động loại hoặc gắn nhãn cảnh báo các dòng ngừng kinh doanh/thiếu hàng."
+      ],
+      [
+        "3",
+        "Người dùng chỉnh sửa số lượng hoặc xóa dòng trên boDoDeXuatTable",
+        "Tính toán lại ngay ước tính tiền thuê (làm tròn lên theo chu kỳ 24h) và tiền đặt cọc trên uocTinhChiPhiSummary."
+      ],
+      [
+        "4",
+        "Nhấp duaVaoGioThueBtn (UC2.4.2)",
+        "Kiểm tra đăng nhập (yêu cầu đăng nhập nếu là Khách vãng lai), kiểm tra lại khả dụng theo lịch và đưa các dòng hợp lệ vào giỏ thuê (SCR-08)."
+      ]
+    ]
+  },
+  {
+    "scr": "SCR-08",
+    "name": "Giao diện Giỏ thuê và Tính báo giá",
+    "ucs": "UC3.1",
+    "a": [
+      [
+        "1",
+        "lichThueChungPicker",
+        "RangePicker",
+        "Chọn hoặc cập nhật thời gian nhận và trả chung cho cả giỏ",
+        "DateTimeRange",
+        "Theo giỏ",
+        "Áp dụng chung toàn đơn"
+      ],
+      [
+        "2",
+        "chiTietGioTable",
+        "DataTable",
+        "Hiển thị từng dòng sản phẩm, đơn giá/ngày, cọc và số lượng",
+        "List<ChiTietGio>",
+        "Từ GIO_THUE",
+        "Cho phép tăng/giảm/xóa dòng"
+      ],
+      [
+        "3",
+        "maKhuyenMaiInput",
+        "Input (text)",
+        "Nhập mã voucher khuyến mãi (UC3.1.2)",
+        "String",
+        "Rỗng",
+        "Mở rộng tại EP3.1-UUDAI"
+      ],
+      [
+        "4",
+        "apDungMaBtn",
+        "Button",
+        "Kiểm tra hiệu lực và áp dụng mã khuyến mãi vào tiền thuê",
+        "Null",
+        "Kích hoạt",
+        "Không giảm trên tiền cọc"
+      ],
+      [
+        "5",
+        "baoGiaChiTietCard",
+        "SummaryCard",
+        "Hiển thị số ngày thuê, tiền thuê, tiền giảm, tiền cọc và tổng cộng",
+        "Decimal (VND)",
+        "0 đ",
+        "Ánh xạ UC3.1.1"
+      ],
+      [
+        "6",
+        "tiepTucDatThueBtn",
+        "Button",
+        "Xác nhận giỏ hàng hợp lệ và chuyển sang tạo đơn (UC3.2)",
+        "Null",
+        "Kích hoạt",
+        "Chặn nếu có dòng thiếu hàng"
+      ]
+    ],
+    "b": [
+      [
+        "1",
+        "Tải giỏ thuê hoặc đổi lịch/số lượng trên lichThueChungPicker, chiTietGioTable",
+        "Gọi UC2.3 kiểm tra khả dụng từng dòng, tính số ngày = max(1, làm tròn lên giờ/24) và cập nhật báo giá (UC3.1.1)."
+      ],
+      [
+        "2",
+        "Nhập mã vào maKhuyenMaiInput và nhấn apDungMaBtn (UC3.1.2)",
+        "Kiểm tra thời hạn, phạm vi (ToanBo/TheoDanhMuc/TheoSanPham), đơn tối thiểu và giới hạn lượt của KHUYEN_MAI; tính số tiền giảm trên tiền thuê đủ điều kiện."
+      ],
+      [
+        "3",
+        "Nhấp tiepTucDatThueBtn",
+        "Lưu trạng thái giỏ hợp lệ (chưa khóa giữ chỗ thiết bị hoặc lượt khuyến mãi) và điều hướng sang giao diện Xác nhận đặt thuê (SCR-09)."
+      ]
+    ]
+  },
+  {
+    "scr": "SCR-09",
+    "name": "Giao diện Xác nhận đặt thuê và Giữ chỗ",
+    "ucs": "UC3.2",
+    "a": [
+      [
+        "1",
+        "tenNguoiNhanInput",
+        "Input (text)",
+        "Nhập hoặc xác nhận họ tên người trực tiếp nhận đồ",
+        "String",
+        "Theo hồ sơ KH",
+        "Bắt buộc nhập"
+      ],
+      [
+        "2",
+        "sdtNguoiNhanInput",
+        "Input (tel)",
+        "Nhập số điện thoại liên hệ của người nhận đồ",
+        "Phone",
+        "Theo hồ sơ KH",
+        "Bắt buộc nhập"
+      ],
+      [
+        "3",
+        "emailLienHeInput",
+        "Input (email)",
+        "Nhập email nhận thông báo và chứng từ đơn thuê",
+        "Email",
+        "Theo hồ sơ KH",
+        "Tùy chọn"
+      ],
+      [
+        "4",
+        "tomTatDonHangPanel",
+        "Panel / Table",
+        "Hiển thị danh sách dụng cụ, lịch nhận/trả, giá chốt và chính sách",
+        "Object",
+        "Từ giỏ thuê",
+        "Hiển thị quy định hủy & cọc"
+      ],
+      [
+        "5",
+        "canhBaoThayDoiGiaModal",
+        "Modal",
+        "Hiển thị báo giá mới nếu giá hoặc ưu đãi vừa thay đổi (UC3.2.2)",
+        "Object",
+        "Ẩn",
+        "Mở rộng tại EP3.2-GIA"
+      ],
+      [
+        "6",
+        "xacNhanDatDonBtn",
+        "Button",
+        "Tạo đơn thuê, khóa giữ chỗ 15 phút và chuyển thanh toán (UC3.2)",
+        "Null",
+        "Kích hoạt",
+        "Kiểm soát đồng thời (BR05)"
+      ]
+    ],
+    "b": [
+      [
+        "1",
+        "Nhấp xacNhanDatDonBtn (UC3.2)",
+        "Hệ thống kiểm tra khả dụng lần cuối (UC2.3), kiểm tra lại đơn giá và điều kiện mã khuyến mãi tại thời điểm đặt."
+      ],
+      [
+        "2",
+        "Nếu giá sản phẩm hoặc điều kiện ưu đãi thay đổi so với lúc xem giỏ",
+        "Hiển thị canhBaoThayDoiGiaModal (UC3.2.2); chỉ tiếp tục tạo đơn khi khách hàng bấm đồng ý báo giá mới."
+      ],
+      [
+        "3",
+        "Tạo đơn thuê và giữ chỗ thành công",
+        "Thực hiện UC3.2.1: lưu DON_THUE (ChoThanhToan), CHI_TIET_DON_THUE, GIU_CHO (hạn 15 phút) và LUOT_SU_DUNG_KHUYEN_MAI (DangGiu) đồng bộ; chuyển sang SCR-15 để thanh toán."
+      ]
+    ]
+  },
+  {
+    "scr": "SCR-10",
+    "name": "Giao diện Quản lý đơn thuê của tôi và Hủy đơn",
+    "ucs": "UC3.3, UC3.4",
+    "a": [
+      [
+        "1",
+        "trangThaiTabs",
+        "Tabs",
+        "Lọc đơn thuê của khách theo trạng thái",
+        "TatCa | ChoThanhToan | DaXacNhan | DangThue | HoanTat | DaHuy",
+        "TatCa",
+        "Ánh xạ UC3.3"
+      ],
+      [
+        "2",
+        "donThueCuaToiTable",
+        "DataTable",
+        "Hiển thị mã đơn (maDonHienThi), lịch nhận/trả, tổng tiền, trạng thái",
+        "List<DonThue>",
+        "Theo KH",
+        "Chỉ hiển thị đơn của chủ TK"
+      ],
+      [
+        "3",
+        "chiTietDonDrawer",
+        "Drawer / Modal",
+        "Hiển thị chi tiết dòng hàng, tiền thu, phiếu giao/trả, phụ phí, đối soát",
+        "Object",
+        "Đóng",
+        "Xem chứng từ thuộc sở hữu"
+      ],
+      [
+        "4",
+        "thanhToanNgayBtn",
+        "Button",
+        "Mở cổng thanh toán khi đơn còn hạn giữ chỗ 15 phút",
+        "Null",
+        "Hiển thị theo TT",
+        "Điều hướng sang SCR-15"
+      ],
+      [
+        "5",
+        "huyDonBtn",
+        "Button",
+        "Mở Modal yêu cầu hủy đơn khi đơn chưa bàn giao (UC3.4)",
+        "Null",
+        "Hiển thị theo TT",
+        "Ẩn khi đơn đã bàn giao"
+      ],
+      [
+        "6",
+        "duTinhHoanTienPanel",
+        "Panel / Alert",
+        "Hiển thị tiền thuê giữ lại và tiền cọc dự kiến hoàn theo mốc giờ",
+        "Decimal (VND)",
+        "Tự động tính",
+        "Theo chính sách đã chốt"
+      ],
+      [
+        "7",
+        "lyDoHuyTextArea",
+        "TextArea",
+        "Nhập lý do hủy đơn thuê",
+        "String",
+        "Rỗng",
+        "Bắt buộc nhập khi hủy"
+      ],
+      [
+        "8",
+        "xacNhanHuyDonBtn",
+        "Button",
+        "Xác nhận hủy đơn, giải phóng giữ chỗ và tạo yêu cầu hoàn (nếu có)",
+        "Null",
+        "Kích hoạt",
+        "Mở rộng UC5.6 tại EP3.4-HOAN"
+      ]
+    ],
+    "b": [
+      [
+        "1",
+        "Chọn tab trạng thái hoặc mở một đơn trên donThueCuaToiTable (UC3.3)",
+        "Kiểm tra quyền sở hữu đơn thuê của khách hàng hiện tại và hiển thị đầy đủ tiến trình giao nhận từng đợt, phụ phí, bảng đối soát và lịch sử trạng thái."
+      ],
+      [
+        "2",
+        "Nhấp huyDonBtn trên đơn chưa bàn giao (UC3.4)",
+        "Tính toán số giờ còn lại trước gioNhanDuKien, đối chiếu CHINH_SACH của đơn để hiển thị rõ tiền thuê bị giữ lại và tiền cọc/tiền thuê được hoàn trên duTinhHoanTienPanel."
+      ],
+      [
+        "3",
+        "Nhập lyDoHuyTextArea và nhấn xacNhanHuyDonBtn",
+        "Kiểm tra lại trạng thái chưa bàn giao để tránh xung đột; cập nhật DON_THUE sang DaHuy, giải phóng GIU_CHO/lượt ưu đãi và khởi tạo bản ghi HOAN_TIEN (ChoXuLy) nếu đã thu tiền."
+      ]
+    ]
+  },
+  {
+    "scr": "SCR-11",
+    "name": "Giao diện Điều phối và Tra cứu đơn vận hành",
+    "ucs": "UC4.5",
+    "a": [
+      [
+        "1",
+        "timKiemVanHanhInput",
+        "Input (search/QR)",
+        "Tìm đơn theo mã đơn, quét QR, tên khách hoặc số điện thoại",
+        "String",
+        "Rỗng",
+        "Ánh xạ UC4.5"
+      ],
+      [
+        "2",
+        "ngayGiaoNhanPicker",
+        "RangePicker",
+        "Lọc đơn theo khung giờ nhận dự kiến hoặc giờ trả dự kiến",
+        "DateTimeRange",
+        "Hôm nay",
+        "Phục vụ ca trực"
+      ],
+      [
+        "3",
+        "trangThaiVanHanhSelect",
+        "Select",
+        "Lọc theo trạng thái vận hành của đơn thuê",
+        "TatCa | DaXacNhan | DangChuanBi | SanSangNhan | DangThue | ChoDoiSoat",
+        "TatCa",
+        "Có nhãn Quá hạn / Trả 1 phần"
+      ],
+      [
+        "4",
+        "donVanHanhTable",
+        "DataTable",
+        "Hiển thị danh sách đơn cần phục vụ kèm các nút tác vụ nhanh",
+        "List<DonThue>",
+        "Dữ liệu CSDL",
+        "Phân quyền theo vai trò"
+      ],
+      [
+        "5",
+        "ghiNhanKhachKhongDenBtn",
+        "Button",
+        "Ghi nhận thời điểm, kết quả liên hệ khi khách không đến nhận đồ",
+        "Null",
+        "Theo trạng thái",
+        "Chuyển QTV xử lý hủy (UC3.4)"
+      ]
+    ],
+    "b": [
+      [
+        "1",
+        "Nhập điều kiện lọc trên timKiemVanHanhInput, ngayGiaoNhanPicker hoặc trangThaiVanHanhSelect",
+        "Truy vấn danh sách đơn thuê trong phạm vi quyền vận hành (UC4.5) và hiển thị các nhãn cảnh báo (Quá hạn, Trả một phần)."
+      ],
+      [
+        "2",
+        "Chọn tác vụ tương ứng trên từng dòng đơn (Chuẩn bị / Bàn giao / Nhận trả / Đối soát)",
+        "Kiểm tra trạng thái hiện tại và quyền của nhân sự trước khi điều hướng sang các màn hình nghiệp vụ đích (SCR-12, SCR-13, SCR-14, SCR-17)."
+      ],
+      [
+        "3",
+        "Nhấp ghiNhanKhachKhongDenBtn khi quá giờ hẹn nhận đồ",
+        "Lưu thời điểm và kết quả liên hệ vào lịch sử đơn, chuyển thông báo cho Quản trị viên quyết định hủy đơn theo chính sách (không tự chuyển sang DangThue)."
+      ]
+    ]
+  },
+  {
+    "scr": "SCR-12",
+    "name": "Giao diện Chuẩn bị và Phân công mã thiết bị",
+    "ucs": "UC4.1",
+    "a": [
+      [
+        "1",
+        "thongTinDonHeader",
+        "PageHeader",
+        "Hiển thị mã đơn, khách hàng, lịch nhận/trả và trạng thái thanh toán",
+        "Object",
+        "Từ DON_THUE",
+        "Yêu cầu đơn DaXacNhan"
+      ],
+      [
+        "2",
+        "nhanChuanBiBtn",
+        "Button",
+        "Nhận phụ trách chuẩn bị đơn (chuyển sang DangChuanBi)",
+        "Null",
+        "Kích hoạt",
+        "Lưu người thực hiện"
+      ],
+      [
+        "3",
+        "dongSanPhamTable",
+        "DataTable",
+        "Hiển thị từng dòng sản phẩm khách đặt và số lượng cần gán",
+        "List<ChiTietDon>",
+        "Từ đơn thuê",
+        "Không tự đổi SP/giảm SL"
+      ],
+      [
+        "4",
+        "chonMaThietBiSelect",
+        "MultiSelect",
+        "Chọn các mã thiết bị vật lý cá biệt (maThietBiHienThi) khả dụng",
+        "List<ThietBi>",
+        "Rỗng",
+        "Chỉ hiện mã SanSang & trống lịch"
+      ],
+      [
+        "5",
+        "kiemTraPhuKienChecklist",
+        "CheckboxGroup",
+        "Xác nhận kiểm tra thực tế tình trạng và phụ kiện từng mã",
+        "JSON",
+        "Theo ThietBi",
+        "Đánh dấu mã lỗi nếu có"
+      ],
+      [
+        "6",
+        "doiMaThietBiBtn",
+        "Button",
+        "Hủy phân công mã cũ không đạt và gán mã thay thế cùng loại",
+        "Null",
+        "Hiển thị khi sửa",
+        "Lưu lịch sử đổi phân công"
+      ],
+      [
+        "7",
+        "xacNhanSanSangBtn",
+        "Button",
+        "Lưu phân công đủ bộ và chuyển đơn sang SanSangNhan (UC4.1)",
+        "Null",
+        "Disabled",
+        "Chỉ bật khi đủ 100% số lượng"
+      ]
+    ],
+    "b": [
+      [
+        "1",
+        "Nhấp nhanChuanBiBtn (UC4.1)",
+        "Chuyển trạng thái DON_THUE sang DangChuanBi và ghi nhận nhân viên thực hiện vào LICH_SU_TRANG_THAI_DON."
+      ],
+      [
+        "2",
+        "Chọn mã thiết bị trên chonMaThietBiSelect và tích kiemTraPhuKienChecklist",
+        "Kiểm tra từng mã thuộc đúng maSanPham, tình trạng SanSang và không xung đột lịch với đơn khác; lưu vào PHAN_CONG_THIET_BI."
+      ],
+      [
+        "3",
+        "Nhấp xacNhanSanSangBtn khi đã gán đủ số lượng",
+        "Kiểm tra lại không còn xung đột lịch, cập nhật DON_THUE sang SanSangNhan và tự động phát thông báo (THONG_BAO) mời khách đến nhận đồ."
+      ]
+    ]
+  },
+  {
+    "scr": "SCR-13",
+    "name": "Giao diện Bàn giao thiết bị tại quầy",
+    "ucs": "UC4.2",
+    "a": [
+      [
+        "1",
+        "timKiemDonInput",
+        "Input (search/QR)",
+        "Nhập hoặc quét mã đơn hiển thị (maDonHienThi) cần bàn giao",
+        "String",
+        "Rỗng",
+        "Chỉ hỗ trợ tra cứu đơn"
+      ],
+      [
+        "2",
+        "thongTinDonPanel",
+        "Descriptions",
+        "Hiển thị mã đơn, trạng thái SanSangNhan, khoản đã thu và giờ hẹn",
+        "Object",
+        "Từ DON_THUE",
+        "Chặn giao nếu chưa thu đủ tiền"
+      ],
+      [
+        "3",
+        "tenNguoiNhanInput",
+        "Input (text)",
+        "Nhập/đối chiếu họ tên người trực tiếp nhận đồ tại cửa hàng",
+        "String",
+        "tenNguoiNhan",
+        "Đối chiếu giấy tờ tùy thân"
+      ],
+      [
+        "4",
+        "danhSachBanGiaoTable",
+        "DataTable",
+        "Hiển thị danh sách thiết bị đã phân công (maThietBiHienThi, tên SP)",
+        "List<PhanCong>",
+        "Từ PHAN_CONG",
+        "Bàn giao đủ 1 lần (BR10)"
+      ],
+      [
+        "5",
+        "tinhTrangTruocInput",
+        "Input / TextArea",
+        "Ghi mô tả tình trạng vật lý thực tế trước thuê của từng thiết bị",
+        "String",
+        "Rỗng",
+        "Bắt buộc nhập từng dòng"
+      ],
+      [
+        "6",
+        "phuKienThucGiaoCheck",
+        "CheckboxGroup",
+        "Đánh dấu đầy đủ các phụ kiện thực tế bàn giao cùng khách",
+        "JSON",
+        "Theo phuKienDiKem",
+        "Lưu vào phuKienThucGiao"
+      ],
+      [
+        "7",
+        "taiAnhBangChungUpload",
+        "Upload",
+        "Tải lên ảnh chụp thiết bị và biên bản ký nhận của khách",
+        "Image (JPG/PNG)",
+        "Rỗng",
+        "Lưu danhSachAnh & bangChung"
+      ],
+      [
+        "8",
+        "chotBanGiaoBtn",
+        "Button",
+        "Chốt phiếu bàn giao và chuyển đơn sang DangThue (UC4.2)",
+        "Null",
+        "Kích hoạt",
+        "Chỉ thực hiện 1 lần duy nhất"
+      ]
+    ],
+    "b": [
+      [
+        "1",
+        "Nhập mã đơn hoặc quét QR vào timKiemDonInput",
+        "Truy xuất DON_THUE, kiểm tra điều kiện trạng thái SanSangNhan, đã thu đủ tiền thuê + cọc và khung giờ nhận hợp lệ."
+      ],
+      [
+        "2",
+        "Đối chiếu người nhận, nhập tinhTrangTruocInput, tích phuKienThucGiaoCheck và tải ảnh",
+        "Cập nhật dữ liệu nháp cho phiếu bàn giao và từng dòng CHI_TIET_BAN_GIAO."
+      ],
+      [
+        "3",
+        "Nhấp chotBanGiaoBtn (UC4.2)",
+        "Kiểm tra lần cuối đầy đủ 100% vật phẩm và bằng chứng; lưu PHIEU_BAN_GIAO (DaChotBanGiao), cập nhật THIET_BI và DON_THUE sang DangThue, ghi lịch sử biến động."
+      ]
+    ]
+  },
+  {
+    "scr": "SCR-14",
+    "name": "Giao diện Nhận trả theo đợt và Xử lý quá hạn",
+    "ucs": "UC4.3, UC4.4",
+    "a": [
+      [
+        "1",
+        "donDangThueSelect",
+        "Select / Search",
+        "Tra cứu đơn đang thuê (kèm bộ lọc đơn Quá hạn - UC4.4)",
+        "String",
+        "Rỗng",
+        "Hiển thị số ngày trễ nếu có"
+      ],
+      [
+        "2",
+        "danhSachDaGiaoTable",
+        "DataTable",
+        "Hiển thị thiết bị đã giao, đợt đã trả trước đó và danh sách còn nợ",
+        "List",
+        "Từ PHIEU_BAN_GIAO",
+        "Không cho trả trùng mã đã trả"
+      ],
+      [
+        "3",
+        "chonMaTraCheckbox",
+        "Checkbox",
+        "Chọn các mã thiết bị khách thực trả trong đợt này (UC4.3)",
+        "Boolean",
+        "False",
+        "Hỗ trợ trả một phần (UC4.3.1)"
+      ],
+      [
+        "4",
+        "ketLuanKiemTraSelect",
+        "Select",
+        "Chọn kết luận kiểm tra từng thiết bị sau thuê",
+        "DatChuan | CanBaoTri | BaoMat",
+        "DatChuan",
+        "Mất đồ cần lập biên bản"
+      ],
+      [
+        "5",
+        "tinhTrangSauThueInput",
+        "TextArea",
+        "Mô tả tình trạng vật lý, phụ kiện thiếu và tải ảnh bằng chứng",
+        "String / Image",
+        "Rỗng",
+        "Lưu vào CHI_TIET_NHAN_TRA"
+      ],
+      [
+        "6",
+        "lapPhuPhiNhanhBtn",
+        "Button",
+        "Mở form lập phụ phí (trễ hạn 150%, hư hỏng, mất đồ - UC5.2)",
+        "Null",
+        "Kích hoạt",
+        "Mở rộng tại EP4.3-PHUPHI"
+      ],
+      [
+        "7",
+        "nhatKyLienHeQuaHanInput",
+        "TextArea",
+        "Ghi nhận kết quả liên hệ khách và hẹn trả cho đơn quá hạn (UC4.4)",
+        "String",
+        "Rỗng",
+        "Hiển thị đơn kế tiếp bị ảnh hưởng"
+      ],
+      [
+        "8",
+        "chotPhieuNhanTraBtn",
+        "Button",
+        "Lưu phiếu nhận trả theo đợt (PNT) và cập nhật trạng thái thiết bị",
+        "Null",
+        "Kích hoạt",
+        "Đợt cuối chuyển ChoDoiSoat"
+      ]
+    ],
+    "b": [
+      [
+        "1",
+        "Chọn đơn đang thuê trên donDangThueSelect (UC4.3 & UC4.4)",
+        "Hiển thị danh sách thiết bị đã bàn giao, lịch sử các đợt trả trước và phần còn nợ; nếu quá hạn thì hiển thị thời gian trễ, phí trễ dự kiến (150%) và các đơn tương lai bị ảnh hưởng."
+      ],
+      [
+        "2",
+        "Tích chọn thiết bị thực trả, chọn ketLuanKiemTraSelect và nhập bằng chứng",
+        "Nếu chọn BaoMat thì yêu cầu lập biên bản mất và chờ Quản trị viên duyệt; nếu có phát sinh phí thì bấm lapPhuPhiNhanhBtn để mở UC5.2."
+      ],
+      [
+        "3",
+        "Nhấp chotPhieuNhanTraBtn",
+        "Lưu PHIEU_NHAN_TRA theo số thứ tự đợt; chuyển đồ DatChuan về SanSang, CanBaoTri sang BaoTri. Nếu còn thiết bị nợ (EP4.3-MOTPHAN / UC4.3.1) thì giữ DON_THUE ở DangThue kèm nhãn Trả một phần; nếu đã giải quyết hết thì chuyển DaNhanTra / ChoDoiSoat."
+      ]
+    ]
+  },
+  {
+    "scr": "SCR-15",
+    "name": "Giao diện Cổng thanh toán và Xác nhận đơn",
+    "ucs": "UC5.1",
+    "a": [
+      [
+        "1",
+        "dongHoDemNguocTimer",
+        "CountdownTimer",
+        "Hiển thị thời gian giữ chỗ còn lại (tối đa 15 phút)",
+        "mm:ss",
+        "15:00",
+        "Hết giờ tự hủy giữ chỗ (BR05)"
+      ],
+      [
+        "2",
+        "chiTietKhoanThuCard",
+        "Card / Table",
+        "Hiển thị tách bạch Tiền thuê sau giảm, Tiền đặt cọc và Tổng cần trả",
+        "Decimal (VND)",
+        "Từ DON_THUE",
+        "Không gộp chung cọc vào thuê"
+      ],
+      [
+        "3",
+        "congThanhToanRadio",
+        "RadioGroup",
+        "Chọn kênh thanh toán trực tuyến tích hợp",
+        "VNPay | MoMo",
+        "VNPay",
+        "Ánh xạ UC5.1"
+      ],
+      [
+        "4",
+        "thanhToanNgayBtn",
+        "Button",
+        "Khởi tạo yêu cầu thanh toán (Idempotency Key) và chuyển cổng",
+        "Null",
+        "Kích hoạt",
+        "Chống tạo giao dịch trùng"
+      ],
+      [
+        "5",
+        "ketQuaGiaoDichResult",
+        "ResultPanel",
+        "Hiển thị trạng thái xác minh giao dịch và mã tham chiếu cổng",
+        "ThanhCong | ChoXuLy | ThatBai",
+        "ChoXuLy",
+        "Chỉ xác nhận khi đối chiếu khớp"
+      ]
+    ],
+    "b": [
+      [
+        "1",
+        "Tải trang thanh toán đơn thuê (UC5.1)",
+        "Kiểm tra quyền sở hữu đơn, trạng thái ChoThanhToan và thời hạn hanThanhToan; khởi chạy dongHoDemNguocTimer."
+      ],
+      [
+        "2",
+        "Chọn cổng thanh toán và nhấn thanhToanNgayBtn",
+        "Tạo bản ghi THANH_TOAN với maYeuCau duy nhất, chuyển hướng khách hàng sang Dịch vụ thanh toán ngoài để thực hiện giao dịch."
+      ],
+      [
+        "3",
+        "Nhận kết quả trả về / Webhook từ Dịch vụ thanh toán",
+        "Xác minh chữ ký nguồn, maGiaoDichCong, số tiền và hạn giữ chỗ; ghi nhận CHI_TIET_THANH_TOAN (tách TienThue và TienCoc), chốt lượt khuyến mãi (DaSuDung) và chuyển DON_THUE sang DaXacNhan. Nếu tiền về sau khi hết hạn thì ghi nhận để hoàn tiền (UC5.6)."
+      ]
+    ]
+  },
+  {
+    "scr": "SCR-16",
+    "name": "Giao diện Lập và Duyệt phụ phí / Tranh chấp",
+    "ucs": "UC5.2, UC5.3",
+    "a": [
+      [
+        "1",
+        "loaiPhuPhiSelect",
+        "Select",
+        "Chọn loại phụ phí phát sinh (UC5.2)",
+        "TreHan | VeSinh | HuHong | MatThietBi | ThieuPhuKien",
+        "TreHan",
+        "Không thu hao mòn tự nhiên"
+      ],
+      [
+        "2",
+        "thietBiLienQuanSelect",
+        "Select",
+        "Chọn mã thiết bị cụ thể phát sinh phụ phí",
+        "List<ThietBi>",
+        "Từ đơn thuê",
+        "Chặn tính trùng mất & sửa"
+      ],
+      [
+        "3",
+        "mucPhiGoiYText",
+        "Text / Tag",
+        "Hiển thị mức phí gợi ý theo chính sách và giá trị bồi thường đã chốt",
+        "Decimal (VND)",
+        "Tự động tính",
+        "Phí trễ 150% giá ngày"
+      ],
+      [
+        "4",
+        "soTienPhuPhiInput",
+        "InputNumber",
+        "Nhập số tiền phụ phí đề xuất",
+        "Decimal (>=0)",
+        "Theo gợi ý",
+        "Kiểm tra ngưỡng quyền NV"
+      ],
+      [
+        "5",
+        "lyDoVaBangChungUpload",
+        "TextArea & Upload",
+        "Nhập giải trình nguyên nhân và tải ảnh đối chiếu trước/sau thuê",
+        "String / Image",
+        "Rỗng",
+        "Bắt buộc có căn cứ (BR13)"
+      ],
+      [
+        "6",
+        "guiPhuPhiBtn",
+        "Button",
+        "Lưu hồ sơ phụ phí và xác định thẩm quyền duyệt",
+        "Null",
+        "Kích hoạt",
+        "Vượt ngưỡng chuyển ChoDuyet"
+      ],
+      [
+        "7",
+        "tranhChapTable",
+        "DataTable",
+        "Danh sách phụ phí chờ duyệt hoặc khách hàng khiếu nại (UC5.3)",
+        "List<PhuPhi>",
+        "ChoDuyet",
+        "Dành cho Quản trị viên"
+      ],
+      [
+        "8",
+        "ketLuanDuyetModal",
+        "Modal",
+        "Hiển thị chứng cứ trước/sau, ý kiến khách và nút Duyệt / Từ chối",
+        "Object",
+        "Đóng",
+        "Lưu người duyệt & lý do"
+      ]
+    ],
+    "b": [
+      [
+        "1",
+        "Nhân viên chọn loại phí, thiết bị, nhập bằng chứng và nhấn guiPhuPhiBtn (UC5.2)",
+        "Kiểm tra không trùng tổn thất (không vừa tính mất vừa tính sửa), không thu hao mòn thông thường; nếu trong ngưỡng quyền NV thì ghi DaDuyet, nếu vượt ngưỡng/ngoại lệ thì chuyển ChoDuyet."
+      ],
+      [
+        "2",
+        "Khách hàng phản hồi không đồng ý khoản phí trên chi tiết đơn",
+        "Cập nhật trangThaiTranhChap = DangTranhChap và chuyển hồ sơ lên hàng đợi xử lý của Quản trị viên."
+      ],
+      [
+        "3",
+        "Quản trị viên mở ketLuanDuyetModal và xác nhận Duyệt / Từ chối (UC5.3)",
+        "Lưu người duyệt, thời điểm, lý do và số tiền chốt hợp lệ vào PHU_PHI; chỉ các khoản DaDuyet mới được đưa vào bảng đối soát (UC5.4)."
+      ]
+    ]
+  },
+  {
+    "scr": "SCR-17",
+    "name": "Giao diện Đối soát tiền cọc, Thu thêm và Hoàn tiền",
+    "ucs": "UC5.4, UC5.5, UC5.6",
+    "a": [
+      [
+        "1",
+        "bangTinhDoiSoatCard",
+        "Descriptions / Card",
+        "Hiển thị Cọc thực thu, Tổng phụ phí đã duyệt, Đã thu/hoàn trước đó",
+        "Decimal (VND)",
+        "Từ DOI_SOAT",
+        "Ánh xạ UC5.4"
+      ],
+      [
+        "2",
+        "chenhLechKetLuanAlert",
+        "Alert / Statistic",
+        "Hiển thị rõ Số tiền cần hoàn cho khách hoặc Số tiền cần thu thêm",
+        "Decimal (VND)",
+        "0 đ",
+        "Công thức BR15"
+      ],
+      [
+        "3",
+        "thuBoSungPanel",
+        "Card / Form",
+        "Ghi nhận thu tiền bổ sung tại quầy (TienMat / ChuyenKhoan - UC5.5)",
+        "Object",
+        "Hiển thị khi thiếu",
+        "Mở rộng tại EP5.4-THU"
+      ],
+      [
+        "4",
+        "maThamChieuThuInput",
+        "Input (text)",
+        "Nhập mã giao dịch ngân hàng hoặc chứng từ thu tiền mặt",
+        "String",
+        "Rỗng",
+        "Chống ghi thu trùng lặp"
+      ],
+      [
+        "5",
+        "hoanTienPanel",
+        "Card / Form",
+        "Thực hiện hoàn cọc dư hoặc hoàn hủy đơn (UC5.6)",
+        "Object",
+        "Hiển thị khi dư",
+        "Mở rộng tại EP5.4-HOAN"
+      ],
+      [
+        "6",
+        "kenhHoanTienSelect",
+        "Select",
+        "Chọn kênh hoàn trả tiền cho khách",
+        "CongThanhToan | ChuyenKhoan",
+        "CongThanhToan",
+        "Kèm mã tham chiếu hoàn"
+      ],
+      [
+        "7",
+        "xacNhanGiaoDichTienBtn",
+        "Button",
+        "Xác nhận đã thu bổ sung hoặc đã hoàn tiền thành công có chứng từ",
+        "Null",
+        "Kích hoạt",
+        "Cập nhật số dư nghĩa vụ"
+      ],
+      [
+        "8",
+        "chotHoanTatDonBtn",
+        "Button",
+        "Khóa bảng đối soát và chuyển đơn thuê sang trạng thái HoanTat",
+        "Null",
+        "Disabled",
+        "Chỉ bật khi hết nghĩa vụ"
+      ]
+    ],
+    "b": [
+      [
+        "1",
+        "Mở màn hình đối soát của đơn ở trạng thái ChoDoiSoat (UC5.4)",
+        "Kiểm tra mọi thiết bị đã có kết luận nhận trả/mất và mọi phụ phí đã được duyệt; tính toán chênh lệch giữa tiền cọc đã thu và tổng phụ phí hợp lệ."
+      ],
+      [
+        "2",
+        "Thực hiện thu thêm (UC5.5) hoặc hoàn tiền (UC5.6) và nhấn xacNhanGiaoDichTienBtn",
+        "Đối chiếu mã tham chiếu giao dịch thực tế (không chấp nhận ảnh chụp đơn thuần), ghi nhận vào THANH_TOAN / HOAN_TIEN và cập nhật số dư còn lại trên DOI_SOAT_TIEN_COC."
+      ],
+      [
+        "3",
+        "Nhấp chotHoanTatDonBtn khi số dư chênh lệch bằng 0",
+        "Khóa bảng đối soát (DaKhoaDoiSoat), cập nhật DON_THUE sang HoanTat, ghi nhận thoiDiemHoanTat để phục vụ báo cáo doanh thu."
+      ]
+    ]
+  },
+  {
+    "scr": "SCR-18",
+    "name": "Giao diện Điều chỉnh tài chính sau chốt",
+    "ucs": "UC5.7",
+    "a": [
+      [
+        "1",
+        "chungTuDaChotSelect",
+        "Select / Search",
+        "Chọn hồ sơ đối soát hoặc phụ phí đã chốt cần điều chỉnh (UC5.7)",
+        "String",
+        "Rỗng",
+        "Chỉ dành cho Quản trị viên"
+      ],
+      [
+        "2",
+        "chuoiLichSuDieuChinhTimeline",
+        "Timeline",
+        "Hiển thị bản đối soát/phụ phí gốc và các bản điều chỉnh trước đó",
+        "List",
+        "Từ CSDL",
+        "Không sửa đè bản gốc (BR17)"
+      ],
+      [
+        "3",
+        "soLieuDeNghiInput",
+        "InputNumber",
+        "Nhập số tiền phụ phí hoặc mức điều chỉnh đúng cần lập",
+        "Decimal",
+        "0",
+        "Tự tính chênh lệch mới"
+      ],
+      [
+        "4",
+        "lyDoVaBangChungInput",
+        "TextArea & Upload",
+        "Nhập giải trình sai sót và tải lên chứng từ căn cứ điều chỉnh",
+        "String / File",
+        "Rỗng",
+        "Bắt buộc có bằng chứng"
+      ],
+      [
+        "5",
+        "duyetDieuChinhBtn",
+        "Button",
+        "Phê duyệt và phát sinh bản ghi điều chỉnh liên kết chứng từ gốc",
+        "Null",
+        "Kích hoạt",
+        "Chuyển UC5.5/UC5.6 nếu lệch tiền"
+      ]
+    ],
+    "b": [
+      [
+        "1",
+        "Chọn chứng từ đã chốt trên chungTuDaChotSelect (UC5.7)",
+        "Hiển thị nguyên trạng số liệu bản gốc và chuỗi các lần điều chỉnh liên quan để tránh xử lý trùng lặp."
+      ],
+      [
+        "2",
+        "Nhập số liệu đề nghị, lý do, bằng chứng và nhấn duyetDieuChinhBtn",
+        "Tạo bản ghi DOI_SOAT_TIEN_COC (loaiDoiSoat = DieuChinhSauChot) hoặc PHU_PHI mới liên kết khóa ngoại về bản gốc; tự động tính khoản tiền chênh lệch cần thu thêm (UC5.5) hoặc hoàn bổ sung (UC5.6)."
+      ]
+    ]
+  },
+  {
+    "scr": "SCR-19",
+    "name": "Giao diện Quản lý Danh mục và Sản phẩm mẫu",
+    "ucs": "UC6.1 – UC6.8",
+    "a": [
+      [
+        "1",
+        "danhMucTreePanel",
+        "Tree / Table",
+        "Quản lý cây danh mục: Thêm (UC6.1), Sửa (UC6.2), Tìm (UC6.3), Ẩn/Hiện (UC6.4)",
+        "List<DanhMuc>",
+        "Tất cả",
+        "Chặn vòng lặp danh mục cha"
+      ],
+      [
+        "2",
+        "sanPhamDataTable",
+        "DataTable",
+        "Danh sách sản phẩm mẫu (mã SP, tên, danh mục, giá thuê, cọc, trạng thái)",
+        "List<SanPham>",
+        "Dữ liệu CSDL",
+        "Ánh xạ UC6.7"
+      ],
+      [
+        "3",
+        "themSuaSanPhamModal",
+        "Modal Form",
+        "Biểu mẫu nhập/sửa thông tin sản phẩm, thông số JSON, giá thuê và tiền cọc",
+        "Object",
+        "Đóng",
+        "Ánh xạ UC6.5 & UC6.6"
+      ],
+      [
+        "4",
+        "thuVienAnhUpload",
+        "UploadList",
+        "Quản lý danh sách hình ảnh và chọn ảnh chính của sản phẩm",
+        "List<HinhAnh>",
+        "Rỗng",
+        "Lưu HINH_ANH_SAN_PHAM"
+      ],
+      [
+        "5",
+        "doiTrangThaiSPSelect",
+        "Select / Switch",
+        "Chuyển trạng thái kinh doanh (DangChoThue / TamNgung / NgungKinhDoanh)",
+        "Enum",
+        "DangChoThue",
+        "Ánh xạ UC6.8"
+      ]
+    ],
+    "b": [
+      [
+        "1",
+        "Thêm/cập nhật danh mục trên danhMucTreePanel (UC6.1 – UC6.4)",
+        "Gọi UC6.1.1 kiểm tra cấu trúc cây không tạo vòng lặp cha-con; chặn ẩn danh mục nếu vẫn còn sản phẩm đang kinh doanh trực thuộc."
+      ],
+      [
+        "2",
+        "Thêm/cập nhật sản phẩm trên themSuaSanPhamModal (UC6.5, UC6.6)",
+        "Gọi UC6.5.1 kiểm tra mã sản phẩm duy nhất, giá thuê, tiền cọc, mức bồi thường hợp lệ; lưu thay đổi mà không làm sai lệch giá đã chốt trên các đơn thuê cũ."
+      ],
+      [
+        "3",
+        "Đổi trạng thái kinh doanh sản phẩm (UC6.8)",
+        "Kiểm tra các thiết bị thuộc sản phẩm có đang được thuê hoặc có lịch đặt trước hay không trước khi cho phép chuyển sang NgungKinhDoanh."
+      ]
+    ]
+  },
+  {
+    "scr": "SCR-20",
+    "name": "Giao diện Quản lý Vòng đời thiết bị và Điều chuyển",
+    "ucs": "UC6.9, UC6.14, UC6.15",
+    "a": [
+      [
+        "1",
+        "timKiemThietBiInput",
+        "Input (search/QR)",
+        "Tra cứu thiết bị cá biệt theo mã QR (maThietBiHienThi) hoặc sản phẩm",
+        "String",
+        "Rỗng",
+        "Ánh xạ UC6.9"
+      ],
+      [
+        "2",
+        "trangThaiThietBiSelect",
+        "Select",
+        "Lọc theo trạng thái sử dụng vật lý của thiết bị",
+        "TatCa | SanSang | DangThue | BaoTri | ThatLac | NgungSuDung",
+        "TatCa",
+        "Từ bảng THIET_BI"
+      ],
+      [
+        "3",
+        "thietBiDataTable",
+        "DataTable",
+        "Hiển thị mã thiết bị, sản phẩm hiện tại, nguồn nhập, tình trạng",
+        "List<ThietBi>",
+        "Dữ liệu CSDL",
+        "Tách nguồn nhập & SP hiện tại"
+      ],
+      [
+        "4",
+        "vongDoiThietBiDrawer",
+        "Drawer / Timeline",
+        "Hiển thị toàn bộ lịch sử nhập kho, giao nhận, bảo trì và điều chuyển",
+        "List<LichSu>",
+        "Đóng",
+        "Từ LICH_SU_TINH_TRANG"
+      ],
+      [
+        "5",
+        "dieuChuyenSanPhamModal",
+        "Modal Form",
+        "Chọn sản phẩm đích và nhập lý do điều chuyển thiết bị (UC6.15)",
+        "Object",
+        "Đóng",
+        "Dành cho Quản trị viên"
+      ],
+      [
+        "6",
+        "ngungSuDungModal",
+        "Modal Form",
+        "Nhập lý do, bằng chứng để thanh lý/ngừng sử dụng thiết bị (UC6.14)",
+        "Object",
+        "Đóng",
+        "Chặn nếu còn lịch cam kết"
+      ]
+    ],
+    "b": [
+      [
+        "1",
+        "Tra cứu và mở chi tiết một thiết bị (UC6.9)",
+        "Hiển thị thông tin chi tiết, nguồn gốc phiếu nhập ban đầu (không bị ghi đè) và chuỗi lịch sử biến động trạng thái trên vongDoiThietBiDrawer."
+      ],
+      [
+        "2",
+        "Thực hiện điều chuyển thiết bị sang sản phẩm khác (UC6.15)",
+        "Kiểm tra thiết bị không đang thuê và không vướng lịch phân công tương lai; cập nhật maSanPhamHienTai mới và ghi vết trước/sau vào lịch sử."
+      ],
+      [
+        "3",
+        "Xác nhận ngừng sử dụng thiết bị (UC6.14)",
+        "Kiểm tra thiết bị đã thu hồi về kho và đã thay thế hết các lịch phân công tương lai; chuyển trạng thái sang NgungSuDung và bảo toàn toàn bộ lịch sử."
+      ]
+    ]
+  },
+  {
+    "scr": "SCR-21",
+    "name": "Giao diện Kiểm kê và Duyệt điều chỉnh kho",
+    "ucs": "UC6.10, UC6.11",
+    "a": [
+      [
+        "1",
+        "phamViKiemKeSelect",
+        "Select",
+        "Chọn danh mục hoặc sản phẩm cần lập đợt kiểm kê kho (UC6.10)",
+        "String",
+        "Toàn kho",
+        "Lấy danh sách tại thời điểm"
+      ],
+      [
+        "2",
+        "danhSachKiemKeTable",
+        "EditableTable",
+        "Hiển thị từng mã thiết bị, trạng thái hệ thống và cột ghi nhận thực tế",
+        "List<ThietBi>",
+        "Theo kho",
+        "Tách riêng đồ đang cho thuê"
+      ],
+      [
+        "3",
+        "ketQuaDoiChieuSelect",
+        "Select",
+        "Ghi nhận kết quả kiểm đếm từng mã (Khớp / Sai lệch tình trạng / Thất lạc)",
+        "Enum",
+        "Khớp",
+        "Ánh xạ UC6.10.1"
+      ],
+      [
+        "4",
+        "guiBienBanKiemKeBtn",
+        "Button",
+        "Lưu biên bản kiểm kê và tạo phiếu đề nghị điều chỉnh nếu có sai lệch",
+        "Null",
+        "Kích hoạt",
+        "Chưa tác động kho khi chưa duyệt"
+      ],
+      [
+        "5",
+        "phieuDieuChinhChoDuyetTable",
+        "DataTable",
+        "Danh sách phiếu điều chỉnh kho chờ Quản trị viên phê duyệt (UC6.11)",
+        "List<PhieuDieuChinh>",
+        "ChoDuyet",
+        "Kèm bằng chứng đối chiếu"
+      ],
+      [
+        "6",
+        "duyetTuChoiDieuChinhBtn",
+        "Button Group",
+        "Phê duyệt hoặc từ chối phiếu điều chỉnh kho kèm lý do",
+        "Null",
+        "Kích hoạt",
+        "Kiểm tra lịch thuê (UC6.11.1)"
+      ]
+    ],
+    "b": [
+      [
+        "1",
+        "Thực hiện kiểm kê và nhấn guiBienBanKiemKeBtn (UC6.10 & UC6.10.1)",
+        "Đối chiếu giao nhận phát sinh trong lúc kiểm kê để tránh báo sai lệch giả; lưu biên bản kiểm kê và tự động sinh PHIEU_DIEU_CHINH_KHO (ChoDuyet) nếu có chênh lệch."
+      ],
+      [
+        "2",
+        "Quản trị viên xem xét và nhấn duyệt phiếu điều chỉnh (UC6.11)",
+        "Gọi UC6.11.1 kiểm tra thiết bị không đang thuê hoặc vướng lịch cam kết; cập nhật trạng thái kho theo phạm vi được duyệt và lưu vết vào NHAT_KY_THAO_TAC."
+      ]
+    ]
+  },
+  {
+    "scr": "SCR-22",
+    "name": "Giao diện Quản lý và Nghiệm thu bảo trì",
+    "ucs": "UC6.12, UC6.13",
+    "a": [
+      [
+        "1",
+        "phieuBaoTriTable",
+        "DataTable",
+        "Danh sách thiết bị đang bảo trì / chờ nghiệm thu",
+        "List<PhieuBaoTri>",
+        "DangXuLy",
+        "Ánh xạ UC6.12 & UC6.13"
+      ],
+      [
+        "2",
+        "lapPhieuBaoTriModal",
+        "Modal Form",
+        "Chọn thiết bị tại kho, loại xử lý (VeSinh/SuaChua), mức độ lỗi, dự kiến xong",
+        "Object",
+        "Đóng",
+        "Loại khỏi khả dụng (UC6.12.1)"
+      ],
+      [
+        "3",
+        "canhBaoLichThueAlert",
+        "Alert / List",
+        "Hiển thị các đơn thuê sắp tới bị ảnh hưởng bởi thiết bị đưa đi bảo trì",
+        "List<DonThue>",
+        "Tự động kiểm tra",
+        "Yêu cầu đổi mã phân công"
+      ],
+      [
+        "4",
+        "capNhatTienDoForm",
+        "Form",
+        "Cập nhật công việc đã làm, chi phí bảo trì và gửi đề nghị nghiệm thu",
+        "Object",
+        "Theo phiếu",
+        "Chưa tự chuyển SanSang"
+      ],
+      [
+        "5",
+        "nghiemThuModal",
+        "Modal Form",
+        "Ghi nhận kết quả kiểm tra thực tế sau sửa chữa (Đạt / Chưa đạt / Hỏng hẳn)",
+        "Enum",
+        "Đóng",
+        "Ánh xạ UC6.13"
+      ]
+    ],
+    "b": [
+      [
+        "1",
+        "Lập phiếu bảo trì trên lapPhieuBaoTriModal (UC6.12)",
+        "Kiểm tra thiết bị đang ở kho và chưa có phiếu bảo trì mở; lưu PHIEU_BAO_TRI, chuyển THIET_BI sang BaoTri (UC6.12.1) và cảnh báo các đơn tương lai cần đổi mã thay thế."
+      ],
+      [
+        "2",
+        "Cập nhật tiến độ và gửi đề nghị nghiệm thu",
+        "Lưu chi phí, kết quả xử lý theo thời gian và chuyển trạng thái phiếu sang ChoNghiemThu."
+      ],
+      [
+        "3",
+        "Xác nhận kết quả trên nghiemThuModal (UC6.13)",
+        "Nếu đạt tiêu chuẩn thì đóng phiếu (DaHoanThanh) và đưa thiết bị về SanSang; nếu chưa đạt thì giữ BaoTri; nếu không thể khắc phục thì đề xuất ngừng sử dụng (UC6.14)."
+      ]
+    ]
+  },
+  {
+    "scr": "SCR-23",
+    "name": "Giao diện Quản lý Nhà cung cấp",
+    "ucs": "UC7.1 – UC7.4",
+    "a": [
+      [
+        "1",
+        "timKiemNCCInput",
+        "Input (search)",
+        "Tìm kiếm nhà cung cấp theo mã, tên, SĐT hoặc mã số thuế (UC7.3)",
+        "String",
+        "Rỗng",
+        "Từ bảng NHA_CUNG_CAP"
+      ],
+      [
+        "2",
+        "trangThaiHopTacSelect",
+        "Select",
+        "Lọc theo tình trạng hợp tác",
+        "TatCa | DangHopTac | TamNgung | NgungHopTac",
+        "TatCa",
+        "Ánh xạ UC7.4"
+      ],
+      [
+        "3",
+        "nhaCungCapTable",
+        "DataTable",
+        "Hiển thị danh sách nhà cung cấp và tổng giá trị hàng đã nhập",
+        "List<NhaCungCap>",
+        "Dữ liệu CSDL",
+        "Chỉ tính phiếu DaXacNhan"
+      ],
+      [
+        "4",
+        "themSuaNCCModal",
+        "Modal Form",
+        "Biểu mẫu thêm mới (UC7.1) hoặc cập nhật (UC7.2) thông tin nhà cung cấp",
+        "Object",
+        "Đóng",
+        "Bảo toàn lịch sử phiếu cũ"
+      ],
+      [
+        "5",
+        "lichSuNhapNCCDrawer",
+        "Drawer / Table",
+        "Hiển thị chi tiết các phiếu nhập đã xác nhận của nhà cung cấp",
+        "List<PhieuNhap>",
+        "Đóng",
+        "Cho phép mở chứng từ gốc"
+      ]
+    ],
+    "b": [
+      [
+        "1",
+        "Tìm kiếm và chọn một nhà cung cấp (UC7.3)",
+        "Hiển thị hồ sơ liên hệ và tổng hợp lịch sử các phiếu nhập kho đã xác nhận (loại trừ phiếu nháp/hủy)."
+      ],
+      [
+        "2",
+        "Thêm mới hoặc cập nhật nhà cung cấp trên themSuaNCCModal (UC7.1, UC7.2)",
+        "Kiểm tra tính duy nhất của mã nhà cung cấp, lưu thông tin và giữ nguyên bản chụp thông tin trên các chứng từ nhập đã chốt."
+      ],
+      [
+        "3",
+        "Thay đổi tình trạng hợp tác sang NgungHopTac (UC7.4)",
+        "Kiểm tra không còn phiếu nhập nháp/chờ nhập kho đang mở; cập nhật trạng thái để chặn lập phiếu nhập mới từ nguồn cung này."
+      ]
+    ]
+  },
+  {
+    "scr": "SCR-24",
+    "name": "Giao diện Lập và Kiểm nhận phiếu nhập kho",
+    "ucs": "UC7.5 – UC7.9",
+    "a": [
+      [
+        "1",
+        "phieuNhapTable",
+        "DataTable",
+        "Tra cứu danh sách phiếu nhập theo mã, NCC, thời gian, trạng thái (UC7.8)",
+        "List<PhieuNhap>",
+        "Dữ liệu CSDL",
+        "Nhap | DaXacNhan | DaHuy"
+      ],
+      [
+        "2",
+        "lapSuaPhieuNhapModal",
+        "Modal Form",
+        "Chọn NCC đang hợp tác, thêm/sửa dòng sản phẩm, số lượng, đơn giá nhập",
+        "Object",
+        "Đóng",
+        "Ánh xạ UC7.5 & UC7.6"
+      ],
+      [
+        "3",
+        "huyPhieuNhapBtn",
+        "Button",
+        "Hủy bỏ phiếu nhập còn ở trạng thái nháp kèm lý do (UC7.9)",
+        "Null",
+        "Theo trạng thái",
+        "Chặn hủy phiếu DaXacNhan"
+      ],
+      [
+        "4",
+        "kiemNhanThucTeDrawer",
+        "Drawer / Form",
+        "Ghi nhận số lượng thực nhận đạt, hàng lỗi và mã thiết bị từng món (UC7.7)",
+        "Object",
+        "Đóng",
+        "Mở rộng UC7.7.2 cho hàng lỗi"
+      ],
+      [
+        "5",
+        "xacNhanNhapKhoBtn",
+        "Button",
+        "Quản trị viên phê duyệt chốt phiếu và tự động sinh mã thiết bị vào kho",
+        "Null",
+        "Chỉ QTV thấy",
+        "Gọi UC7.7.1 ghi nhận 1 lần"
+      ]
+    ],
+    "b": [
+      [
+        "1",
+        "Lập hoặc sửa phiếu nhập nháp (UC7.5, UC7.5.1, UC7.6)",
+        "Kiểm tra nhà cung cấp đang hợp tác, số lượng nguyên dương, đơn giá không âm; tính tổng tiền và lưu PHIEU_NHAP_HANG ở trạng thái Nhap (chưa tăng tồn kho)."
+      ],
+      [
+        "2",
+        "Nhân viên kiểm nhận thực tế và Quản trị viên nhấn xacNhanNhapKhoBtn (UC7.7)",
+        "Gọi UC7.7.1 và UC7.7.2: tạo mã định danh cá biệt (maThietBiHienThi) duy nhất một lần cho số lượng thực nhận; đưa hàng đạt vào SanSang, hàng lỗi nhận xử lý vào BaoTri và chốt phiếu DaXacNhan."
+      ]
+    ]
+  },
+  {
+    "scr": "SCR-25",
+    "name": "Giao diện Xử lý sai lệch phiếu nhập",
+    "ucs": "UC7.10",
+    "a": [
+      [
+        "1",
+        "phieuNhapDaChotSelect",
+        "Select / Search",
+        "Chọn phiếu nhập kho đã xác nhận phát hiện sai lệch (UC7.10)",
+        "String",
+        "Rỗng",
+        "Giữ nguyên phiếu gốc"
+      ],
+      [
+        "2",
+        "loaiSaiLechRadio",
+        "RadioGroup",
+        "Chọn loại điều chỉnh (Sai lệch đơn giá nhập / Sai lệch số lượng vật phẩm)",
+        "SaiGia | SaiSoLuong",
+        "SaiGia",
+        "Theo quy tắc BR17 & BR19"
+      ],
+      [
+        "3",
+        "chiTietDieuChinhTable",
+        "EditableTable",
+        "Hiển thị giá trị gốc và cột nhập giá trị đề nghị điều chỉnh",
+        "List",
+        "Từ phiếu nhập",
+        "Kèm lý do và bằng chứng"
+      ],
+      [
+        "4",
+        "guiDeNghiDieuChinhBtn",
+        "Button",
+        "Gửi đề nghị điều chỉnh sang trạng thái ChoDuyet (UC7.10.1)",
+        "Null",
+        "Kích hoạt",
+        "Chưa sửa số liệu kho"
+      ],
+      [
+        "5",
+        "duyetSaiLechBtn",
+        "Button",
+        "Quản trị viên phê duyệt bản điều chỉnh sau khi kiểm tra cam kết thuê",
+        "Null",
+        "Chỉ QTV thấy",
+        "Chặn giảm đồ đang thuê"
+      ]
+    ],
+    "b": [
+      [
+        "1",
+        "Nhân viên lập đề nghị sai lệch và nhấn guiDeNghiDieuChinhBtn (UC7.10.1)",
+        "Lưu đề nghị điều chỉnh kèm bằng chứng ở trạng thái ChoDuyet, liên kết khóa ngoại về PHIEU_NHAP_HANG gốc."
+      ],
+      [
+        "2",
+        "Quản trị viên kiểm tra và nhấn duyetSaiLechBtn (UC7.10)",
+        "Kiểm tra các thiết bị thuộc phiếu nhập có đang cho thuê hoặc có lịch cam kết tương lai hay không; áp dụng bản điều chỉnh hợp lệ một lần và tách riêng trên báo cáo nhập hàng."
+      ]
+    ]
+  },
+  {
+    "scr": "SCR-26",
+    "name": "Giao diện Cấu hình phiên bản Chính sách",
+    "ucs": "UC8.1",
+    "a": [
+      [
+        "1",
+        "phienBanHienHanhCard",
+        "Descriptions",
+        "Hiển thị số hiệu phiên bản chính sách đang có hiệu lực và ngày áp dụng",
+        "Object",
+        "Bản mới nhất",
+        "Từ bảng CHINH_SACH"
+      ],
+      [
+        "2",
+        "thamSoChinhSachForm",
+        "Form",
+        "Cấu hình hạn giữ chỗ (15p), tỷ lệ phí hủy theo mốc giờ, hệ số trễ (150%)",
+        "JSON",
+        "Theo bản hiện tại",
+        "Validate miền giá trị >= 0"
+      ],
+      [
+        "3",
+        "thoiDiemApDungPicker",
+        "DateTimePicker",
+        "Chọn thời điểm phiên bản chính sách mới bắt đầu có hiệu lực",
+        "DateTime",
+        "Hiện tại",
+        "Cảnh báo nếu chồng lấn mốc"
+      ],
+      [
+        "4",
+        "lichSuPhienBanTable",
+        "DataTable",
+        "Danh sách các phiên bản chính sách cũ đã ban hành",
+        "List<ChinhSach>",
+        "Dữ liệu CSDL",
+        "Không hồi tố đơn cũ (UC8.1)"
+      ],
+      [
+        "5",
+        "banHanhPhienBanBtn",
+        "Button",
+        "Lưu phiên bản chính sách mới và ghi nhật ký thay đổi (UC8.1.1)",
+        "Null",
+        "Kích hoạt",
+        "Chỉ dành cho Quản trị viên"
+      ]
+    ],
+    "b": [
+      [
+        "1",
+        "Chỉnh sửa thông số trên thamSoChinhSachForm và nhấn banHanhPhienBanBtn (UC8.1)",
+        "Gọi UC8.1.1 kiểm tra tính hợp lệ của các mốc thời gian và tỷ lệ cấu hình; tạo bản ghi CHINH_SACH với số hiệu phienBan tăng dần."
+      ],
+      [
+        "2",
+        "Áp dụng phiên bản chính sách mới",
+        "Chỉ áp dụng cho các đơn thuê được tạo từ thoiDiemApDungPicker trở đi; toàn bộ các đơn thuê cũ tiếp tục giữ nguyên maChinhSach đã chốt lúc đặt."
+      ]
+    ]
+  },
+  {
+    "scr": "SCR-27",
+    "name": "Giao diện Quản lý Chương trình khuyến mãi",
+    "ucs": "UC8.2 – UC8.5",
+    "a": [
+      [
+        "1",
+        "timKiemKhuyenMaiInput",
+        "Input (search)",
+        "Tìm kiếm chương trình khuyến mãi theo mã voucher hoặc tên (UC8.4)",
+        "String",
+        "Rỗng",
+        "Từ bảng KHUYEN_MAI"
+      ],
+      [
+        "2",
+        "trangThaiKMSelect",
+        "Select",
+        "Lọc theo trạng thái chương trình ưu đãi",
+        "TatCa | DangHoatDong | TamNgung | DaKetThuc",
+        "TatCa",
+        "Ánh xạ UC8.4"
+      ],
+      [
+        "3",
+        "khuyenMaiTable",
+        "DataTable",
+        "Hiển thị mã giảm giá, loại giảm, mức giảm tối đa, lượt đã dùng/tổng lượt",
+        "List<KhuyenMai>",
+        "Dữ liệu CSDL",
+        "Theo dõi tiến độ sử dụng"
+      ],
+      [
+        "4",
+        "themSuaKMModal",
+        "Modal Form",
+        "Biểu mẫu tạo mới (UC8.2) hoặc cập nhật (UC8.3) chương trình khuyến mãi",
+        "Object",
+        "Đóng",
+        "Gọi UC8.2.1 & UC8.3.1"
+      ],
+      [
+        "5",
+        "phamViApDungTransfer",
+        "Transfer / Select",
+        "Chọn phạm vi áp dụng (Toàn bộ / Theo danh mục / Theo sản phẩm chỉ định)",
+        "Enum / List",
+        "ToanBo",
+        "Lưu KHUYEN_MAI_SP/DM"
+      ],
+      [
+        "6",
+        "ngungKhuyenMaiBtn",
+        "Button",
+        "Ngừng chương trình khuyến mãi đang chạy kèm lý do (UC8.5)",
+        "Null",
+        "Theo trạng thái",
+        "Chặn áp dụng cho đơn mới"
+      ]
+    ],
+    "b": [
+      [
+        "1",
+        "Tạo mới hoặc cập nhật khuyến mãi trên themSuaKMModal (UC8.2, UC8.3)",
+        "Gọi UC8.2.1 và UC8.3.1 kiểm tra mã voucher duy nhất, thời gian hiệu lực, mức giảm chỉ tính trên tiền thuê (không giảm cọc) và bảo toàn mức giảm đã chốt trên đơn cũ."
+      ],
+      [
+        "2",
+        "Nhấp ngungKhuyenMaiBtn (UC8.5)",
+        "Chuyển trạng thái chương trình sang TamNgung/DaKetThuc để chặn áp dụng cho các giỏ thuê và đơn đặt mới."
+      ]
+    ]
+  },
+  {
+    "scr": "SCR-28",
+    "name": "Giao diện Đánh giá sản phẩm và Kiểm duyệt đánh giá",
+    "ucs": "UC9.1, UC9.2",
+    "a": [
+      [
+        "1",
+        "guiDanhGiaModal",
+        "Modal Form",
+        "Biểu mẫu cho khách hàng chọn sao (1–5), viết nhận xét sau khi hoàn tất đơn",
+        "Object",
+        "Đóng",
+        "Ánh xạ UC9.1 & UC9.1.1"
+      ],
+      [
+        "2",
+        "anhDanhGiaUpload",
+        "Upload",
+        "Đính kèm hình ảnh thực tế trải nghiệm dụng cụ (UC9.1.2)",
+        "List<Image>",
+        "Rỗng",
+        "Mở rộng tại EP9.1-ANH"
+      ],
+      [
+        "3",
+        "kiemDuyetDanhGiaTable",
+        "DataTable",
+        "Bảng quản lý đánh giá dành cho Quản trị viên lọc theo sao, SP, trạng thái",
+        "List<DanhGia>",
+        "CongKhai",
+        "Ánh xạ UC9.2"
+      ],
+      [
+        "4",
+        "anHienDanhGiaBtn",
+        "Button",
+        "Ẩn hoặc khôi phục hiển thị đánh giá vi phạm tiêu chuẩn cộng đồng",
+        "Null",
+        "Kích hoạt",
+        "Không cho sửa điểm/lời khách"
+      ],
+      [
+        "5",
+        "lyDoAnInput",
+        "Input / TextArea",
+        "Nhập lý do bắt buộc khi ẩn đánh giá vi phạm (UC9.2.1)",
+        "String",
+        "Rỗng",
+        "Lưu vào DANH_GIA.lyDoAn"
+      ]
+    ],
+    "b": [
+      [
+        "1",
+        "Khách hàng mở guiDanhGiaModal từ đơn HoanTat và gửi đánh giá (UC9.1)",
+        "Gọi UC9.1.1 kiểm tra quyền sở hữu đơn, trạng thái HoanTat và đảm bảo mỗi sản phẩm trong một đơn chỉ được đánh giá duy nhất một lần; lưu DANH_GIA."
+      ],
+      [
+        "2",
+        "Quản trị viên nhấn anHienDanhGiaBtn và nhập lyDoAnInput (UC9.2 & UC9.2.1)",
+        "Cập nhật trangThaiHienThi (DaAn/CongKhai) kèm người xử lý và lý do; hệ thống nghiêm cấm sửa đổi số sao hoặc nội dung nhận xét gốc của khách hàng."
+      ]
+    ]
+  },
+  {
+    "scr": "SCR-29",
+    "name": "Giao diện Trung tâm Thông báo và Quản lý gửi thông báo",
+    "ucs": "UC9.3, UC9.4",
+    "a": [
+      [
+        "1",
+        "thongBaoPopoverList",
+        "List / Drawer",
+        "Hiển thị danh sách thông báo nghiệp vụ của tài khoản đang đăng nhập",
+        "List<ThongBao>",
+        "Mới nhất",
+        "Ánh xạ UC9.3"
+      ],
+      [
+        "2",
+        "danhDauDaDocBtn",
+        "Button",
+        "Cập nhật trạng thái đã đọc cho thông báo (lưu thoiDiemDoc)",
+        "Null",
+        "Kích hoạt",
+        "Không làm đổi trạng thái đơn"
+      ],
+      [
+        "3",
+        "lienKetChungTuLink",
+        "Link",
+        "Điều hướng trực tiếp đến đơn thuê hoặc chứng từ được nhắc trong thông báo",
+        "URL",
+        "Theo sự kiện",
+        "Kiểm tra quyền (UC9.3.1)"
+      ],
+      [
+        "4",
+        "soanThongBaoForm",
+        "Form",
+        "Biểu mẫu cho Quản trị viên soạn tiêu đề, nội dung và chọn nhóm người nhận",
+        "Object",
+        "Rỗng",
+        "Ánh xạ UC9.4"
+      ],
+      [
+        "5",
+        "xemTruocVaGuiBtn",
+        "Button",
+        "Kiểm tra phạm vi người nhận (UC9.4.1), xem trước và phát thông báo",
+        "Null",
+        "Kích hoạt",
+        "Ghi nhận trạng thái gửi"
+      ]
+    ],
+    "b": [
+      [
+        "1",
+        "Người dùng mở danh sách và nhấp vào một thông báo (UC9.3)",
+        "Cập nhật thoiDiemDoc; khi nhấp vào lienKetChungTuLink thì gọi UC9.3.1 kiểm tra quyền truy cập hiện hành trước khi mở chứng từ đích."
+      ],
+      [
+        "2",
+        "Quản trị viên soạn nội dung trên soanThongBaoForm và nhấn xemTruocVaGuiBtn (UC9.4)",
+        "Gọi UC9.4.1 đối chiếu tính hợp lệ của danh sách người nhận, phát thông báo qua kênh InApp/Email và lưu kết quả gửi vào bảng THONG_BAO."
+      ]
+    ]
+  },
+  {
+    "scr": "SCR-30",
+    "name": "Giao diện Báo cáo Vận hành, Doanh thu và Nhập hàng",
+    "ucs": "UC10.1 – UC10.3",
+    "a": [
+      [
+        "1",
+        "loaiBaoCaoTabs",
+        "Tabs",
+        "Chuyển đổi 3 phân hệ báo cáo: Vận hành (UC10.1), Doanh thu (UC10.2), Nhập hàng (UC10.3)",
+        "VanHanh | DoanhThu | NhapHang",
+        "VanHanh",
+        "Phân quyền theo vai trò"
+      ],
+      [
+        "2",
+        "kyBaoCaoRangePicker",
+        "RangePicker",
+        "Chọn khoảng thời gian bắt đầu và kết thúc kỳ báo cáo",
+        "DateRange",
+        "Tháng hiện tại",
+        "Validate từ ngày <= đến ngày"
+      ],
+      [
+        "3",
+        "kpiTongHopCards",
+        "StatisticCards",
+        "Hiển thị các chỉ tiêu tổng hợp tách bạch (Doanh thu thuần, Dòng tiền, Cọc đang giữ)",
+        "Decimal / Int",
+        "0",
+        "Không cộng cọc vào doanh thu"
+      ],
+      [
+        "4",
+        "bieuDoThongKeChart",
+        "Chart (Bar/Line)",
+        "Biểu đồ trực quan xu hướng đơn thuê, doanh thu và giá trị nhập kho",
+        "Dataset",
+        "Theo kỳ",
+        "Thư viện biểu đồ React"
+      ],
+      [
+        "5",
+        "bangChiTietCauThanhTable",
+        "DataTable",
+        "Hiển thị danh sách đơn thuê, giao dịch hoặc phiếu nhập cấu thành số liệu",
+        "List",
+        "Theo kỳ",
+        "Cho phép truy ngược chứng từ"
+      ]
+    ],
+    "b": [
+      [
+        "1",
+        "Chọn tab VanHanh và kỳ báo cáo (UC10.1 & UC10.1.1)",
+        "Tổng hợp số đơn cần giao/trả, đơn quá hạn, đơn chờ đối soát, lượt thuê và số lần hỏng theo phạm vi quyền của Nhân viên/Quản trị viên."
+      ],
+      [
+        "2",
+        "Chọn tab DoanhThu và kỳ báo cáo (UC10.2 & UC10.2.1)",
+        "Chỉ cho phép Quản trị viên truy cập; tính doanh thu theo ngày hoàn tất (tiền thuê sau giảm + phụ phí duyệt), tách riêng phí hủy, tiền cọc đang giữ và bản điều chỉnh sau chốt."
+      ],
+      [
+        "3",
+        "Chọn tab NhapHang và kỳ báo cáo (UC10.3)",
+        "Tổng hợp số phiếu, số thiết bị và tổng giá trị nhập kho từ các phiếu DaXacNhan (loại trừ phiếu nháp/hủy) và tách riêng bản điều chỉnh sai lệch."
+      ]
+    ]
+  },
+  {
+    "scr": "SCR-31",
+    "name": "Giao diện Tra cứu Nhật ký thao tác hệ thống",
+    "ucs": "UC10.4",
+    "a": [
+      [
+        "1",
+        "maThamChieuInput",
+        "Input (search)",
+        "Tìm kiếm nhật ký theo mã đối tượng (mã đơn, mã thiết bị, mã phiếu)",
+        "String",
+        "Rỗng",
+        "Ánh xạ UC10.4"
+      ],
+      [
+        "2",
+        "loaiDoiTuongSelect",
+        "Select",
+        "Lọc theo phân hệ nghiệp vụ / bảng dữ liệu tác động",
+        "TatCa | DonThue | ThietBi | PhuPhi | DoiSoat | PhieuNhap | TaiKhoan",
+        "TatCa",
+        "Phân quyền xem theo vai trò"
+      ],
+      [
+        "3",
+        "thoiGianNhatKyPicker",
+        "RangePicker",
+        "Lọc sự kiện nhật ký theo khoảng thời gian thực hiện",
+        "DateTimeRange",
+        "7 ngày gần nhất",
+        "Sắp xếp theo thứ tự thời gian"
+      ],
+      [
+        "4",
+        "nhatKyDataTable",
+        "DataTable",
+        "Hiển thị thời điểm, người thực hiện, hành động, đối tượng và lý do",
+        "List<NhatKy>",
+        "Từ NHAT_KY",
+        "Chế độ chỉ đọc (Read-only)"
+      ],
+      [
+        "5",
+        "soSanhDuLieuModal",
+        "DiffViewer Modal",
+        "Hiển thị chi tiết dữ liệu trước (duLieuTruoc) và sau (duLieuSau) thay đổi",
+        "JSON Diff",
+        "Đóng",
+        "Mở chứng từ qua UC10.4.2"
+      ]
+    ],
+    "b": [
+      [
+        "1",
+        "Nhập điều kiện lọc và thực hiện tra cứu (UC10.4 & UC10.4.1)",
+        "Kiểm tra phạm vi nhật ký người dùng được phép xem (Nhân viên chỉ xem lịch sử vận hành được phân quyền; Quản trị viên xem toàn bộ nhật ký quản trị) và trả về danh sách sự kiện."
+      ],
+      [
+        "2",
+        "Nhấp vào một dòng sự kiện hoặc liên kết chứng từ (UC10.4.2)",
+        "Mở soSanhDuLieuModal hiển thị đối chiếu trước/sau thay đổi và kiểm tra quyền truy cập chứng từ đích ở chế độ chỉ đọc; không cho phép sửa hoặc xóa nhật ký."
+      ]
+    ]
+  }
+]

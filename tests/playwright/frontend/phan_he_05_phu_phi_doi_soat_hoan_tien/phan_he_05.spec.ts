@@ -18,5 +18,14 @@ test.describe.serial("Frontend PH5: Phụ phí, Đối soát cọc & Bù trừ t
     await page.getByRole("button", { name: "Bù trừ tài chính" }).first().click();
     await expect(page.getByText(/Bù trừ|Điều chỉnh tài chính/i).first()).toBeVisible();
     await pauseForViewer(page);
+
+    // UC5.4 - UC5.6: Kiểm tra nút Đối soát trên Đơn thuê
+    await page.getByRole("button", { name: "Đơn thuê" }).first().click();
+    const reconcileBtn = page.getByRole("button", { name: "Đối soát", exact: true }).first();
+    if (await reconcileBtn.isVisible().catch(() => false)) {
+      await reconcileBtn.click();
+      await expect(page.getByText(/Đối Soát Cọc/i).first()).toBeVisible();
+    }
+    await pauseForViewer(page);
   });
 });

@@ -1,4 +1,4 @@
-﻿import { test, expect } from "@playwright/test";
+import { test, expect } from "@playwright/test";
 import { loginUi } from "../../helpers/auth.js";
 import { useSubsystemPage, pauseForViewer } from "../../helpers/subsystemVideo.js";
 
@@ -14,6 +14,11 @@ test.describe.serial("Frontend PH6: Danh mục, Sản phẩm, Thiết bị, Đi�
     await page.getByRole("button", { name: /\+ Thêm danh mục/i }).click();
     await pauseForViewer(page);
     await page.getByRole("button", { name: /Hủy|Đóng/i }).first().click();
+    const editCat = page.getByRole("button", { name: "Sửa", exact: true }).first();
+    if (await editCat.isVisible().catch(() => false)) {
+      await editCat.click();
+      await page.getByRole("button", { name: /Hủy|Đóng/i }).first().click().catch(() => {});
+    }
 
     await page.getByRole("button", { name: "Sản phẩm" }).first().click();
     await expect(page.getByPlaceholder(/Tìm tên sản phẩm/i)).toBeVisible();
@@ -23,6 +28,11 @@ test.describe.serial("Frontend PH6: Danh mục, Sản phẩm, Thiết bị, Đi�
     await page.getByRole("button", { name: /\+ Thêm sản phẩm/i }).click();
     await pauseForViewer(page);
     await page.getByRole("button", { name: /Hủy|Đóng/i }).first().click();
+    const editProd = page.getByRole("button", { name: "Sửa", exact: true }).first();
+    if (await editProd.isVisible().catch(() => false)) {
+      await editProd.click();
+      await page.getByRole("button", { name: /Hủy|Đóng/i }).first().click().catch(() => {});
+    }
   });
 
   test("UC6.7 - UC6.15 - Admin xem Thiết bị, Điều chỉnh kho & Staff mở Kho & Bảo trì", async () => {
@@ -39,6 +49,11 @@ test.describe.serial("Frontend PH6: Danh mục, Sản phẩm, Thiết bị, Đi�
     await loginUi(page, "staff");
     await page.getByRole("button", { name: "Kho & Bảo trì" }).first().click();
     await expect(page.getByText(/Kho|Bảo trì/i).first()).toBeVisible();
+    const maintTab = page.locator('button:has-text("Phiếu bảo trì")').first();
+    if (await maintTab.isVisible().catch(() => false)) {
+      await maintTab.click();
+      await expect(page.getByText(/Hồ sơ bảo trì/i)).toBeVisible();
+    }
     await pauseForViewer(page);
   });
 });
