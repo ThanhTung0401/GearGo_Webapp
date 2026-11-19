@@ -1,4 +1,4 @@
-﻿/**
+/**
  * feat/ROLE_Adjustment — Frontend phân quyền động.
  *
  * Một file gộp: API client (real + mock localStorage), hook `usePermissions`,
@@ -66,7 +66,19 @@ async function apiGet<T>(path: string): Promise<T | null> {
 }
 
 export async function fetchQuyenCuaToi(): Promise<QuyenCuaToiResponse | null> {
-  return apiGet<QuyenCuaToiResponse>("/api/auth/quyen-cua-toi");
+  const real = await apiGet<QuyenCuaToiResponse>("/api/auth/quyen-cua-toi");
+  if (real) return real;
+  if (!isRealApiEnabled()) {
+    const m = loadMock();
+    const roleData = m.roles[m.currentRole] ?? { version: 1, permissions: [] };
+    return {
+      maTaiKhoan: 1,
+      roleName: m.currentRole,
+      version: roleData.version,
+      quyen: roleData.permissions,
+    };
+  }
+  return null;
 }
 
 async function apiPut<T>(path: string, body: unknown): Promise<T | null> {

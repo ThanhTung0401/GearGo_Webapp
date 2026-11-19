@@ -9,7 +9,8 @@ test.describe.serial("Frontend PH5: Phụ phí, Đối soát cọc & Bù trừ t
     const page = getPage();
     await loginUi(page, "admin");
 
-    // UC5.3: Trung tâm xử lý tranh chấp & Duyệt phụ phí trên Tổng quan Admin
+    // UC5.3: Trung tâm xử lý tranh chấp & Duyệt phụ phí trên Tổng quan hệ thống
+    await page.getByRole("button", { name: "Tổng quan hệ thống" }).first().click();
     await expect(page.getByText(/Trung tâm xử lý tranh chấp & Duyệt phụ phí/i)).toBeVisible();
     await pauseForViewer(page);
 

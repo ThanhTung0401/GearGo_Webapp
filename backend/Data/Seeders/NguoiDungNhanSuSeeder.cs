@@ -81,7 +81,25 @@ internal static class NguoiDungNhanSuSeeder
                 ClaimValue = ma
             });
         }
-        if (missing.Count > 0) await context.SaveChangesAsync();
+
+        // Đồng bộ đầy đủ Permissions.All cho QuanTriVien trong Real DB (hỗ trợ 100% DB-Driven RBAC)
+        var adminRole = await context.Roles.FirstAsync(r => r.Name == DomainConstants.Roles.Admin);
+        var adminExisting = await context.RoleClaims
+            .Where(c => c.RoleId == adminRole.Id && c.ClaimType == DomainConstants.Permissions.Type)
+            .Select(c => c.ClaimValue!)
+            .ToListAsync();
+
+        var adminMissing = DomainConstants.Permissions.All.Except(adminExisting).ToList();
+        foreach (var ma in adminMissing)
+        {
+            context.RoleClaims.Add(new IdentityRoleClaim<long>
+            {
+                RoleId = adminRole.Id,
+                ClaimType = DomainConstants.Permissions.Type,
+                ClaimValue = ma
+            });
+        }
+        if (missing.Count > 0 || adminMissing.Count > 0) await context.SaveChangesAsync();
 
         foreach (var roleName in DomainConstants.Roles.All)
         {
