@@ -1,5 +1,7 @@
 import type { StaffAccount } from "../../../../store";
 import Icon from "../../../../components/Icon";
+import { Can } from "../../../../features/permissions/PermissionsContext";
+import { Permissions } from "../../../../constants/permissions";
 
 interface StaffAccountsTableProps {
   search: string;
@@ -128,8 +130,9 @@ export function StaffAccountsTable({
                         Phân quyền
                       </button>
                       {/* Chặn khóa / nghỉ việc trên tài khoản Quản trị viên */}
+                      {/* v2 §P3 — nút Khoá/Mở/Nghỉ việc bọc theo NhanVien_Quan */}
                       {s.role !== "Quản trị viên" && (
-                        <>
+                        <Can perm={Permissions.NhanVien_Quan}>
                           <button
                             onClick={() => {
                               if (s.status === "active") {
@@ -150,7 +153,7 @@ export function StaffAccountsTable({
                               Nghỉ việc
                             </button>
                           )}
-                        </>
+                        </Can>
                       )}
                     </div>
                   </td>

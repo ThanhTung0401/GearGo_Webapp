@@ -22,6 +22,11 @@ internal static class NguoiDungNhanSuSeeder
 {
     public static async Task<SeedActors> SeedAsync(ApplicationDbContext context)
     {
+        // v2 §P1 + §8.10 — seed 2 row TaiKhoan "system" (MaTaiKhoan=1,2) làm actor cho
+        // seeder/migration/callback gateway. MatKhauBam=null → không thể login qua JWT.
+        // Idempotent; ma_tai_khoan là identity nên phải dùng SET IDENTITY_INSERT.
+        await SeedSystemActorsAsync(context);
+
         var hash = BCrypt.Net.BCrypt.HashPassword("GearGo@2026", workFactor: 11);
 
         var adminTk = await UpsertTaiKhoanAsync(context, "admin@geargo.vn", "0901000001", hash, "QuanTriVien", "HoatDong", true);
@@ -89,6 +94,60 @@ internal static class NguoiDungNhanSuSeeder
             });
         }
         await context.SaveChangesAsync();
+    }
+
+    /// <summary>
+    /// v2 §P1 — seed row TaiKhoan "system" với MaTaiKhoan cố định (Seeder=1, Gateway=2).
+    /// Dùng IDENTITY_INSERT vì ma_tai_khoan là identity column.
+    /// </summary>
+    private static async Task SeedSystemActorsAsync(ApplicationDbContext context)
+    {
+        var existing = await context.TaiKhoans.AsNoTracking()
+            .Where(t => t.MaTaiKhoan == DomainConstants.SystemActors.Seeder
+                     || t.MaTaiKhoan == DomainConstants.SystemActors.Gateway)
+            .Select(t => t.MaTaiKhoan)
+            .ToListAsync();
+
+        var needSeeder = !existing.Contains(DomainConstants.SystemActors.Seeder);
+        var needGateway = !existing.Contains(DomainConstants.SystemActors.Gateway);
+        if (!needSeeder && !needGateway) return;
+
+        // Ép identity-insert ở mức bảng cho DbContext hiện tại; chạy trong 1 transaction để
+        // đảm bảo SET IDENTITY_INSERT tồn tại trên đúng connection khi INSERT.
+        await using var tx = await context.Database.BeginTransactionAsync();
+        await context.Database.ExecuteSqlRawAsync("SET IDENTITY_INSERT TAI_KHOAN ON");
+        try
+        {
+            if (needSeeder)
+            {
+                await context.Database.ExecuteSqlRawAsync(
+                    "INSERT INTO TAI_KHOAN (ma_tai_khoan, email, so_dien_thoai, mat_khau_bam, vai_tro, trang_thai, ly_do_khoa, ngay_tao, ngay_cap_nhat, permission_version) " +
+                    "VALUES ({0}, {1}, {2}, NULL, {3}, {4}, NULL, {5}, {5}, 0)",
+                    DomainConstants.SystemActors.Seeder,
+                    "system@geargo.local",
+                    "0000000001",
+                    DomainConstants.SystemActors.SystemRole,
+                    DomainConstants.AccountStatus.Active,
+                    DateTime.Now);
+            }
+            if (needGateway)
+            {
+                await context.Database.ExecuteSqlRawAsync(
+                    "INSERT INTO TAI_KHOAN (ma_tai_khoan, email, so_dien_thoai, mat_khau_bam, vai_tro, trang_thai, ly_do_khoa, ngay_tao, ngay_cap_nhat, permission_version) " +
+                    "VALUES ({0}, {1}, {2}, NULL, {3}, {4}, NULL, {5}, {5}, 0)",
+                    DomainConstants.SystemActors.Gateway,
+                    "gateway@geargo.local",
+                    "0000000002",
+                    DomainConstants.SystemActors.SystemRole,
+                    DomainConstants.AccountStatus.Active,
+                    DateTime.Now);
+            }
+        }
+        finally
+        {
+            await context.Database.ExecuteSqlRawAsync("SET IDENTITY_INSERT TAI_KHOAN OFF");
+        }
+        await tx.CommitAsync();
     }
 
     private static async Task<TaiKhoan> UpsertTaiKhoanAsync(

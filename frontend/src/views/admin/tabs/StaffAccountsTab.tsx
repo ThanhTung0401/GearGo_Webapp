@@ -4,6 +4,8 @@ import { StaffAccountsTable } from "./staff/StaffAccountsTable";
 import { StaffAccountModal } from "./staff/StaffAccountModal";
 import { StaffPermissionsModal } from "./staff/StaffPermissionsModal";
 import { StaffStatusModals } from "./staff/StaffStatusModals";
+import { Can } from "../../../features/permissions/PermissionsContext";
+import { Permissions } from "../../../constants/permissions";
 
 /**
  * Tab Quản lý tài khoản & Phân quyền nhân viên (UC1.7 - UC1.11).
@@ -22,9 +24,12 @@ export function StaffAccountsTab({ app }: { app: ReturnType<typeof useApp> }) {
             Tạo tài khoản, cập nhật thông tin liên hệ, phân quyền theo nhóm nghiệp vụ và khóa tài khoản khi nghỉ việc.
           </p>
         </div>
-        <button onClick={staff.handleOpenAdd} className="btn btn-primary btn-md">
-          + Thêm nhân viên mới
-        </button>
+        {/* v2 §P3 — nút tạo nhân viên bọc theo NhanVien_Quan (demo pattern <Can>) */}
+        <Can perm={Permissions.NhanVien_Quan}>
+          <button onClick={staff.handleOpenAdd} className="btn btn-primary btn-md">
+            + Thêm nhân viên mới
+          </button>
+        </Can>
       </div>
 
       {staff.apiError && (

@@ -155,8 +155,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 // Cấu hình các chính sách (Policy) dựa trên Roles
 builder.Services.AddAuthorization(opt =>
 {
-    opt.AddPolicy("AdminOnly", p => p.RequireRole("QuanTriVien"));
-    opt.AddPolicy("StaffOrAdmin", p => p.RequireRole("NhanVien", "QuanTriVien"));
+    // v2 §P5 — gỡ "AdminOnly"/"StaffOrAdmin" (role-based hard-coded); controller đã migrate sang
+    // [RequirePermission] (xem DomainConstants.Permissions.*). Giữ "CustomerOnly" cho endpoint chỉ dành KH.
     opt.AddPolicy("CustomerOnly", p => p.RequireRole("KhachHang"));
 });
 
@@ -284,6 +284,23 @@ using (var scope = app.Services.CreateScope())
     var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
     db.Database.Migrate();
     await DbSeeder.SeedAllAsync(db);
+}
+
+// v2 §8.4 — cảnh báo orphan RoleClaims (ClaimValue không nằm trong Permissions.All).
+// Chạy sau migrate+seed, ở startup; không chặn boot, chỉ log Warning để team RBAC sửa.
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+    var catalog = GearGo.Helpers.DomainConstants.Permissions.All.ToHashSet(StringComparer.Ordinal);
+    var claimValues = await db.RoleClaims.AsNoTracking()
+        .Where(c => c.ClaimType == GearGo.Helpers.DomainConstants.Permissions.Type)
+        .Select(c => c.ClaimValue!)
+        .ToListAsync();
+    var invalid = claimValues.Where(v => !catalog.Contains(v)).Distinct().ToList();
+    if (invalid.Count > 0)
+        logger.LogWarning("Phát hiện {Count} ClaimValue orphan trong AspNetRoleClaims (không thuộc Permissions.All): {Values}",
+            invalid.Count, string.Join(", ", invalid));
 }
 
 if (app.Environment.IsDevelopment())

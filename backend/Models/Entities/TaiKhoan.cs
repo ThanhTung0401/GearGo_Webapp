@@ -41,6 +41,14 @@ public class TaiKhoan
     [Column("ngay_cap_nhat")]
     public DateTime NgayCapNhat { get; set; } = DateTime.Now;
 
+    /// <summary>
+    /// v2 §8.3 — version quyền riêng của tài khoản. Bump khi admin ghi override
+    /// (CapNhatQuyenNhanVienAsync / XoaPhanQuyenRiengNhanVienAsync); UserCacheEntry so
+    /// với giá trị này để reload khi stale (tương tự RolePermissionVersion cho role).
+    /// </summary>
+    [Column("permission_version")]
+    public long PermissionVersion { get; set; } = 0;
+
     public KhachHang? KhachHang { get; set; }
     public NhanVien? NhanVien { get; set; }
 }

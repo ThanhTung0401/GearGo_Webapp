@@ -76,6 +76,10 @@ public partial class PermissionService
             foreach (var ma in moi)
                 _context.RoleClaims.Add(new IdentityRoleClaim<long> { RoleId = role.Id, ClaimType = permType, ClaimValue = ma });
 
+            // v2 §8.3 — bump TaiKhoan.PermissionVersion trong cùng transaction → mọi pod reload cache ở request kế.
+            var tkTracked = await _context.TaiKhoans.FirstOrDefaultAsync(t => t.MaTaiKhoan == tk.MaTaiKhoan, ct);
+            if (tkTracked != null) tkTracked.PermissionVersion += 1;
+
             _context.NhatKyThaoTacs.Add(new NhatKyThaoTac
             {
                 MaTaiKhoan = actor, HanhDong = "CapNhatQuyenNhanVien", LoaiDoiTuong = "TAI_KHOAN",
@@ -111,6 +115,11 @@ public partial class PermissionService
         if (hienCo.Count > 0)
         {
             _context.RoleClaims.RemoveRange(hienCo);
+
+            // v2 §8.3 — bump TaiKhoan.PermissionVersion để cache per-user invalidate ở mọi pod.
+            var tkTracked = await _context.TaiKhoans.FirstOrDefaultAsync(t => t.MaTaiKhoan == tk.MaTaiKhoan, ct);
+            if (tkTracked != null) tkTracked.PermissionVersion += 1;
+
             _context.NhatKyThaoTacs.Add(new NhatKyThaoTac
             {
                 MaTaiKhoan = actor, HanhDong = "XoaPhanQuyenRiengNhanVien", LoaiDoiTuong = "TAI_KHOAN",
@@ -129,6 +138,12 @@ public partial class PermissionService
     public async Task<long> LayVersionAsync(string roleName, CancellationToken ct = default)
         => await _context.RolePermissionVersions.AsNoTracking()
             .Where(v => v.RoleName == roleName).Select(v => (long?)v.Version).FirstOrDefaultAsync(ct) ?? 0;
+
+    /// <summary>v2 §8.3 — version quyền riêng của tài khoản (TaiKhoan.PermissionVersion).</summary>
+    private async Task<long> LayAccountVersionAsync(long maTaiKhoan, CancellationToken ct = default)
+        => await _context.TaiKhoans.AsNoTracking()
+            .Where(t => t.MaTaiKhoan == maTaiKhoan)
+            .Select(t => (long?)t.PermissionVersion).FirstOrDefaultAsync(ct) ?? 0;
 
     private async Task<HashSet<string>> LoadCachedAsync(string roleName, CancellationToken ct)
     {
@@ -180,7 +195,7 @@ public partial class PermissionService
     }
 
     private sealed record CacheEntry(long Version, HashSet<string> Quyen);
-    private sealed record UserCacheEntry(bool HasOverride, HashSet<string> Quyen);
+    private sealed record UserCacheEntry(long Version, bool HasOverride, HashSet<string> Quyen);
 
     private static string TenHienThi(string roleName) => roleName switch
     {

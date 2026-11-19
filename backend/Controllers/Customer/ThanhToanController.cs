@@ -1,4 +1,5 @@
 using GearGo.Helpers;
+using GearGo.Helpers.Authorization;
 using GearGo.Models.DTOs.ThanhToan;
 using GearGo.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -45,12 +46,14 @@ public class ThanhToanController : BaseApiController
         => HandleResult(await _thanhToanService.XuLyCallbackThuBoSungAsync(request), LayStatusCode);
 
     [HttpGet("can-doi-chieu")]
-    [Authorize(Policy = "StaffOrAdmin")]
+    [Authorize]
+    [RequirePermission(DomainConstants.Permissions.DoiSoat_Xem)]
     public async Task<IActionResult> LayDanhSachCanDoiChieu()
         => HandleResult(await _thanhToanService.LayDanhSachCanDoiChieuAsync(MaTaiKhoanHienTai), LayStatusCode);
 
     [HttpPost("{id:long}/doi-chieu")]
-    [Authorize(Policy = "StaffOrAdmin")]
+    [Authorize]
+    [RequirePermission(DomainConstants.Permissions.DoiSoat_Chot)]
     public async Task<IActionResult> DoiChieuGiaoDich(long id, [FromBody] DoiChieuGiaoDichRequest request)
     {
         var result = await _thanhToanService.DoiChieuGiaoDichAsync(id, request, MaTaiKhoanHienTai);

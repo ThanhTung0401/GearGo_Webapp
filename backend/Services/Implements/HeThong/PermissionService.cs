@@ -194,11 +194,13 @@ public partial class PermissionService : IPermissionService
     {
         if (string.IsNullOrEmpty(roleName) || string.IsNullOrEmpty(permissionMa)) return false;
 
+        // v2 §8.3 — version-check theo TaiKhoan.PermissionVersion: admin bump column → mọi pod reload ở request kế.
+        var version = await LayAccountVersionAsync(maTaiKhoan, ct);
         var userKey = UserCacheKey(maTaiKhoan);
-        if (!_cache.TryGetValue<UserCacheEntry>(userKey, out var cached) || cached == null)
+        if (!_cache.TryGetValue<UserCacheEntry>(userKey, out var cached) || cached == null || cached.Version != version)
         {
             var (hasOverride, perms) = await LoadUserOverrideFromDbAsync(maTaiKhoan, ct);
-            cached = new UserCacheEntry(hasOverride, perms);
+            cached = new UserCacheEntry(version, hasOverride, perms);
             _cache.Set(userKey, cached, CacheTtl);
         }
 

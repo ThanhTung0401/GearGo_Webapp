@@ -8,6 +8,8 @@ import { fmt, type Category } from "../../../store";
 import Icon from "../../../components/Icon";
 
 import { CategoryForm } from "../forms/CategoryForm";
+import { Can } from "../../../features/permissions/PermissionsContext";
+import { Permissions } from "../../../constants/permissions";
 
 export function CategoriesTab({ app }: { app: ReturnType<typeof useApp> }) {
   const [action, setAction] = useState<Category | "new" | null>(null);
@@ -22,7 +24,10 @@ export function CategoriesTab({ app }: { app: ReturnType<typeof useApp> }) {
     <div>
       <div className="flex justify-between items-center mb-4 flex-wrap gap-2">
         <h2 className="adm-page-title adm-page-title--compact">Quản lý danh mục</h2>
-        <button onClick={() => setAction("new")} className="adm-btn-primary">+ Thêm danh mục</button>
+        {/* v2 §P3 — nút tạo danh mục bọc theo DanhMuc_Quan (demo pattern <Can>) */}
+        <Can perm={Permissions.DanhMuc_Quan}>
+          <button onClick={() => setAction("new")} className="adm-btn-primary">+ Thêm danh mục</button>
+        </Can>
       </div>
       {message && <div role="alert" className="adm-alert is-error-solid adm-alert--block">{message}</div>}
       <div className="adm-cat-grid">
@@ -57,31 +62,34 @@ export function CategoriesTab({ app }: { app: ReturnType<typeof useApp> }) {
                 </div>
               </div>
               <div className="adm-cat-footer">
-                <button onClick={() => setAction(c.category)} className="adm-btn-parchment adm-btn-flex">Sửa</button>
-                <button
-                  onClick={async () => {
-                    const nextStatus = c.category.status === "active" ? "inactive" : "active";
-                    if (app.realApi || isRealApiEnabled()) {
-                      const catId = Number(c.category.id);
-                      if (Number.isNaN(catId)) {
-                        return setMessage("ID danh mục không hợp lệ.");
+                {/* v2 §P3 — Sửa + Ẩn/Hiện bọc DanhMuc_Quan */}
+                <Can perm={Permissions.DanhMuc_Quan}>
+                  <button onClick={() => setAction(c.category)} className="adm-btn-parchment adm-btn-flex">Sửa</button>
+                  <button
+                    onClick={async () => {
+                      const nextStatus = c.category.status === "active" ? "inactive" : "active";
+                      if (app.realApi || isRealApiEnabled()) {
+                        const catId = Number(c.category.id);
+                        if (Number.isNaN(catId)) {
+                          return setMessage("ID danh mục không hợp lệ.");
+                        }
+                        try {
+                          await catalogApi.adminDoiTrangThaiDanhMuc(catId, nextStatus === "active" ? "HienThi" : "TamAn");
+                          await app.refreshCatalog?.();
+                          setMessage("");
+                        } catch (err) {
+                          setMessage(err instanceof Error ? err.message : "Lỗi cập nhật trạng thái danh mục");
+                        }
+                        return;
                       }
-                      try {
-                        await catalogApi.adminDoiTrangThaiDanhMuc(catId, nextStatus === "active" ? "HienThi" : "TamAn");
-                        await app.refreshCatalog?.();
-                        setMessage("");
-                      } catch (err) {
-                        setMessage(err instanceof Error ? err.message : "Lỗi cập nhật trạng thái danh mục");
-                      }
-                      return;
-                    }
-                    const result = app.setCategoryStatus(c.category.id, nextStatus);
-                    setMessage(result.ok ? "" : result.message);
-                  }}
-                  className="adm-btn-parchment adm-btn-flex"
-                >
-                  {c.category.status === "active" ? "Ẩn" : "Hiện"}
-                </button>
+                      const result = app.setCategoryStatus(c.category.id, nextStatus);
+                      setMessage(result.ok ? "" : result.message);
+                    }}
+                    className="adm-btn-parchment adm-btn-flex"
+                  >
+                    {c.category.status === "active" ? "Ẩn" : "Hiện"}
+                  </button>
+                </Can>
               </div>
             </div>
           );

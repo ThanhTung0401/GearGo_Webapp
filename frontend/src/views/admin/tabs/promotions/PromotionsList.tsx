@@ -1,5 +1,7 @@
 import { fmt, type Promotion } from "../../../../store";
 import { type PromoStatusFilter, type PromoTypeFilter } from "./usePromotionsTab";
+import { Can } from "../../../../features/permissions/PermissionsContext";
+import { Permissions } from "../../../../constants/permissions";
 
 interface PromotionsListProps {
   totalPromotions: number;
@@ -48,12 +50,15 @@ export function PromotionsList({
             Kiểm soát mã giảm giá, giới hạn ngân sách, theo dõi doanh thu và tra cứu đơn áp dụng thực tế.
           </p>
         </div>
-        <button
-          onClick={onCreateNew}
-          className="adm-btn-primary font-bold flex items-center gap-1.5"
-        >
-          <span>+</span> Tạo mã giảm mới (UC8.2)
-        </button>
+        {/* v2 §P3 — chỉ hiện nút tạo khi có quyền KhuyenMai_Quan (demo pattern <Can>) */}
+        <Can perm={Permissions.KhuyenMai_Quan}>
+          <button
+            onClick={onCreateNew}
+            className="adm-btn-primary font-bold flex items-center gap-1.5"
+          >
+            <span>+</span> Tạo mã giảm mới (UC8.2)
+          </button>
+        </Can>
       </div>
       {promoActionError && (
         <div role="alert" className="adm-alert is-error-solid adm-alert--block">
@@ -182,24 +187,27 @@ export function PromotionsList({
                     👁 Xem đơn áp dụng (UC8.4)
                   </button>
 
-                  <div className="flex gap-1.5">
-                    {/* Nút sửa */}
-                    <button
-                      onClick={() => onEdit(p)}
-                      className="adm-btn-outline adm-btn-flex py-1.5"
-                    >
-                      ✏️ Sửa (UC8.3)
-                    </button>
+                  {/* v2 §P3 — nút Sửa / Toggle chỉ hiện khi có quyền KhuyenMai_Quan */}
+                  <Can perm={Permissions.KhuyenMai_Quan}>
+                    <div className="flex gap-1.5">
+                      {/* Nút sửa */}
+                      <button
+                        onClick={() => onEdit(p)}
+                        className="adm-btn-outline adm-btn-flex py-1.5"
+                      >
+                        ✏️ Sửa (UC8.3)
+                      </button>
 
-                    {/* Nút tạm dừng / kích hoạt lại (UC8.5) */}
-                    <button
-                      disabled={togglingPromoId === p.id}
-                      onClick={() => onToggleStatus(p)}
-                      className={`adm-btn-flex ${p.status === "active" ? "adm-btn-warning-outline" : "adm-btn-success-outline"}`}
-                    >
-                      {togglingPromoId === p.id ? "..." : p.status === "active" ? "⏸ Tạm dừng" : "▶ Kích hoạt"}
-                    </button>
-                  </div>
+                      {/* Nút tạm dừng / kích hoạt lại (UC8.5) */}
+                      <button
+                        disabled={togglingPromoId === p.id}
+                        onClick={() => onToggleStatus(p)}
+                        className={`adm-btn-flex ${p.status === "active" ? "adm-btn-warning-outline" : "adm-btn-success-outline"}`}
+                      >
+                        {togglingPromoId === p.id ? "..." : p.status === "active" ? "⏸ Tạm dừng" : "▶ Kích hoạt"}
+                      </button>
+                    </div>
+                  </Can>
                 </div>
               </div>
             );

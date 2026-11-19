@@ -2103,6 +2103,10 @@ namespace GearGo.Migrations
                         .HasColumnType("datetime2")
                         .HasColumnName("ngay_tao");
 
+                    b.Property<long>("PermissionVersion")
+                        .HasColumnType("bigint")
+                        .HasColumnName("permission_version");
+
                     b.Property<string>("SoDienThoai")
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)")
