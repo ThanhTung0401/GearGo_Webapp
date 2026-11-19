@@ -10,6 +10,11 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- v2 §P3 — cho phép test project gọi internal seeders để setup RBAC trong test fixtures. -->
+    <InternalsVisibleTo Include="GearGo.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <!-- EF Core 9 stable, tương thích .NET 10 -->
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="9.0.*" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="9.0.*">

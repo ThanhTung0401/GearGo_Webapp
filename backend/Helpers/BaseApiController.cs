@@ -8,6 +8,17 @@ public abstract class BaseApiController : ControllerBase
     /// <summary>Lấy mã tài khoản hiện tại từ JWT claims.</summary>
     protected long MaTaiKhoanHienTai => User.LayMaTaiKhoan();
 
+    /// <summary>
+    /// v2 §8.10 — biến thể an toàn cho action [AllowAnonymous]: trả về <paramref name="systemActor"/>
+    /// thay vì throw khi không có claim MaTaiKhoan (vd. callback payment gateway, cron, migration).
+    /// </summary>
+    protected long MaTaiKhoanHienTaiOrSystem(long systemActor)
+    {
+        var raw = User.FindFirst("MaTaiKhoan")?.Value
+                  ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        return long.TryParse(raw, out var ma) ? ma : systemActor;
+    }
+
     protected IActionResult HandleResult<T>(Result<T> result, Func<string?, int>? statusResolver = null)
         => result.ThanhCong
             ? Ok(result.DuLieu)

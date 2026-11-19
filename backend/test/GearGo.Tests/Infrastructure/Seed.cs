@@ -1,4 +1,5 @@
 using GearGo.Data;
+using GearGo.Data.Seeders;
 using GearGo.Models.Entities;
 using GearGo.Models.Enums;
 
@@ -21,6 +22,10 @@ public static class Seed
 
     public static DuLieuMau CoBan(ApplicationDbContext ctx)
     {
+        // v2 §P3 — tests dùng [RequirePermission]: cần seed AspNetRoles + AspNetRoleClaims + RolePermissionVersions
+        // để handler PermissionAuthorizationHandler tra cứu RoleClaims trả về đúng tập permission cho NhanVien/Staff.
+        NguoiDungNhanSuSeeder.SeedRolesAndPermissionsAsync(ctx).GetAwaiter().GetResult();
+
         var tkA = new TaiKhoan { Email = Ma("a") + "@t.vn", SoDienThoai = Ma("09"), VaiTro = "KhachHang", TrangThai = "HoatDong" };
         var tkB = new TaiKhoan { Email = Ma("b") + "@t.vn", SoDienThoai = Ma("08"), VaiTro = "KhachHang", TrangThai = "HoatDong" };
         var tkNv = new TaiKhoan { Email = Ma("nv") + "@t.vn", SoDienThoai = Ma("07"), VaiTro = "NhanVien", TrangThai = "HoatDong" };

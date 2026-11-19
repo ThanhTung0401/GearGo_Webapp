@@ -1,0 +1,23 @@
+name: Enforce FE-first permission migration order
+on:
+  pull_request:
+    paths:
+      - 'backend/Controllers/**'
+      - 'frontend/src/views/**'
+      - 'frontend/src/features/permissions/**'
+jobs:
+  check-order:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Warn if backend permission change without frontend
+        run: |
+          set -eu
+          BE=$(git diff --name-only origin/${{ github.base_ref }}...HEAD -- 'backend/Controllers/**/*Controller.cs' | wc -l)
+          FE=$(git diff --name-only origin/${{ github.base_ref }}...HEAD -- 'frontend/src/views/**' 'frontend/src/features/permissions/**' | wc -l)
+          echo "backend_changed=$BE frontend_changed=$FE"
+          if [ "$BE" -gt 0 ] && [ "$FE" -eq 0 ]; then
+            echo "::warning::v2 §P4 §8.8 — Backend controllers thay đổi không kèm frontend permission update. Có thể gây 403 không mong muốn nếu chưa lọc tab/button."
+          fi

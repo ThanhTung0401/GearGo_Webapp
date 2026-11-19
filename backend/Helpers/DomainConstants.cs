@@ -348,7 +348,11 @@ public static class DomainConstants
             Kho_Xem, DieuChinhKho_Xem,
             BaoCaoKho_Xem, BaoCaoVanHanh_Xem,
             ThongBao_Xem,
-            // KHÔNG seed cho NhanVien (chỉ Admin): PhanQuyen.*, TaiKhoan.*, NhanVien.*, BaoCaoTaiChinh.*, NhatKy.*, DanhGia.Duyet/Xoa
+            // v2 §P3 — NhanVien được quyền trả lời đánh giá, xem nhật ký vận hành phạm vi của mình, duyệt yêu cầu hoàn tiền.
+            DanhGia_Xem, DanhGia_Duyet,
+            NhatKy_Xem,
+            HoanTien_Duyet,
+            // KHÔNG seed cho NhanVien (chỉ Admin): PhanQuyen.*, TaiKhoan.*, NhanVien.*, BaoCaoTaiChinh.*, DanhGia.Xoa
         };
 
         public static readonly string[] DefaultCustomer = System.Array.Empty<string>();

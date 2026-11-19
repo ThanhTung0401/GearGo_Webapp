@@ -44,7 +44,8 @@ export function PermissionsProvider({ userId, children }: { userId: number | nul
 
 export function useHasPerm() {
   const ctx = useContext(PermissionsCtx);
-  if (!ctx) throw new Error("useHasPerm phải dùng bên trong <PermissionsProvider>");
+  // v2 §P3 — fallback no-op cho test / component render ngoài Provider (hiển thị mọi button cho an toàn UX).
+  if (!ctx) return (_perm?: string) => true;
   return ctx.hasPerm;
 }
 

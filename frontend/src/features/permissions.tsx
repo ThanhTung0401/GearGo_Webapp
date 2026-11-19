@@ -14,6 +14,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { API_BASE, isRealApiEnabled } from "../services/apiClient";
+import { MIN_STAFF } from "../constants/permissions";
 
 export interface VaiTroResponse {
   roleName: string;
@@ -280,6 +281,19 @@ export function PermissionsTab() {
   };
 
   const save = async () => {
+    // v2 §8.5 — chặn admin lỡ tay gỡ các quyền thiết yếu của NhanVien (MIN_STAFF).
+    // Chỉ áp dụng khi role đang chỉnh = "NhanVien". Nếu có quyền thiết yếu chưa tick → confirm.
+    if (selected === "NhanVien") {
+      const thieu = MIN_STAFF.filter((p) => !selectedPerms.has(p));
+      if (thieu.length > 0) {
+        const danhSach = thieu.join(", ");
+        const ok = window.confirm(
+          `Bạn đang gỡ ${thieu.length} quyền thiết yếu: ${danhSach}. Tiếp tục?`,
+        );
+        if (!ok) return;
+      }
+    }
+
     setSaving(true);
     setMsg(null);
     try {

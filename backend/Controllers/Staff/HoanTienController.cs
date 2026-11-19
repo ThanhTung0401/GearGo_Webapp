@@ -16,10 +16,12 @@ public class HoanTienController : BaseApiController
 
     public HoanTienController(IHoanTienService hoanTienService) => _hoanTienService = hoanTienService;
 
-    /// <summary>Chủ đơn hoặc nhân viên/quản trị viên; đơn của người khác trả 404.</summary>
+    /// <summary>Chủ đơn hoặc nhân viên/quản trị viên; đơn của người khác trả 404.
+    /// v2 §P3 — endpoint cross-role: Customer phải xem được yêu cầu hoàn của ĐƠN CHÍNH MÌNH,
+    /// Staff/Admin xem mọi đơn. Service đã guard theo MaTaiKhoanHienTai → giữ [Authorize] đủ.
+    /// KHÔNG gắn [RequirePermission(HoanTien_Xem)] vì sẽ chặn Customer (vai trò không nhận permission quản trị).</summary>
     [HttpGet("theo-don/{donId:long}")]
     [Authorize]
-    [RequirePermission(DomainConstants.Permissions.HoanTien_Xem)]
     public async Task<IActionResult> LayTheoDon(long donId, CancellationToken ct)
         => Ok(await _hoanTienService.LayDanhSachTheoDonAsync(donId, MaTaiKhoanHienTai, ct));
 

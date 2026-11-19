@@ -303,6 +303,33 @@ using (var scope = app.Services.CreateScope())
             invalid.Count, string.Join(", ", invalid));
 }
 
+// v2 §8.6 — sanity check: mọi action có [RequirePermission] KHÔNG được cùng lúc có [AllowAnonymous].
+// [AllowAnonymous] override [Authorize] thầm lặng → sẽ tạo lỗ hổng bảo mật nếu lọt lên prod.
+using (var scope = app.Services.CreateScope())
+{
+    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+    var controllerTypes = typeof(Program).Assembly.GetTypes()
+        .Where(t => typeof(Microsoft.AspNetCore.Mvc.ControllerBase).IsAssignableFrom(t));
+    var violations = new List<string>();
+    foreach (var t in controllerTypes)
+    {
+        var methods = t.GetMethods(System.Reflection.BindingFlags.Public
+            | System.Reflection.BindingFlags.Instance
+            | System.Reflection.BindingFlags.DeclaredOnly);
+        foreach (var m in methods)
+        {
+            var hasPerm = m.GetCustomAttributes(typeof(GearGo.Helpers.Authorization.RequirePermissionAttribute), true).Any();
+            var hasAnon = m.GetCustomAttributes(typeof(Microsoft.AspNetCore.Authorization.AllowAnonymousAttribute), true).Any();
+            if (hasPerm && hasAnon) violations.Add($"{t.Name}.{m.Name}");
+        }
+    }
+    if (violations.Count > 0)
+    {
+        logger.LogError("v2 §8.6 VI PHẠM: {Count} action có cả [AllowAnonymous] và [RequirePermission]: {List}",
+            violations.Count, string.Join(", ", violations));
+    }
+}
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();

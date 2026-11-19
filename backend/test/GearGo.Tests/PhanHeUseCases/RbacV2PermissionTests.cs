@@ -35,11 +35,12 @@ public class RbacV2PermissionTests : IDisposable
 {
     private const string JwtSecret = "GearGoSecretKey2026_ThisKeyMustBeAtLeast32Chars!";
     private readonly TestDb _db = new();
+    private readonly DuLieuMau _du;
     private readonly WebApplicationFactory<Program> _app;
 
     public RbacV2PermissionTests()
     {
-        using (var ctx = _db.NewContext()) Seed.CoBan(ctx);
+        using (var ctx = _db.NewContext()) _du = Seed.CoBan(ctx);
         _app = new WebApplicationFactory<Program>().WithWebHostBuilder(b =>
         {
             b.UseEnvironment("Development");
@@ -79,32 +80,46 @@ public class RbacV2PermissionTests : IDisposable
         return c;
     }
 
-    [Theory(Skip = "TODO: wire up seed role + payload KhuyenMai hợp lệ + lấy MaTaiKhoan từ Seed.CoBan (v2 §5.2).")]
-    [InlineData(DomainConstants.Roles.Staff, false, HttpStatusCode.Forbidden)]
-    [InlineData(DomainConstants.Roles.Admin, false, HttpStatusCode.OK)]
-    [InlineData(DomainConstants.Roles.Staff, true,  HttpStatusCode.OK)]
-    public async Task PostKhuyenMai_PhanQuyenTheoRole(string vaiTro, bool capQuyenChoStaff, HttpStatusCode expected)
+    /// <summary>
+    /// Theory 3 case: NhanVien không có quyền → 403; Admin → không 403; sau khi cấp KhuyenMai_Quan cho NhanVien → không 403.
+    /// Mục tiêu cốt lõi là ranh giới RBAC: 403 vs ≠403. Payload có thể fail validate (400) hoặc trùng mã (409), miễn qua auth.
+    /// </summary>
+    [Theory]
+    [InlineData(DomainConstants.Roles.Staff, false, true)]   // bị chặn → 403
+    [InlineData(DomainConstants.Roles.Admin, false, false)]  // Admin bypass
+    [InlineData(DomainConstants.Roles.Staff, true,  false)]  // cấp KhuyenMai_Quan → qua
+    public async Task PostKhuyenMai_PhanQuyenTheoRole(string vaiTro, bool capQuyenChoStaff, bool expectForbidden)
     {
         if (capQuyenChoStaff)
         {
             using var scope = _app.Services.CreateScope();
             var svc = scope.ServiceProvider.GetRequiredService<IPermissionService>();
-            await svc.CapNhatQuyenVaiTroAsync(
+            // Giữ MinStaff (DonThue_Xem) + cộng KhuyenMai_Xem/Quan.
+            var quyen = DomainConstants.Permissions.DefaultStaff.ToList();
+            if (!quyen.Contains(DomainConstants.Permissions.KhuyenMai_Quan))
+                quyen.Add(DomainConstants.Permissions.KhuyenMai_Quan);
+            var kq = await svc.CapNhatQuyenVaiTroAsync(
                 DomainConstants.Roles.Staff,
-                new CapNhatQuyenVaiTroRequest
-                {
-                    Quyen = new()
-                    {
-                        DomainConstants.Permissions.KhuyenMai_Xem,
-                        DomainConstants.Permissions.KhuyenMai_Quan
-                    }
-                },
-                actor: DomainConstants.SystemActors.Seeder);
+                new CapNhatQuyenVaiTroRequest { Quyen = quyen },
+                actor: _du.TkQuanTri);
+            Assert.True(kq.ThanhCong, $"Cấp quyền phải thành công, got {kq.MaLoi}: {kq.ThongDiep}");
         }
 
-        // TODO: inject MaTaiKhoan tương ứng khi bỏ Skip (lấy từ Seed.CoBan — TkQuanTri hoặc TkNhanVien).
-        var client = Client(maTaiKhoan: 0L, vaiTro: vaiTro);
-        var resp = await client.PostAsJsonAsync("/api/admin/khuyen-mai", new { /* TODO payload */ });
-        Assert.Equal(expected, resp.StatusCode);
+        var maTaiKhoan = vaiTro == DomainConstants.Roles.Admin ? _du.TkQuanTri : _du.TkNhanVien;
+        var client = Client(maTaiKhoan, vaiTro);
+        var payload = new
+        {
+            maGiamGia = $"RBACV2-{Guid.NewGuid():N}".Substring(0, 20),
+            loaiGiam = "PhanTram",
+            giaTriGiam = 10m,
+            phamVi = "TatCa",
+            batDau = DateTime.UtcNow.AddHours(1),
+            ketThuc = DateTime.UtcNow.AddDays(7)
+        };
+        var resp = await client.PostAsJsonAsync("/api/admin/khuyen-mai", payload);
+        if (expectForbidden)
+            Assert.Equal(HttpStatusCode.Forbidden, resp.StatusCode);
+        else
+            Assert.NotEqual(HttpStatusCode.Forbidden, resp.StatusCode);
     }
 }
