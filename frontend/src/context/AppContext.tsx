@@ -13,7 +13,7 @@ export type Page =
   | "profile"
   | "ai-advisor"
   | "login" | "register" | "forgot-password" | "auth"
-  | "staff" | "admin";
+  | "workspace" | "staff" | "admin";
 
 export interface AppState {
   role: Role;

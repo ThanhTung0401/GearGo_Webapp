@@ -1,5 +1,5 @@
-/**
- * warehouseApi.ts - Tổng quan kho, kiểm kê đối chiếu & phân tích ảnh hưởng (/api/v1/kho)
+﻿/**
+ * warehouseApi.ts - Tổng quan kho, kiểm kê đối chiếu & phân tích ảnh hưởng (/api/kho)
  */
 
 import { apiClient } from "../apiClient";
@@ -79,7 +79,7 @@ export const warehouseApi = {
     gioTra?: string;
   }): Promise<KhoTongQuanBackend> {
     const q = buildQuery(params as Record<string, unknown>);
-    const res = await apiClient.get<unknown>(`/api/v1/kho/tong-quan${q}`);
+    const res = await apiClient.get<unknown>(`/api/kho/tong-quan${q}`);
     return unwrapResult<KhoTongQuanBackend>(res.data);
   },
 
@@ -93,7 +93,7 @@ export const warehouseApi = {
     soMoiTrang?: number;
   }): Promise<PagedBackendResponse<ThietBiKhoItemBackend>> {
     const q = buildQuery(params as Record<string, unknown>);
-    const res = await apiClient.get<unknown>(`/api/v1/kho/thiet-bi${q}`);
+    const res = await apiClient.get<unknown>(`/api/kho/thiet-bi${q}`);
     return unwrapPaged<ThietBiKhoItemBackend>(res.data);
   },
 
@@ -103,7 +103,7 @@ export const warehouseApi = {
     thoiDiemKiemKe?: string;
     ghiChu?: string;
   }): Promise<DoiChieuKiemKeBackend> {
-    const res = await apiClient.post<unknown>("/api/v1/kho/kiem-ke/doi-chieu", req);
+    const res = await apiClient.post<unknown>("/api/kho/kiem-ke/doi-chieu", req);
     return unwrapResult<DoiChieuKiemKeBackend>(res.data);
   },
 
@@ -113,7 +113,7 @@ export const warehouseApi = {
     maSanPhamDich?: number;
     lyDo?: string;
   }): Promise<PhanTichAnhHuongBackend> {
-    const res = await apiClient.post<unknown>("/api/v1/kho/dieu-chinh/xem-anh-huong", req);
+    const res = await apiClient.post<unknown>("/api/kho/dieu-chinh/xem-anh-huong", req);
     return unwrapResult<PhanTichAnhHuongBackend>(res.data);
   },
 };

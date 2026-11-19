@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Test Suite cho W3-T1 và W3-T2 (Thanh Tùng):
  * - W3-T1: Hồ sơ khách hàng & Truy vấn theo dõi đơn (Khách + Vận hành)
  * - W3-T2: Lịch sử và Thông báo in-app
@@ -78,14 +78,14 @@ async function runTests() {
   console.log(`${colors.bold}[1. W3-T1: Quản lý Hồ sơ khách hàng]${colors.reset}`);
   
   // Khách lấy hồ sơ
-  const resHoSo = await callApi('/api/v1/ho-so/toi', {
+  const resHoSo = await callApi('/api/ho-so/toi', {
     headers: { Authorization: `Bearer ${customerToken}` }
   });
   // Nếu tài khoản seed chưa có hồ sơ thì có thể trả 403 hoặc 200 (ActorGuard.LayMaKhachHangAsync)
-  assert('GET /api/v1/ho-so/toi (Khách xem hồ sơ)', resHoSo.status === 200 || resHoSo.status === 403, `Status: ${resHoSo.status}`);
+  assert('GET /api/ho-so/toi (Khách xem hồ sơ)', resHoSo.status === 200 || resHoSo.status === 403, `Status: ${resHoSo.status}`);
 
   // Cập nhật hồ sơ
-  const resCapNhatHoSo = await callApi('/api/v1/ho-so/toi', {
+  const resCapNhatHoSo = await callApi('/api/ho-so/toi', {
     method: 'PUT',
     headers: { Authorization: `Bearer ${customerToken}` },
     body: JSON.stringify({
@@ -95,68 +95,68 @@ async function runTests() {
       diaChi: '123 Đường Test, TP.HCM'
     })
   });
-  assert('PUT /api/v1/ho-so/toi (Cập nhật hồ sơ)', resCapNhatHoSo.status === 200 || resCapNhatHoSo.status === 403 || resCapNhatHoSo.status === 409, `Status: ${resCapNhatHoSo.status}`);
+  assert('PUT /api/ho-so/toi (Cập nhật hồ sơ)', resCapNhatHoSo.status === 200 || resCapNhatHoSo.status === 403 || resCapNhatHoSo.status === 409, `Status: ${resCapNhatHoSo.status}`);
 
   // 2. Truy vấn đơn thuê phía Khách hàng
   console.log(`\n${colors.bold}[2. W3-T1: Khách hàng theo dõi đơn thuê]${colors.reset}`);
   
-  const resDonCuaToi = await callApi('/api/v1/don-thue?trang=1&soMoiTrang=10', {
+  const resDonCuaToi = await callApi('/api/don-thue?trang=1&soMoiTrang=10', {
     headers: { Authorization: `Bearer ${customerToken}` }
   });
-  assert('GET /api/v1/don-thue (Khách xem danh sách đơn của mình)', resDonCuaToi.status === 200 || resDonCuaToi.status === 403, `Status: ${resDonCuaToi.status}`);
+  assert('GET /api/don-thue (Khách xem danh sách đơn của mình)', resDonCuaToi.status === 200 || resDonCuaToi.status === 403, `Status: ${resDonCuaToi.status}`);
 
   // Khách xem đơn không tồn tại -> 404
-  const resDonFake = await callApi('/api/v1/don-thue/999999999', {
+  const resDonFake = await callApi('/api/don-thue/999999999', {
     headers: { Authorization: `Bearer ${customerToken}` }
   });
-  assert('GET /api/v1/don-thue/{id} (Không tìm thấy -> 404)', resDonFake.status === 404 || resDonFake.status === 403, `Status: ${resDonFake.status}`);
+  assert('GET /api/don-thue/{id} (Không tìm thấy -> 404)', resDonFake.status === 404 || resDonFake.status === 403, `Status: ${resDonFake.status}`);
 
   // Khách xem lịch sử đơn không tồn tại
-  const resLichSuFake = await callApi('/api/v1/don-thue/999999999/lich-su', {
+  const resLichSuFake = await callApi('/api/don-thue/999999999/lich-su', {
     headers: { Authorization: `Bearer ${customerToken}` }
   });
-  assert('GET /api/v1/don-thue/{id}/lich-su (Xem lịch sử đơn -> 404/403)', resLichSuFake.status === 404 || resLichSuFake.status === 403, `Status: ${resLichSuFake.status}`);
+  assert('GET /api/don-thue/{id}/lich-su (Xem lịch sử đơn -> 404/403)', resLichSuFake.status === 404 || resLichSuFake.status === 403, `Status: ${resLichSuFake.status}`);
 
   // Khách xem thông tin bàn giao đơn không tồn tại
-  const resBanGiaoDonFake = await callApi('/api/v1/don-thue/999999999/ban-giao', {
+  const resBanGiaoDonFake = await callApi('/api/don-thue/999999999/ban-giao', {
     headers: { Authorization: `Bearer ${customerToken}` }
   });
-  assert('GET /api/v1/don-thue/{id}/ban-giao (Xem bàn giao đơn -> 404/403)', resBanGiaoDonFake.status === 404 || resBanGiaoDonFake.status === 403, `Status: ${resBanGiaoDonFake.status}`);
+  assert('GET /api/don-thue/{id}/ban-giao (Xem bàn giao đơn -> 404/403)', resBanGiaoDonFake.status === 404 || resBanGiaoDonFake.status === 403, `Status: ${resBanGiaoDonFake.status}`);
 
   // 3. Truy vấn đơn phía Vận hành (Nhân viên / Admin)
   console.log(`\n${colors.bold}[3. W3-T1: Nhân viên tra cứu đơn vận hành]${colors.reset}`);
   
-  const resVanHanh = await callApi('/api/v1/van-hanh/don-thue?trang=1&soMoiTrang=10', {
+  const resVanHanh = await callApi('/api/don-thue/xu-ly?trang=1&soMoiTrang=10', {
     headers: { Authorization: `Bearer ${staffToken}` }
   });
-  assert('GET /api/v1/van-hanh/don-thue (Nhân viên xem đơn vận hành)', resVanHanh.status === 200 || resVanHanh.status === 403, `Status: ${resVanHanh.status}`);
+  assert('GET /api/don-thue/xu-ly (Nhân viên xem đơn vận hành)', resVanHanh.status === 200 || resVanHanh.status === 403, `Status: ${resVanHanh.status}`);
 
   // Nhân viên xem chi tiết đơn vận hành không tồn tại
-  const resChiTietVhFake = await callApi('/api/v1/van-hanh/don-thue/999999999', {
+  const resChiTietVhFake = await callApi('/api/don-thue/xu-ly/999999999', {
     headers: { Authorization: `Bearer ${staffToken}` }
   });
-  assert('GET /api/v1/van-hanh/don-thue/{id} (Không tìm thấy -> 404)', resChiTietVhFake.status === 404 || resChiTietVhFake.status === 403, `Status: ${resChiTietVhFake.status}`);
+  assert('GET /api/don-thue/xu-ly/{id} (Không tìm thấy -> 404)', resChiTietVhFake.status === 404 || resChiTietVhFake.status === 403, `Status: ${resChiTietVhFake.status}`);
 
   // Khách hàng truy cập API vận hành -> 403
-  const resVanHanhKhach = await callApi('/api/v1/van-hanh/don-thue', {
+  const resVanHanhKhach = await callApi('/api/don-thue/xu-ly', {
     headers: { Authorization: `Bearer ${customerToken}` }
   });
-  assert('GET /api/v1/van-hanh/don-thue (Khách truy cập bị chặn 403)', resVanHanhKhach.status === 403, `Status: ${resVanHanhKhach.status}`);
+  assert('GET /api/don-thue/xu-ly (Khách truy cập bị chặn 403)', resVanHanhKhach.status === 403, `Status: ${resVanHanhKhach.status}`);
 
   // 4. Thông báo in-app (W3-T2)
   console.log(`\n${colors.bold}[4. W3-T2: Thông báo in-app]${colors.reset}`);
   
-  const resThongBao = await callApi('/api/v1/thong-bao?trang=1&soMoiTrang=10', {
+  const resThongBao = await callApi('/api/thong-bao?trang=1&soMoiTrang=10', {
     headers: { Authorization: `Bearer ${customerToken}` }
   });
-  assert('GET /api/v1/thong-bao (Lấy danh sách thông báo)', resThongBao.status === 200, `Status: ${resThongBao.status}`);
+  assert('GET /api/thong-bao (Lấy danh sách thông báo)', resThongBao.status === 200, `Status: ${resThongBao.status}`);
 
   // Đánh dấu đã đọc thông báo giả -> 404
-  const resDaDocFake = await callApi('/api/v1/thong-bao/999999999/da-doc', {
+  const resDaDocFake = await callApi('/api/thong-bao/999999999/da-doc', {
     method: 'POST',
     headers: { Authorization: `Bearer ${customerToken}` }
   });
-  assert('POST /api/v1/thong-bao/{id}/da-doc (Không tìm thấy -> 404)', resDaDocFake.status === 404, `Status: ${resDaDocFake.status}`);
+  assert('POST /api/thong-bao/{id}/da-doc (Không tìm thấy -> 404)', resDaDocFake.status === 404, `Status: ${resDaDocFake.status}`);
 
   console.log(`\n======================================================`);
   console.log(`KẾT QUẢ: ${passed} PASS / ${failed} FAIL`);

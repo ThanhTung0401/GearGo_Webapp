@@ -1,4 +1,4 @@
-import crypto from 'node:crypto';
+﻿import crypto from 'node:crypto';
 
 const BASE_URL = process.env.API_URL || 'http://localhost:5000';
 const JWT_SECRET = 'GearGoSecretKey2026_ThisKeyMustBeAtLeast32Chars!';
@@ -48,7 +48,7 @@ async function detectAccountTokens() {
   for (const adminId of [10002, 1]) {
     const candidate = generateToken('QuanTriVien', adminId, 'admin@geargo.vn');
     try {
-      const res = await fetch(`${BASE_URL}/api/v1/admin/chinh-sach`, {
+      const res = await fetch(`${BASE_URL}/api/chinh-sach`, {
         headers: { Authorization: `Bearer ${candidate}` }
       });
       if (res.status === 200) {
@@ -71,20 +71,20 @@ async function run() {
   // --- PHẦN 1: W6-T1 (Quản trị chính sách - UC83) ---
   console.log(`${colors.bold}[PHẦN 1] W6-T1: Quản trị chính sách thuê & hủy${colors.reset}`);
 
-  const noAuthPolicy = await fetch(`${BASE_URL}/api/v1/admin/chinh-sach`);
+  const noAuthPolicy = await fetch(`${BASE_URL}/api/chinh-sach`);
   assert(noAuthPolicy.status === 401, 'Từ chối yêu cầu không có token khi xem chính sách (HTTP 401)');
 
-  const custPolicy = await fetch(`${BASE_URL}/api/v1/admin/chinh-sach`, {
+  const custPolicy = await fetch(`${BASE_URL}/api/chinh-sach`, {
     headers: { Authorization: `Bearer ${customerToken}` }
   });
   assert(custPolicy.status === 403, 'Khách hàng bị cấm truy cập quản trị chính sách (HTTP 403)');
 
-  const staffPolicy = await fetch(`${BASE_URL}/api/v1/admin/chinh-sach`, {
+  const staffPolicy = await fetch(`${BASE_URL}/api/chinh-sach`, {
     headers: { Authorization: `Bearer ${staffToken}` }
   });
   assert(staffPolicy.status === 403, 'Nhân viên bị cấm truy cập quản trị chính sách (HTTP 403 AdminOnly)');
 
-  const adminPoliciesRes = await fetch(`${BASE_URL}/api/v1/admin/chinh-sach?trang=1&kichThuoc=10`, {
+  const adminPoliciesRes = await fetch(`${BASE_URL}/api/chinh-sach?trang=1&kichThuoc=10`, {
     headers: { Authorization: `Bearer ${adminToken}` }
   });
   assert(adminPoliciesRes.status === 200, 'Admin lấy danh sách phiên bản chính sách thành công (HTTP 200)');
@@ -100,19 +100,19 @@ async function run() {
   }
 
   if (firstPolicyId) {
-    const detailRes = await fetch(`${BASE_URL}/api/v1/admin/chinh-sach/${firstPolicyId}`, {
+    const detailRes = await fetch(`${BASE_URL}/api/chinh-sach/${firstPolicyId}`, {
       headers: { Authorization: `Bearer ${adminToken}` }
     });
     assert(detailRes.status === 200, `Admin xem chi tiết phiên bản chính sách #${firstPolicyId} (HTTP 200)`);
   }
 
-  const notFoundPolicy = await fetch(`${BASE_URL}/api/v1/admin/chinh-sach/999999`, {
+  const notFoundPolicy = await fetch(`${BASE_URL}/api/chinh-sach/999999`, {
     headers: { Authorization: `Bearer ${adminToken}` }
   });
   assert(notFoundPolicy.status === 404, 'Báo 404 khi xem phiên bản chính sách không tồn tại');
 
   // Kiểm tra validation endpoint /kiem-tra với dữ liệu lỗi (không ghi DB)
-  const invalidCheckRes = await fetch(`${BASE_URL}/api/v1/admin/chinh-sach/kiem-tra`, {
+  const invalidCheckRes = await fetch(`${BASE_URL}/api/chinh-sach/kiem-tra`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${adminToken}`,
@@ -123,7 +123,7 @@ async function run() {
   assert(invalidCheckRes.status === 400, 'Endpoint /kiem-tra chặn payload rỗng / thiếu trường bắt buộc (HTTP 400)');
 
   // Kiểm tra chặn tạo phiên bản khi thiếu dữ liệu bắt buộc
-  const invalidCreateRes = await fetch(`${BASE_URL}/api/v1/admin/chinh-sach`, {
+  const invalidCreateRes = await fetch(`${BASE_URL}/api/chinh-sach`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${adminToken}`,
@@ -136,15 +136,15 @@ async function run() {
   // --- PHẦN 2: W6-T7 (Nhật ký hệ thống - UC100-UC102) ---
   console.log(`\n${colors.bold}[PHẦN 2] W6-T7: Nhật ký thao tác & Kiểm toán (Audit Log)${colors.reset}`);
 
-  const noAuthAudit = await fetch(`${BASE_URL}/api/v1/admin/nhat-ky`);
+  const noAuthAudit = await fetch(`${BASE_URL}/api/nhat-ky`);
   assert(noAuthAudit.status === 401, 'Từ chối yêu cầu không có token khi xem nhật ký (HTTP 401)');
 
-  const custAudit = await fetch(`${BASE_URL}/api/v1/admin/nhat-ky`, {
+  const custAudit = await fetch(`${BASE_URL}/api/nhat-ky`, {
     headers: { Authorization: `Bearer ${customerToken}` }
   });
   assert(custAudit.status === 403, 'Khách hàng bị cấm truy cập nhật ký hệ thống (HTTP 403)');
 
-  const staffAudit = await fetch(`${BASE_URL}/api/v1/admin/nhat-ky?trang=1&soMoiTrang=10`, {
+  const staffAudit = await fetch(`${BASE_URL}/api/nhat-ky?trang=1&soMoiTrang=10`, {
     headers: { Authorization: `Bearer ${staffToken}` }
   });
   assert(staffAudit.status === 200, 'Nhân viên truy cập nhật ký vận hành thành công (HTTP 200 StaffOrAdmin)');
@@ -160,7 +160,7 @@ async function run() {
     assert(!leaked, 'Nhân viên không xem được nhật ký nhạy cảm (tài khoản/chính sách/phân quyền) của người khác');
   }
 
-  const adminAudit = await fetch(`${BASE_URL}/api/v1/admin/nhat-ky?trang=1&soMoiTrang=15`, {
+  const adminAudit = await fetch(`${BASE_URL}/api/nhat-ky?trang=1&soMoiTrang=15`, {
     headers: { Authorization: `Bearer ${adminToken}` }
   });
   assert(adminAudit.status === 200, 'Admin tra cứu nhật ký hệ thống thành công (HTTP 200)');
@@ -171,7 +171,7 @@ async function run() {
     assert(typeof auditData.totalItems === 'number', 'Kết quả nhật ký có tổng số bản ghi totalItems hợp lệ');
   }
 
-  const filteredAudit = await fetch(`${BASE_URL}/api/v1/admin/nhat-ky?tuKhoa=DON&trang=1&soMoiTrang=5`, {
+  const filteredAudit = await fetch(`${BASE_URL}/api/nhat-ky?tuKhoa=DON&trang=1&soMoiTrang=5`, {
     headers: { Authorization: `Bearer ${adminToken}` }
   });
   assert(filteredAudit.status === 200, 'Lọc nhật ký hệ thống theo từ khóa thành công (HTTP 200)');

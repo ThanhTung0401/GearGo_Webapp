@@ -1,4 +1,4 @@
-/**
+﻿/**
  * orderMapper.ts - Ánh xạ DTO Đơn thuê, Bàn giao BBBG, Nhận trả PNT, Phụ phí, Thanh toán & Đối soát 7 bước
  */
 
@@ -76,7 +76,7 @@ export function mapDonVanHanhTomTatToOrder(dto: DonVanHanhTomTatBackend): Order 
 }
 
 /**
- * Map chi tiết đơn đầy đủ từ /api/v1/don-thue/{id} sang Order của UI.
+ * Map chi tiết đơn đầy đủ từ /api/don-thue/{id} sang Order của UI.
  */
 export function mapDonChiTietToOrder(
   dto: DonChiTietBackend,

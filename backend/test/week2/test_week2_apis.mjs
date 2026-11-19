@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Script kiểm thử tự động toàn diện TẤT CẢ 28 endpoints Swagger của GearGo Backend (Week 2)
  * Chạy: node backend/test/week2/test_week2_apis.mjs
  */
@@ -167,15 +167,15 @@ async function runAllTests() {
   const resDanhMucId = await callApi('/api/danh-muc/1');
   assertTest('GET /api/danh-muc/{id} (Xem chi tiết danh mục hoặc 404)', resDanhMucId.status === 200 || resDanhMucId.status === 404, `Status: ${resDanhMucId.status}`);
 
-  // 10. GET /api/admin/danh-muc
-  const resAdminDanhMuc = await callApi('/api/admin/danh-muc', {
+  // 10. GET /api/danh-muc
+  const resAdminDanhMuc = await callApi('/api/danh-muc', {
     headers: { Authorization: `Bearer ${adminToken}` }
   });
-  assertTest('GET /api/admin/danh-muc (Admin lấy danh sách)', resAdminDanhMuc.status === 200, `Status: ${resAdminDanhMuc.status}`);
+  assertTest('GET /api/danh-muc (Admin lấy danh sách)', resAdminDanhMuc.status === 200, `Status: ${resAdminDanhMuc.status}`);
 
-  // 11. POST /api/admin/danh-muc
+  // 11. POST /api/danh-muc
   let createdDanhMucId = 0;
-  const resCreateDM = await callApi('/api/admin/danh-muc', {
+  const resCreateDM = await callApi('/api/danh-muc', {
     method: 'POST',
     headers: { Authorization: `Bearer ${adminToken}` },
     body: JSON.stringify({
@@ -185,12 +185,12 @@ async function runAllTests() {
       trangThai: 'HienThi'
     })
   });
-  assertTest('POST /api/admin/danh-muc (Admin tạo danh mục)', resCreateDM.status === 201, `Status: ${resCreateDM.status}`);
+  assertTest('POST /api/danh-muc (Admin tạo danh mục)', resCreateDM.status === 201, `Status: ${resCreateDM.status}`);
   if (resCreateDM.data?.maDanhMuc) createdDanhMucId = resCreateDM.data.maDanhMuc;
 
-  // 12. PUT /api/admin/danh-muc/{id}
+  // 12. PUT /api/danh-muc/{id}
   if (createdDanhMucId > 0) {
-    const resUpdateDM = await callApi(`/api/admin/danh-muc/${createdDanhMucId}`, {
+    const resUpdateDM = await callApi(`/api/danh-muc/${createdDanhMucId}`, {
       method: 'PUT',
       headers: { Authorization: `Bearer ${adminToken}` },
       body: JSON.stringify({
@@ -200,22 +200,22 @@ async function runAllTests() {
         trangThai: 'HienThi'
       })
     });
-    assertTest('PUT /api/admin/danh-muc/{id} (Admin cập nhật danh mục)', resUpdateDM.status === 200, `Status: ${resUpdateDM.status}`);
+    assertTest('PUT /api/danh-muc/{id} (Admin cập nhật danh mục)', resUpdateDM.status === 200, `Status: ${resUpdateDM.status}`);
 
-    // 13. PATCH /api/admin/danh-muc/{id}/trang-thai
-    const resPatchDM = await callApi(`/api/admin/danh-muc/${createdDanhMucId}/trang-thai`, {
+    // 13. PATCH /api/danh-muc/{id}/trang-thai
+    const resPatchDM = await callApi(`/api/danh-muc/${createdDanhMucId}/trang-thai`, {
       method: 'PATCH',
       headers: { Authorization: `Bearer ${adminToken}` },
       body: JSON.stringify({ trangThaiMoi: 'TamAn' })
     });
-    assertTest('PATCH /api/admin/danh-muc/{id}/trang-thai (Admin đổi trạng thái)', resPatchDM.status === 200, `Status: ${resPatchDM.status}`);
+    assertTest('PATCH /api/danh-muc/{id}/trang-thai (Admin đổi trạng thái)', resPatchDM.status === 200, `Status: ${resPatchDM.status}`);
 
-    // 14. DELETE /api/admin/danh-muc/{id}
-    const resDeleteDM = await callApi(`/api/admin/danh-muc/${createdDanhMucId}`, {
+    // 14. DELETE /api/danh-muc/{id}
+    const resDeleteDM = await callApi(`/api/danh-muc/${createdDanhMucId}`, {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${adminToken}` }
     });
-    assertTest('DELETE /api/admin/danh-muc/{id} (Admin xóa danh mục)', resDeleteDM.status === 200, `Status: ${resDeleteDM.status}`);
+    assertTest('DELETE /api/danh-muc/{id} (Admin xóa danh mục)', resDeleteDM.status === 200, `Status: ${resDeleteDM.status}`);
   }
 
   // ==========================================
@@ -235,23 +235,23 @@ async function runAllTests() {
   const resSanPhamDetail = await callApi(`/api/san-pham/${sampleSanPhamId}`);
   assertTest('GET /api/san-pham/{id} (Chi tiết sản phẩm hoặc 404)', resSanPhamDetail.status === 200 || resSanPhamDetail.status === 404, `Status: ${resSanPhamDetail.status}`);
 
-  // 17. GET /api/admin/san-pham
-  const resAdminSP = await callApi('/api/admin/san-pham', {
+  // 17. GET /api/san-pham
+  const resAdminSP = await callApi('/api/san-pham', {
     headers: { Authorization: `Bearer ${adminToken}` }
   });
-  assertTest('GET /api/admin/san-pham (Admin lấy danh sách)', resAdminSP.status === 200, `Status: ${resAdminSP.status}`);
+  assertTest('GET /api/san-pham (Admin lấy danh sách)', resAdminSP.status === 200, `Status: ${resAdminSP.status}`);
 
-  // 18. POST /api/admin/san-pham (Tạo sản phẩm mẫu)
+  // 18. POST /api/san-pham (Tạo sản phẩm mẫu)
   let createdSanPhamId = 0;
   // Tạo 1 danh mục tạm để gán cho sản phẩm
-  const tempDM = await callApi('/api/admin/danh-muc', {
+  const tempDM = await callApi('/api/danh-muc', {
     method: 'POST',
     headers: { Authorization: `Bearer ${adminToken}` },
     body: JSON.stringify({ tenDanhMuc: `DM SP ${timestamp}`, thuTuHienThi: 1, trangThai: 'HienThi' })
   });
   const dmIdForSP = tempDM.data?.maDanhMuc || 1;
 
-  const resCreateSP = await callApi('/api/admin/san-pham', {
+  const resCreateSP = await callApi('/api/san-pham', {
     method: 'POST',
     headers: { Authorization: `Bearer ${adminToken}` },
     body: JSON.stringify({
@@ -269,15 +269,15 @@ async function runAllTests() {
       trangThaiKinhDoanh: 'DangKinhDoanh'
     })
   });
-  assertTest('POST /api/admin/san-pham (Admin tạo sản phẩm)', resCreateSP.status === 201, `Status: ${resCreateSP.status}`);
+  assertTest('POST /api/san-pham (Admin tạo sản phẩm)', resCreateSP.status === 201, `Status: ${resCreateSP.status}`);
   if (resCreateSP.data?.maSanPham) {
     createdSanPhamId = resCreateSP.data.maSanPham;
     sampleSanPhamId = createdSanPhamId;
   }
 
   if (createdSanPhamId > 0) {
-    // 19. PUT /api/admin/san-pham/{id}
-    const resUpdateSP = await callApi(`/api/admin/san-pham/${createdSanPhamId}`, {
+    // 19. PUT /api/san-pham/{id}
+    const resUpdateSP = await callApi(`/api/san-pham/${createdSanPhamId}`, {
       method: 'PUT',
       headers: { Authorization: `Bearer ${adminToken}` },
       body: JSON.stringify({
@@ -293,24 +293,24 @@ async function runAllTests() {
         trangThaiKinhDoanh: 'DangKinhDoanh'
       })
     });
-    assertTest('PUT /api/admin/san-pham/{id} (Admin cập nhật sản phẩm)', resUpdateSP.status === 200, `Status: ${resUpdateSP.status}`);
+    assertTest('PUT /api/san-pham/{id} (Admin cập nhật sản phẩm)', resUpdateSP.status === 200, `Status: ${resUpdateSP.status}`);
 
-    // 20. PATCH /api/admin/san-pham/{id}/trang-thai
-    const resPatchSP = await callApi(`/api/admin/san-pham/${createdSanPhamId}/trang-thai`, {
+    // 20. PATCH /api/san-pham/{id}/trang-thai
+    const resPatchSP = await callApi(`/api/san-pham/${createdSanPhamId}/trang-thai`, {
       method: 'PATCH',
       headers: { Authorization: `Bearer ${adminToken}` },
       body: JSON.stringify({ trangThaiMoi: 'TamNgung' })
     });
-    assertTest('PATCH /api/admin/san-pham/{id}/trang-thai (Admin đổi trạng thái)', resPatchSP.status === 200, `Status: ${resPatchSP.status}`);
+    assertTest('PATCH /api/san-pham/{id}/trang-thai (Admin đổi trạng thái)', resPatchSP.status === 200, `Status: ${resPatchSP.status}`);
 
     // Khôi phục trạng thái về DangKinhDoanh để không ảnh hưởng đến các kịch bản test thuê sau
-    await callApi(`/api/admin/san-pham/${createdSanPhamId}/trang-thai`, {
+    await callApi(`/api/san-pham/${createdSanPhamId}/trang-thai`, {
       method: 'PATCH',
       headers: { Authorization: `Bearer ${adminToken}` },
       body: JSON.stringify({ trangThaiMoi: 'DangKinhDoanh' })
     });
 
-    // 21. POST /api/admin/san-pham/{id}/hinh-anh
+    // 21. POST /api/san-pham/{id}/hinh-anh
     const validJpeg = Buffer.from([
       0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10, 0x4A, 0x46, 0x49, 0x46, 0x00, 0x01, 0x01, 0x01, 0x00, 0x48,
       0x00, 0x48, 0x00, 0x00, 0xFF, 0xDB, 0x00, 0x43, 0x00, 0x08, 0x06, 0x06, 0x07, 0x06, 0x05, 0x08,
@@ -322,23 +322,23 @@ async function runAllTests() {
     const dummyBlob = new Blob([validJpeg], { type: 'image/jpeg' });
     formData.append('file', dummyBlob, 'test_image.jpg');
 
-    const resUploadImg = await callApi(`/api/admin/san-pham/${createdSanPhamId}/hinh-anh`, {
+    const resUploadImg = await callApi(`/api/san-pham/${createdSanPhamId}/hinh-anh`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${adminToken}` },
       body: formData
     });
-    assertTest('POST /api/admin/san-pham/{id}/hinh-anh (Upload ảnh sản phẩm)', resUploadImg.status === 201 || resUploadImg.status === 200, `Status: ${resUploadImg.status}`);
+    assertTest('POST /api/san-pham/{id}/hinh-anh (Upload ảnh sản phẩm)', resUploadImg.status === 201 || resUploadImg.status === 200, `Status: ${resUploadImg.status}`);
     const imgId = resUploadImg.data?.maHinhAnh || 0;
 
-    // 22. DELETE /api/admin/san-pham/hinh-anh/{maHinhAnh}
+    // 22. DELETE /api/san-pham/hinh-anh/{maHinhAnh}
     if (imgId > 0) {
-      const resDelImg = await callApi(`/api/admin/san-pham/hinh-anh/${imgId}`, {
+      const resDelImg = await callApi(`/api/san-pham/hinh-anh/${imgId}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${adminToken}` }
       });
-      assertTest('DELETE /api/admin/san-pham/hinh-anh/{maHinhAnh} (Xóa ảnh sản phẩm)', resDelImg.status === 200, `Status: ${resDelImg.status}`);
+      assertTest('DELETE /api/san-pham/hinh-anh/{maHinhAnh} (Xóa ảnh sản phẩm)', resDelImg.status === 200, `Status: ${resDelImg.status}`);
     } else {
-      assertTest('DELETE /api/admin/san-pham/hinh-anh/{maHinhAnh} (Bỏ qua do không có ảnh)', true, 'Skipped');
+      assertTest('DELETE /api/san-pham/hinh-anh/{maHinhAnh} (Bỏ qua do không có ảnh)', true, 'Skipped');
     }
   }
 
@@ -410,35 +410,35 @@ async function runAllTests() {
   // ==========================================
   console.log(`\n${colors.bold}[6. Module DonThue - Đơn đặt thuê]${colors.reset}`);
 
-  // 29. POST /api/v1/don-thue (Validation test)
-  const resTaoDon = await callApi('/api/v1/don-thue', {
+  // 29. POST /api/don-thue (Validation test)
+  const resTaoDon = await callApi('/api/don-thue', {
     method: 'POST',
     headers: { Authorization: `Bearer ${customerToken}` },
     body: JSON.stringify({})
   });
-  assertTest('POST /api/v1/don-thue (Validation kiểm tra dữ liệu)', resTaoDon.status === 400, `Status: ${resTaoDon.status}`);
+  assertTest('POST /api/don-thue (Validation kiểm tra dữ liệu)', resTaoDon.status === 400, `Status: ${resTaoDon.status}`);
 
-  // 30. PUT /api/v1/don-thue/{id}/huy
-  const resHuyDon = await callApi('/api/v1/don-thue/999999/huy', {
+  // 30. PUT /api/don-thue/{id}/huy
+  const resHuyDon = await callApi('/api/don-thue/999999/huy', {
     method: 'PUT',
     headers: { Authorization: `Bearer ${customerToken}` },
     body: JSON.stringify('Hủy kiểm thử')
   });
   // W4-T7: endpoint đi qua HuyDonService, kiểm tra chủ đơn → đơn không tồn tại/của người khác trả 404.
-  assertTest('PUT /api/v1/don-thue/{id}/huy (Hủy đơn thuê)', resHuyDon.status === 404, `Status: ${resHuyDon.status}`);
+  assertTest('PUT /api/don-thue/{id}/huy (Hủy đơn thuê)', resHuyDon.status === 404, `Status: ${resHuyDon.status}`);
 
   // ==========================================
   // MODULE 7: ThanhToan (1 endpoint)
   // ==========================================
   console.log(`\n${colors.bold}[7. Module ThanhToan - Xác nhận thanh toán]${colors.reset}`);
 
-  // 31. POST /api/v1/thanh-toan/xac-nhan
-  const resThanhToan = await callApi('/api/v1/thanh-toan/xac-nhan', {
+  // 31. POST /api/thanh-toan/xac-nhan
+  const resThanhToan = await callApi('/api/thanh-toan/xac-nhan', {
     method: 'POST',
     headers: { 'Authorization': `Bearer ${adminToken}` },
     body: JSON.stringify({ maDonThue: 999999, phuongThuc: 'ChuyenKhoan', soTien: 100000 })
   });
-  assertTest('POST /api/v1/thanh-toan/xac-nhan (Xác nhận thanh toán)', resThanhToan.status === 400, `Status: ${resThanhToan.status}`);
+  assertTest('POST /api/thanh-toan/xac-nhan (Xác nhận thanh toán)', resThanhToan.status === 400, `Status: ${resThanhToan.status}`);
 
   // ==========================================
   // TỔNG KẾT

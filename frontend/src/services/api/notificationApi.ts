@@ -1,5 +1,5 @@
-/**
- * notificationApi.ts - Thông báo người dùng (/api/v1/thong-bao) & Quản trị gửi lỗi/thử lại (/api/v1/admin/thong-bao)
+﻿/**
+ * notificationApi.ts - Thông báo người dùng (/api/thong-bao) & Quản trị gửi lỗi/thử lại (/api/thong-bao)
  */
 
 import { apiClient } from "../apiClient";
@@ -40,22 +40,22 @@ export interface ThongBaoGuiLoiBackend {
 export const notificationApi = {
   async layCuaToi(params?: { chuaDoc?: boolean; trang?: number; soMoiTrang?: number }): Promise<DanhSachThongBaoBackend> {
     const q = buildQuery(params as Record<string, unknown>);
-    const res = await apiClient.get<unknown>(`/api/v1/thong-bao${q}`);
+    const res = await apiClient.get<unknown>(`/api/thong-bao${q}`);
     return unwrapResult<DanhSachThongBaoBackend>(res.data);
   },
 
   async demChuaDoc(): Promise<number> {
-    const res = await apiClient.get<{ soLuongChuaDoc?: number; soChuaDoc?: number }>("/api/v1/thong-bao/chua-doc/dem");
+    const res = await apiClient.get<{ soLuongChuaDoc?: number; soChuaDoc?: number }>("/api/thong-bao/chua-doc/dem");
     const data = unwrapResult<{ soLuongChuaDoc?: number; soChuaDoc?: number }>(res.data);
     return Number(data?.soLuongChuaDoc ?? data?.soChuaDoc ?? 0);
   },
 
   async danhDauDaDoc(id: number): Promise<void> {
-    await apiClient.post<unknown>(`/api/v1/thong-bao/${id}/da-doc`);
+    await apiClient.post<unknown>(`/api/thong-bao/${id}/da-doc`);
   },
 
   async danhDauTatCaDaDoc(): Promise<void> {
-    await apiClient.post<unknown>("/api/v1/thong-bao/da-doc-tat-ca");
+    await apiClient.post<unknown>("/api/thong-bao/da-doc-tat-ca");
   },
 
   async adminGuiThuCong(req: {
@@ -65,18 +65,18 @@ export const notificationApi = {
     maDonThue?: number | null;
     loaiSuKien?: string;
   }): Promise<unknown> {
-    const res = await apiClient.post<unknown>("/api/v1/admin/thong-bao", req);
+    const res = await apiClient.post<unknown>("/api/thong-bao", req);
     return unwrapResult<unknown>(res.data);
   },
 
   async adminLayGuiLoi(params?: { trang?: number; soMoiTrang?: number }): Promise<PagedBackendResponse<ThongBaoGuiLoiBackend>> {
     const q = buildQuery(params as Record<string, unknown>);
-    const res = await apiClient.get<unknown>(`/api/v1/admin/thong-bao/gui-loi${q}`);
+    const res = await apiClient.get<unknown>(`/api/thong-bao/gui-loi${q}`);
     return unwrapPaged<ThongBaoGuiLoiBackend>(res.data);
   },
 
   async adminThuLai(id: number, lyDo?: string): Promise<ThongBaoGuiLoiBackend> {
-    const res = await apiClient.post<unknown>(`/api/v1/admin/thong-bao/${id}/thu-lai`, { lyDo });
+    const res = await apiClient.post<unknown>(`/api/thong-bao/${id}/thu-lai`, { lyDo });
     return unwrapResult<ThongBaoGuiLoiBackend>(res.data);
   },
 };

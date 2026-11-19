@@ -1,10 +1,10 @@
-import { test, expect } from "@playwright/test";
+﻿import { test, expect } from "@playwright/test";
 import { authHeaders, loginApi } from "../../helpers/auth.js";
 
 test.describe("Phân hệ 4: Chuẩn bị, Bàn giao, Nhận trả & Quá hạn (UC4.1 - UC4.5)", () => {
   test("UC4.5 - Tra cứu hàng đợi đơn thuê cho vận hành", async ({ request }) => {
     const { token: staffToken } = await loginApi(request, "staff");
-    const res = await request.get("/api/v1/van-hanh/don-thue?soMoiTrang=20", {
+    const res = await request.get("/api/don-thue/xu-ly?soMoiTrang=20", {
       headers: authHeaders(staffToken),
     });
     expect(res.ok()).toBeTruthy();
@@ -17,7 +17,7 @@ test.describe("Phân hệ 4: Chuẩn bị, Bàn giao, Nhận trả & Quá hạn 
 
     // Lấy chi tiết vận hành 1 đơn
     const firstId = items[0].maDonThue;
-    const detailRes = await request.get(`/api/v1/van-hanh/don-thue/${firstId}`, {
+    const detailRes = await request.get(`/api/don-thue/xu-ly/${firstId}`, {
       headers: authHeaders(staffToken),
     });
     expect(detailRes.ok()).toBeTruthy();
@@ -25,7 +25,7 @@ test.describe("Phân hệ 4: Chuẩn bị, Bàn giao, Nhận trả & Quá hạn 
 
   test("UC4.1 & UC4.2 - Kiểm tra endpoint chuẩn bị & bàn giao thiết bị", async ({ request }) => {
     const { token: staffToken } = await loginApi(request, "staff");
-    const listRes = await request.get("/api/v1/van-hanh/don-thue?soMoiTrang=20", {
+    const listRes = await request.get("/api/don-thue/xu-ly?soMoiTrang=20", {
       headers: authHeaders(staffToken),
     });
     const listBody = (await listRes.json()) as {
@@ -37,7 +37,7 @@ test.describe("Phân hệ 4: Chuẩn bị, Bàn giao, Nhận trả & Quá hạn 
     // Kiểm tra đọc được danh sách phiếu bàn giao nếu có đơn
     if (items.length > 0) {
       const id = items[0].maDonThue;
-      const bgRes = await request.get(`/api/v1/ban-giao?maDonThue=${id}`, {
+      const bgRes = await request.get(`/api/ban-giao?maDonThue=${id}`, {
         headers: authHeaders(staffToken),
       });
       expect([200, 404]).toContain(bgRes.status());
@@ -46,7 +46,7 @@ test.describe("Phân hệ 4: Chuẩn bị, Bàn giao, Nhận trả & Quá hạn 
 
   test("UC4.3 & UC4.3.1 - Kiểm tra endpoint nhận trả & trả một phần", async ({ request }) => {
     const { token: staffToken } = await loginApi(request, "staff");
-    const listRes = await request.get("/api/v1/van-hanh/don-thue?soMoiTrang=20", {
+    const listRes = await request.get("/api/don-thue/xu-ly?soMoiTrang=20", {
       headers: authHeaders(staffToken),
     });
     const listBody = (await listRes.json()) as {
@@ -55,7 +55,7 @@ test.describe("Phân hệ 4: Chuẩn bị, Bàn giao, Nhận trả & Quá hạn 
     };
     const items = listBody.duLieu?.items ?? listBody.items ?? [];
     if (items.length > 0) {
-      const ntRes = await request.get(`/api/v1/nhan-tra?maDonThue=${items[0].maDonThue}`, {
+      const ntRes = await request.get(`/api/nhan-tra?maDonThue=${items[0].maDonThue}`, {
         headers: authHeaders(staffToken),
       });
       expect([200, 404]).toContain(ntRes.status());
@@ -64,7 +64,7 @@ test.describe("Phân hệ 4: Chuẩn bị, Bàn giao, Nhận trả & Quá hạn 
 
   test("UC4.4 - Tra cứu danh sách đơn quá hạn & nhật ký liên hệ", async ({ request }) => {
     const { token: staffToken } = await loginApi(request, "staff");
-    const overdueRes = await request.get("/api/v1/qua-han", {
+    const overdueRes = await request.get("/api/qua-han", {
       headers: authHeaders(staffToken),
     });
     expect([200, 404]).toContain(overdueRes.status());

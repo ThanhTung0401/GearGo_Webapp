@@ -20,13 +20,13 @@ import {
   INITIAL_STOCK_ADJUSTMENTS,
   INITIAL_SUPPLIERS,
 } from "../src/store";
-import { LoginView, RegisterView, ForgotPasswordView } from "../src/views/AuthViews";
-import ProductsView from "../src/views/ProductsView";
-import { CartView } from "../src/views/customer/CartView";
-import { MyOrdersView } from "../src/views/customer/MyOrdersView";
-import { ProfileView } from "../src/views/customer/ProfileView";
-import { OrdersTab } from "../src/views/staff/tabs/OrdersTab";
-import ReconciliationSheet from "../src/views/ReconciliationSheet";
+import { LoginView, RegisterView, ForgotPasswordView } from "../src/modules/auth/AuthViews";
+import ProductsView from "../src/modules/catalog/ProductsView";
+import { CartView } from "../src/modules/orders/CartView";
+import { MyOrdersView } from "../src/modules/orders/MyOrdersView";
+import { ProfileView } from "../src/modules/auth/ProfileView";
+import { OrdersTab } from "../src/modules/orders/OrdersTab";
+import ReconciliationSheet from "../src/modules/orders/ReconciliationSheet";
 
 function makeMockApp(overrides: Partial<AppState> = {}): AppState {
   const ok = <T = void>(data?: T) => ({ ok: true, message: "OK", data });

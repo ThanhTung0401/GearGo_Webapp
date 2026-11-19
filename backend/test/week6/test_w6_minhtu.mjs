@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Script kiểm thử tự động toàn diện cho Week 6 của Minh Tú:
  * - Task W6-T6 (UC25): Báo cáo nhập hàng, điều chỉnh kho, bảo trì và xuất CSV
  * - Bám sát Plan_Week6.md (Mục 9, 13.4, 15: W6-21, W6-22, W6-23, W6-24, W6-28, W6-29, W6-T6-A01 -> A08)
@@ -113,7 +113,7 @@ async function runTests() {
   console.log(`${colors.bold}${colors.cyan}================================================================================${colors.reset}\n`);
 
   // 0. Kiểm tra kết nối backend server
-  const ping = await callApi('/api/v1/bao-cao/kho/hien-trang');
+  const ping = await callApi('/api/bao-cao/kho/hien-trang');
   if (ping.status === 0) {
     console.log(`${colors.yellow}⚠️ Backend API server chưa chạy tại ${BASE_URL}.${colors.reset}`);
     console.log(`${colors.yellow}👉 Đã xác thực thành công 8/8 ca kiểm thử trong dotnet test (Unit & Integration Tests).${colors.reset}`);
@@ -129,39 +129,39 @@ async function runTests() {
   console.log(`${colors.magenta}${colors.bold}--- [PHẦN 1] BẢO MẬT PHÂN QUYỀN VÀ MASKING DỮ LIỆU TÀI CHÍNH KHO ---${colors.reset}`);
 
   // Test 1: Khách hàng gọi API kho bị chặn 403 Forbidden
-  const rKhachHienTrang = await callApi('/api/v1/bao-cao/kho/hien-trang', {
+  const rKhachHienTrang = await callApi('/api/bao-cao/kho/hien-trang', {
     headers: { Authorization: `Bearer ${customerToken}` }
   });
   assert(rKhachHienTrang.status === 403, 'Khách hàng bị chặn truy cập Hiện trạng kho (HTTP 403 Forbidden)');
 
-  const rKhachNhapHang = await callApi('/api/v1/admin/bao-cao/kho/nhap-hang', {
+  const rKhachNhapHang = await callApi('/api/bao-cao/kho/nhap-hang', {
     headers: { Authorization: `Bearer ${customerToken}` }
   });
   assert(rKhachNhapHang.status === 403, 'Khách hàng bị chặn truy cập Báo cáo nhập hàng Admin (HTTP 403 Forbidden)');
 
   // Test 2: Nhân viên bị chặn gọi các endpoint Admin
-  const rStaffNhapHang = await callApi('/api/v1/admin/bao-cao/kho/nhap-hang', {
+  const rStaffNhapHang = await callApi('/api/bao-cao/kho/nhap-hang', {
     headers: { Authorization: `Bearer ${staffToken}` }
   });
   assert(rStaffNhapHang.status === 403, 'Nhân viên bị chặn truy cập Báo cáo nhập hàng (HTTP 403 AdminOnly)');
 
-  const rStaffDieuChinh = await callApi('/api/v1/admin/bao-cao/kho/dieu-chinh-nhap', {
+  const rStaffDieuChinh = await callApi('/api/bao-cao/kho/dieu-chinh-nhap', {
     headers: { Authorization: `Bearer ${staffToken}` }
   });
   assert(rStaffDieuChinh.status === 403, 'Nhân viên bị chặn truy cập Phát sinh điều chỉnh nhập (HTTP 403 AdminOnly)');
 
-  const rStaffDonGia = await callApi('/api/v1/admin/bao-cao/kho/lich-su-don-gia', {
+  const rStaffDonGia = await callApi('/api/bao-cao/kho/lich-su-don-gia', {
     headers: { Authorization: `Bearer ${staffToken}` }
   });
   assert(rStaffDonGia.status === 403, 'Nhân viên bị chặn truy cập Lịch sử đơn giá (HTTP 403 AdminOnly)');
 
-  const rStaffCsv = await callApi('/api/v1/admin/bao-cao/kho/xuat-csv?loaiBaoCao=NhapHang', {
+  const rStaffCsv = await callApi('/api/bao-cao/kho/xuat-csv?loaiBaoCao=NhapHang', {
     headers: { Authorization: `Bearer ${staffToken}` }
   });
   assert(rStaffCsv.status === 403, 'Nhân viên bị chặn xuất CSV báo cáo tài chính kho (HTTP 403 AdminOnly)');
 
   // Test 3: Nhân viên xem Hiện trạng kho thành công nhưng BỊ CHE TỔNG GIÁ TRỊ NHẬP
-  const rStaffHienTrang = await callApi('/api/v1/bao-cao/kho/hien-trang', {
+  const rStaffHienTrang = await callApi('/api/bao-cao/kho/hien-trang', {
     headers: { Authorization: `Bearer ${staffToken}` }
   });
   assert(rStaffHienTrang.status === 200, 'Nhân viên truy cập Hiện trạng kho vận hành thành công (HTTP 200 OK)');
@@ -169,7 +169,7 @@ async function runTests() {
     'Nhân viên bị ẩn tổng giá trị nhập kho (tongGiaTriNhap = null)');
 
   // Test 4: Nhân viên xem Thống kê bảo trì thành công nhưng BỊ CHE CHI PHÍ BẢO TRÌ
-  const rStaffBaoTri = await callApi('/api/v1/bao-cao/kho/bao-tri', {
+  const rStaffBaoTri = await callApi('/api/bao-cao/kho/bao-tri', {
     headers: { Authorization: `Bearer ${staffToken}` }
   });
   assert(rStaffBaoTri.status === 200, 'Nhân viên truy cập Thống kê bảo trì thành công (HTTP 200 OK)');
@@ -183,7 +183,7 @@ async function runTests() {
   console.log(`\n${colors.magenta}${colors.bold}--- [PHẦN 2] BÁO CÁO NHẬP HÀNG THEO LÔ & PHÁT SINH ĐIỀU CHỈNH ---${colors.reset}`);
 
   // Test 5: Admin xem Báo cáo Nhập hàng theo lô (W6-21)
-  const rAdminNhapHang = await callApi('/api/v1/admin/bao-cao/kho/nhap-hang?trang=1&soMoiTrang=20', {
+  const rAdminNhapHang = await callApi('/api/bao-cao/kho/nhap-hang?trang=1&soMoiTrang=20', {
     headers: { Authorization: `Bearer ${adminToken}` }
   });
   assert(rAdminNhapHang.status === 200, 'Admin lấy báo cáo nhập hàng theo lô thành công (HTTP 200 OK)');
@@ -198,7 +198,7 @@ async function runTests() {
   }
 
   // Test 6: Admin xem Phát sinh điều chỉnh nhập trong kỳ (W6-22, W6-23)
-  const rAdminDieuChinh = await callApi('/api/v1/admin/bao-cao/kho/dieu-chinh-nhap?trang=1&soMoiTrang=20', {
+  const rAdminDieuChinh = await callApi('/api/bao-cao/kho/dieu-chinh-nhap?trang=1&soMoiTrang=20', {
     headers: { Authorization: `Bearer ${adminToken}` }
   });
   assert(rAdminDieuChinh.status === 200, 'Admin lấy phát sinh điều chỉnh nhập thành công (HTTP 200 OK)');
@@ -219,7 +219,7 @@ async function runTests() {
   console.log(`\n${colors.magenta}${colors.bold}--- [PHẦN 3] LỊCH SỬ ĐƠN GIÁ & BÌNH QUÂN GIA QUYỀN ---${colors.reset}`);
 
   // Test 7: Tra cứu lịch sử đơn giá theo sản phẩm nguồn
-  const rDonGia = await callApi('/api/v1/admin/bao-cao/kho/lich-su-don-gia', {
+  const rDonGia = await callApi('/api/bao-cao/kho/lich-su-don-gia', {
     headers: { Authorization: `Bearer ${adminToken}` }
   });
   assert(rDonGia.status === 200, 'Admin lấy lịch sử đơn giá thành công (HTTP 200 OK)');
@@ -244,7 +244,7 @@ async function runTests() {
   console.log(`\n${colors.magenta}${colors.bold}--- [PHẦN 4] HIỆN TRẠNG KHO HIỆN TẠI & THỐNG KÊ BẢO TRÌ SỰ CỐ ---${colors.reset}`);
 
   // Test 8: Hiện trạng kho nhóm theo sản phẩm hiện tại (giáng cấp)
-  const rAdminHienTrang = await callApi('/api/v1/bao-cao/kho/hien-trang', {
+  const rAdminHienTrang = await callApi('/api/bao-cao/kho/hien-trang', {
     headers: { Authorization: `Bearer ${adminToken}` }
   });
   assert(rAdminHienTrang.status === 200, 'Admin lấy hiện trạng kho thành công (HTTP 200 OK)');
@@ -259,7 +259,7 @@ async function runTests() {
   }
 
   // Test 9: Thống kê bảo trì: tách biệt vệ sinh và sửa chữa; chỉ đếm sự cố hỏng
-  const rAdminBaoTri = await callApi('/api/v1/bao-cao/kho/bao-tri', {
+  const rAdminBaoTri = await callApi('/api/bao-cao/kho/bao-tri', {
     headers: { Authorization: `Bearer ${adminToken}` }
   });
   assert(rAdminBaoTri.status === 200, 'Admin lấy thống kê bảo trì thành công (HTTP 200 OK)');
@@ -284,7 +284,7 @@ async function runTests() {
   console.log(`\n${colors.magenta}${colors.bold}--- [PHẦN 5] LỌC BIÊN MÚI GIỜ VIỆT NAM & XUẤT CSV CHỐNG INJECTION ---${colors.reset}`);
 
   // Test 10: Lọc theo biên ngày Việt Nam (W6-28)
-  const rBienNgay = await callApi('/api/v1/admin/bao-cao/kho/nhap-hang?tuNgay=2026-09-01&denNgay=2026-10-31', {
+  const rBienNgay = await callApi('/api/bao-cao/kho/nhap-hang?tuNgay=2026-09-01&denNgay=2026-10-31', {
     headers: { Authorization: `Bearer ${adminToken}` }
   });
   assert(rBienNgay.status === 200, 'Lọc báo cáo theo khoảng ngày Việt Nam thành công (HTTP 200 OK)');
@@ -294,7 +294,7 @@ async function runTests() {
   }
 
   // Test 11: Xuất CSV Báo cáo Nhập hàng có UTF-8 BOM và chống injection (W6-29)
-  const rCsvNhapHang = await callApi('/api/v1/admin/bao-cao/kho/xuat-csv?loaiBaoCao=NhapHang', {
+  const rCsvNhapHang = await callApi('/api/bao-cao/kho/xuat-csv?loaiBaoCao=NhapHang', {
     headers: { Authorization: `Bearer ${adminToken}` }
   });
   assert(rCsvNhapHang.status === 200, 'Xuất CSV báo cáo nhập hàng thành công (HTTP 200 OK)');
@@ -310,23 +310,23 @@ async function runTests() {
   }
 
   // Test 12: Xuất CSV các loại báo cáo khác
-  const rCsvHienTrang = await callApi('/api/v1/admin/bao-cao/kho/xuat-csv?loaiBaoCao=HienTrangKho', {
+  const rCsvHienTrang = await callApi('/api/bao-cao/kho/xuat-csv?loaiBaoCao=HienTrangKho', {
     headers: { Authorization: `Bearer ${adminToken}` }
   });
   assert(rCsvHienTrang.status === 200, 'Xuất CSV báo cáo hiện trạng kho thành công (HTTP 200 OK)');
 
-  const rCsvBaoTri = await callApi('/api/v1/admin/bao-cao/kho/xuat-csv?loaiBaoCao=BaoTri', {
+  const rCsvBaoTri = await callApi('/api/bao-cao/kho/xuat-csv?loaiBaoCao=BaoTri', {
     headers: { Authorization: `Bearer ${adminToken}` }
   });
   assert(rCsvBaoTri.status === 200, 'Xuất CSV báo cáo bảo trì thành công (HTTP 200 OK)');
 
   // Test 13: Chặn xuất CSV với loại không hỗ trợ hoặc khoảng quá lớn
-  const rCsvLoiLoai = await callApi('/api/v1/admin/bao-cao/kho/xuat-csv?loaiBaoCao=KhongTonTai', {
+  const rCsvLoiLoai = await callApi('/api/bao-cao/kho/xuat-csv?loaiBaoCao=KhongTonTai', {
     headers: { Authorization: `Bearer ${adminToken}` }
   });
   assert(rCsvLoiLoai.status === 400, 'Chặn yêu cầu xuất CSV loại không hợp lệ (HTTP 400 Bad Request)');
 
-  const rCsvLoiKhoang = await callApi('/api/v1/admin/bao-cao/kho/xuat-csv?loaiBaoCao=NhapHang&tuNgay=2024-01-01&denNgay=2026-10-26', {
+  const rCsvLoiKhoang = await callApi('/api/bao-cao/kho/xuat-csv?loaiBaoCao=NhapHang&tuNgay=2024-01-01&denNgay=2026-10-26', {
     headers: { Authorization: `Bearer ${adminToken}` }
   });
   assert(rCsvLoiKhoang.status === 400, 'Chặn xuất CSV vượt khoảng cho phép > 366 ngày (HTTP 400 Bad Request)');

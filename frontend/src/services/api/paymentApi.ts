@@ -1,5 +1,5 @@
-/**
- * paymentApi.ts - Thanh toán đơn thuê, thu bổ sung đối soát & đối chiếu ngoại lệ (/api/v1/thanh-toan)
+﻿/**
+ * paymentApi.ts - Thanh toán đơn thuê, thu bổ sung đối soát & đối chiếu ngoại lệ (/api/thanh-toan)
  */
 
 import { apiClient } from "../apiClient";
@@ -36,12 +36,12 @@ export interface GiaoDichCanDoiChieuBackend {
 
 export const paymentApi = {
   async xacNhanThanhToan(req: XacNhanThanhToanRequest): Promise<string> {
-    const res = await apiClient.post<unknown>("/api/v1/thanh-toan/xac-nhan", req);
+    const res = await apiClient.post<unknown>("/api/thanh-toan/xac-nhan", req);
     return unwrapResult<string>(res.data);
   },
 
   async taoThuBoSung(doiSoatId: number, phuongThucDuocHoTro = "VNPAY"): Promise<YeuCauThuBackend> {
-    const res = await apiClient.post<unknown>(`/api/v1/thanh-toan/doi-soat/${doiSoatId}/thu-bo-sung`, {
+    const res = await apiClient.post<unknown>(`/api/thanh-toan/doi-soat/${doiSoatId}/thu-bo-sung`, {
       maDoiSoat: doiSoatId,
       phuongThucDuocHoTro,
     });
@@ -49,12 +49,12 @@ export const paymentApi = {
   },
 
   async layTrangThaiGiaoDich(maYeuCau: string): Promise<YeuCauThuBackend> {
-    const res = await apiClient.get<unknown>(`/api/v1/thanh-toan/${encodeURIComponent(maYeuCau)}/trang-thai`);
+    const res = await apiClient.get<unknown>(`/api/thanh-toan/${encodeURIComponent(maYeuCau)}/trang-thai`);
     return unwrapResult<YeuCauThuBackend>(res.data);
   },
 
   async layDanhSachCanDoiChieu(): Promise<GiaoDichCanDoiChieuBackend[]> {
-    const res = await apiClient.get<unknown>("/api/v1/thanh-toan/can-doi-chieu");
+    const res = await apiClient.get<unknown>("/api/thanh-toan/can-doi-chieu");
     return unwrapResult<GiaoDichCanDoiChieuBackend[]>(res.data);
   },
 
@@ -62,7 +62,7 @@ export const paymentApi = {
     id: number,
     req: { ketLuan: "HopLe_XacNhan" | "HopLe_HoanTienThua" | "TuChoi"; ghiChu: string; soTienHoan?: number }
   ): Promise<string> {
-    const res = await apiClient.post<unknown>(`/api/v1/thanh-toan/${id}/doi-chieu`, req);
+    const res = await apiClient.post<unknown>(`/api/thanh-toan/${id}/doi-chieu`, req);
     return unwrapResult<string>(res.data);
   },
 };

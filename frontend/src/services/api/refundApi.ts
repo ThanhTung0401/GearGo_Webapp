@@ -1,5 +1,5 @@
-/**
- * refundApi.ts - Yêu cầu hoàn tiền cọc / hủy đơn & đối chiếu hoàn (/api/v1/hoan-tien)
+﻿/**
+ * refundApi.ts - Yêu cầu hoàn tiền cọc / hủy đơn & đối chiếu hoàn (/api/hoan-tien)
  */
 
 import { apiClient } from "../apiClient";
@@ -43,17 +43,17 @@ export interface HoanTienTheoDonBackend {
 
 export const refundApi = {
   async layTheoDon(donId: number): Promise<HoanTienTheoDonBackend> {
-    const res = await apiClient.get<unknown>(`/api/v1/hoan-tien/theo-don/${donId}`);
+    const res = await apiClient.get<unknown>(`/api/hoan-tien/theo-don/${donId}`);
     return unwrapResult<HoanTienTheoDonBackend>(res.data);
   },
 
   async xuLyHoan(id: number, ghiChuXuLy?: string): Promise<HoanTienBackend> {
-    const res = await apiClient.post<unknown>(`/api/v1/hoan-tien/${id}/xu-ly`, { ghiChuXuLy });
+    const res = await apiClient.post<unknown>(`/api/hoan-tien/${id}/xu-ly`, { ghiChuXuLy });
     return unwrapResult<HoanTienBackend>(res.data);
   },
 
   async doiChieuHoan(id: number): Promise<HoanTienBackend> {
-    const res = await apiClient.post<unknown>(`/api/v1/hoan-tien/${id}/doi-chieu`);
+    const res = await apiClient.post<unknown>(`/api/hoan-tien/${id}/doi-chieu`);
     return unwrapResult<HoanTienBackend>(res.data);
   },
 };

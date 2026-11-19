@@ -1,4 +1,4 @@
-/**
+﻿/**
  * reportApi.ts - Báo cáo vận hành, tài chính, kho, bảo trì & Xuất CSV
  */
 
@@ -51,14 +51,14 @@ export const reportApi = {
     maSanPham?: number;
   }): Promise<BaoCaoVanHanhBackend> {
     const q = buildQuery(params as Record<string, unknown>);
-    const res = await apiClient.get<unknown>(`/api/v1/admin/bao-cao-van-hanh${q}`);
+    const res = await apiClient.get<unknown>(`/api/bao-cao-van-hanh${q}`);
     return unwrapResult<BaoCaoVanHanhBackend>(res.data);
   },
 
   // ─── Kho & Bảo trì (StaffOrAdmin) ───
   async layHienTrangKho(maSanPham?: number): Promise<any> {
     const q = buildQuery({ maSanPham });
-    const res = await apiClient.get<unknown>(`/api/v1/bao-cao/kho/hien-trang${q}`);
+    const res = await apiClient.get<unknown>(`/api/bao-cao/kho/hien-trang${q}`);
     return unwrapResult<any>(res.data);
   },
 
@@ -69,7 +69,7 @@ export const reportApi = {
     loaiXuLy?: string;
   }): Promise<any> {
     const q = buildQuery(params as Record<string, unknown>);
-    const res = await apiClient.get<unknown>(`/api/v1/bao-cao/kho/bao-tri${q}`);
+    const res = await apiClient.get<unknown>(`/api/bao-cao/kho/bao-tri${q}`);
     return unwrapResult<any>(res.data);
   },
 
@@ -84,7 +84,7 @@ export const reportApi = {
     soMoiTrang?: number;
   }): Promise<any> {
     const q = buildQuery(params as Record<string, unknown>);
-    const res = await apiClient.get<unknown>(`/api/v1/admin/bao-cao/kho/nhap-hang${q}`);
+    const res = await apiClient.get<unknown>(`/api/bao-cao/kho/nhap-hang${q}`);
     return unwrapResult<any>(res.data);
   },
 
@@ -97,7 +97,7 @@ export const reportApi = {
     soMoiTrang?: number;
   }): Promise<any> {
     const q = buildQuery(params as Record<string, unknown>);
-    const res = await apiClient.get<unknown>(`/api/v1/admin/bao-cao/kho/dieu-chinh-nhap${q}`);
+    const res = await apiClient.get<unknown>(`/api/bao-cao/kho/dieu-chinh-nhap${q}`);
     return unwrapResult<any>(res.data);
   },
 
@@ -108,7 +108,7 @@ export const reportApi = {
     maSanPhamNguon?: number;
   }): Promise<any> {
     const q = buildQuery(params as Record<string, unknown>);
-    const res = await apiClient.get<unknown>(`/api/v1/admin/bao-cao/kho/lich-su-don-gia${q}`);
+    const res = await apiClient.get<unknown>(`/api/bao-cao/kho/lich-su-don-gia${q}`);
     return unwrapResult<any>(res.data);
   },
 
@@ -124,44 +124,44 @@ export const reportApi = {
     loaiXuLy?: string;
   }): Promise<void> {
     const q = buildQuery(params as Record<string, unknown>);
-    const { blob, fileName } = await apiClient.getBlob(`/api/v1/admin/bao-cao/kho/xuat-csv${q}`);
+    const { blob, fileName } = await apiClient.getBlob(`/api/bao-cao/kho/xuat-csv${q}`);
     triggerDownload(blob, fileName);
   },
 
   // ─── Tài chính (AdminOnly) ───
   async layDoanhThuHoanTat(params?: { tuNgay?: string; denNgay?: string; maDon?: number; trang?: number; soMoiTrang?: number }): Promise<any> {
     const q = buildQuery(params as Record<string, unknown>);
-    const res = await apiClient.get<unknown>(`/api/v1/admin/bao-cao/tai-chinh/doanh-thu-hoan-tat${q}`);
+    const res = await apiClient.get<unknown>(`/api/bao-cao/tai-chinh/doanh-thu-hoan-tat${q}`);
     return unwrapResult<any>(res.data);
   },
 
   async layPhiHuy(params?: { tuNgay?: string; denNgay?: string; maDon?: number; trang?: number; soMoiTrang?: number }): Promise<any> {
     const q = buildQuery(params as Record<string, unknown>);
-    const res = await apiClient.get<unknown>(`/api/v1/admin/bao-cao/tai-chinh/phi-huy${q}`);
+    const res = await apiClient.get<unknown>(`/api/bao-cao/tai-chinh/phi-huy${q}`);
     return unwrapResult<any>(res.data);
   },
 
   async layDieuChinhDoanhThu(params?: { tuNgay?: string; denNgay?: string; maDon?: number; trang?: number; soMoiTrang?: number }): Promise<any> {
     const q = buildQuery(params as Record<string, unknown>);
-    const res = await apiClient.get<unknown>(`/api/v1/admin/bao-cao/tai-chinh/dieu-chinh${q}`);
+    const res = await apiClient.get<unknown>(`/api/bao-cao/tai-chinh/dieu-chinh${q}`);
     return unwrapResult<any>(res.data);
   },
 
   async layThuHoan(params?: { tuNgay?: string; denNgay?: string; maDon?: number; trang?: number; soMoiTrang?: number }): Promise<any> {
     const q = buildQuery(params as Record<string, unknown>);
-    const res = await apiClient.get<unknown>(`/api/v1/admin/bao-cao/tai-chinh/thu-hoan${q}`);
+    const res = await apiClient.get<unknown>(`/api/bao-cao/tai-chinh/thu-hoan${q}`);
     return unwrapResult<any>(res.data);
   },
 
   async layCocChuaTatToan(params?: { maDon?: number; trang?: number; soMoiTrang?: number }): Promise<any> {
     const q = buildQuery(params as Record<string, unknown>);
-    const res = await apiClient.get<unknown>(`/api/v1/admin/bao-cao/tai-chinh/coc-chua-tat-toan${q}`);
+    const res = await apiClient.get<unknown>(`/api/bao-cao/tai-chinh/coc-chua-tat-toan${q}`);
     return unwrapResult<any>(res.data);
   },
 
   async layKhoanCanXuLy(params?: { maDon?: number }): Promise<any> {
     const q = buildQuery(params as Record<string, unknown>);
-    const res = await apiClient.get<unknown>(`/api/v1/admin/bao-cao/tai-chinh/can-xu-ly${q}`);
+    const res = await apiClient.get<unknown>(`/api/bao-cao/tai-chinh/can-xu-ly${q}`);
     return unwrapResult<any>(res.data);
   },
 
@@ -172,7 +172,7 @@ export const reportApi = {
     maDon?: number;
   }): Promise<void> {
     const q = buildQuery(params as Record<string, unknown>);
-    const { blob, fileName } = await apiClient.getBlob(`/api/v1/admin/bao-cao/tai-chinh/xuat-csv${q}`);
+    const { blob, fileName } = await apiClient.getBlob(`/api/bao-cao/tai-chinh/xuat-csv${q}`);
     triggerDownload(blob, fileName);
   },
 };

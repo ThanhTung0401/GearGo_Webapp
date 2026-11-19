@@ -1,10 +1,10 @@
-import { test, expect } from "@playwright/test";
+﻿import { test, expect } from "@playwright/test";
 import { authHeaders, loginApi } from "../../helpers/auth.js";
 
 test.describe("Phân hệ 5: Thanh toán, Phụ phí, Đối soát & Hoàn tiền (UC5.1 - UC5.7)", () => {
   test("UC5.1 & UC5.5 - Kiểm tra danh sách giao dịch cần đối chiếu & trạng thái thanh toán", async ({ request }) => {
     const { token: adminToken } = await loginApi(request, "admin");
-    const res = await request.get("/api/v1/thanh-toan/can-doi-chieu", {
+    const res = await request.get("/api/thanh-toan/can-doi-chieu", {
       headers: authHeaders(adminToken),
     });
     expect(res.ok()).toBeTruthy();
@@ -17,13 +17,13 @@ test.describe("Phân hệ 5: Thanh toán, Phụ phí, Đối soát & Hoàn tiề
     const { token: custToken } = await loginApi(request, "customer");
 
     // Khách hàng không được truy cập danh sách cần đối chiếu của quản trị
-    const forbiddenRes = await request.get("/api/v1/thanh-toan/can-doi-chieu", {
+    const forbiddenRes = await request.get("/api/thanh-toan/can-doi-chieu", {
       headers: authHeaders(custToken),
     });
     expect([401, 403]).toContain(forbiddenRes.status());
 
     // Admin xem danh sách phụ phí theo đơn hoặc endpoint danh sách
-    const listRes = await request.get("/api/v1/phu-phi", {
+    const listRes = await request.get("/api/phu-phi", {
       headers: authHeaders(adminToken),
     });
     expect([200, 404, 405]).toContain(listRes.status());
@@ -35,7 +35,7 @@ test.describe("Phân hệ 5: Thanh toán, Phụ phí, Đối soát & Hoàn tiề
     const { token: adminToken } = await loginApi(request, "admin");
 
     // Kiểm tra endpoint đối soát theo đơn đầu tiên nếu có
-    const ordersRes = await request.get("/api/v1/van-hanh/don-thue?soMoiTrang=5", {
+    const ordersRes = await request.get("/api/don-thue/xu-ly?soMoiTrang=5", {
       headers: authHeaders(adminToken),
     });
     expect(ordersRes.ok()).toBeTruthy();
@@ -45,14 +45,14 @@ test.describe("Phân hệ 5: Thanh toán, Phụ phí, Đối soát & Hoàn tiề
     };
     const items = ordersBody.duLieu?.items ?? ordersBody.items ?? [];
     if (items.length > 0) {
-      const dsRes = await request.get(`/api/v1/doi-soat/don-thue/${items[0].maDonThue}`, {
+      const dsRes = await request.get(`/api/doi-soat/don-thue/${items[0].maDonThue}`, {
         headers: authHeaders(adminToken),
       });
       expect([200, 404]).toContain(dsRes.status());
     }
 
     // Kiểm tra hoàn tiền
-    const refundRes = await request.get("/api/v1/hoan-tien", {
+    const refundRes = await request.get("/api/hoan-tien", {
       headers: authHeaders(adminToken),
     });
     expect([200, 404]).toContain(refundRes.status());

@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+﻿import { test, expect } from "@playwright/test";
 import { authHeaders, loginApi } from "../../helpers/auth.js";
 import { uniqueSuffix } from "../../helpers/testData.js";
 
@@ -62,7 +62,7 @@ test.describe("Phân hệ 7: Nhà cung cấp & Nhập kho (UC7.1 - UC7.10.1)", (
     const nccBody = (await nccRes.json()) as { duLieu?: Array<{ maNhaCungCap: number }> } | Array<{ maNhaCungCap: number }>;
     const nccs = Array.isArray(nccBody) ? nccBody : nccBody.duLieu ?? [];
 
-    const spRes = await request.get("/api/admin/san-pham?soMoiTrang=5", { headers: authHeaders(token) });
+    const spRes = await request.get("/api/san-pham/quan-ly?soMoiTrang=5", { headers: authHeaders(token) });
     const spBody = (await spRes.json()) as { items?: Array<{ maSanPham: number }> };
     const sps = spBody.items ?? [];
 

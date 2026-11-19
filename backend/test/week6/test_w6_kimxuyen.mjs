@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Test Suite cho W6-T5: BÁO CÁO TÀI CHÍNH VÀ SỐ DƯ CẦN XỬ LÝ (KIM XUYẾN - UC25)
  * 
  * Kiểm thử toàn diện các yêu cầu nghiệp vụ theo Plan_Week6.md:
@@ -85,7 +85,7 @@ async function detectAccountTokens() {
   for (const adminId of [1, 10002]) {
     const candidate = generateToken('QuanTriVien', adminId, 'admin@geargo.vn');
     try {
-      const res = await fetch(`${BASE_URL}/api/admin/bao-cao/tai-chinh/doanh-thu-hoan-tat`, {
+      const res = await fetch(`${BASE_URL}/api/bao-cao/tai-chinh/doanh-thu-hoan-tat`, {
         headers: { 'Authorization': `Bearer ${candidate}` }
       });
       if (res.status === 200) {
@@ -113,23 +113,23 @@ async function run() {
   console.log(`${colors.bold}${colors.yellow}[1] Kiểm tra phân quyền truy cập (AdminOnly & ActorGuard)${colors.reset}`);
   
   // 1.1 Không có token -> 401
-  const noAuthRes = await fetch(`${BASE_URL}/api/admin/bao-cao/tai-chinh/doanh-thu-hoan-tat`);
+  const noAuthRes = await fetch(`${BASE_URL}/api/bao-cao/tai-chinh/doanh-thu-hoan-tat`);
   assert(noAuthRes.status === 401, 'Từ chối yêu cầu không có Bearer token (HTTP 401)');
 
   // 1.2 Khách hàng truy cập -> 403
-  const customerRes = await fetch(`${BASE_URL}/api/admin/bao-cao/tai-chinh/doanh-thu-hoan-tat`, {
+  const customerRes = await fetch(`${BASE_URL}/api/bao-cao/tai-chinh/doanh-thu-hoan-tat`, {
     headers: { 'Authorization': `Bearer ${customerToken}` }
   });
   assert(customerRes.status === 403, 'Chặn tài khoản Khách hàng truy cập báo cáo tài chính (HTTP 403)');
 
   // 1.3 Nhân viên truy cập -> 403 (chỉ Admin mới được xem)
-  const staffRes = await fetch(`${BASE_URL}/api/admin/bao-cao/tai-chinh/doanh-thu-hoan-tat`, {
+  const staffRes = await fetch(`${BASE_URL}/api/bao-cao/tai-chinh/doanh-thu-hoan-tat`, {
     headers: { 'Authorization': `Bearer ${staffToken}` }
   });
   assert(staffRes.status === 403, 'Chặn tài khoản Nhân viên truy cập báo cáo tài chính (HTTP 403 AdminOnly)');
 
   // 1.4 Quản trị viên truy cập hợp lệ -> 200
-  const adminRes = await fetch(`${BASE_URL}/api/admin/bao-cao/tai-chinh/doanh-thu-hoan-tat`, {
+  const adminRes = await fetch(`${BASE_URL}/api/bao-cao/tai-chinh/doanh-thu-hoan-tat`, {
     headers: { 'Authorization': `Bearer ${adminToken}` }
   });
   assert(adminRes.status === 200, 'Quản trị viên được cấp quyền truy cập báo cáo tài chính (HTTP 200)');
@@ -138,7 +138,7 @@ async function run() {
   // 2. BÁO CÁO DOANH THU HOÀN TẤT
   // ============================================================================
   console.log(`\n${colors.bold}${colors.yellow}[2] Báo cáo Doanh thu hoàn tất (/doanh-thu-hoan-tat)${colors.reset}`);
-  const dtRes = await fetch(`${BASE_URL}/api/admin/bao-cao/tai-chinh/doanh-thu-hoan-tat?tuNgay=2026-10-01&denNgay=2026-10-31`, {
+  const dtRes = await fetch(`${BASE_URL}/api/bao-cao/tai-chinh/doanh-thu-hoan-tat?tuNgay=2026-10-01&denNgay=2026-10-31`, {
     headers: { 'Authorization': `Bearer ${adminToken}` }
   });
   assert(dtRes.status === 200, 'Gọi API Doanh thu hoàn tất trả về HTTP 200');
@@ -159,7 +159,7 @@ async function run() {
   // 3. BÁO CÁO PHÍ HỦY
   // ============================================================================
   console.log(`\n${colors.bold}${colors.yellow}[3] Báo cáo Phí hủy (/phi-huy)${colors.reset}`);
-  const phRes = await fetch(`${BASE_URL}/api/admin/bao-cao/tai-chinh/phi-huy?tuNgay=2026-10-01&denNgay=2026-10-31`, {
+  const phRes = await fetch(`${BASE_URL}/api/bao-cao/tai-chinh/phi-huy?tuNgay=2026-10-01&denNgay=2026-10-31`, {
     headers: { 'Authorization': `Bearer ${adminToken}` }
   });
   assert(phRes.status === 200, 'Gọi API Phí hủy trả về HTTP 200');
@@ -175,7 +175,7 @@ async function run() {
   // 4. BÁO CÁO ĐIỀU CHỈNH DOANH THU
   // ============================================================================
   console.log(`\n${colors.bold}${colors.yellow}[4] Báo cáo Điều chỉnh doanh thu (/dieu-chinh)${colors.reset}`);
-  const dcRes = await fetch(`${BASE_URL}/api/admin/bao-cao/tai-chinh/dieu-chinh?tuNgay=2026-10-01&denNgay=2026-10-31`, {
+  const dcRes = await fetch(`${BASE_URL}/api/bao-cao/tai-chinh/dieu-chinh?tuNgay=2026-10-01&denNgay=2026-10-31`, {
     headers: { 'Authorization': `Bearer ${adminToken}` }
   });
   assert(dcRes.status === 200, 'Gọi API Điều chỉnh doanh thu trả về HTTP 200');
@@ -191,7 +191,7 @@ async function run() {
   // 5. BÁO CÁO DÒNG TIỀN THU VÀ HOÀN
   // ============================================================================
   console.log(`\n${colors.bold}${colors.yellow}[5] Báo cáo Dòng tiền thu và hoàn (/thu-hoan)${colors.reset}`);
-  const thRes = await fetch(`${BASE_URL}/api/admin/bao-cao/tai-chinh/thu-hoan?tuNgay=2026-10-01&denNgay=2026-10-31`, {
+  const thRes = await fetch(`${BASE_URL}/api/bao-cao/tai-chinh/thu-hoan?tuNgay=2026-10-01&denNgay=2026-10-31`, {
     headers: { 'Authorization': `Bearer ${adminToken}` }
   });
   assert(thRes.status === 200, 'Gọi API Dòng tiền thu/hoàn trả về HTTP 200');
@@ -213,7 +213,7 @@ async function run() {
   // 6. BÁO CÁO SỐ DƯ CỌC CHƯA TẤT TOÁN
   // ============================================================================
   console.log(`\n${colors.bold}${colors.yellow}[6] Báo cáo Số dư cọc chưa tất toán (/coc-chua-tat-toan)${colors.reset}`);
-  const cocRes = await fetch(`${BASE_URL}/api/admin/bao-cao/tai-chinh/coc-chua-tat-toan`, {
+  const cocRes = await fetch(`${BASE_URL}/api/bao-cao/tai-chinh/coc-chua-tat-toan`, {
     headers: { 'Authorization': `Bearer ${adminToken}` }
   });
   assert(cocRes.status === 200, 'Gọi API Cọc chưa tất toán trả về HTTP 200');
@@ -234,7 +234,7 @@ async function run() {
   // 7. BÁO CÁO KHOẢN CẦN XỬ LÝ / NGOẠI LỆ
   // ============================================================================
   console.log(`\n${colors.bold}${colors.yellow}[7] Báo cáo Khoản cần xử lý / Ngoại lệ (/can-xu-ly)${colors.reset}`);
-  const cxlRes = await fetch(`${BASE_URL}/api/admin/bao-cao/tai-chinh/can-xu-ly`, {
+  const cxlRes = await fetch(`${BASE_URL}/api/bao-cao/tai-chinh/can-xu-ly`, {
     headers: { 'Authorization': `Bearer ${adminToken}` }
   });
   assert(cxlRes.status === 200, 'Gọi API Khoản cần xử lý trả về HTTP 200');
@@ -253,7 +253,7 @@ async function run() {
   console.log(`\n${colors.bold}${colors.yellow}[8] Xuất báo cáo CSV UTF-8 BOM (/xuat-csv)${colors.reset}`);
   
   // 8.1 Xuất CSV Doanh thu hoàn tất
-  const csvRes = await fetch(`${BASE_URL}/api/admin/bao-cao/tai-chinh/xuat-csv?loaiBaoCao=DoanhThuHoanTat&tuNgay=2026-10-01&denNgay=2026-10-31`, {
+  const csvRes = await fetch(`${BASE_URL}/api/bao-cao/tai-chinh/xuat-csv?loaiBaoCao=DoanhThuHoanTat&tuNgay=2026-10-01&denNgay=2026-10-31`, {
     headers: { 'Authorization': `Bearer ${adminToken}` }
   });
   assert(csvRes.status === 200, 'Xuất CSV Doanh thu hoàn tất trả về HTTP 200');
@@ -266,13 +266,13 @@ async function run() {
   assert(hasUtf8Bom, 'Nội dung file CSV có tiền tố UTF-8 BOM (0xEF, 0xBB, 0xBF) tương thích Excel tiếng Việt');
 
   // 8.2 Xuất CSV Cọc chưa tất toán
-  const csvCocRes = await fetch(`${BASE_URL}/api/admin/bao-cao/tai-chinh/xuat-csv?loaiBaoCao=CocChuaTatToan`, {
+  const csvCocRes = await fetch(`${BASE_URL}/api/bao-cao/tai-chinh/xuat-csv?loaiBaoCao=CocChuaTatToan`, {
     headers: { 'Authorization': `Bearer ${adminToken}` }
   });
   assert(csvCocRes.status === 200, 'Xuất CSV Số dư cọc chưa tất toán trả về HTTP 200');
 
   // 8.3 Loại báo cáo không hợp lệ -> 400
-  const csvLoiRes = await fetch(`${BASE_URL}/api/admin/bao-cao/tai-chinh/xuat-csv?loaiBaoCao=LoaiKhongTonTai`, {
+  const csvLoiRes = await fetch(`${BASE_URL}/api/bao-cao/tai-chinh/xuat-csv?loaiBaoCao=LoaiKhongTonTai`, {
     headers: { 'Authorization': `Bearer ${adminToken}` }
   });
   assert(csvLoiRes.status === 400, 'Từ chối loại báo cáo CSV không hợp lệ (HTTP 400)');
@@ -281,7 +281,7 @@ async function run() {
   // 9. VALIDATION KHOẢNG NGÀY
   // ============================================================================
   console.log(`\n${colors.bold}${colors.yellow}[9] Kiểm tra bắt lỗi validation khoảng thời gian${colors.reset}`);
-  const invalidDateRes = await fetch(`${BASE_URL}/api/admin/bao-cao/tai-chinh/doanh-thu-hoan-tat?tuNgay=2026-10-31&denNgay=2026-10-01`, {
+  const invalidDateRes = await fetch(`${BASE_URL}/api/bao-cao/tai-chinh/doanh-thu-hoan-tat?tuNgay=2026-10-31&denNgay=2026-10-01`, {
     headers: { 'Authorization': `Bearer ${adminToken}` }
   });
   assert(invalidDateRes.status === 400, 'Báo lỗi khi từ ngày lớn hơn đến ngày (HTTP 400 KHOANG_BAO_CAO_KHONG_HOP_LE)');

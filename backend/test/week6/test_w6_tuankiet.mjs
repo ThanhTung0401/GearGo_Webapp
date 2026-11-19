@@ -1,4 +1,4 @@
-import crypto from 'node:crypto';
+﻿import crypto from 'node:crypto';
 
 const BASE_URL = process.env.API_URL || 'http://localhost:5000';
 const JWT_SECRET = 'GearGoSecretKey2026_ThisKeyMustBeAtLeast32Chars!';
@@ -44,7 +44,7 @@ async function detectAccountTokens() {
   for (const adminId of [10002, 1]) {
     const candidate = generateToken('QuanTriVien', adminId, 'admin@geargo.vn');
     try {
-      const res = await fetch(`${BASE_URL}/api/v1/admin/bao-cao-van-hanh`, {
+      const res = await fetch(`${BASE_URL}/api/bao-cao-van-hanh`, {
         headers: { 'Authorization': `Bearer ${candidate}` }
       });
       if (res.status === 200) {
@@ -65,19 +65,19 @@ async function run() {
   await detectAccountTokens();
 
   // 1. Phân quyền: Khách hàng bị chặn 403
-  const customerRes = await fetch(`${BASE_URL}/api/v1/admin/bao-cao-van-hanh`, {
+  const customerRes = await fetch(`${BASE_URL}/api/bao-cao-van-hanh`, {
     headers: { 'Authorization': `Bearer ${customerToken}` }
   });
   assert(customerRes.status === 403, 'Chặn khách hàng xem báo cáo vận hành (HTTP 403)');
 
   // 2. Phân quyền: Nhân viên được phép truy cập báo cáo vận hành (StaffOrAdmin policy theo UC10.1 / UC96)
-  const staffRes = await fetch(`${BASE_URL}/api/v1/admin/bao-cao-van-hanh`, {
+  const staffRes = await fetch(`${BASE_URL}/api/bao-cao-van-hanh`, {
     headers: { 'Authorization': `Bearer ${staffToken}` }
   });
   assert(staffRes.status === 200, 'Nhân viên xem được báo cáo vận hành (HTTP 200 StaffOrAdmin)');
 
   // 3. Admin truy vấn thành công 200
-  const adminRes = await fetch(`${BASE_URL}/api/v1/admin/bao-cao-van-hanh`, {
+  const adminRes = await fetch(`${BASE_URL}/api/bao-cao-van-hanh`, {
     headers: { 'Authorization': `Bearer ${adminToken}` }
   });
   assert(adminRes.status === 200, 'Admin lấy báo cáo vận hành thành công (HTTP 200)');
@@ -108,13 +108,13 @@ async function run() {
   // 4. Lọc theo khoảng ngày
   const tuNgay = new Date(Date.now() - 7 * 86400000).toISOString();
   const denNgay = new Date().toISOString();
-  const filterRes = await fetch(`${BASE_URL}/api/v1/admin/bao-cao-van-hanh?TuNgay=${tuNgay}&DenNgay=${denNgay}`, {
+  const filterRes = await fetch(`${BASE_URL}/api/bao-cao-van-hanh?TuNgay=${tuNgay}&DenNgay=${denNgay}`, {
     headers: { 'Authorization': `Bearer ${adminToken}` }
   });
   assert(filterRes.status === 200, 'Lọc báo cáo vận hành theo ngày thành công (HTTP 200)');
 
   // 5. Lọc theo danh mục
-  const filterDmRes = await fetch(`${BASE_URL}/api/v1/admin/bao-cao-van-hanh?MaDanhMuc=1`, {
+  const filterDmRes = await fetch(`${BASE_URL}/api/bao-cao-van-hanh?MaDanhMuc=1`, {
     headers: { 'Authorization': `Bearer ${adminToken}` }
   });
   assert(filterDmRes.status === 200, 'Lọc báo cáo vận hành theo danh mục thành công (HTTP 200)');

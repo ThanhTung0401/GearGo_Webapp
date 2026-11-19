@@ -1,5 +1,5 @@
-/**
- * policyApi.ts - Chính sách thuê theo phiên bản (/api/v1/admin/chinh-sach) - UC83–UC84
+﻿/**
+ * policyApi.ts - Chính sách thuê theo phiên bản (/api/chinh-sach) - UC83–UC84
  */
 
 import { apiClient } from "../apiClient";
@@ -60,22 +60,22 @@ export interface KiemTraChinhSachBackend {
 export const policyApi = {
   async layDanhSach(params?: { trang?: number; kichThuoc?: number }): Promise<PagedBackendResponse<ChinhSachBackend>> {
     const q = buildQuery(params as Record<string, unknown>);
-    const res = await apiClient.get<unknown>(`/api/v1/admin/chinh-sach${q}`);
+    const res = await apiClient.get<unknown>(`/api/chinh-sach${q}`);
     return unwrapPaged<ChinhSachBackend>(res.data);
   },
 
   async layChiTiet(id: number): Promise<ChinhSachBackend> {
-    const res = await apiClient.get<unknown>(`/api/v1/admin/chinh-sach/${id}`);
+    const res = await apiClient.get<unknown>(`/api/chinh-sach/${id}`);
     return unwrapResult<ChinhSachBackend>(res.data);
   },
 
   async kiemTra(req: TaoChinhSachRequest): Promise<KiemTraChinhSachBackend> {
-    const res = await apiClient.post<unknown>("/api/v1/admin/chinh-sach/kiem-tra", req);
+    const res = await apiClient.post<unknown>("/api/chinh-sach/kiem-tra", req);
     return unwrapResult<KiemTraChinhSachBackend>(res.data);
   },
 
   async taoPhienBan(req: TaoChinhSachRequest): Promise<ChinhSachBackend> {
-    const res = await apiClient.post<unknown>("/api/v1/admin/chinh-sach", req);
+    const res = await apiClient.post<unknown>("/api/chinh-sach", req);
     return unwrapResult<ChinhSachBackend>(res.data);
   },
 };

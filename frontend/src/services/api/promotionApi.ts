@@ -1,5 +1,5 @@
-/**
- * promotionApi.ts - Quản trị Khuyến mãi (/api/v1/admin/khuyen-mai)
+﻿/**
+ * promotionApi.ts - Quản trị Khuyến mãi (/api/khuyen-mai)
  */
 
 import { apiClient } from "../apiClient";
@@ -77,37 +77,37 @@ export const promotionApi = {
     soMoiTrang?: number;
   }): Promise<PagedBackendResponse<KhuyenMaiBackend>> {
     const q = buildQuery(params as Record<string, unknown>);
-    const res = await apiClient.get<unknown>(`/api/v1/admin/khuyen-mai${q}`);
+    const res = await apiClient.get<unknown>(`/api/khuyen-mai${q}`);
     return unwrapPaged<KhuyenMaiBackend>(res.data);
   },
 
   async layChiTiet(id: number): Promise<KhuyenMaiBackend> {
-    const res = await apiClient.get<unknown>(`/api/v1/admin/khuyen-mai/${id}`);
+    const res = await apiClient.get<unknown>(`/api/khuyen-mai/${id}`);
     return unwrapResult<KhuyenMaiBackend>(res.data);
   },
 
   async tao(req: TaoKhuyenMaiRequest): Promise<KhuyenMaiBackend> {
-    const res = await apiClient.post<unknown>("/api/v1/admin/khuyen-mai", req);
+    const res = await apiClient.post<unknown>("/api/khuyen-mai", req);
     return unwrapResult<KhuyenMaiBackend>(res.data);
   },
 
   async capNhat(id: number, req: CapNhatKhuyenMaiRequest): Promise<KhuyenMaiBackend> {
-    const res = await apiClient.put<unknown>(`/api/v1/admin/khuyen-mai/${id}`, req);
+    const res = await apiClient.put<unknown>(`/api/khuyen-mai/${id}`, req);
     return unwrapResult<KhuyenMaiBackend>(res.data);
   },
 
   async tamAn(id: number, lyDo?: string): Promise<KhuyenMaiBackend> {
-    const res = await apiClient.post<unknown>(`/api/v1/admin/khuyen-mai/${id}/tam-an`, { lyDo: lyDo ?? "Tạm ẩn chương trình" });
+    const res = await apiClient.post<unknown>(`/api/khuyen-mai/${id}/tam-an`, { lyDo: lyDo ?? "Tạm ẩn chương trình" });
     return unwrapResult<KhuyenMaiBackend>(res.data);
   },
 
   async hienThi(id: number, lyDo?: string): Promise<KhuyenMaiBackend> {
-    const res = await apiClient.post<unknown>(`/api/v1/admin/khuyen-mai/${id}/hien-thi`, { lyDo: lyDo ?? "Kích hoạt hiển thị lại" });
+    const res = await apiClient.post<unknown>(`/api/khuyen-mai/${id}/hien-thi`, { lyDo: lyDo ?? "Kích hoạt hiển thị lại" });
     return unwrapResult<KhuyenMaiBackend>(res.data);
   },
 
   async layTinhHinhSuDung(id: number): Promise<SuDungKhuyenMaiBackend> {
-    const res = await apiClient.get<unknown>(`/api/v1/admin/khuyen-mai/${id}/su-dung`);
+    const res = await apiClient.get<unknown>(`/api/khuyen-mai/${id}/su-dung`);
     return unwrapResult<SuDungKhuyenMaiBackend>(res.data);
   },
 };

@@ -32,10 +32,10 @@ export function PermissionsProvider({ userId, children }: { userId: number | nul
     return () => document.removeEventListener("visibilitychange", onVis);
   }, [refetch]);
 
-  // Memo hoá hasPerm (L8 fix) để không trigger re-render con
+  // Memo hoá hasPerm (L8 fix) để không trigger re-render con — 100% dựa vào quyền từ DB, không hardcode roleName
   const hasPerm = useCallback(
-    (p?: string) => !p || state.roleName === "QuanTriVien" || state.perms.has(p),
-    [state.perms, state.roleName]
+    (p?: string) => !p || state.perms.has(p),
+    [state.perms]
   );
 
   const value = useMemo<PermissionsCtxValue>(() => ({ ...state, hasPerm, refetch }), [state, hasPerm, refetch]);

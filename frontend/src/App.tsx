@@ -41,12 +41,11 @@ import {
   type StockAdjustmentReceipt,
   type Supplier,
 } from "./store";
-import LandingView from "./views/LandingView";
-import ProductsView from "./views/ProductsView";
+import LandingView from "./modules/marketing/LandingView";
+import ProductsView from "./modules/catalog/ProductsView";
 import CustomerPortal from "./views/CustomerPortal";
-import StaffView from "./views/StaffView";
-import AdminView from "./views/AdminView";
-import { LoginView, RegisterView, ForgotPasswordView } from "./views/AuthViews";
+import WorkspaceView from "./views/WorkspaceView";
+import { LoginView, RegisterView, ForgotPasswordView } from "./modules/auth/AuthViews";
 import { PermissionsProvider } from "./features/permissions/PermissionsContext";
 import { PublicLayout, AuthLayout } from "./layouts";
 import Icon from "./components/Icon";
@@ -486,8 +485,7 @@ export default function App() {
     appliedPromoCode,
     setRole: (r: Role) => {
       setRole(r);
-      if (r === "staff") setPage("staff");
-      else if (r === "admin") setPage("admin");
+      if (r === "staff" || r === "admin") setPage("workspace");
       else setPage("landing");
     },
     setPage,
@@ -543,14 +541,13 @@ export default function App() {
         </AuthLayout>
       )}
 
-      {(page === "staff" || page === "admin") && (
+      {(page === "workspace" || page === "staff" || page === "admin") && (
         <PermissionsProvider userId={currentUser?.id != null ? Number(currentUser.id) || 0 : null}>
-          {page === "staff" && <StaffView />}
-          {page === "admin" && <AdminView />}
+          <WorkspaceView />
         </PermissionsProvider>
       )}
 
-      {page !== "login" && page !== "register" && page !== "forgot-password" && page !== "staff" && page !== "admin" && (
+      {page !== "login" && page !== "register" && page !== "forgot-password" && page !== "workspace" && page !== "staff" && page !== "admin" && (
         <PublicLayout>
           {page === "landing" && <LandingView />}
           {(page === "products" || page === "product-detail") && <ProductsView />}

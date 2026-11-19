@@ -20,17 +20,17 @@ import {
   INITIAL_STOCK_ADJUSTMENTS,
   INITIAL_SUPPLIERS,
 } from "../src/store";
-import { CategoriesTab } from "../src/views/admin/tabs/CategoriesTab";
-import { ProductsTab } from "../src/views/admin/tabs/ProductsTab";
-import { EquipmentTab } from "../src/views/admin/tabs/EquipmentTab";
-import { SuppliersTab } from "../src/views/admin/tabs/SuppliersTab";
-import { InventoryTab } from "../src/views/admin/tabs/InventoryTab";
-import { PoliciesTab } from "../src/views/admin/tabs/PoliciesTab";
-import { PromotionsTab } from "../src/views/admin/tabs/PromotionsTab";
-import { ReviewsTab } from "../src/views/admin/tabs/ReviewsTab";
-import { NotificationsTab } from "../src/views/admin/tabs/NotificationsTab";
-import { ReportsTab } from "../src/views/admin/tabs/ReportsTab";
-import { AuditLogTab } from "../src/views/admin/tabs/AuditLogTab";
+import { CategoriesTab } from "../src/modules/catalog/CategoriesTab";
+import { ProductsTab } from "../src/modules/catalog/ProductsTab";
+import { EquipmentTab } from "../src/modules/inventory/EquipmentLifecycleTab";
+import { SuppliersTab } from "../src/modules/inventory/SuppliersTab";
+import { InventoryTab } from "../src/modules/inventory/InventoryTab";
+import { PoliciesTab } from "../src/modules/marketing/PoliciesTab";
+import { PromotionsTab } from "../src/modules/marketing/PromotionsTab";
+import { ReviewsTab } from "../src/modules/catalog/ReviewsTab";
+import { NotificationsTab } from "../src/modules/notifications/NotificationsTab";
+import { ReportsTab } from "../src/modules/reports/ReportsTab";
+import { AuditLogTab } from "../src/modules/reports/AuditLogTab";
 
 function makeAdminMockApp(): AppState {
   const ok = <T = void>(data?: T) => ({ ok: true, message: "OK", data });

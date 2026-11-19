@@ -1,5 +1,5 @@
-/**
- * reviewApi.ts - Đánh giá sản phẩm (/api/v1/danh-gia) & Kiểm duyệt/Phản hồi (/api/v1/admin/danh-gia)
+﻿/**
+ * reviewApi.ts - Đánh giá sản phẩm (/api/danh-gia) & Kiểm duyệt/Phản hồi (/api/danh-gia)
  */
 
 import { apiClient } from "../apiClient";
@@ -43,29 +43,29 @@ export interface SanPhamDuDieuKienDanhGiaBackend {
 }
 
 export const reviewApi = {
-  // ─── Khách hàng & Công khai (/api/v1/danh-gia) ───
+  // ─── Khách hàng & Công khai (/api/danh-gia) ───
   async layDanhGiaSanPham(
     sanPhamId: number,
     params?: { soSao?: number; coAnh?: boolean; trang?: number; soMoiTrang?: number }
   ): Promise<PagedBackendResponse<DanhGiaBackend>> {
     const q = buildQuery(params as Record<string, unknown>);
-    const res = await apiClient.get<unknown>(`/api/v1/danh-gia/san-pham/${sanPhamId}${q}`);
+    const res = await apiClient.get<unknown>(`/api/danh-gia/san-pham/${sanPhamId}${q}`);
     return unwrapPaged<DanhGiaBackend>(res.data);
   },
 
   async layTongHopDiem(sanPhamId: number): Promise<TongHopDiemBackend> {
-    const res = await apiClient.get<unknown>(`/api/v1/danh-gia/san-pham/${sanPhamId}/tong-hop`);
+    const res = await apiClient.get<unknown>(`/api/danh-gia/san-pham/${sanPhamId}/tong-hop`);
     return unwrapResult<TongHopDiemBackend>(res.data);
   },
 
   async laySanPhamDuDieuKien(): Promise<SanPhamDuDieuKienDanhGiaBackend[]> {
-    const res = await apiClient.get<unknown>("/api/v1/danh-gia/du-dieu-kien");
+    const res = await apiClient.get<unknown>("/api/danh-gia/du-dieu-kien");
     return unwrapResult<SanPhamDuDieuKienDanhGiaBackend[]>(res.data);
   },
 
   async layDanhGiaCuaToi(params?: { trang?: number; soMoiTrang?: number }): Promise<PagedBackendResponse<DanhGiaBackend>> {
     const q = buildQuery(params as Record<string, unknown>);
-    const res = await apiClient.get<unknown>(`/api/v1/danh-gia/cua-toi${q}`);
+    const res = await apiClient.get<unknown>(`/api/danh-gia/cua-toi${q}`);
     return unwrapPaged<DanhGiaBackend>(res.data);
   },
 
@@ -75,42 +75,42 @@ export const reviewApi = {
     noiDung?: string;
     danhSachAnh?: string[];
   }): Promise<DanhGiaBackend> {
-    const res = await apiClient.post<unknown>("/api/v1/danh-gia", req);
+    const res = await apiClient.post<unknown>("/api/danh-gia", req);
     return unwrapResult<DanhGiaBackend>(res.data);
   },
 
   async uploadHinhAnh(file: File): Promise<{ url: string; duongDan?: string }> {
     const formData = new FormData();
     formData.append("file", file);
-    const res = await apiClient.postFormData<{ url?: string; duongDan?: string }>("/api/v1/danh-gia/hinh-anh", formData);
+    const res = await apiClient.postFormData<{ url?: string; duongDan?: string }>("/api/danh-gia/hinh-anh", formData);
     const data = unwrapResult<{ url?: string; duongDan?: string }>(res.data);
     const url = data?.url ?? data?.duongDan ?? "";
     return { url, duongDan: url };
   },
 
-  // ─── Quản trị & Vận hành (/api/v1/admin/danh-gia) ───
+  // ─── Quản trị & Vận hành (/api/danh-gia) ───
   async adminTimKiem(params?: {
     trang?: number;
     soMoiTrang?: number;
     trangThai?: string;
   }): Promise<PagedBackendResponse<DanhGiaBackend>> {
     const q = buildQuery(params as Record<string, unknown>);
-    const res = await apiClient.get<unknown>(`/api/v1/admin/danh-gia${q}`);
+    const res = await apiClient.get<unknown>(`/api/danh-gia${q}`);
     return unwrapPaged<DanhGiaBackend>(res.data);
   },
 
   async adminAn(id: number, lyDo: string): Promise<DanhGiaBackend> {
-    const res = await apiClient.post<unknown>(`/api/v1/admin/danh-gia/${id}/an`, { lyDo });
+    const res = await apiClient.post<unknown>(`/api/danh-gia/${id}/an`, { lyDo });
     return unwrapResult<DanhGiaBackend>(res.data);
   },
 
   async adminKhoiPhuc(id: number, lyDo?: string): Promise<DanhGiaBackend> {
-    const res = await apiClient.post<unknown>(`/api/v1/admin/danh-gia/${id}/khoi-phuc`, { lyDo });
+    const res = await apiClient.post<unknown>(`/api/danh-gia/${id}/khoi-phuc`, { lyDo });
     return unwrapResult<DanhGiaBackend>(res.data);
   },
 
   async phanHoi(id: number, noiDung: string): Promise<DanhGiaBackend> {
-    const res = await apiClient.post<unknown>(`/api/v1/admin/danh-gia/${id}/phan-hoi`, { noiDung });
+    const res = await apiClient.post<unknown>(`/api/danh-gia/${id}/phan-hoi`, { noiDung });
     return unwrapResult<DanhGiaBackend>(res.data);
   },
 };

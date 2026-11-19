@@ -49,9 +49,10 @@ export const NEUTRAL_POLICY_CONFIG: RentalPolicyConfig = {
 };
 
 export function mapBackendRoleToFrontend(vaiTro?: string | null): Role {
+  if (!vaiTro || vaiTro === "KhachHang") return "customer";
   if (vaiTro === "QuanTriVien") return "admin";
-  if (vaiTro === "NhanVien") return "staff";
-  return "customer";
+  // Mọi vai trò nội bộ khác từ DB (NhanVien, Shipper, LaoCong, ...) đều vào Workspace và phân quyền động theo DB
+  return "staff";
 }
 
 export interface PersistedState {

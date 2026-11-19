@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Script kiểm thử tự động toàn diện cho Week 6 của Kiện Minh:
  * - W6-T2: Quản trị khuyến mãi (Admin/KhuyenMaiController)
  * - W6-T3: Áp mã & bỏ mã trong giỏ hàng (GioThueController)
@@ -92,24 +92,24 @@ async function runTests() {
 
   // ── TEST 1: Quyền truy cập API Quản trị Khuyến mãi ──
   console.log(`${colors.magenta}1. Kiểm tra phân quyền truy cập API Admin/KhuyenMai${colors.reset}`);
-  const rKhach = await callApi('/api/admin/khuyen-mai', {
+  const rKhach = await callApi('/api/khuyen-mai', {
     headers: { Authorization: `Bearer ${customerToken}` }
   });
   assert(rKhach.status === 403, `Khách hàng gọi API admin khuyến mãi bị chặn 403 Forbidden (nhận ${rKhach.status})`);
 
-  const rStaff = await callApi('/api/admin/khuyen-mai', {
+  const rStaff = await callApi('/api/khuyen-mai', {
     headers: { Authorization: `Bearer ${staffToken}` }
   });
   assert(rStaff.status === 403, `Nhân viên gọi API admin khuyến mãi bị chặn 403 Forbidden (nhận ${rStaff.status})`);
 
-  const rAdmin = await callApi('/api/admin/khuyen-mai', {
+  const rAdmin = await callApi('/api/khuyen-mai', {
     headers: { Authorization: `Bearer ${adminToken}` }
   });
   assert(rAdmin.status === 200, `Admin truy cập thành công 200 OK danh sách khuyến mãi`);
 
   // ── TEST 2: Admin tạo khuyến mãi mới & Chuẩn hóa mã ──
   console.log(`\n${colors.magenta}2. Admin tạo khuyến mãi mới & Kiểm tra chuẩn hóa mã (Trim, Uppercase)${colors.reset}`);
-  const taoKm = await callApi('/api/admin/khuyen-mai', {
+  const taoKm = await callApi('/api/khuyen-mai', {
     method: 'POST',
     headers: { Authorization: `Bearer ${adminToken}` },
     body: JSON.stringify({
@@ -132,7 +132,7 @@ async function runTests() {
 
   // ── TEST 3: Chặn tạo mã trùng lặp ──
   console.log(`\n${colors.magenta}3. Kiểm tra chặn trùng mã (Case-Insensitive Unique Check)${colors.reset}`);
-  const taoTrung = await callApi('/api/admin/khuyen-mai', {
+  const taoTrung = await callApi('/api/khuyen-mai', {
     method: 'POST',
     headers: { Authorization: `Bearer ${adminToken}` },
     body: JSON.stringify({
@@ -148,13 +148,13 @@ async function runTests() {
 
   // ── TEST 4: Xem chi tiết và Cập nhật khuyến mãi ──
   console.log(`\n${colors.magenta}4. Xem chi tiết & Cập nhật khuyến mãi khi chưa có cam kết${colors.reset}`);
-  const chiTiet = await callApi(`/api/admin/khuyen-mai/${createdPromoId}`, {
+  const chiTiet = await callApi(`/api/khuyen-mai/${createdPromoId}`, {
     headers: { Authorization: `Bearer ${adminToken}` }
   });
   assert(chiTiet.status === 200, `Lấy chi tiết khuyến mãi thành công 200 OK`);
   assert(chiTiet.data?.coTheSuaDieuKhoanCamKet === true, `Cờ coTheSuaDieuKhoanCamKet = true khi chưa có lượt giữ/dùng`);
 
-  const capNhat = await callApi(`/api/admin/khuyen-mai/${createdPromoId}`, {
+  const capNhat = await callApi(`/api/khuyen-mai/${createdPromoId}`, {
     method: 'PUT',
     headers: { Authorization: `Bearer ${adminToken}` },
     body: JSON.stringify({
@@ -168,14 +168,14 @@ async function runTests() {
 
   // ── TEST 5: Tạm ẩn và Hiển thị lại ──
   console.log(`\n${colors.magenta}5. Tạm ẩn & Hiển thị lại chương trình khuyến mãi${colors.reset}`);
-  const tamAn = await callApi(`/api/admin/khuyen-mai/${createdPromoId}/tam-an`, {
+  const tamAn = await callApi(`/api/khuyen-mai/${createdPromoId}/tam-an`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${adminToken}` },
     body: JSON.stringify({ lyDo: 'Tạm ẩn để điều chỉnh' })
   });
   assert(tamAn.status === 200 && tamAn.data?.trangThai === 2, `Tạm ẩn thành công (trangThai = 2 TamAn)`);
 
-  const hienThi = await callApi(`/api/admin/khuyen-mai/${createdPromoId}/hien-thi`, {
+  const hienThi = await callApi(`/api/khuyen-mai/${createdPromoId}/hien-thi`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${adminToken}` },
     body: JSON.stringify({ lyDo: 'Tiếp tục chương trình' })
@@ -184,7 +184,7 @@ async function runTests() {
 
   // ── TEST 6: Báo cáo tình hình sử dụng ──
   console.log(`\n${colors.magenta}6. Thống kê tình hình sử dụng mã chi tiết${colors.reset}`);
-  const suDung = await callApi(`/api/admin/khuyen-mai/${createdPromoId}/su-dung`, {
+  const suDung = await callApi(`/api/khuyen-mai/${createdPromoId}/su-dung`, {
     headers: { Authorization: `Bearer ${adminToken}` }
   });
   assert(suDung.status === 200, `Lấy báo cáo sử dụng mã thành công 200 OK`);

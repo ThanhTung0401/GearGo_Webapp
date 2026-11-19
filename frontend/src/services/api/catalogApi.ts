@@ -1,4 +1,4 @@
-/**
+﻿/**
  * catalogApi.ts - Quản trị Danh mục và Sản phẩm (WP-M06: UC44 - UC53 / UC6.1 - UC6.8)
  * Kết nối trực tiếp tới ASP.NET Core Backend qua apiClient.
  */
@@ -92,12 +92,12 @@ export const catalogApi = {
 
   // ─── Quản trị Danh mục (Admin - UC44, UC45, UC46, UC48) ───
   async adminLayDanhSachDanhMuc(): Promise<DanhMucBackend[]> {
-    const res = await apiClient.get<DanhMucBackend[]>("/api/admin/danh-muc");
+    const res = await apiClient.get<DanhMucBackend[]>("/api/danh-muc/quan-ly");
     return Array.isArray(res.data) ? res.data : [];
   },
 
   async adminTaoDanhMuc(dto: TaoDanhMucDto): Promise<DanhMucBackend> {
-    const res = await apiClient.post<DanhMucBackend>("/api/admin/danh-muc", {
+    const res = await apiClient.post<DanhMucBackend>("/api/danh-muc", {
       tenDanhMuc: dto.tenDanhMuc,
       maDanhMucCha: dto.maDanhMucCha ?? null,
       moTa: dto.moTa ?? "",
@@ -108,7 +108,7 @@ export const catalogApi = {
   },
 
   async adminCapNhatDanhMuc(id: number, dto: CapNhatDanhMucDto): Promise<DanhMucBackend> {
-    const res = await apiClient.put<DanhMucBackend>(`/api/admin/danh-muc/${id}`, {
+    const res = await apiClient.put<DanhMucBackend>(`/api/danh-muc/${id}`, {
       tenDanhMuc: dto.tenDanhMuc,
       maDanhMucCha: dto.maDanhMucCha ?? null,
       moTa: dto.moTa ?? "",
@@ -119,14 +119,14 @@ export const catalogApi = {
   },
 
   async adminDoiTrangThaiDanhMuc(id: number, trangThaiMoi: "HienThi" | "TamAn" | string): Promise<{ message: string }> {
-    const res = await apiClient.patch<{ message: string }>(`/api/admin/danh-muc/${id}/trang-thai`, {
+    const res = await apiClient.patch<{ message: string }>(`/api/danh-muc/${id}/trang-thai`, {
       trangThaiMoi,
     });
     return res.data;
   },
 
   async adminXoaDanhMuc(id: number): Promise<{ message: string }> {
-    const res = await apiClient.del<{ message: string }>(`/api/admin/danh-muc/${id}`);
+    const res = await apiClient.del<{ message: string }>(`/api/danh-muc/${id}`);
     return res.data;
   },
 
@@ -185,7 +185,7 @@ export const catalogApi = {
     if (params?.soMoiTrang) qs.set("soMoiTrang", String(params.soMoiTrang));
     const suffix = qs.toString() ? `?${qs.toString()}` : "";
     const res = await apiClient.get<{ total?: number; Total?: number; items?: SanPhamBackend[]; Items?: SanPhamBackend[] }>(
-      `/api/admin/san-pham${suffix}`
+      `/api/san-pham/quan-ly${suffix}`
     );
     const total = res.data.total ?? res.data.Total ?? 0;
     const items = res.data.items ?? res.data.Items ?? [];
@@ -193,12 +193,12 @@ export const catalogApi = {
   },
 
   async adminTaoSanPham(dto: TaoSanPhamDto): Promise<SanPhamBackend> {
-    const res = await apiClient.post<SanPhamBackend>("/api/admin/san-pham", dto);
+    const res = await apiClient.post<SanPhamBackend>("/api/san-pham", dto);
     return res.data;
   },
 
   async adminCapNhatSanPham(id: number, dto: CapNhatSanPhamDto): Promise<SanPhamBackend> {
-    const res = await apiClient.put<SanPhamBackend>(`/api/admin/san-pham/${id}`, dto);
+    const res = await apiClient.put<SanPhamBackend>(`/api/san-pham/${id}`, dto);
     return res.data;
   },
 
@@ -206,14 +206,14 @@ export const catalogApi = {
     id: number,
     trangThaiMoi: "DangKinhDoanh" | "TamNgung" | "NgungKinhDoanh" | string
   ): Promise<{ message: string }> {
-    const res = await apiClient.patch<{ message: string }>(`/api/admin/san-pham/${id}/trang-thai`, {
+    const res = await apiClient.patch<{ message: string }>(`/api/san-pham/${id}/trang-thai`, {
       trangThaiMoi,
     });
     return res.data;
   },
 
   async adminLayHinhAnh(id: number): Promise<HinhAnhSanPhamBackend[]> {
-    const res = await apiClient.get<HinhAnhSanPhamBackend[]>(`/api/admin/san-pham/${id}/hinh-anh`);
+    const res = await apiClient.get<HinhAnhSanPhamBackend[]>(`/api/san-pham/${id}/hinh-anh`);
     return Array.isArray(res.data) ? res.data : [];
   },
 
@@ -223,12 +223,12 @@ export const catalogApi = {
   async adminUploadHinhAnh(id: number, file: File): Promise<HinhAnhSanPhamBackend> {
     const formData = new FormData();
     formData.append("file", file);
-    const res = await apiClient.postFormData<HinhAnhSanPhamBackend>(`/api/admin/san-pham/${id}/hinh-anh`, formData);
+    const res = await apiClient.postFormData<HinhAnhSanPhamBackend>(`/api/san-pham/${id}/hinh-anh`, formData);
     return res.data;
   },
 
   async adminXoaHinhAnh(maHinhAnh: number): Promise<{ message: string }> {
-    const res = await apiClient.del<{ message: string }>(`/api/admin/san-pham/hinh-anh/${maHinhAnh}`);
+    const res = await apiClient.del<{ message: string }>(`/api/san-pham/hinh-anh/${maHinhAnh}`);
     return res.data;
   },
 };

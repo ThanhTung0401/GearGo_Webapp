@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+﻿import { test, expect } from "@playwright/test";
 import { authHeaders, loginApi } from "../../helpers/auth.js";
 import { TEST_ACCOUNTS, uniqueSuffix } from "../../helpers/testData.js";
 
@@ -82,14 +82,14 @@ test.describe("Phân hệ 1: Quản lý Tài khoản và Nhân viên (UC1.1 - UC
 
   test("UC1.5 & UC1.6 - Xem và cập nhật thông tin cá nhân", async ({ request }) => {
     const { token } = await loginApi(request, "customer2");
-    const profileRes = await request.get("/api/v1/ho-so/toi", {
+    const profileRes = await request.get("/api/ho-so/toi", {
       headers: authHeaders(token),
     });
     expect(profileRes.ok()).toBeTruthy();
     const profile = (await profileRes.json()) as Record<string, unknown>;
     const currentName = String(profile.hoTen || "Trần Minh Quang");
 
-    const updateRes = await request.put("/api/v1/ho-so/toi", {
+    const updateRes = await request.put("/api/ho-so/toi", {
       headers: authHeaders(token),
       data: {
         hoTen: currentName,
@@ -107,20 +107,20 @@ test.describe("Phân hệ 1: Quản lý Tài khoản và Nhân viên (UC1.1 - UC
     const { token: adminToken } = await loginApi(request, "admin");
 
     // UC1.9: Tra cứu danh sách nhân viên
-    const listStaffRes = await request.get("/api/v1/admin/nhan-vien?soMoiTrang=20", {
+    const listStaffRes = await request.get("/api/nhan-vien?soMoiTrang=20", {
       headers: authHeaders(adminToken),
     });
     expect(listStaffRes.ok()).toBeTruthy();
 
     // UC1.13: Tra cứu tài khoản khách hàng
-    const listAccRes = await request.get("/api/v1/admin/tai-khoan?vaiTro=KhachHang&soMoiTrang=20", {
+    const listAccRes = await request.get("/api/tai-khoan?vaiTro=KhachHang&soMoiTrang=20", {
       headers: authHeaders(adminToken),
     });
     expect(listAccRes.ok()).toBeTruthy();
 
     // UC1.7 & UC1.7.1: Tạo nhân viên mới (gán quyền ban đầu)
     const suffix = uniqueSuffix();
-    const createRes = await request.post("/api/v1/admin/nhan-vien", {
+    const createRes = await request.post("/api/nhan-vien", {
       headers: authHeaders(adminToken),
       data: {
         hoTen: `Nhân viên PW ${suffix}`,
@@ -135,7 +135,7 @@ test.describe("Phân hệ 1: Quản lý Tài khoản và Nhân viên (UC1.1 - UC
     expect(created.maNhanVien).toBeGreaterThan(0);
 
     // UC1.8: Cập nhật thông tin nhân viên
-    const updRes = await request.put(`/api/v1/admin/nhan-vien/${created.maNhanVien}`, {
+    const updRes = await request.put(`/api/nhan-vien/${created.maNhanVien}`, {
       headers: authHeaders(adminToken),
       data: {
         hoTen: `Nhân viên PW ${suffix} Updated`,
@@ -147,19 +147,19 @@ test.describe("Phân hệ 1: Quản lý Tài khoản và Nhân viên (UC1.1 - UC
     expect(updRes.ok()).toBeTruthy();
 
     // UC1.10: Xem danh sách quyền & kiểm tra phân quyền nhân viên
-    const permsRes = await request.get("/api/v1/admin/phan-quyen/danh-muc", {
+    const permsRes = await request.get("/api/phan-quyen/danh-muc", {
       headers: authHeaders(adminToken),
     });
     expect([200, 404]).toContain(permsRes.status());
 
     // UC1.11: Khóa và mở khóa tài khoản vừa tạo (POST + { lyDo })
-    const lockRes = await request.post(`/api/v1/admin/tai-khoan/${created.maTaiKhoan}/khoa`, {
+    const lockRes = await request.post(`/api/tai-khoan/${created.maTaiKhoan}/khoa`, {
       headers: authHeaders(adminToken),
       data: { lyDo: "Kiểm thử khóa tài khoản Playwright" },
     });
     expect(lockRes.ok()).toBeTruthy();
 
-    const unlockRes = await request.post(`/api/v1/admin/tai-khoan/${created.maTaiKhoan}/mo-khoa`, {
+    const unlockRes = await request.post(`/api/tai-khoan/${created.maTaiKhoan}/mo-khoa`, {
       headers: authHeaders(adminToken),
       data: { lyDo: "Mở khóa sau kiểm thử Playwright" },
     });

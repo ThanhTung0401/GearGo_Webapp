@@ -150,7 +150,7 @@ export function useBootstrapData(params: UseBootstrapDataParams) {
       try {
         const [tree, adminCats, publicItems, adminItems] = await Promise.all([
           catalogApi.layCayDanhMuc().catch(() => []),
-          role === "admin" ? catalogApi.adminLayDanhSachDanhMuc().catch(() => []) : Promise.resolve([]),
+          role !== "customer" ? catalogApi.adminLayDanhSachDanhMuc().catch(() => []) : Promise.resolve([]),
           catalogApi
             .layDanhSachSanPham({
               gioNhan: range?.gioNhan,
@@ -172,7 +172,7 @@ export function useBootstrapData(params: UseBootstrapDataParams) {
               }
               return [];
             }),
-          role === "admin" && !range?.gioNhan
+          role !== "customer" && !range?.gioNhan
             ? catalogApi
                 .adminLayDanhSachSanPham({ soMoiTrang: 100 })
                 .then((r) => r.items)
@@ -304,7 +304,7 @@ export function useBootstrapData(params: UseBootstrapDataParams) {
   }, [role, setImportReceipts]);
 
   const refreshPromotions = useCallback(async () => {
-    if (!REAL_MODE || !getAuthToken() || role !== "admin") return;
+    if (!REAL_MODE || !getAuthToken() || role === "customer") return;
     try {
       const res = await promotionApi.timKiem({ soMoiTrang: 50 });
       setPromotions((res.items ?? []).map(mapKhuyenMaiToPromotion));
@@ -314,7 +314,7 @@ export function useBootstrapData(params: UseBootstrapDataParams) {
   }, [role, setPromotions]);
 
   const refreshPolicies = useCallback(async () => {
-    if (!REAL_MODE || !getAuthToken() || role !== "admin") return;
+    if (!REAL_MODE || !getAuthToken() || role === "customer") return;
     try {
       const res = await policyApi.layDanhSach({ kichThuoc: 20 });
       const versions = (res.items ?? []).map((cs) => mapChinhSachToPolicyVersion(cs, NEUTRAL_POLICY_CONFIG));
@@ -418,9 +418,7 @@ export function useBootstrapData(params: UseBootstrapDataParams) {
         if (fromPermissionChange) {
           setPermissionNotice("Quyền hoặc vai trò tài khoản vừa được quản trị viên cập nhật. Hệ thống đã đồng bộ lại quyền hiện tại.");
           const currentPage = pageRef.current;
-          if (currentPage === "admin" && nextRole !== "admin") {
-            setPage(nextRole === "staff" ? "staff" : "landing");
-          } else if (currentPage === "staff" && nextRole === "customer") {
+          if ((currentPage === "workspace" || currentPage === "admin" || currentPage === "staff") && nextRole === "customer") {
             setPage("landing");
           }
         }
@@ -453,13 +451,11 @@ export function useBootstrapData(params: UseBootstrapDataParams) {
     if (role === "customer") {
       void refreshCart();
     }
-    if (role === "staff" || role === "admin") {
+    if (role !== "customer") {
       void refreshEquipment();
       void refreshSuppliers();
       void refreshImportReceipts();
       void refreshAuditLogs();
-    }
-    if (role === "admin") {
       void refreshPromotions();
       void refreshPolicies();
       void staffApi

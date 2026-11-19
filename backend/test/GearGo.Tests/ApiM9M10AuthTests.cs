@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IdentityModel.Tokens.Jwt;
 using System.Net;
 using System.Net.Http.Headers;
@@ -23,9 +23,9 @@ namespace GearGo.Tests;
 
 /// <summary>
 /// Kiểm thử HTTP cho 3 bổ sung M9 & M10:
-/// - UC94: POST /api/v1/admin/danh-gia/{id}/phan-hoi (StaffOrAdmin), an/khoi-phuc vẫn AdminOnly
-/// - UC98: GET /api/v1/admin/bao-cao-van-hanh (StaffOrAdmin)
-/// - UC102: GET /api/v1/admin/nhat-ky (StaffOrAdmin, giới hạn phạm vi với NhanVien)
+/// - UC94: POST /api/danh-gia/{id}/phan-hoi (StaffOrAdmin), an/khoi-phuc vẫn AdminOnly
+/// - UC98: GET /api/bao-cao-van-hanh (StaffOrAdmin)
+/// - UC102: GET /api/nhat-ky (StaffOrAdmin, giới hạn phạm vi với NhanVien)
 /// </summary>
 public class ApiM9M10AuthTests : IDisposable
 {
@@ -98,21 +98,21 @@ public class ApiM9M10AuthTests : IDisposable
         }
 
         // Chưa đăng nhập -> 401; Khách hàng -> 403
-        Assert.Equal(HttpStatusCode.Unauthorized, (await Client().PostAsJsonAsync($"/api/v1/admin/danh-gia/{maDanhGia}/phan-hoi", new { noiDung = "x" })).StatusCode);
-        Assert.Equal(HttpStatusCode.Forbidden, (await KhachA.PostAsJsonAsync($"/api/v1/admin/danh-gia/{maDanhGia}/phan-hoi", new { noiDung = "x" })).StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await Client().PostAsJsonAsync($"/api/danh-gia/{maDanhGia}/phan-hoi", new { noiDung = "x" })).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await KhachA.PostAsJsonAsync($"/api/danh-gia/{maDanhGia}/phan-hoi", new { noiDung = "x" })).StatusCode);
 
         // Nhân viên được phản hồi (200), nhưng không được ẩn đánh giá (403)
-        var nvReply = await NhanVien.PostAsJsonAsync($"/api/v1/admin/danh-gia/{maDanhGia}/phan-hoi", new { noiDung = "Shop cảm ơn bạn!" });
+        var nvReply = await NhanVien.PostAsJsonAsync($"/api/danh-gia/{maDanhGia}/phan-hoi", new { noiDung = "Shop cảm ơn bạn!" });
         Assert.Equal(HttpStatusCode.OK, nvReply.StatusCode);
         using (var doc = JsonDocument.Parse(await nvReply.Content.ReadAsStringAsync()))
         {
             Assert.Equal("Shop cảm ơn bạn!", doc.RootElement.GetProperty("phanHoiCuaHang").GetString());
         }
 
-        Assert.Equal(HttpStatusCode.Forbidden, (await NhanVien.PostAsJsonAsync($"/api/v1/admin/danh-gia/{maDanhGia}/an", new { lyDo = "Vi phạm" })).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await NhanVien.PostAsJsonAsync($"/api/danh-gia/{maDanhGia}/an", new { lyDo = "Vi phạm" })).StatusCode);
 
         // Admin được ẩn đánh giá (200)
-        Assert.Equal(HttpStatusCode.OK, (await QuanTri.PostAsJsonAsync($"/api/v1/admin/danh-gia/{maDanhGia}/an", new { lyDo = "Vi phạm" })).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await QuanTri.PostAsJsonAsync($"/api/danh-gia/{maDanhGia}/an", new { lyDo = "Vi phạm" })).StatusCode);
     }
 
     [Fact]
@@ -142,10 +142,10 @@ public class ApiM9M10AuthTests : IDisposable
         }
 
         // Nhật ký: Anonymous 401, Khách 403, Nhân viên 200 (chỉ thấy nhật ký vận hành/của mình), Admin 200 (thấy hết)
-        Assert.Equal(HttpStatusCode.Unauthorized, (await Client().GetAsync("/api/v1/admin/nhat-ky")).StatusCode);
-        Assert.Equal(HttpStatusCode.Forbidden, (await KhachA.GetAsync("/api/v1/admin/nhat-ky")).StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await Client().GetAsync("/api/nhat-ky")).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await KhachA.GetAsync("/api/nhat-ky")).StatusCode);
 
-        var nvLogs = await NhanVien.GetAsync("/api/v1/admin/nhat-ky");
+        var nvLogs = await NhanVien.GetAsync("/api/nhat-ky");
         Assert.Equal(HttpStatusCode.OK, nvLogs.StatusCode);
         using (var doc = JsonDocument.Parse(await nvLogs.Content.ReadAsStringAsync()))
         {
@@ -154,7 +154,7 @@ public class ApiM9M10AuthTests : IDisposable
             Assert.DoesNotContain(items.EnumerateArray(), x => x.GetProperty("loaiDoiTuong").GetString() == "TAI_KHOAN");
         }
 
-        var adminLogs = await QuanTri.GetAsync("/api/v1/admin/nhat-ky");
+        var adminLogs = await QuanTri.GetAsync("/api/nhat-ky");
         Assert.Equal(HttpStatusCode.OK, adminLogs.StatusCode);
         using (var doc = JsonDocument.Parse(await adminLogs.Content.ReadAsStringAsync()))
         {
@@ -163,9 +163,9 @@ public class ApiM9M10AuthTests : IDisposable
         }
 
         // Báo cáo vận hành: Anonymous 401, Khách 403, Nhân viên qua lớp Authorize (không 401/403)
-        Assert.Equal(HttpStatusCode.Unauthorized, (await Client().GetAsync("/api/v1/admin/bao-cao-van-hanh")).StatusCode);
-        Assert.Equal(HttpStatusCode.Forbidden, (await KhachA.GetAsync("/api/v1/admin/bao-cao-van-hanh")).StatusCode);
-        var nvReport = await NhanVien.GetAsync("/api/v1/admin/bao-cao-van-hanh");
+        Assert.Equal(HttpStatusCode.Unauthorized, (await Client().GetAsync("/api/bao-cao-van-hanh")).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await KhachA.GetAsync("/api/bao-cao-van-hanh")).StatusCode);
+        var nvReport = await NhanVien.GetAsync("/api/bao-cao-van-hanh");
         Assert.NotEqual(HttpStatusCode.Unauthorized, nvReport.StatusCode);
         Assert.NotEqual(HttpStatusCode.Forbidden, nvReport.StatusCode);
     }

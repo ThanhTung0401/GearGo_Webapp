@@ -1,5 +1,5 @@
-/**
- * auditApi.ts - Nhật ký thao tác hệ thống (/api/v1/admin/nhat-ky) - StaffOrAdmin (UC100/UC102)
+﻿/**
+ * auditApi.ts - Nhật ký thao tác hệ thống (/api/nhat-ky) - StaffOrAdmin (UC100/UC102)
  */
 
 import { apiClient } from "../apiClient";
@@ -33,7 +33,7 @@ export const auditApi = {
     soMoiTrang?: number;
   }): Promise<PagedBackendResponse<NhatKyThaoTacBackend>> {
     const q = buildQuery(params as Record<string, unknown>);
-    const res = await apiClient.get<unknown>(`/api/v1/admin/nhat-ky${q}`);
+    const res = await apiClient.get<unknown>(`/api/nhat-ky${q}`);
     return unwrapPaged<NhatKyThaoTacBackend>(res.data);
   },
 

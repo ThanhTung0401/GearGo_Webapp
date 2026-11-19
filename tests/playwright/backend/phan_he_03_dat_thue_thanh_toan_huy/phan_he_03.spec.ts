@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+﻿import { test, expect } from "@playwright/test";
 import { authHeaders, loginApi } from "../../helpers/auth.js";
 import { getFutureRentalDates, uniqueSuffix } from "../../helpers/testData.js";
 
@@ -64,7 +64,7 @@ test.describe("Phân hệ 3: Giỏ thuê, Đặt thuê, Thanh toán & Hủy đơ
     expect(badPromoRes.status()).toBeLessThan(500);
 
     // UC3.2 & UC3.2.1: Tạo đơn thuê giữ chỗ từ giỏ thuê (có idempotencyKey + chiTiet + khung giờ)
-    const createOrderRes = await request.post("/api/v1/don-thue", {
+    const createOrderRes = await request.post("/api/don-thue", {
       headers: authHeaders(token),
       data: {
         gioNhanDuKien: gioNhanIso,
@@ -87,23 +87,23 @@ test.describe("Phân hệ 3: Giỏ thuê, Đặt thuê, Thanh toán & Hủy đơ
     expect(maDonThue).toBeGreaterThan(0);
 
     // UC3.3: Theo dõi danh sách đơn thuê & chi tiết đơn + lịch sử + chính sách đơn
-    const myOrdersRes = await request.get("/api/v1/don-thue?soMoiTrang=20", {
+    const myOrdersRes = await request.get("/api/don-thue?soMoiTrang=20", {
       headers: authHeaders(token),
     });
     expect(myOrdersRes.ok()).toBeTruthy();
 
-    const detailRes = await request.get(`/api/v1/don-thue/${maDonThue}`, {
+    const detailRes = await request.get(`/api/don-thue/${maDonThue}`, {
       headers: authHeaders(token),
     });
     expect(detailRes.ok()).toBeTruthy();
 
-    const policySnapRes = await request.get(`/api/v1/don-thue/${maDonThue}/chinh-sach`, {
+    const policySnapRes = await request.get(`/api/don-thue/${maDonThue}/chinh-sach`, {
       headers: authHeaders(token),
     });
     expect(policySnapRes.ok()).toBeTruthy();
 
     // UC3.4: Xem trước hủy và hủy đơn vừa tạo (dọn sạch dữ liệu giữ chỗ)
-    const previewCancelRes = await request.get(`/api/v1/don-thue/${maDonThue}/huy/xem-truoc`, {
+    const previewCancelRes = await request.get(`/api/don-thue/${maDonThue}/huy/xem-truoc`, {
       headers: authHeaders(token),
     });
     expect(previewCancelRes.ok()).toBeTruthy();
@@ -112,7 +112,7 @@ test.describe("Phân hệ 3: Giỏ thuê, Đặt thuê, Thanh toán & Hủy đơ
       dauVanTay?: string;
     };
 
-    const cancelRes = await request.post(`/api/v1/don-thue/${maDonThue}/huy`, {
+    const cancelRes = await request.post(`/api/don-thue/${maDonThue}/huy`, {
       headers: authHeaders(token),
       data: {
         lyDo: "Hủy đơn kiểm thử Playwright PH3",

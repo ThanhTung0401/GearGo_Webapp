@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Kiểm thử tự động WEEK 5 - THANH TÙNG:
  * - W5-T1: Quản lý tài khoản & nhân viên (tạo, sửa hồ sơ, đổi vai trò, khóa/mở khóa, nghỉ việc)
  *          + quyền xét theo trạng thái/vai trò HIỆN TẠI (JWT cũ không còn hiệu lực sau khi hạ quyền/khóa)
@@ -77,7 +77,7 @@ const nhanVienBody = (tag, n, vaiTro = 'NhanVien', extra = {}) => ({
 });
 
 async function taoNhanSu(adminToken, tag, n, vaiTro = 'NhanVien') {
-  const r = await callApi('/api/admin/nhan-vien', { token: adminToken, method: 'POST', body: nhanVienBody(tag, n, vaiTro) });
+  const r = await callApi('/api/nhan-vien', { token: adminToken, method: 'POST', body: nhanVienBody(tag, n, vaiTro) });
   const l = r.status === 201 ? await login(email(tag), NEW_PASSWORD) : { token: null };
   return { ...r, nv: r.data, token: l.token };
 }
@@ -108,17 +108,17 @@ async function runTests() {
   // =========================================================================
   console.log(`${colors.bold}[PHẦN 1] Phân quyền truy cập các route quản trị${colors.reset}`);
 
-  const noToken = await callApi('/api/admin/tai-khoan');
+  const noToken = await callApi('/api/tai-khoan');
   assert(noToken.status === 401, 'Không có token bị từ chối (401)', noToken);
 
   const routes = [
-    ['GET', '/api/admin/tai-khoan'],
-    ['GET', `/api/admin/tai-khoan/${seedAdminTk}`],
-    ['GET', '/api/admin/nhan-vien'],
-    ['POST', '/api/admin/nhan-vien'],
-    ['POST', '/api/admin/nhan-vien/1/doi-vai-tro'],
-    ['POST', '/api/admin/nhan-vien/1/nghi-viec'],
-    ['POST', `/api/admin/tai-khoan/${seedAdminTk}/khoa`]
+    ['GET', '/api/tai-khoan'],
+    ['GET', `/api/tai-khoan/${seedAdminTk}`],
+    ['GET', '/api/nhan-vien'],
+    ['POST', '/api/nhan-vien'],
+    ['POST', '/api/nhan-vien/1/doi-vai-tro'],
+    ['POST', '/api/nhan-vien/1/nghi-viec'],
+    ['POST', `/api/tai-khoan/${seedAdminTk}/khoa`]
   ];
   for (const [method, path] of routes) {
     const body = method === 'POST' ? {} : undefined;
@@ -130,18 +130,18 @@ async function runTests() {
 
   // W5-T1-A07: khách gọi tạo nhân viên / gửi role trong hồ sơ cá nhân
   console.log(`\n${colors.bold}[W5-T1-A07] Khách không thể tạo nhân sự hoặc tự nâng quyền${colors.reset}`);
-  const custCreate = await callApi('/api/admin/nhan-vien', { token: customerToken, method: 'POST', body: nhanVienBody('khach', 90) });
+  const custCreate = await callApi('/api/nhan-vien', { token: customerToken, method: 'POST', body: nhanVienBody('khach', 90) });
   assert(custCreate.status === 403, 'Khách gọi route tạo nhân viên bị 403', custCreate);
 
-  const hoSo = await callApi('/api/v1/ho-so/toi', { token: customerToken });
+  const hoSo = await callApi('/api/ho-so/toi', { token: customerToken });
   if (hoSo.status === 200) {
     const hs = hoSo.data;
-    const put = await callApi('/api/v1/ho-so/toi', {
+    const put = await callApi('/api/ho-so/toi', {
       token: customerToken, method: 'PUT',
       body: { hoTen: hs.hoTen, email: hs.email, soDienThoai: hs.soDienThoai, diaChi: hs.diaChi, ngaySinh: hs.ngaySinh,
               anhDaiDien: hs.anhDaiDien, vaiTro: 'QuanTriVien', trangThai: 'HoatDong' }
     });
-    const after = await callApi(`/api/admin/tai-khoan/${custLogin.data.maTaiKhoan}`, { token: adminToken });
+    const after = await callApi(`/api/tai-khoan/${custLogin.data.maTaiKhoan}`, { token: adminToken });
     assert(after.status === 200 && after.data.vaiTro === 'KhachHang',
       'Gửi vaiTro=QuanTriVien trong hồ sơ cá nhân không đổi vai trò (vẫn KhachHang)', { put: put.status, after: after.data });
   } else {
@@ -163,73 +163,73 @@ async function runTests() {
   assert(!/matKhau|mat_khau|bam/i.test(raw) && !raw.includes(NEW_PASSWORD),
     'Response không chứa mật khẩu hoặc mật khẩu băm', A.data);
   assert(!!A.token, 'Nhân viên mới đăng nhập được bằng mật khẩu khởi tạo (băm qua cơ chế cũ)');
-  cleanup.push(async () => A.nv && callApi(`/api/admin/tai-khoan/${A.nv.maTaiKhoan}/khoa`, { token: adminToken, method: 'POST', body: { lyDo: 'Dọn dẹp test W5-T1' } }));
+  cleanup.push(async () => A.nv && callApi(`/api/tai-khoan/${A.nv.maTaiKhoan}/khoa`, { token: adminToken, method: 'POST', body: { lyDo: 'Dọn dẹp test W5-T1' } }));
 
-  const dupEmail = await callApi('/api/admin/nhan-vien', { token: adminToken, method: 'POST', body: nhanVienBody('a', 2) });
+  const dupEmail = await callApi('/api/nhan-vien', { token: adminToken, method: 'POST', body: nhanVienBody('a', 2) });
   assert(dupEmail.status === 409 && dupEmail.data?.maLoi === 'LIEN_HE_DA_TON_TAI', 'Trùng email -> 409 LIEN_HE_DA_TON_TAI', dupEmail);
-  const dupPhone = await callApi('/api/admin/nhan-vien', { token: adminToken, method: 'POST', body: nhanVienBody('dupphone', 1) });
+  const dupPhone = await callApi('/api/nhan-vien', { token: adminToken, method: 'POST', body: nhanVienBody('dupphone', 1) });
   assert(dupPhone.status === 409 && dupPhone.data?.maLoi === 'LIEN_HE_DA_TON_TAI', 'Trùng số điện thoại -> 409 LIEN_HE_DA_TON_TAI', dupPhone);
 
   // W5-T1-A01: lỗi khi tạo không để lại TAI_KHOAN mồ côi / email bị chiếm
-  const afterDup = await callApi(`/api/admin/tai-khoan?tuKhoa=${encodeURIComponent(email('dupphone'))}`, { token: adminToken });
+  const afterDup = await callApi(`/api/tai-khoan?tuKhoa=${encodeURIComponent(email('dupphone'))}`, { token: adminToken });
   assert(afterDup.status === 200 && afterDup.data.tongSo === 0,
     'W5-T1-A01: lần tạo thất bại không để lại TAI_KHOAN mồ côi, email không bị chiếm', afterDup.data);
 
-  const badRole = await callApi('/api/admin/nhan-vien', { token: adminToken, method: 'POST', body: nhanVienBody('badrole', 3, 'KhachHang') });
+  const badRole = await callApi('/api/nhan-vien', { token: adminToken, method: 'POST', body: nhanVienBody('badrole', 3, 'KhachHang') });
   assert(badRole.status === 400 && badRole.data?.maLoi === 'VAI_TRO_KHONG_HOP_LE', 'Tạo với vai trò KhachHang -> 400 VAI_TRO_KHONG_HOP_LE', badRole);
-  const badMail = await callApi('/api/admin/nhan-vien', { token: adminToken, method: 'POST', body: nhanVienBody('badmail', 4, 'NhanVien', { email: 'khong-phai-email' }) });
+  const badMail = await callApi('/api/nhan-vien', { token: adminToken, method: 'POST', body: nhanVienBody('badmail', 4, 'NhanVien', { email: 'khong-phai-email' }) });
   assert(badMail.status === 400, 'Email sai định dạng -> 400', badMail);
-  const badPhone = await callApi('/api/admin/nhan-vien', { token: adminToken, method: 'POST', body: nhanVienBody('badphone', 5, 'NhanVien', { soDienThoai: '12345' }) });
+  const badPhone = await callApi('/api/nhan-vien', { token: adminToken, method: 'POST', body: nhanVienBody('badphone', 5, 'NhanVien', { soDienThoai: '12345' }) });
   assert(badPhone.status === 400, 'Số điện thoại sai định dạng -> 400', badPhone);
-  const shortPw = await callApi('/api/admin/nhan-vien', { token: adminToken, method: 'POST', body: nhanVienBody('shortpw', 6, 'NhanVien', { matKhauKhoiTao: '123' }) });
+  const shortPw = await callApi('/api/nhan-vien', { token: adminToken, method: 'POST', body: nhanVienBody('shortpw', 6, 'NhanVien', { matKhauKhoiTao: '123' }) });
   assert(shortPw.status === 400, 'Mật khẩu khởi tạo quá ngắn -> 400', shortPw);
 
   // Hai request tạo đồng thời cùng email: đúng một cái thành công
   const race = await Promise.all([0, 1].map((i) =>
-    callApi('/api/admin/nhan-vien', { token: adminToken, method: 'POST', body: nhanVienBody('race', 7, 'NhanVien', { hoTen: `Race ${i}` }) })));
+    callApi('/api/nhan-vien', { token: adminToken, method: 'POST', body: nhanVienBody('race', 7, 'NhanVien', { hoTen: `Race ${i}` }) })));
   const raceCodes = race.map((r) => r.status).sort();
   assert(raceCodes[0] === 201 && raceCodes[1] === 409, 'Hai request tạo đồng thời cùng liên hệ: 1 x 201 và 1 x 409', race.map((r) => r.status));
   const raceOk = race.find((r) => r.status === 201);
-  if (raceOk) cleanup.push(() => callApi(`/api/admin/tai-khoan/${raceOk.data.maTaiKhoan}/khoa`, { token: adminToken, method: 'POST', body: { lyDo: 'Dọn dẹp test W5-T1' } }));
+  if (raceOk) cleanup.push(() => callApi(`/api/tai-khoan/${raceOk.data.maTaiKhoan}/khoa`, { token: adminToken, method: 'POST', body: { lyDo: 'Dọn dẹp test W5-T1' } }));
 
   // =========================================================================
   // PHẦN 3: TRA CỨU & CẬP NHẬT HỒ SƠ
   // =========================================================================
   console.log(`\n${colors.bold}[PHẦN 3] Tra cứu, phân trang và cập nhật hồ sơ${colors.reset}`);
 
-  const list = await callApi(`/api/admin/tai-khoan?tuKhoa=${runId}&soMoiTrang=1&trang=1`, { token: adminToken });
+  const list = await callApi(`/api/tai-khoan?tuKhoa=${runId}&soMoiTrang=1&trang=1`, { token: adminToken });
   assert(list.status === 200 && list.data.soMoiTrang === 1 && list.data.items.length === 1 && list.data.tongSo >= 2,
     'Tra cứu tài khoản theo từ khóa, phân trang trả items/tongSo/trang/soMoiTrang', list.data);
   assert(!/matKhau|bam/i.test(JSON.stringify(list.data)), 'Danh sách tài khoản không lộ mật khẩu băm');
-  const big = await callApi('/api/admin/tai-khoan?soMoiTrang=100000', { token: adminToken });
+  const big = await callApi('/api/tai-khoan?soMoiTrang=100000', { token: adminToken });
   assert(big.status === 200 && big.data.soMoiTrang === 100, 'soMoiTrang bị giới hạn tối đa 100', big.data);
-  const filt = await callApi('/api/admin/tai-khoan?vaiTro=KhachHang&trangThai=HoatDong', { token: adminToken });
+  const filt = await callApi('/api/tai-khoan?vaiTro=KhachHang&trangThai=HoatDong', { token: adminToken });
   assert(filt.status === 200 && filt.data.items.every((t) => t.vaiTro === 'KhachHang' && t.trangThai === 'HoatDong'),
     'Lọc theo vai trò + trạng thái chính xác', filt.data);
-  const detail = await callApi(`/api/admin/tai-khoan/${A.nv.maTaiKhoan}`, { token: adminToken });
+  const detail = await callApi(`/api/tai-khoan/${A.nv.maTaiKhoan}`, { token: adminToken });
   assert(detail.status === 200 && detail.data.maNhanVien === A.nv.maNhanVien, 'Chi tiết tài khoản có mã nhân viên tương ứng', detail.data);
-  const noAcc = await callApi('/api/admin/tai-khoan/99999999', { token: adminToken });
+  const noAcc = await callApi('/api/tai-khoan/99999999', { token: adminToken });
   assert(noAcc.status === 404, 'Tài khoản không tồn tại -> 404', noAcc);
 
-  const nvList = await callApi(`/api/admin/nhan-vien?tuKhoa=${runId}&vaiTro=NhanVien`, { token: adminToken });
+  const nvList = await callApi(`/api/nhan-vien?tuKhoa=${runId}&vaiTro=NhanVien`, { token: adminToken });
   assert(nvList.status === 200 && nvList.data.items.some((n) => n.maNhanVien === A.nv.maNhanVien), 'Tra cứu nhân viên theo từ khóa/vai trò', nvList.data);
-  const nvGet = await callApi(`/api/admin/nhan-vien/${A.nv.maNhanVien}`, { token: adminToken });
+  const nvGet = await callApi(`/api/nhan-vien/${A.nv.maNhanVien}`, { token: adminToken });
   assert(nvGet.status === 200 && nvGet.data.maTaiKhoan === A.nv.maTaiKhoan, 'Xem chi tiết nhân viên', nvGet.data);
-  const nvNone = await callApi('/api/admin/nhan-vien/99999999', { token: adminToken });
+  const nvNone = await callApi('/api/nhan-vien/99999999', { token: adminToken });
   assert(nvNone.status === 404, 'Nhân viên không tồn tại -> 404', nvNone);
 
-  const upd = await callApi(`/api/admin/nhan-vien/${A.nv.maNhanVien}`, {
+  const upd = await callApi(`/api/nhan-vien/${A.nv.maNhanVien}`, {
     token: adminToken, method: 'PUT',
     body: { hoTen: `Nhân Sự A Đã Sửa ${runId}`, email: email('a'), soDienThoai: phone(1), diaChi: 'Đà Nẵng', ngayVaoLam: '2026-01-06' }
   });
   assert(upd.status === 200 && upd.data.hoTen.includes('Đã Sửa') && upd.data.diaChi === 'Đà Nẵng', 'Cập nhật hồ sơ nhân viên thành công', upd);
   assert(upd.data?.vaiTro === 'NhanVien' && upd.data?.maTaiKhoan === A.nv.maTaiKhoan, 'PUT hồ sơ không đổi vai trò / tài khoản gắn hồ sơ', upd.data);
-  const updDup = await callApi(`/api/admin/nhan-vien/${A.nv.maNhanVien}`, {
+  const updDup = await callApi(`/api/nhan-vien/${A.nv.maNhanVien}`, {
     token: adminToken, method: 'PUT',
     body: { hoTen: 'X', email: 'staff@geargo.vn', soDienThoai: phone(1), diaChi: null, ngayVaoLam: '2026-01-06' }
   });
   assert(updDup.status === 409 && updDup.data?.maLoi === 'LIEN_HE_DA_TON_TAI', 'Sửa sang email của người khác -> 409 LIEN_HE_DA_TON_TAI', updDup);
-  const updBad = await callApi(`/api/admin/nhan-vien/${A.nv.maNhanVien}`, {
+  const updBad = await callApi(`/api/nhan-vien/${A.nv.maNhanVien}`, {
     token: adminToken, method: 'PUT',
     body: { hoTen: '', email: email('a'), soDienThoai: phone(1), diaChi: null, ngayVaoLam: '2026-01-06' }
   });
@@ -238,13 +238,13 @@ async function runTests() {
   // W5-T1-A05: đổi họ tên nhân viên đã ký biên bản giao -> snapshot trong biên bản giữ nguyên
   console.log(`\n${colors.bold}[W5-T1-A05] Đổi họ tên nhân viên đã ký biên bản giao${colors.reset}`);
   const banGiao = await callApi('/api/ban-giao/don-thue/1', { token: adminToken });
-  const nvSeed = await callApi('/api/admin/nhan-vien/2', { token: adminToken });
+  const nvSeed = await callApi('/api/nhan-vien/2', { token: adminToken });
   if (banGiao.status === 200 && banGiao.data?.maNhanVien === 2 && nvSeed.status === 200) {
     const tenCu = nvSeed.data.hoTen;
     const snapshotCu = banGiao.data.tenNhanVienLucGiao;
     const seedBody = { hoTen: tenCu, email: nvSeed.data.email, soDienThoai: nvSeed.data.soDienThoai, diaChi: nvSeed.data.diaChi, ngayVaoLam: nvSeed.data.ngayVaoLam };
-    cleanup.push(() => callApi('/api/admin/nhan-vien/2', { token: adminToken, method: 'PUT', body: seedBody }));
-    const rename = await callApi('/api/admin/nhan-vien/2', { token: adminToken, method: 'PUT', body: { ...seedBody, hoTen: `Tên Mới ${runId}` } });
+    cleanup.push(() => callApi('/api/nhan-vien/2', { token: adminToken, method: 'PUT', body: seedBody }));
+    const rename = await callApi('/api/nhan-vien/2', { token: adminToken, method: 'PUT', body: { ...seedBody, hoTen: `Tên Mới ${runId}` } });
     const banGiao2 = await callApi('/api/ban-giao/don-thue/1', { token: adminToken });
     assert(rename.status === 200 && rename.data.hoTen === `Tên Mới ${runId}`, 'Hồ sơ nhân viên đã đổi tên', rename);
     assert(banGiao2.data?.tenNhanVienLucGiao === snapshotCu, 'Snapshot tên trong biên bản giao giữ nguyên sau khi đổi tên hồ sơ', banGiao2.data);
@@ -257,12 +257,12 @@ async function runTests() {
   // =========================================================================
   console.log(`\n${colors.bold}[PHẦN 4] Khóa và mở khóa tài khoản${colors.reset}`);
 
-  const noReason = await callApi(`/api/admin/tai-khoan/${A.nv.maTaiKhoan}/khoa`, { token: adminToken, method: 'POST', body: { lyDo: '   ' } });
+  const noReason = await callApi(`/api/tai-khoan/${A.nv.maTaiKhoan}/khoa`, { token: adminToken, method: 'POST', body: { lyDo: '   ' } });
   assert(noReason.status === 400, 'Khóa không có lý do -> 400', noReason);
 
-  const lock = await callApi(`/api/admin/tai-khoan/${A.nv.maTaiKhoan}/khoa`, { token: adminToken, method: 'POST', body: { lyDo: 'Vi phạm quy trình kiểm thử' } });
+  const lock = await callApi(`/api/tai-khoan/${A.nv.maTaiKhoan}/khoa`, { token: adminToken, method: 'POST', body: { lyDo: 'Vi phạm quy trình kiểm thử' } });
   assert(lock.status === 200 && lock.data.trangThai === 'BiKhoa' && lock.data.lyDoKhoa === 'Vi phạm quy trình kiểm thử', 'Khóa tài khoản có lý do -> BiKhoa', lock);
-  const lockAgain = await callApi(`/api/admin/tai-khoan/${A.nv.maTaiKhoan}/khoa`, { token: adminToken, method: 'POST', body: { lyDo: 'Lần hai' } });
+  const lockAgain = await callApi(`/api/tai-khoan/${A.nv.maTaiKhoan}/khoa`, { token: adminToken, method: 'POST', body: { lyDo: 'Lần hai' } });
   assert(lockAgain.status === 409, 'Khóa lại tài khoản đã khóa -> 409', lockAgain);
   const oldTokenLocked = await callApi('/api/auth/toi', { token: A.token });
   assert(oldTokenLocked.status === 401, 'JWT cũ của tài khoản bị khóa bị từ chối ngay (401)', oldTokenLocked);
@@ -270,9 +270,9 @@ async function runTests() {
   assert(loginLocked.status === 400 || loginLocked.status === 403 || loginLocked.status === 401 || loginLocked.data?.maLoi === 'TAI_KHOAN_BI_KHOA',
     'Đăng nhập tài khoản bị khóa không cấp token mới', loginLocked.data);
 
-  const unlock = await callApi(`/api/admin/tai-khoan/${A.nv.maTaiKhoan}/mo-khoa`, { token: adminToken, method: 'POST', body: { lyDo: 'Đã xử lý xong' } });
+  const unlock = await callApi(`/api/tai-khoan/${A.nv.maTaiKhoan}/mo-khoa`, { token: adminToken, method: 'POST', body: { lyDo: 'Đã xử lý xong' } });
   assert(unlock.status === 200 && unlock.data.trangThai === 'HoatDong' && unlock.data.lyDoKhoa == null, 'Mở khóa tài khoản thành công', unlock);
-  const unlockAgain = await callApi(`/api/admin/tai-khoan/${A.nv.maTaiKhoan}/mo-khoa`, { token: adminToken, method: 'POST', body: { lyDo: 'Lần hai' } });
+  const unlockAgain = await callApi(`/api/tai-khoan/${A.nv.maTaiKhoan}/mo-khoa`, { token: adminToken, method: 'POST', body: { lyDo: 'Lần hai' } });
   assert(unlockAgain.status === 409, 'Mở khóa tài khoản không bị khóa -> 409', unlockAgain);
   const relog = await login(email('a'), NEW_PASSWORD);
   A.token = relog.token;
@@ -287,16 +287,16 @@ async function runTests() {
   });
   if (reg.status === 200 || reg.status === 201) {
     const khTk = reg.data.maTaiKhoan;
-    const before = await callApi(`/api/admin/tai-khoan/${khTk}`, { token: adminToken });
-    const lockK = await callApi(`/api/admin/tai-khoan/${khTk}/khoa`, { token: adminToken, method: 'POST', body: { lyDo: 'Khóa khách để kiểm thử' } });
-    const afterK = await callApi(`/api/admin/tai-khoan/${khTk}`, { token: adminToken });
+    const before = await callApi(`/api/tai-khoan/${khTk}`, { token: adminToken });
+    const lockK = await callApi(`/api/tai-khoan/${khTk}/khoa`, { token: adminToken, method: 'POST', body: { lyDo: 'Khóa khách để kiểm thử' } });
+    const afterK = await callApi(`/api/tai-khoan/${khTk}`, { token: adminToken });
     assert(lockK.status === 200 && afterK.data?.maKhachHang === before.data?.maKhachHang && afterK.data?.maKhachHang > 0,
       'Khóa khách: hồ sơ khách và liên kết giữ nguyên, không bị xóa', afterK.data);
-    const tokKhach = await callApi('/api/v1/ho-so/toi', { token: reg.data.token });
+    const tokKhach = await callApi('/api/ho-so/toi', { token: reg.data.token });
     assert(tokKhach.status === 401, 'Khách bị khóa không còn thao tác mới bằng JWT cũ (401)', tokKhach);
     const staffStill = await callApi('/api/bao-tri', { token: staffToken });
     assert(staffStill.status === 200, 'Nhân viên vẫn làm việc bình thường khi khách bị khóa', staffStill.status);
-    const unlockK = await callApi(`/api/admin/tai-khoan/${khTk}/mo-khoa`, { token: adminToken, method: 'POST', body: { lyDo: 'Dọn dẹp' } });
+    const unlockK = await callApi(`/api/tai-khoan/${khTk}/mo-khoa`, { token: adminToken, method: 'POST', body: { lyDo: 'Dọn dẹp' } });
     assert(unlockK.status === 200 && unlockK.data.trangThai === 'HoatDong', 'Mở khóa khách không đổi dữ liệu cũ', unlockK);
     blocked('W5-T1-A06 phần callback/nhân viên hoàn tiền cho đơn của khách bị khóa cần luồng hoàn Tuần 4 với dữ liệu đơn chờ hoàn; chưa kiểm tra trong suite này.');
   } else {
@@ -308,19 +308,19 @@ async function runTests() {
   // =========================================================================
   console.log(`\n${colors.bold}[PHẦN 5] Đổi vai trò và quyền xét theo trạng thái hiện tại${colors.reset}`);
 
-  const badRoleChange = await callApi(`/api/admin/nhan-vien/${A.nv.maNhanVien}/doi-vai-tro`, { token: adminToken, method: 'POST', body: { vaiTroMoi: 'KhachHang', lyDo: 'x' } });
+  const badRoleChange = await callApi(`/api/nhan-vien/${A.nv.maNhanVien}/doi-vai-tro`, { token: adminToken, method: 'POST', body: { vaiTroMoi: 'KhachHang', lyDo: 'x' } });
   assert(badRoleChange.status === 400 && badRoleChange.data?.maLoi === 'VAI_TRO_KHONG_HOP_LE', 'Đổi sang KhachHang -> 400 VAI_TRO_KHONG_HOP_LE', badRoleChange);
-  const noReasonRole = await callApi(`/api/admin/nhan-vien/${A.nv.maNhanVien}/doi-vai-tro`, { token: adminToken, method: 'POST', body: { vaiTroMoi: 'QuanTriVien', lyDo: '' } });
+  const noReasonRole = await callApi(`/api/nhan-vien/${A.nv.maNhanVien}/doi-vai-tro`, { token: adminToken, method: 'POST', body: { vaiTroMoi: 'QuanTriVien', lyDo: '' } });
   assert(noReasonRole.status === 400, 'Đổi vai trò thiếu lý do -> 400', noReasonRole);
 
   // Nâng A lên quản trị: JWT cũ của A (vai trò NhanVien) phải được nâng quyền theo database
-  const staffOnlyBefore = await callApi('/api/admin/tai-khoan', { token: A.token });
+  const staffOnlyBefore = await callApi('/api/tai-khoan', { token: A.token });
   assert(staffOnlyBefore.status === 403, 'Trước khi nâng quyền, A (NhanVien) bị cấm route admin (403)', staffOnlyBefore);
-  const promote = await callApi(`/api/admin/nhan-vien/${A.nv.maNhanVien}/doi-vai-tro`, { token: adminToken, method: 'POST', body: { vaiTroMoi: 'QuanTriVien', lyDo: 'Bổ nhiệm quản trị thử nghiệm' } });
+  const promote = await callApi(`/api/nhan-vien/${A.nv.maNhanVien}/doi-vai-tro`, { token: adminToken, method: 'POST', body: { vaiTroMoi: 'QuanTriVien', lyDo: 'Bổ nhiệm quản trị thử nghiệm' } });
   assert(promote.status === 200 && promote.data.vaiTro === 'QuanTriVien', 'Nâng NhanVien -> QuanTriVien thành công', promote);
-  const promoteAgain = await callApi(`/api/admin/nhan-vien/${A.nv.maNhanVien}/doi-vai-tro`, { token: adminToken, method: 'POST', body: { vaiTroMoi: 'QuanTriVien', lyDo: 'Retry' } });
+  const promoteAgain = await callApi(`/api/nhan-vien/${A.nv.maNhanVien}/doi-vai-tro`, { token: adminToken, method: 'POST', body: { vaiTroMoi: 'QuanTriVien', lyDo: 'Retry' } });
   assert(promoteAgain.status === 200 && promoteAgain.data.vaiTro === 'QuanTriVien', 'Retry đổi vai trò đã thành công trả kết quả cũ (200)', promoteAgain);
-  const promotedUse = await callApi('/api/admin/tai-khoan?soMoiTrang=1', { token: A.token });
+  const promotedUse = await callApi('/api/tai-khoan?soMoiTrang=1', { token: A.token });
   assert(promotedUse.status === 200, 'Quyền mới có hiệu lực ngay: JWT cũ của A dùng được route admin', promotedUse);
 
   // W5-T1-A03: hạ quyền rồi dùng JWT cũ
@@ -328,9 +328,9 @@ async function runTests() {
   // JWT cấp lúc A đang là quản trị viên (claim vai trò = QuanTriVien).
   const oldAdminToken = (await login(email('a'), NEW_PASSWORD)).token;
   assert(!!oldAdminToken, 'A đăng nhập khi đang là quản trị viên để lấy JWT quản trị');
-  const demote = await callApi(`/api/admin/nhan-vien/${A.nv.maNhanVien}/doi-vai-tro`, { token: adminToken, method: 'POST', body: { vaiTroMoi: 'NhanVien', lyDo: 'Hạ quyền thử nghiệm' } });
+  const demote = await callApi(`/api/nhan-vien/${A.nv.maNhanVien}/doi-vai-tro`, { token: adminToken, method: 'POST', body: { vaiTroMoi: 'NhanVien', lyDo: 'Hạ quyền thử nghiệm' } });
   assert(demote.status === 200 && demote.data.vaiTro === 'NhanVien', 'Hạ QuanTriVien -> NhanVien thành công', demote);
-  const staleAdmin = await callApi('/api/admin/nhan-vien', { token: oldAdminToken });
+  const staleAdmin = await callApi('/api/nhan-vien', { token: oldAdminToken });
   assert(staleAdmin.status === 403, 'JWT cũ (claim QuanTriVien) bị từ chối ở route admin (403)', staleAdmin);
   assert(staleAdmin.data?.maLoi === 'QUYEN_DA_THAY_DOI', 'Mã lỗi QUYEN_DA_THAY_DOI để UI yêu cầu đăng nhập lại', staleAdmin.data);
   // Hành động duyệt nhạy cảm đã có từ tuần trước: chỉ AdminOnly -> phải bị chặn
@@ -340,7 +340,7 @@ async function runTests() {
   assert(staleInStaffArea.status === 200, 'Vẫn dùng được vùng NhanVien theo vai trò hiện tại (200)', staleInStaffArea.status);
 
   // Đổi vai trò cho tài khoản không phải nhân sự
-  const khachNv = await callApi(`/api/admin/nhan-vien/99999999/doi-vai-tro`, { token: adminToken, method: 'POST', body: { vaiTroMoi: 'QuanTriVien', lyDo: 'x' } });
+  const khachNv = await callApi(`/api/nhan-vien/99999999/doi-vai-tro`, { token: adminToken, method: 'POST', body: { vaiTroMoi: 'QuanTriVien', lyDo: 'x' } });
   assert(khachNv.status === 404, 'Đổi vai trò nhân viên không tồn tại (khách không có hồ sơ) -> 404', khachNv);
 
   // =========================================================================
@@ -350,11 +350,11 @@ async function runTests() {
 
   const B = await taoNhanSu(adminToken, 'b', 11);
   assert(B.status === 201 && !!B.token, 'Tạo nhân viên B để thử nghỉ việc', B);
-  const badNghi = await callApi(`/api/admin/nhan-vien/${B.nv.maNhanVien}/nghi-viec`, { token: adminToken, method: 'POST', body: { ngayNghiViec: '2020-01-01', lyDo: 'Trước ngày vào làm' } });
+  const badNghi = await callApi(`/api/nhan-vien/${B.nv.maNhanVien}/nghi-viec`, { token: adminToken, method: 'POST', body: { ngayNghiViec: '2020-01-01', lyDo: 'Trước ngày vào làm' } });
   assert(badNghi.status === 400, 'Ngày nghỉ trước ngày vào làm -> 400', badNghi);
-  const futureNghi = await callApi(`/api/admin/nhan-vien/${B.nv.maNhanVien}/nghi-viec`, { token: adminToken, method: 'POST', body: { ngayNghiViec: '2099-01-01', lyDo: 'Tương lai' } });
+  const futureNghi = await callApi(`/api/nhan-vien/${B.nv.maNhanVien}/nghi-viec`, { token: adminToken, method: 'POST', body: { ngayNghiViec: '2099-01-01', lyDo: 'Tương lai' } });
   assert(futureNghi.status === 400, 'Ngày nghỉ ở tương lai -> 400', futureNghi);
-  const noReasonNghi = await callApi(`/api/admin/nhan-vien/${B.nv.maNhanVien}/nghi-viec`, { token: adminToken, method: 'POST', body: { ngayNghiViec: '2026-02-01', lyDo: '' } });
+  const noReasonNghi = await callApi(`/api/nhan-vien/${B.nv.maNhanVien}/nghi-viec`, { token: adminToken, method: 'POST', body: { ngayNghiViec: '2026-02-01', lyDo: '' } });
   assert(noReasonNghi.status === 400, 'Nghỉ việc thiếu lý do -> 400', noReasonNghi);
 
   // Tạo 2 phiếu bảo trì giao cho B (cần 2 thiết bị sẵn sàng chưa có phiếu mở)
@@ -384,7 +384,7 @@ async function runTests() {
   };
   cleanup.push(cleanupTickets);
 
-  const nghi = await callApi(`/api/admin/nhan-vien/${B.nv.maNhanVien}/nghi-viec`, { token: adminToken, method: 'POST', body: { ngayNghiViec: '2026-02-01', lyDo: 'Nghỉ việc theo nguyện vọng' } });
+  const nghi = await callApi(`/api/nhan-vien/${B.nv.maNhanVien}/nghi-viec`, { token: adminToken, method: 'POST', body: { ngayNghiViec: '2026-02-01', lyDo: 'Nghỉ việc theo nguyện vọng' } });
   assert(nghi.status === 200 && nghi.data.trangThaiLamViec === 'DaNghiViec' && nghi.data.ngayNghiViec === '2026-02-01', 'Ghi nhận nghỉ việc: trạng thái + ngày nghỉ', nghi);
   assert(nghi.data?.trangThaiTaiKhoan === 'BiKhoa', 'Nghỉ việc ngừng quyền truy cập tài khoản cùng transaction (BiKhoa)', nghi.data);
   const assigned = tickets.filter((x) => x > 0);
@@ -398,17 +398,17 @@ async function runTests() {
   }
   const resignedToken = await callApi('/api/bao-tri', { token: B.token });
   assert(resignedToken.status === 401, 'Nhân viên nghỉ việc mất quyền ngay (JWT cũ 401)', resignedToken);
-  const nghiAgain = await callApi(`/api/admin/nhan-vien/${B.nv.maNhanVien}/nghi-viec`, { token: adminToken, method: 'POST', body: { ngayNghiViec: '2026-02-01', lyDo: 'Lần hai' } });
+  const nghiAgain = await callApi(`/api/nhan-vien/${B.nv.maNhanVien}/nghi-viec`, { token: adminToken, method: 'POST', body: { ngayNghiViec: '2026-02-01', lyDo: 'Lần hai' } });
   assert(nghiAgain.status === 409 && nghiAgain.data?.maLoi === 'NHAN_VIEN_DA_NGHI_VIEC', 'Ghi nghỉ việc lần hai -> 409 NHAN_VIEN_DA_NGHI_VIEC', nghiAgain);
-  const unlockResigned = await callApi(`/api/admin/tai-khoan/${B.nv.maTaiKhoan}/mo-khoa`, { token: adminToken, method: 'POST', body: { lyDo: 'Thử mở lại' } });
+  const unlockResigned = await callApi(`/api/tai-khoan/${B.nv.maTaiKhoan}/mo-khoa`, { token: adminToken, method: 'POST', body: { lyDo: 'Thử mở lại' } });
   assert(unlockResigned.status === 409 && unlockResigned.data?.maLoi === 'NHAN_VIEN_DA_NGHI_VIEC', 'Mở khóa người đã nghỉ việc bị chặn (409 NHAN_VIEN_DA_NGHI_VIEC)', unlockResigned);
-  const roleResigned = await callApi(`/api/admin/nhan-vien/${B.nv.maNhanVien}/doi-vai-tro`, { token: adminToken, method: 'POST', body: { vaiTroMoi: 'QuanTriVien', lyDo: 'Thử' } });
+  const roleResigned = await callApi(`/api/nhan-vien/${B.nv.maNhanVien}/doi-vai-tro`, { token: adminToken, method: 'POST', body: { vaiTroMoi: 'QuanTriVien', lyDo: 'Thử' } });
   assert(roleResigned.status === 409, 'Không đổi vai trò cho nhân viên đã nghỉ việc (409)', roleResigned);
   const reloginResigned = await login(email('b'), NEW_PASSWORD);
   assert(!reloginResigned.token, 'Nhân viên nghỉ việc không đăng nhập lại được', reloginResigned.data);
-  const histB = await callApi(`/api/admin/nhan-vien/${B.nv.maNhanVien}`, { token: adminToken });
+  const histB = await callApi(`/api/nhan-vien/${B.nv.maNhanVien}`, { token: adminToken });
   assert(histB.status === 200 && histB.data.hoTen === B.nv.hoTen, 'Hồ sơ nhân viên nghỉ việc còn nguyên (không xóa lịch sử)', histB.data);
-  const delB = await callApi(`/api/admin/nhan-vien/${B.nv.maNhanVien}`, { token: adminToken, method: 'DELETE' });
+  const delB = await callApi(`/api/nhan-vien/${B.nv.maNhanVien}`, { token: adminToken, method: 'DELETE' });
   assert(delB.status === 404 || delB.status === 405, 'Không có API xóa cứng nhân viên (404/405)', delB.status);
 
   // =========================================================================
@@ -416,34 +416,34 @@ async function runTests() {
   // =========================================================================
   console.log(`\n${colors.bold}[PHẦN 7] Quản trị viên hoạt động cuối cùng (W5-T1-A02)${colors.reset}`);
 
-  const admins = async () => callApi('/api/admin/tai-khoan?vaiTro=QuanTriVien&trangThai=HoatDong&soMoiTrang=100', { token: adminToken });
+  const admins = async () => callApi('/api/tai-khoan?vaiTro=QuanTriVien&trangThai=HoatDong&soMoiTrang=100', { token: adminToken });
   const P = await taoNhanSu(adminToken, 'p', 21, 'QuanTriVien');
   const Q = await taoNhanSu(adminToken, 'q', 22, 'QuanTriVien');
   assert(P.status === 201 && Q.status === 201 && !!P.token && !!Q.token, 'Tạo hai quản trị viên tạm P và Q', [P.status, Q.status]);
-  cleanup.push(() => callApi(`/api/admin/tai-khoan/${P.nv.maTaiKhoan}/khoa`, { token: adminToken, method: 'POST', body: { lyDo: 'Dọn dẹp test W5-T1' } }));
-  cleanup.push(() => callApi(`/api/admin/tai-khoan/${Q.nv.maTaiKhoan}/khoa`, { token: adminToken, method: 'POST', body: { lyDo: 'Dọn dẹp test W5-T1' } }));
+  cleanup.push(() => callApi(`/api/tai-khoan/${P.nv.maTaiKhoan}/khoa`, { token: adminToken, method: 'POST', body: { lyDo: 'Dọn dẹp test W5-T1' } }));
+  cleanup.push(() => callApi(`/api/tai-khoan/${Q.nv.maTaiKhoan}/khoa`, { token: adminToken, method: 'POST', body: { lyDo: 'Dọn dẹp test W5-T1' } }));
 
   if (P.token && Q.token) {
     // Mọi quản trị khác (ngoài seed, P, Q) làm kết quả không "chạm đáy"; chỉ khẳng định quy tắc khi môi trường sạch.
     const before = await admins();
     const allowed = new Set([seedAdminTk, P.nv.maTaiKhoan, Q.nv.maTaiKhoan]);
     const strangers = before.data.items.filter((t) => !allowed.has(t.maTaiKhoan));
-    const seedNv = (await callApi(`/api/admin/nhan-vien?tuKhoa=${encodeURIComponent('admin@geargo.vn')}`, { token: adminToken })).data?.items?.[0];
+    const seedNv = (await callApi(`/api/nhan-vien?tuKhoa=${encodeURIComponent('admin@geargo.vn')}`, { token: adminToken })).data?.items?.[0];
 
     if (strangers.length === 0 && seedNv) {
       // P hạ seed admin: còn P, Q
-      const demoteSeed = await callApi(`/api/admin/nhan-vien/${seedNv.maNhanVien}/doi-vai-tro`, { token: P.token, method: 'POST', body: { vaiTroMoi: 'NhanVien', lyDo: 'Chuẩn bị ca còn hai admin' } });
+      const demoteSeed = await callApi(`/api/nhan-vien/${seedNv.maNhanVien}/doi-vai-tro`, { token: P.token, method: 'POST', body: { vaiTroMoi: 'NhanVien', lyDo: 'Chuẩn bị ca còn hai admin' } });
       assert(demoteSeed.status === 200, 'Hạ quyền admin seed khi còn P, Q hoạt động (200)', demoteSeed);
       // Khôi phục seed admin bằng admin còn sống (P hoặc Q) ở bước dọn dẹp, trước khi khóa P/Q.
       cleanup.push(async () => {
-        const alive = (await callApi('/api/admin/tai-khoan', { token: P.token })).status === 200 ? P.token : Q.token;
-        await callApi(`/api/admin/nhan-vien/${seedNv.maNhanVien}/doi-vai-tro`, { token: alive, method: 'POST', body: { vaiTroMoi: 'QuanTriVien', lyDo: 'Khôi phục admin seed sau test W5-T1' } });
+        const alive = (await callApi('/api/tai-khoan', { token: P.token })).status === 200 ? P.token : Q.token;
+        await callApi(`/api/nhan-vien/${seedNv.maNhanVien}/doi-vai-tro`, { token: alive, method: 'POST', body: { vaiTroMoi: 'QuanTriVien', lyDo: 'Khôi phục admin seed sau test W5-T1' } });
       });
 
       // Hai admin hạ quyền nhau đồng thời
       const [r1, r2] = await Promise.all([
-        callApi(`/api/admin/nhan-vien/${Q.nv.maNhanVien}/doi-vai-tro`, { token: P.token, method: 'POST', body: { vaiTroMoi: 'NhanVien', lyDo: 'P hạ Q' } }),
-        callApi(`/api/admin/nhan-vien/${P.nv.maNhanVien}/doi-vai-tro`, { token: Q.token, method: 'POST', body: { vaiTroMoi: 'NhanVien', lyDo: 'Q hạ P' } })
+        callApi(`/api/nhan-vien/${Q.nv.maNhanVien}/doi-vai-tro`, { token: P.token, method: 'POST', body: { vaiTroMoi: 'NhanVien', lyDo: 'P hạ Q' } }),
+        callApi(`/api/nhan-vien/${P.nv.maNhanVien}/doi-vai-tro`, { token: Q.token, method: 'POST', body: { vaiTroMoi: 'NhanVien', lyDo: 'Q hạ P' } })
       ]);
       const oks = [r1, r2].filter((r) => r.status === 200).length;
       assert(oks === 1, 'W5-T1-A02: hai admin hạ quyền nhau đồng thời -> đúng một yêu cầu thành công', [r1.status, r2.status]);
@@ -453,15 +453,15 @@ async function runTests() {
       // Dùng token của người thắng (còn là admin) kiểm tra không còn 0 admin
       const survivor = r1.status === 200 ? P.token : Q.token;
       const survivorNv = r1.status === 200 ? P.nv : Q.nv;
-      const after = await callApi('/api/admin/tai-khoan?vaiTro=QuanTriVien&trangThai=HoatDong', { token: survivor });
+      const after = await callApi('/api/tai-khoan?vaiTro=QuanTriVien&trangThai=HoatDong', { token: survivor });
       assert(after.status === 200 && after.data.tongSo >= 1, 'Sau cuộc đua vẫn còn ít nhất 1 quản trị viên hoạt động', after.data);
 
       // Người cuối cùng không tự hạ / khóa / nghỉ việc
-      const selfDemote = await callApi(`/api/admin/nhan-vien/${survivorNv.maNhanVien}/doi-vai-tro`, { token: survivor, method: 'POST', body: { vaiTroMoi: 'NhanVien', lyDo: 'Tự hạ' } });
+      const selfDemote = await callApi(`/api/nhan-vien/${survivorNv.maNhanVien}/doi-vai-tro`, { token: survivor, method: 'POST', body: { vaiTroMoi: 'NhanVien', lyDo: 'Tự hạ' } });
       assert(selfDemote.status === 409 && selfDemote.data?.maLoi === 'ADMIN_HOAT_DONG_CUOI_CUNG', 'Admin cuối không tự hạ quyền (409 ADMIN_HOAT_DONG_CUOI_CUNG)', selfDemote);
-      const selfLock = await callApi(`/api/admin/tai-khoan/${survivorNv.maTaiKhoan}/khoa`, { token: survivor, method: 'POST', body: { lyDo: 'Tự khóa' } });
+      const selfLock = await callApi(`/api/tai-khoan/${survivorNv.maTaiKhoan}/khoa`, { token: survivor, method: 'POST', body: { lyDo: 'Tự khóa' } });
       assert(selfLock.status === 409 && selfLock.data?.maLoi === 'ADMIN_HOAT_DONG_CUOI_CUNG', 'Admin cuối không tự khóa (409 ADMIN_HOAT_DONG_CUOI_CUNG)', selfLock);
-      const selfResign = await callApi(`/api/admin/nhan-vien/${survivorNv.maNhanVien}/nghi-viec`, { token: survivor, method: 'POST', body: { ngayNghiViec: '2026-02-01', lyDo: 'Tự nghỉ' } });
+      const selfResign = await callApi(`/api/nhan-vien/${survivorNv.maNhanVien}/nghi-viec`, { token: survivor, method: 'POST', body: { ngayNghiViec: '2026-02-01', lyDo: 'Tự nghỉ' } });
       assert(selfResign.status === 409 && selfResign.data?.maLoi === 'ADMIN_HOAT_DONG_CUOI_CUNG', 'Admin cuối không tự nghỉ việc (409 ADMIN_HOAT_DONG_CUOI_CUNG)', selfResign);
     } else {
       blocked(`W5-T1-A02: môi trường có ${strangers.length} quản trị viên hoạt động khác ngoài admin seed và tài khoản tạm; không thể chạm ngưỡng "admin cuối" mà không đụng dữ liệu thật. Cần DB sạch.`);
@@ -475,7 +475,7 @@ async function runTests() {
   for (const fn of cleanup.reverse()) {
     try { await fn(); } catch { /* bỏ qua lỗi dọn dẹp */ }
   }
-  const adminOk = await callApi('/api/admin/tai-khoan?soMoiTrang=1', { token: adminToken });
+  const adminOk = await callApi('/api/tai-khoan?soMoiTrang=1', { token: adminToken });
   assert(adminOk.status === 200, 'Admin seed vẫn là quản trị viên hoạt động sau khi dọn dẹp', adminOk.status);
 
   console.log(`\n${colors.bold}${colors.cyan}==============================================================${colors.reset}`);

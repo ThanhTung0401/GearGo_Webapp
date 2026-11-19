@@ -1,5 +1,5 @@
-/**
- * reconciliationApi.ts - Đối soát cọc 7 bước & điều chỉnh sau chốt (/api/v1/doi-soat)
+﻿/**
+ * reconciliationApi.ts - Đối soát cọc 7 bước & điều chỉnh sau chốt (/api/doi-soat)
  */
 
 import { apiClient } from "../apiClient";
@@ -74,22 +74,22 @@ export interface DoiSoatBackend {
 
 export const reconciliationApi = {
   async xemTruoc(donId: number): Promise<XemTruocDoiSoatBackend> {
-    const res = await apiClient.get<unknown>(`/api/v1/doi-soat/theo-don/${donId}/xem-truoc`);
+    const res = await apiClient.get<unknown>(`/api/doi-soat/theo-don/${donId}/xem-truoc`);
     return unwrapResult<XemTruocDoiSoatBackend>(res.data);
   },
 
   async layTheoDon(donId: number): Promise<DoiSoatBackend> {
-    const res = await apiClient.get<unknown>(`/api/v1/doi-soat/theo-don/${donId}`);
+    const res = await apiClient.get<unknown>(`/api/doi-soat/theo-don/${donId}`);
     return unwrapResult<DoiSoatBackend>(res.data);
   },
 
   async layTheoId(id: number): Promise<DoiSoatBackend> {
-    const res = await apiClient.get<unknown>(`/api/v1/doi-soat/${id}`);
+    const res = await apiClient.get<unknown>(`/api/doi-soat/${id}`);
     return unwrapResult<DoiSoatBackend>(res.data);
   },
 
   async lapDoiSoat(donId: number, ghiChu?: string): Promise<DoiSoatBackend> {
-    const res = await apiClient.post<unknown>(`/api/v1/doi-soat/theo-don/${donId}`, {
+    const res = await apiClient.post<unknown>(`/api/doi-soat/theo-don/${donId}`, {
       maDonThue: donId,
       ghiChu,
     });
@@ -97,7 +97,7 @@ export const reconciliationApi = {
   },
 
   async xacNhanBangTinh(id: number, dauVanTayBangTinh: string, ghiChu?: string): Promise<DoiSoatBackend> {
-    const res = await apiClient.post<unknown>(`/api/v1/doi-soat/${id}/xac-nhan`, {
+    const res = await apiClient.post<unknown>(`/api/doi-soat/${id}/xac-nhan`, {
       dauVanTayBangTinh,
       ghiChu,
     });
@@ -105,12 +105,12 @@ export const reconciliationApi = {
   },
 
   async yeuCauXuLyTien(id: number): Promise<DoiSoatBackend> {
-    const res = await apiClient.post<unknown>(`/api/v1/doi-soat/${id}/xu-ly-tien`);
+    const res = await apiClient.post<unknown>(`/api/doi-soat/${id}/xu-ly-tien`);
     return unwrapResult<DoiSoatBackend>(res.data);
   },
 
   async chotDoiSoat(id: number): Promise<DoiSoatBackend> {
-    const res = await apiClient.post<unknown>(`/api/v1/doi-soat/${id}/chot`);
+    const res = await apiClient.post<unknown>(`/api/doi-soat/${id}/chot`);
     return unwrapResult<DoiSoatBackend>(res.data);
   },
 
@@ -118,7 +118,7 @@ export const reconciliationApi = {
     doiSoatGocId: number,
     req: { lyDoDieuChinh: string; danhSachMaPhuPhiDieuChinh?: number[]; ghiChu?: string }
   ): Promise<DoiSoatBackend> {
-    const res = await apiClient.post<unknown>(`/api/v1/doi-soat/${doiSoatGocId}/dieu-chinh`, req);
+    const res = await apiClient.post<unknown>(`/api/doi-soat/${doiSoatGocId}/dieu-chinh`, req);
     return unwrapResult<DoiSoatBackend>(res.data);
   },
 };

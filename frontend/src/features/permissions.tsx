@@ -1,14 +1,14 @@
-/**
+﻿/**
  * feat/ROLE_Adjustment — Frontend phân quyền động.
  *
  * Một file gộp: API client (real + mock localStorage), hook `usePermissions`,
  * và trang `PermissionsTab` cho admin.
  *
  * Contract khớp 1-1 backend:
- *   GET  /api/admin/phan-quyen/vai-tro
- *   GET  /api/admin/phan-quyen/quyen
- *   GET  /api/admin/phan-quyen/vai-tro/{role}
- *   PUT  /api/admin/phan-quyen/vai-tro/{role}   body: { quyen: string[] }
+ *   GET  /api/phan-quyen/vai-tro
+ *   GET  /api/phan-quyen/quyen
+ *   GET  /api/phan-quyen/vai-tro/{role}
+ *   PUT  /api/phan-quyen/vai-tro/{role}   body: { quyen: string[] }
  *   GET  /api/auth/quyen-cua-toi
  */
 
@@ -165,7 +165,7 @@ const ROLE_LABELS: Record<string, string> = {
 
 export const permissionApi = {
   async listRoles(): Promise<VaiTroResponse[]> {
-    const real = await apiGet<VaiTroResponse[]>("/api/admin/phan-quyen/vai-tro");
+    const real = await apiGet<VaiTroResponse[]>("/api/phan-quyen/vai-tro");
     if (real) return real;
     const m = loadMock();
     return Object.entries(m.roles).map(([roleName, v]) => ({
@@ -177,12 +177,12 @@ export const permissionApi = {
   },
 
   async catalog(): Promise<QuyenCatalogResponse[]> {
-    const real = await apiGet<QuyenCatalogResponse[]>("/api/admin/phan-quyen/quyen");
+    const real = await apiGet<QuyenCatalogResponse[]>("/api/phan-quyen/quyen");
     return real ?? CATALOG_SEED;
   },
 
   async getRolePermissions(roleName: string): Promise<QuyenCuaVaiTroResponse> {
-    const real = await apiGet<QuyenCuaVaiTroResponse>(`/api/admin/phan-quyen/vai-tro/${encodeURIComponent(roleName)}`);
+    const real = await apiGet<QuyenCuaVaiTroResponse>(`/api/phan-quyen/vai-tro/${encodeURIComponent(roleName)}`);
     if (real) return real;
     const m = loadMock();
     const r = m.roles[roleName] ?? { version: 0, permissions: [] };
@@ -190,7 +190,7 @@ export const permissionApi = {
   },
 
   async setRolePermissions(roleName: string, quyen: string[]): Promise<QuyenCuaVaiTroResponse> {
-    const real = await apiPut<QuyenCuaVaiTroResponse>(`/api/admin/phan-quyen/vai-tro/${encodeURIComponent(roleName)}`, { quyen });
+    const real = await apiPut<QuyenCuaVaiTroResponse>(`/api/phan-quyen/vai-tro/${encodeURIComponent(roleName)}`, { quyen });
     if (real) return real;
     const m = loadMock();
     const prev = m.roles[roleName] ?? { version: 0, permissions: [] };

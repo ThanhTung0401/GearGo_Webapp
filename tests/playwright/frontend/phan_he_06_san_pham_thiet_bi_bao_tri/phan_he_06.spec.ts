@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+﻿import { test, expect } from "@playwright/test";
 import { loginUi } from "../../helpers/auth.js";
 import { useSubsystemPage, pauseForViewer } from "../../helpers/subsystemVideo.js";
 
@@ -27,7 +27,7 @@ test.describe.serial("Frontend PH6: Danh mục, Sản phẩm, Thiết bị, Đi�
 
   test("UC6.7 - UC6.15 - Admin xem Thiết bị, Điều chỉnh kho & Staff mở Kho & Bảo trì", async () => {
     const page = getPage();
-    await page.getByRole("button", { name: "Thiết bị" }).first().click();
+    await page.getByRole("button", { name: "Vòng đời thiết bị" }).first().click();
     await expect(page.getByText(/Thiết bị/i).first()).toBeVisible();
     await pauseForViewer(page);
 

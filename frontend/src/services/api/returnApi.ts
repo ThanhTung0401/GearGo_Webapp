@@ -1,5 +1,5 @@
-/**
- * returnApi.ts - Nhận trả nhiều đợt (/api/v1/nhan-tra) & Xử lý quá hạn (/api/v1/qua-han)
+﻿/**
+ * returnApi.ts - Nhận trả nhiều đợt (/api/nhan-tra) & Xử lý quá hạn (/api/qua-han)
  */
 
 import { apiClient } from "../apiClient";
@@ -120,14 +120,14 @@ export interface TaoNhatKyLienHeQuaHanRequest {
 }
 
 export const returnApi = {
-  // ─── Nhận trả (/api/v1/nhan-tra) ───
+  // ─── Nhận trả (/api/nhan-tra) ───
   async layDanhSachTheoDon(donId: number): Promise<NhanTraBackend[]> {
-    const res = await apiClient.get<unknown>(`/api/v1/nhan-tra/theo-don/${donId}`);
+    const res = await apiClient.get<unknown>(`/api/nhan-tra/theo-don/${donId}`);
     return unwrapResult<NhanTraBackend[]>(res.data);
   },
 
   async layThietBiConNo(donId: number): Promise<ThietBiConNoBackend[]> {
-    const res = await apiClient.get<unknown>(`/api/v1/nhan-tra/theo-don/${donId}/con-no`);
+    const res = await apiClient.get<unknown>(`/api/nhan-tra/theo-don/${donId}/con-no`);
     return unwrapResult<ThietBiConNoBackend[]>(res.data);
   },
 
@@ -136,7 +136,7 @@ export const returnApi = {
     danhSachChiTietBanGiao: number[],
     ghiChu?: string
   ): Promise<NhanTraBackend> {
-    const res = await apiClient.post<unknown>(`/api/v1/nhan-tra/theo-don/${donId}`, {
+    const res = await apiClient.post<unknown>(`/api/nhan-tra/theo-don/${donId}`, {
       danhSachChiTietBanGiao,
       ghiChu,
     });
@@ -148,7 +148,7 @@ export const returnApi = {
     danhSachDong: DongNhanTraRequest[],
     ghiChu?: string
   ): Promise<NhanTraBackend> {
-    const res = await apiClient.put<unknown>(`/api/v1/nhan-tra/${phieuId}`, {
+    const res = await apiClient.put<unknown>(`/api/nhan-tra/${phieuId}`, {
       danhSachDong,
       ghiChu,
     });
@@ -160,7 +160,7 @@ export const returnApi = {
     danhSachChiTietNhanTra: number[],
     lyDo: string
   ): Promise<{ phieuGoc: NhanTraBackend; phieuMoi: NhanTraBackend }> {
-    const res = await apiClient.post<unknown>(`/api/v1/nhan-tra/${phieuId}/tach-cho-xu-ly`, {
+    const res = await apiClient.post<unknown>(`/api/nhan-tra/${phieuId}/tach-cho-xu-ly`, {
       danhSachChiTietNhanTra,
       lyDo,
     });
@@ -172,16 +172,16 @@ export const returnApi = {
     chiTietId: number,
     req: { lyDo: string; bienBanMat?: string; maPhuPhiBoiThuong: number }
   ): Promise<ChiTietNhanTraBackend> {
-    const res = await apiClient.post<unknown>(`/api/v1/nhan-tra/${phieuId}/chi-tiet/${chiTietId}/duyet-mat`, req);
+    const res = await apiClient.post<unknown>(`/api/nhan-tra/${phieuId}/chi-tiet/${chiTietId}/duyet-mat`, req);
     return unwrapResult<ChiTietNhanTraBackend>(res.data);
   },
 
   async chotNhanTra(phieuId: number): Promise<NhanTraBackend> {
-    const res = await apiClient.post<unknown>(`/api/v1/nhan-tra/${phieuId}/chot`);
+    const res = await apiClient.post<unknown>(`/api/nhan-tra/${phieuId}/chot`);
     return unwrapResult<NhanTraBackend>(res.data);
   },
 
-  // ─── Quá hạn (/api/v1/qua-han) ───
+  // ─── Quá hạn (/api/qua-han) ───
   async layDonQuaHan(params?: {
     denThoiDiem?: string;
     maDon?: number;
@@ -190,28 +190,28 @@ export const returnApi = {
     soMoiTrang?: number;
   }): Promise<PagedBackendResponse<DonQuaHanBackend>> {
     const q = buildQuery(params as Record<string, unknown>);
-    const res = await apiClient.get<unknown>(`/api/v1/qua-han${q}`);
+    const res = await apiClient.get<unknown>(`/api/qua-han${q}`);
     return unwrapPaged<DonQuaHanBackend>(res.data);
   },
 
   async layChiTietQuaHan(donId: number): Promise<QuaHanChiTietBackend> {
-    const res = await apiClient.get<unknown>(`/api/v1/qua-han/${donId}`);
+    const res = await apiClient.get<unknown>(`/api/qua-han/${donId}`);
     return unwrapResult<QuaHanChiTietBackend>(res.data);
   },
 
   async layDonBiAnhHuong(donId: number): Promise<unknown[]> {
-    const res = await apiClient.get<unknown>(`/api/v1/qua-han/${donId}/don-bi-anh-huong`);
+    const res = await apiClient.get<unknown>(`/api/qua-han/${donId}/don-bi-anh-huong`);
     return unwrapResult<unknown[]>(res.data);
   },
 
   async quetNhacQuaHan(mocQuet?: string): Promise<unknown> {
     const q = buildQuery({ mocQuet });
-    const res = await apiClient.post<unknown>(`/api/v1/qua-han/quet-nhac${q}`);
+    const res = await apiClient.post<unknown>(`/api/qua-han/quet-nhac${q}`);
     return unwrapResult<unknown>(res.data);
   },
 
   async layNhatKyLienHe(donId: number): Promise<NhatKyLienHeQuaHanBackend[]> {
-    const res = await apiClient.get<unknown>(`/api/v1/qua-han/${donId}/nhat-ky-lien-he`);
+    const res = await apiClient.get<unknown>(`/api/qua-han/${donId}/nhat-ky-lien-he`);
     return unwrapResult<NhatKyLienHeQuaHanBackend[]>(res.data);
   },
 
@@ -219,7 +219,7 @@ export const returnApi = {
     donId: number,
     req: TaoNhatKyLienHeQuaHanRequest
   ): Promise<NhatKyLienHeQuaHanBackend> {
-    const res = await apiClient.post<unknown>(`/api/v1/qua-han/${donId}/nhat-ky-lien-he`, req);
+    const res = await apiClient.post<unknown>(`/api/qua-han/${donId}/nhat-ky-lien-he`, req);
     return unwrapResult<NhatKyLienHeQuaHanBackend>(res.data);
   },
 };

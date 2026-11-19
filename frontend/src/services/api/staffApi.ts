@@ -1,6 +1,6 @@
-/**
+﻿/**
  * staffApi.ts - Quản trị nhân sự, vai trò & tài khoản (WP-M01: UC07 - UC11, UC13, UC16)
- * Kết nối các API admin (/api/v1/admin/nhan-vien, /api/v1/admin/tai-khoan) qua apiClient.
+ * Kết nối các API admin (/api/nhan-vien, /api/tai-khoan) qua apiClient.
  */
 
 import { apiClient } from "../apiClient";
@@ -109,7 +109,7 @@ export const staffApi = {
    */
   async timNhanVien(params?: TimNhanVienParams): Promise<PhanTrangResponse<NhanVienResponse>> {
     const q = buildQuery(params as Record<string, unknown>);
-    const res = await apiClient.get<PhanTrangResponse<NhanVienResponse>>(`/api/v1/admin/nhan-vien${q}`);
+    const res = await apiClient.get<PhanTrangResponse<NhanVienResponse>>(`/api/nhan-vien${q}`);
     return res.data;
   },
 
@@ -117,7 +117,7 @@ export const staffApi = {
    * Xem chi tiết hồ sơ nhân viên (UC08 / UC1.8)
    */
   async layNhanVien(id: number): Promise<NhanVienResponse> {
-    const res = await apiClient.get<NhanVienResponse>(`/api/v1/admin/nhan-vien/${id}`);
+    const res = await apiClient.get<NhanVienResponse>(`/api/nhan-vien/${id}`);
     return res.data;
   },
 
@@ -125,7 +125,7 @@ export const staffApi = {
    * Tạo tài khoản nhân viên mới kèm mật khẩu khởi tạo và phân quyền vai trò (UC07 / UC1.7, UC16 / UC1.7.1)
    */
   async taoNhanVien(req: TaoNhanVienRequest): Promise<NhanVienResponse> {
-    const res = await apiClient.post<NhanVienResponse>("/api/v1/admin/nhan-vien", req);
+    const res = await apiClient.post<NhanVienResponse>("/api/nhan-vien", req);
     return res.data;
   },
 
@@ -133,7 +133,7 @@ export const staffApi = {
    * Cập nhật thông tin lý lịch nhân sự (UC08 / UC1.8)
    */
   async capNhatNhanVien(id: number, req: CapNhatNhanVienRequest): Promise<NhanVienResponse> {
-    const res = await apiClient.put<NhanVienResponse>(`/api/v1/admin/nhan-vien/${id}`, req);
+    const res = await apiClient.put<NhanVienResponse>(`/api/nhan-vien/${id}`, req);
     return res.data;
   },
 
@@ -141,7 +141,7 @@ export const staffApi = {
    * Thay đổi vai trò nghiệp vụ (Admin <-> Staff) kèm lý do phê duyệt (UC10 / UC1.10)
    */
   async doiVaiTro(id: number, req: DoiVaiTroRequest): Promise<NhanVienResponse> {
-    const res = await apiClient.post<NhanVienResponse>(`/api/v1/admin/nhan-vien/${id}/doi-vai-tro`, req);
+    const res = await apiClient.post<NhanVienResponse>(`/api/nhan-vien/${id}/doi-vai-tro`, req);
     return res.data;
   },
 
@@ -149,7 +149,7 @@ export const staffApi = {
    * Ghi nhận nhân viên nghỉ việc và hủy hiệu lực tài khoản (UC08 Phụ lục / UC1.8)
    */
   async ghiNhanNghiViec(id: number, req: NghiViecRequest): Promise<NhanVienResponse> {
-    const res = await apiClient.post<NhanVienResponse>(`/api/v1/admin/nhan-vien/${id}/nghi-viec`, req);
+    const res = await apiClient.post<NhanVienResponse>(`/api/nhan-vien/${id}/nghi-viec`, req);
     return res.data;
   },
 
@@ -158,7 +158,7 @@ export const staffApi = {
    */
   async timTaiKhoan(params?: TimTaiKhoanParams): Promise<PhanTrangResponse<TaiKhoanResponse>> {
     const q = buildQuery(params as Record<string, unknown>);
-    const res = await apiClient.get<PhanTrangResponse<TaiKhoanResponse>>(`/api/v1/admin/tai-khoan${q}`);
+    const res = await apiClient.get<PhanTrangResponse<TaiKhoanResponse>>(`/api/tai-khoan${q}`);
     return res.data;
   },
 
@@ -166,7 +166,7 @@ export const staffApi = {
    * Khóa tài khoản khách hàng hoặc nhân viên kèm lý do bắt buộc (UC11 / UC1.11)
    */
   async khoaTaiKhoan(maTaiKhoan: number, lyDo: string): Promise<TaiKhoanResponse> {
-    const res = await apiClient.post<TaiKhoanResponse>(`/api/v1/admin/tai-khoan/${maTaiKhoan}/khoa`, { lyDo });
+    const res = await apiClient.post<TaiKhoanResponse>(`/api/tai-khoan/${maTaiKhoan}/khoa`, { lyDo });
     return res.data;
   },
 
@@ -174,7 +174,7 @@ export const staffApi = {
    * Mở khóa tài khoản đã bị khóa (UC11 / UC1.11)
    */
   async moKhoaTaiKhoan(maTaiKhoan: number, lyDo: string): Promise<TaiKhoanResponse> {
-    const res = await apiClient.post<TaiKhoanResponse>(`/api/v1/admin/tai-khoan/${maTaiKhoan}/mo-khoa`, { lyDo });
+    const res = await apiClient.post<TaiKhoanResponse>(`/api/tai-khoan/${maTaiKhoan}/mo-khoa`, { lyDo });
     return res.data;
   },
 };

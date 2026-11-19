@@ -1,4 +1,4 @@
-using System.IdentityModel.Tokens.Jwt;
+﻿using System.IdentityModel.Tokens.Jwt;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
@@ -90,37 +90,37 @@ public class ApiHuyHoanTests : IDisposable
     {
         var don = Don(TimeSpan.FromHours(36));
 
-        Assert.Equal(HttpStatusCode.Unauthorized, (await Client().GetAsync($"/api/v1/don-thue/{don.MaDon}/huy/xem-truoc")).StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await Client().GetAsync($"/api/don-thue/{don.MaDon}/huy/xem-truoc")).StatusCode);
 
-        var xem = await KhachA.GetAsync($"/api/v1/don-thue/{don.MaDon}/huy/xem-truoc");
+        var xem = await KhachA.GetAsync($"/api/don-thue/{don.MaDon}/huy/xem-truoc");
         Assert.Equal(HttpStatusCode.OK, xem.StatusCode);
         var bang = await Json(xem);
         Assert.Equal(300_000, bang.GetProperty("tienThueGiuLai").GetDecimal());
         var dau = bang.GetProperty("dauVanTay").GetString();
 
         // Dấu sai → 409 kèm bảng mới trong chiTiet.
-        var sai = await KhachA.PostAsJsonAsync($"/api/v1/don-thue/{don.MaDon}/huy", new { lyDo = "x", xacNhanChiPhi = true, dauVanTayXemTruoc = "cu" });
+        var sai = await KhachA.PostAsJsonAsync($"/api/don-thue/{don.MaDon}/huy", new { lyDo = "x", xacNhanChiPhi = true, dauVanTayXemTruoc = "cu" });
         Assert.Equal(HttpStatusCode.Conflict, sai.StatusCode);
         var loi = await Json(sai);
         Assert.Equal("CHI_PHI_HUY_DA_THAY_DOI", loi.GetProperty("maLoi").GetString());
         Assert.Equal(dau, loi.GetProperty("chiTiet").GetProperty("DauVanTay").GetString());
 
         // Khách B: 404 không lộ đơn.
-        var b = await KhachB.PostAsJsonAsync($"/api/v1/don-thue/{don.MaDon}/huy", new { lyDo = "x", xacNhanChiPhi = true, dauVanTayXemTruoc = dau });
+        var b = await KhachB.PostAsJsonAsync($"/api/don-thue/{don.MaDon}/huy", new { lyDo = "x", xacNhanChiPhi = true, dauVanTayXemTruoc = dau });
         Assert.Equal(HttpStatusCode.NotFound, b.StatusCode);
         Assert.Equal("DON_KHONG_TIM_THAY", (await Json(b)).GetProperty("maLoi").GetString());
 
-        var ok = await KhachA.PostAsJsonAsync($"/api/v1/don-thue/{don.MaDon}/huy", new { lyDo = "Bận", xacNhanChiPhi = true, dauVanTayXemTruoc = dau });
+        var ok = await KhachA.PostAsJsonAsync($"/api/don-thue/{don.MaDon}/huy", new { lyDo = "Bận", xacNhanChiPhi = true, dauVanTayXemTruoc = dau });
         Assert.Equal(HttpStatusCode.OK, ok.StatusCode);
         var kq = await Json(ok);
         Assert.Equal("KhachHuy", kq.GetProperty("trangThai").GetString());
         Assert.Equal(2, kq.GetProperty("yeuCauHoan").GetArrayLength());
 
-        var ds = await Json(await KhachA.GetAsync($"/api/v1/hoan-tien/theo-don/{don.MaDon}"));
+        var ds = await Json(await KhachA.GetAsync($"/api/hoan-tien/theo-don/{don.MaDon}"));
         Assert.Equal(1_300_000, ds.GetProperty("tongDaHoan").GetDecimal());
-        Assert.Equal(HttpStatusCode.NotFound, (await KhachB.GetAsync($"/api/v1/hoan-tien/theo-don/{don.MaDon}")).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await KhachB.GetAsync($"/api/hoan-tien/theo-don/{don.MaDon}")).StatusCode);
 
-        var chiTiet = await Json(await KhachA.GetAsync($"/api/v1/don-thue/{don.MaDon}"));
+        var chiTiet = await Json(await KhachA.GetAsync($"/api/don-thue/{don.MaDon}"));
         Assert.Equal("KhachHuy", chiTiet.GetProperty("taiChinh").GetProperty("huy").GetProperty("loaiHuy").GetString());
     }
 
@@ -128,17 +128,17 @@ public class ApiHuyHoanTests : IDisposable
     public async Task PhanQuyen_CuaHangHuyVaThaoTacHoan()
     {
         var don = Don(TimeSpan.FromHours(5));
-        Assert.Equal(HttpStatusCode.Forbidden, (await KhachA.PostAsJsonAsync($"/api/v1/van-hanh/don-thue/{don.MaDon}/cua-hang-huy", new { lyDo = "x" })).StatusCode);
-        Assert.Equal(HttpStatusCode.Forbidden, (await NhanVien.PostAsJsonAsync($"/api/v1/van-hanh/don-thue/{don.MaDon}/cua-hang-huy", new { lyDo = "x" })).StatusCode);
-        Assert.Equal(HttpStatusCode.Forbidden, (await KhachA.PostAsync("/api/v1/hoan-tien/1/xu-ly", null)).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await KhachA.PostAsJsonAsync($"/api/don-thue/{don.MaDon}/cua-hang-huy", new { lyDo = "x" })).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await NhanVien.PostAsJsonAsync($"/api/don-thue/{don.MaDon}/cua-hang-huy", new { lyDo = "x" })).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await KhachA.PostAsync("/api/hoan-tien/1/xu-ly", null)).StatusCode);
 
-        var dau = (await Json(await QuanTri.GetAsync($"/api/v1/van-hanh/don-thue/{don.MaDon}/cua-hang-huy/xem-truoc"))).GetProperty("dauVanTay").GetString();
-        var r = await QuanTri.PostAsJsonAsync($"/api/v1/van-hanh/don-thue/{don.MaDon}/cua-hang-huy", new { lyDo = "Thiếu lều", xacNhanChiPhi = true, dauVanTayXemTruoc = dau });
+        var dau = (await Json(await QuanTri.GetAsync($"/api/don-thue/{don.MaDon}/cua-hang-huy/xem-truoc"))).GetProperty("dauVanTay").GetString();
+        var r = await QuanTri.PostAsJsonAsync($"/api/don-thue/{don.MaDon}/cua-hang-huy", new { lyDo = "Thiếu lều", xacNhanChiPhi = true, dauVanTayXemTruoc = dau });
         Assert.Equal(HttpStatusCode.OK, r.StatusCode);
         Assert.Equal("CuaHangHuy", (await Json(r)).GetProperty("trangThai").GetString());
 
         // Đã hủy bởi quyết định khác → 409.
-        var lai = await KhachA.PostAsJsonAsync($"/api/v1/don-thue/{don.MaDon}/huy", new { lyDo = "x" });
+        var lai = await KhachA.PostAsJsonAsync($"/api/don-thue/{don.MaDon}/huy", new { lyDo = "x" });
         Assert.Equal(HttpStatusCode.Conflict, lai.StatusCode);
         Assert.Equal("DON_DA_HUY_KHAC_Y_DINH", (await Json(lai)).GetProperty("maLoi").GetString());
     }
@@ -148,23 +148,23 @@ public class ApiHuyHoanTests : IDisposable
     {
         var don = Don(TimeSpan.FromHours(72));
         _db.Gateway.MacDinh = GatewayGia.DaTiepNhan;
-        var dau = (await Json(await KhachA.GetAsync($"/api/v1/don-thue/{don.MaDon}/huy/xem-truoc"))).GetProperty("dauVanTay").GetString();
-        var kq = await Json(await KhachA.PostAsJsonAsync($"/api/v1/don-thue/{don.MaDon}/huy", new { lyDo = "x", xacNhanChiPhi = true, dauVanTayXemTruoc = dau }));
+        var dau = (await Json(await KhachA.GetAsync($"/api/don-thue/{don.MaDon}/huy/xem-truoc"))).GetProperty("dauVanTay").GetString();
+        var kq = await Json(await KhachA.PostAsJsonAsync($"/api/don-thue/{don.MaDon}/huy", new { lyDo = "x", xacNhanChiPhi = true, dauVanTayXemTruoc = dau }));
         var ma = kq.GetProperty("yeuCauHoan")[0].GetProperty("maYeuCau").GetString()!;
         var soTien = kq.GetProperty("yeuCauHoan")[0].GetProperty("soTien").GetDecimal();
 
-        var gia = await Client().PostAsJsonAsync("/api/v1/hoan-tien/ket-qua", new { maYeuCau = ma, soTien, trangThai = "ThanhCong", chuKy = "gia" });
+        var gia = await Client().PostAsJsonAsync("/api/hoan-tien/ket-qua", new { maYeuCau = ma, soTien, trangThai = "ThanhCong", chuKy = "gia" });
         Assert.Equal(HttpStatusCode.BadRequest, gia.StatusCode);
         Assert.Equal("KET_QUA_HOAN_KHONG_KHOP", (await Json(gia)).GetProperty("maLoi").GetString());
 
-        var that = await Client().PostAsJsonAsync("/api/v1/hoan-tien/ket-qua",
+        var that = await Client().PostAsJsonAsync("/api/hoan-tien/ket-qua",
             new { maYeuCau = ma, maGiaoDichHoanCong = "GD-9", soTien, trangThai = "ThanhCong", chuKy = GatewayGia.Ky(ma, "GD-9", soTien, "ThanhCong") });
         Assert.Equal(HttpStatusCode.OK, that.StatusCode);
         Assert.Equal("ThanhCong", (await Json(that)).GetProperty("trangThai").GetString());
 
         // Khoản còn lại đang chờ: nhân viên bấm xử lý → 409 phải đối chiếu trước.
         var conLai = kq.GetProperty("yeuCauHoan")[1].GetProperty("maHoanTien").GetInt64();
-        var xl = await NhanVien.PostAsync($"/api/v1/hoan-tien/{conLai}/xu-ly", null);
+        var xl = await NhanVien.PostAsync($"/api/hoan-tien/{conLai}/xu-ly", null);
         Assert.Equal(HttpStatusCode.Conflict, xl.StatusCode);
         Assert.Equal("HOAN_CHUA_RO_KET_QUA", (await Json(xl)).GetProperty("maLoi").GetString());
     }
@@ -173,8 +173,8 @@ public class ApiHuyHoanTests : IDisposable
     public async Task PutHuyTuan2_DonDaThanhToan_YeuCauXacNhanBang()
     {
         var don = Don(TimeSpan.FromHours(72));
-        Assert.Equal(HttpStatusCode.Unauthorized, (await Client().PutAsJsonAsync($"/api/v1/don-thue/{don.MaDon}/huy", "lý do")).StatusCode);
-        var r = await KhachA.PutAsJsonAsync($"/api/v1/don-thue/{don.MaDon}/huy", "lý do");
+        Assert.Equal(HttpStatusCode.Unauthorized, (await Client().PutAsJsonAsync($"/api/don-thue/{don.MaDon}/huy", "lý do")).StatusCode);
+        var r = await KhachA.PutAsJsonAsync($"/api/don-thue/{don.MaDon}/huy", "lý do");
         Assert.Equal(HttpStatusCode.Conflict, r.StatusCode);
         Assert.Equal("CHI_PHI_HUY_DA_THAY_DOI", (await Json(r)).GetProperty("maLoi").GetString());
     }

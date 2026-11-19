@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+﻿import { test, expect } from "@playwright/test";
 import { authHeaders, loginApi } from "../../helpers/auth.js";
 import { uniqueSuffix } from "../../helpers/testData.js";
 
@@ -8,11 +8,11 @@ test.describe("Phân hệ 6: Danh mục, Sản phẩm, Thiết bị, Kiểm kê 
     const suffix = uniqueSuffix();
 
     // UC6.3: Tra cứu danh mục
-    const listRes = await request.get("/api/admin/danh-muc", { headers: authHeaders(token) });
+    const listRes = await request.get("/api/danh-muc/quan-ly", { headers: authHeaders(token) });
     expect(listRes.ok()).toBeTruthy();
 
     // UC6.1 & UC6.1.1: Tạo danh mục mới
-    const createRes = await request.post("/api/admin/danh-muc", {
+    const createRes = await request.post("/api/danh-muc", {
       headers: authHeaders(token),
       data: {
         tenDanhMuc: `Danh mục PW ${suffix}`,
@@ -26,7 +26,7 @@ test.describe("Phân hệ 6: Danh mục, Sản phẩm, Thiết bị, Kiểm kê 
     expect(created.maDanhMuc).toBeGreaterThan(0);
 
     // UC6.2: Cập nhật danh mục
-    const updRes = await request.put(`/api/admin/danh-muc/${created.maDanhMuc}`, {
+    const updRes = await request.put(`/api/danh-muc/${created.maDanhMuc}`, {
       headers: authHeaders(token),
       data: {
         tenDanhMuc: `Danh mục PW ${suffix} Updated`,
@@ -38,13 +38,13 @@ test.describe("Phân hệ 6: Danh mục, Sản phẩm, Thiết bị, Kiểm kê 
     expect(updRes.ok()).toBeTruthy();
 
     // UC6.4: Đổi trạng thái TamAn -> xóa dọn dữ liệu test
-    const statusRes = await request.patch(`/api/admin/danh-muc/${created.maDanhMuc}/trang-thai`, {
+    const statusRes = await request.patch(`/api/danh-muc/${created.maDanhMuc}/trang-thai`, {
       headers: authHeaders(token),
       data: { trangThaiMoi: "TamAn" },
     });
     expect(statusRes.ok()).toBeTruthy();
 
-    const delRes = await request.delete(`/api/admin/danh-muc/${created.maDanhMuc}`, {
+    const delRes = await request.delete(`/api/danh-muc/${created.maDanhMuc}`, {
       headers: authHeaders(token),
     });
     expect(delRes.ok()).toBeTruthy();
@@ -54,16 +54,16 @@ test.describe("Phân hệ 6: Danh mục, Sản phẩm, Thiết bị, Kiểm kê 
     const { token } = await loginApi(request, "admin");
     const suffix = uniqueSuffix();
 
-    const catsRes = await request.get("/api/admin/danh-muc", { headers: authHeaders(token) });
+    const catsRes = await request.get("/api/danh-muc/quan-ly", { headers: authHeaders(token) });
     const cats = (await catsRes.json()) as Array<{ maDanhMuc: number }>;
     expect(cats.length).toBeGreaterThan(0);
 
     // UC6.7: Tra cứu sản phẩm quản trị
-    const listRes = await request.get("/api/admin/san-pham?soMoiTrang=20", { headers: authHeaders(token) });
+    const listRes = await request.get("/api/san-pham/quan-ly?soMoiTrang=20", { headers: authHeaders(token) });
     expect(listRes.ok()).toBeTruthy();
 
     // UC6.5 & UC6.5.1: Tạo sản phẩm mới (kiểm tra giá thuê & cọc hợp lệ)
-    const createRes = await request.post("/api/admin/san-pham", {
+    const createRes = await request.post("/api/san-pham", {
       headers: authHeaders(token),
       data: {
         maDanhMuc: cats[0].maDanhMuc,
@@ -80,7 +80,7 @@ test.describe("Phân hệ 6: Danh mục, Sản phẩm, Thiết bị, Kiểm kê 
     const created = (await createRes.json()) as { maSanPham: number };
 
     // UC6.6: Cập nhật sản phẩm
-    const updRes = await request.put(`/api/admin/san-pham/${created.maSanPham}`, {
+    const updRes = await request.put(`/api/san-pham/${created.maSanPham}`, {
       headers: authHeaders(token),
       data: {
         maDanhMuc: cats[0].maDanhMuc,
@@ -96,7 +96,7 @@ test.describe("Phân hệ 6: Danh mục, Sản phẩm, Thiết bị, Kiểm kê 
     expect(updRes.ok()).toBeTruthy();
 
     // UC6.8: Đổi trạng thái kinh doanh sang NgungKinhDoanh
-    const stRes = await request.patch(`/api/admin/san-pham/${created.maSanPham}/trang-thai`, {
+    const stRes = await request.patch(`/api/san-pham/${created.maSanPham}/trang-thai`, {
       headers: authHeaders(token),
       data: { trangThaiMoi: "NgungKinhDoanh" },
     });

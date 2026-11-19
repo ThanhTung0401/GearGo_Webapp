@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Script kiểm thử tự động toàn diện cho WEEK 4 - THANH TÙNG:
  * - W4-T6: Dịch vụ hoàn tiền dùng chung (Quản lý yêu cầu hoàn, phát lệnh, đối chiếu, callback)
  * - W4-T7: Hủy đơn an toàn theo chính sách (Khách hủy, Cửa hàng hủy, Không đến nhận)
@@ -110,13 +110,13 @@ async function runTests() {
   console.log(`${colors.bold}[PHẦN 1] Kiểm tra phân quyền truy cập${colors.reset}`);
 
   // Test 1: Khách hàng bị cấm gọi API vận hành xem trước cửa hàng hủy -> 403
-  const t1 = await callApi(`/api/v1/van-hanh/don-thue/${testDonId}/cua-hang-huy/xem-truoc`, {
+  const t1 = await callApi(`/api/don-thue/${testDonId}/cua-hang-huy/xem-truoc`, {
     headers: { Authorization: `Bearer ${customerToken}` }
   });
   assert(t1.status === 403, 'Khách hàng bị cấm xem trước hủy vận hành (HTTP 403 Policy AdminOnly)');
 
   // Test 2: Nhân viên thường bị cấm gọi Cửa hàng hủy đơn (chỉ Quản trị viên mới được hủy) -> 403
-  const t2 = await callApi(`/api/v1/van-hanh/don-thue/${testDonId}/cua-hang-huy`, {
+  const t2 = await callApi(`/api/don-thue/${testDonId}/cua-hang-huy`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${staffToken}` },
     body: JSON.stringify({ lyDo: 'Nhân viên tự ý hủy' })
@@ -124,7 +124,7 @@ async function runTests() {
   assert(t2.status === 403, 'Nhân viên thường bị cấm thao tác Cửa hàng hủy (HTTP 403 AdminOnly)');
 
   // Test 3: Khách hàng không được quyền phát lệnh xử lý hoàn tiền -> 403
-  const t3 = await callApi(`/api/v1/hoan-tien/1/xu-ly`, {
+  const t3 = await callApi(`/api/hoan-tien/1/xu-ly`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${customerToken}` }
   });
@@ -136,7 +136,7 @@ async function runTests() {
   console.log(`\n${colors.bold}[PHẦN 2] Kiểm tra W4-T7: Chính sách hủy đơn của Khách hàng${colors.reset}`);
 
   // Test 4: Khách xem trước bảng tính chi phí hủy đơn của chính mình -> 200 hoặc 400 nếu đơn không đủ điều kiện
-  const t4 = await callApi(`/api/v1/don-thue/${testDonId}/huy/xem-truoc`, {
+  const t4 = await callApi(`/api/don-thue/${testDonId}/huy/xem-truoc`, {
     headers: { Authorization: `Bearer ${customerToken}` }
   });
   assert(t4.status === 200 || (t4.status === 400 && t4.data?.maLoi), 
@@ -146,13 +146,13 @@ async function runTests() {
   }
 
   // Test 5: Khách hàng khác xem trước hủy đơn không thuộc sở hữu -> 404 (Bảo vệ IDOR)
-  const t5 = await callApi(`/api/v1/don-thue/${testDonId}/huy/xem-truoc`, {
+  const t5 = await callApi(`/api/don-thue/${testDonId}/huy/xem-truoc`, {
     headers: { Authorization: `Bearer ${otherCustomerToken}` }
   });
   assert(t5.status === 404 || t5.status === 403, 'Chặn khách hàng lạ xem trước hủy đơn người khác (Bảo vệ IDOR)');
 
   // Test 6: Kiểm tra tính toàn vẹn khi hủy đơn: Chặn hủy khi lý do rỗng -> 400
-  const t6 = await callApi(`/api/v1/don-thue/${testDonId}/huy`, {
+  const t6 = await callApi(`/api/don-thue/${testDonId}/huy`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${customerToken}` },
     body: JSON.stringify({ lyDo: '' })
@@ -165,21 +165,21 @@ async function runTests() {
   console.log(`\n${colors.bold}[PHẦN 3] Kiểm tra W4-T7: Cửa hàng hủy & Ghi nhận không đến nhận${colors.reset}`);
 
   // Test 7: Admin xem trước chi phí Cửa hàng hủy -> 200 hoặc 400
-  const t7 = await callApi(`/api/v1/van-hanh/don-thue/${testDonId}/cua-hang-huy/xem-truoc`, {
+  const t7 = await callApi(`/api/don-thue/${testDonId}/cua-hang-huy/xem-truoc`, {
     headers: { Authorization: `Bearer ${adminToken}` }
   });
   assert(t7.status === 200 || (t7.status === 400 && t7.data?.maLoi), 
     `Admin xem trước bảng tính Cửa hàng hủy (HTTP ${t7.status})`);
 
   // Test 8: Nhân viên xem trước bảng tính ghi nhận khách không đến nhận -> 200 hoặc 400
-  const t8 = await callApi(`/api/v1/van-hanh/don-thue/${testDonId}/khong-den-nhan/xem-truoc`, {
+  const t8 = await callApi(`/api/don-thue/${testDonId}/khong-den-nhan/xem-truoc`, {
     headers: { Authorization: `Bearer ${staffToken}` }
   });
   assert(t8.status === 200 || (t8.status === 400 && t8.data?.maLoi),
     `Nhân viên xem trước trường hợp khách không đến nhận (HTTP ${t8.status})`);
 
   // Test 9: Ghi nhận không đến nhận thiếu ghi chú -> 400
-  const t9 = await callApi(`/api/v1/van-hanh/don-thue/${testDonId}/khong-den-nhan`, {
+  const t9 = await callApi(`/api/don-thue/${testDonId}/khong-den-nhan`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${staffToken}` },
     body: JSON.stringify({ ghiChu: '' })
@@ -192,26 +192,26 @@ async function runTests() {
   console.log(`\n${colors.bold}[PHẦN 4] Kiểm tra W4-T6: Dịch vụ hoàn tiền dùng chung${colors.reset}`);
 
   // Test 10: Tra cứu danh sách yêu cầu hoàn tiền theo đơn
-  const t10 = await callApi(`/api/v1/hoan-tien/theo-don/${testDonId}`, {
+  const t10 = await callApi(`/api/hoan-tien/theo-don/${testDonId}`, {
     headers: { Authorization: `Bearer ${staffToken}` }
   });
   assert(t10.status === 200 && Array.isArray(t10.data?.items), 
     `Tra cứu danh sách hoàn tiền theo đơn #${testDonId} thành công (HTTP 200, Tổng yêu cầu: ${t10.data?.items?.length})`);
 
   // Test 11: Chủ đơn xem danh sách hoàn tiền của đơn mình -> 200
-  const t11 = await callApi(`/api/v1/hoan-tien/theo-don/${testDonId}`, {
+  const t11 = await callApi(`/api/hoan-tien/theo-don/${testDonId}`, {
     headers: { Authorization: `Bearer ${customerToken}` }
   });
   assert(t11.status === 200 && Array.isArray(t11.data?.items), 'Khách hàng chủ đơn tra cứu yêu cầu hoàn tiền của mình (HTTP 200)');
 
   // Test 12: Khách hàng lạ xem danh sách hoàn tiền đơn người khác -> 404
-  const t12 = await callApi(`/api/v1/hoan-tien/theo-don/${testDonId}`, {
+  const t12 = await callApi(`/api/hoan-tien/theo-don/${testDonId}`, {
     headers: { Authorization: `Bearer ${otherCustomerToken}` }
   });
   assert(t12.status === 404 || t12.status === 403, 'Chặn khách hàng lạ xem danh sách hoàn tiền đơn người khác (HTTP 404)');
 
   // Test 13: Xử lý yêu cầu hoàn tiền không tồn tại -> 404
-  const t13 = await callApi(`/api/v1/hoan-tien/999999/xu-ly`, {
+  const t13 = await callApi(`/api/hoan-tien/999999/xu-ly`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${staffToken}` },
     body: JSON.stringify({})
@@ -219,14 +219,14 @@ async function runTests() {
   assert(t13.status === 404, 'Báo lỗi 404 khi xử lý yêu cầu hoàn tiền không tồn tại (HTTP 404)');
 
   // Test 14: Đối chiếu kết quả hoàn tiền không tồn tại -> 404
-  const t14 = await callApi(`/api/v1/hoan-tien/999999/doi-chieu`, {
+  const t14 = await callApi(`/api/hoan-tien/999999/doi-chieu`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${staffToken}` }
   });
   assert(t14.status === 404, 'Báo lỗi 404 khi đối chiếu yêu cầu hoàn tiền không tồn tại (HTTP 404)');
 
   // Test 15: Gateway webhook callback giả mạo chữ ký -> 400 KET_QUA_HOAN_KHONG_KHOP
-  const t15 = await callApi(`/api/v1/hoan-tien/ket-qua`, {
+  const t15 = await callApi(`/api/hoan-tien/ket-qua`, {
     method: 'POST',
     body: JSON.stringify({
       maYeuCau: 'REFUND-FAKE-001',
@@ -243,19 +243,19 @@ async function runTests() {
   console.log(`\n${colors.bold}[PHẦN 5] Kiểm tra W4-T9: Toàn cảnh tài chính đơn thuê & Dòng tiền${colors.reset}`);
 
   // Test 16: Khách hàng truy vấn chi tiết đơn và dòng tiền -> 200
-  const t16 = await callApi(`/api/v1/don-thue/${testDonId}`, {
+  const t16 = await callApi(`/api/don-thue/${testDonId}`, {
     headers: { Authorization: `Bearer ${customerToken}` }
   });
   assert(t16.status === 200 && t16.data != null, 'Khách hàng tra cứu toàn cảnh đơn thuê và dòng tiền (HTTP 200)');
 
   // Test 17: Vận hành tra cứu toàn cảnh đơn thuê -> 200
-  const t17 = await callApi(`/api/v1/van-hanh/don-thue/${testDonId}`, {
+  const t17 = await callApi(`/api/don-thue/xu-ly/${testDonId}`, {
     headers: { Authorization: `Bearer ${staffToken}` }
   });
   assert(t17.status === 200 && t17.data != null, 'Nhân viên vận hành tra cứu chi tiết tiến độ tài chính đơn (HTTP 200)');
 
   // Test 18: Lấy lịch sử biến động trạng thái và tài chính của đơn
-  const t18 = await callApi(`/api/v1/don-thue/${testDonId}/lich-su`, {
+  const t18 = await callApi(`/api/don-thue/${testDonId}/lich-su`, {
     headers: { Authorization: `Bearer ${customerToken}` }
   });
   assert(t18.status === 200 && Array.isArray(t18.data), 'Lấy lịch sử biến động vòng đời và sự kiện tài chính của đơn (HTTP 200)');

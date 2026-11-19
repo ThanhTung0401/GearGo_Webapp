@@ -1,5 +1,5 @@
-/**
- * handoverApi.ts - Chuẩn bị đơn (/api/chuan-bi-don) & Bàn giao BBBG (/api/v1/ban-giao)
+﻿/**
+ * handoverApi.ts - Chuẩn bị đơn (/api/chuan-bi-don) & Bàn giao BBBG (/api/ban-giao)
  */
 
 import { apiClient } from "../apiClient";
@@ -134,24 +134,24 @@ export const handoverApi = {
     return unwrapResult<BaoThieuThietBiResponse>(res.data);
   },
 
-  // ─── Bàn giao BBBG (/api/v1/ban-giao) ───
+  // ─── Bàn giao BBBG (/api/ban-giao) ───
   async layTheoDon(maDonThue: number): Promise<PhieuBanGiaoBackend> {
-    const res = await apiClient.get<unknown>(`/api/v1/ban-giao/don-thue/${maDonThue}`);
+    const res = await apiClient.get<unknown>(`/api/ban-giao/don-thue/${maDonThue}`);
     return unwrapResult<PhieuBanGiaoBackend>(res.data);
   },
 
   async taoHoacLayNhap(maDonThue: number): Promise<PhieuBanGiaoBackend> {
-    const res = await apiClient.post<unknown>(`/api/v1/ban-giao/nhap/${maDonThue}`);
+    const res = await apiClient.post<unknown>(`/api/ban-giao/nhap/${maDonThue}`);
     return unwrapResult<PhieuBanGiaoBackend>(res.data);
   },
 
   async capNhatNhap(maPhieuBanGiao: number, req: CapNhatPhieuBanGiaoRequest): Promise<PhieuBanGiaoBackend> {
-    const res = await apiClient.put<unknown>(`/api/v1/ban-giao/nhap/${maPhieuBanGiao}`, req);
+    const res = await apiClient.put<unknown>(`/api/ban-giao/nhap/${maPhieuBanGiao}`, req);
     return unwrapResult<PhieuBanGiaoBackend>(res.data);
   },
 
   async chotBanGiao(maPhieuBanGiao: number, tenNguoiNhanThucTe: string): Promise<boolean> {
-    const res = await apiClient.post<unknown>(`/api/v1/ban-giao/${maPhieuBanGiao}/chot`, { tenNguoiNhanThucTe });
+    const res = await apiClient.post<unknown>(`/api/ban-giao/${maPhieuBanGiao}/chot`, { tenNguoiNhanThucTe });
     return unwrapResult<boolean>(res.data);
   },
 };

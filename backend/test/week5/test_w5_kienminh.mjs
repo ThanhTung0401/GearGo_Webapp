@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Script kiểm thử tự động toàn diện cho Week 5 của Kiện Minh:
  * - W5-T6: Đánh giá sản phẩm và kiểm duyệt (UC08, UC03)
  * - W5-T8: Hoàn thiện thông báo và xử lý gửi (UC26)
@@ -89,22 +89,22 @@ async function runTests() {
   // Test 1: Khách hàng chưa đăng nhập xem danh sách và tổng hợp điểm sản phẩm (Public API)
   console.log(`\n${colors.yellow}1. Truy vấn công khai đánh giá và tổng hợp điểm sản phẩm${colors.reset}`);
   const sanPhamIdFixture = 1;
-  const resDanhGiaSp = await callApi(`/api/v1/danh-gia/san-pham/${sanPhamIdFixture}`);
+  const resDanhGiaSp = await callApi(`/api/danh-gia/san-pham/${sanPhamIdFixture}`);
   assert(resDanhGiaSp.status === 200 || resDanhGiaSp.status === 404, 'Xem danh sách đánh giá công khai (200 OK)');
   
-  const resTongHop = await callApi(`/api/v1/danh-gia/san-pham/${sanPhamIdFixture}/tong-hop`);
+  const resTongHop = await callApi(`/api/danh-gia/san-pham/${sanPhamIdFixture}/tong-hop`);
   assert(resTongHop.status === 200 || resTongHop.status === 404, 'Xem tổng hợp điểm & histogram sao (200 OK)');
 
   // Test 2: Khách lấy danh sách sản phẩm đủ điều kiện đánh giá
   console.log(`\n${colors.yellow}2. Lấy danh sách sản phẩm đủ điều kiện đánh giá (đơn HoanTat)${colors.reset}`);
-  const resDuDieuKien = await callApi('/api/v1/danh-gia/du-dieu-kien', {
+  const resDuDieuKien = await callApi('/api/danh-gia/du-dieu-kien', {
     headers: { Authorization: `Bearer ${customerToken}` }
   });
   assert(resDuDieuKien.status === 200, 'Khách hàng truy vấn sản phẩm đủ điều kiện đánh giá (200 OK)');
 
   // Test 3: W5-T6-A01 - Tạo đánh giá khi đơn chưa HoanTat hoặc chi tiết không tồn tại
   console.log(`\n${colors.yellow}3. W5-T6-A01: Chặn đánh giá khi đơn chưa Hoàn tất hoặc chi tiết sai${colors.reset}`);
-  const resChuaHoanTat = await callApi('/api/v1/danh-gia', {
+  const resChuaHoanTat = await callApi('/api/danh-gia', {
     method: 'POST',
     headers: { Authorization: `Bearer ${customerToken}` },
     body: JSON.stringify({
@@ -118,7 +118,7 @@ async function runTests() {
 
   // Test 4: Validation số sao (1 đến 5 sao nguyên)
   console.log(`\n${colors.yellow}4. Validation số sao không hợp lệ (ngoài 1-5)${colors.reset}`);
-  const resSaoLoi = await callApi('/api/v1/danh-gia', {
+  const resSaoLoi = await callApi('/api/danh-gia', {
     method: 'POST',
     headers: { Authorization: `Bearer ${customerToken}` },
     body: JSON.stringify({
@@ -131,14 +131,14 @@ async function runTests() {
 
   // Test 5: Quyền kiểm duyệt Admin: Khách/Staff không được ẩn đánh giá
   console.log(`\n${colors.yellow}5. Bảo mật kiểm duyệt: Chặn khách/nhân viên gọi API ẩn đánh giá${colors.reset}`);
-  const resChanKhachAn = await callApi('/api/v1/admin/danh-gia/1/an', {
+  const resChanKhachAn = await callApi('/api/danh-gia/1/an', {
     method: 'POST',
     headers: { Authorization: `Bearer ${customerToken}` },
     body: JSON.stringify({ lyDo: 'Nội dung phản cảm' })
   });
   assert(resChanKhachAn.status === 403, 'Khách bị chặn gọi API Admin ẩn đánh giá (403 Forbidden)');
 
-  const resChanStaffAn = await callApi('/api/v1/admin/danh-gia/1/an', {
+  const resChanStaffAn = await callApi('/api/danh-gia/1/an', {
     method: 'POST',
     headers: { Authorization: `Bearer ${staffToken}` },
     body: JSON.stringify({ lyDo: 'Nội dung phản cảm' })
@@ -147,7 +147,7 @@ async function runTests() {
 
   // Test 6: Admin tra cứu danh sách kiểm duyệt đánh giá
   console.log(`\n${colors.yellow}6. Admin xem danh sách kiểm duyệt đánh giá (có phân trang và lọc)${colors.reset}`);
-  const resAdminList = await callApi('/api/v1/admin/danh-gia?trang=1&soMoiTrang=10', {
+  const resAdminList = await callApi('/api/danh-gia?trang=1&soMoiTrang=10', {
     headers: { Authorization: `Bearer ${adminToken}` }
   });
   assert(resAdminList.status === 200, 'Admin lấy danh sách đánh giá thành công (200 OK)');
@@ -160,21 +160,21 @@ async function runTests() {
 
   // Test 7: Khách lấy danh sách thông báo của mình (phân trang)
   console.log(`\n${colors.yellow}7. Khách hàng lấy danh sách thông báo của mình${colors.reset}`);
-  const resThongBaoCuaToi = await callApi('/api/v1/thong-bao?trang=1&soMoiTrang=10', {
+  const resThongBaoCuaToi = await callApi('/api/thong-bao?trang=1&soMoiTrang=10', {
     headers: { Authorization: `Bearer ${customerToken}` }
   });
   assert(resThongBaoCuaToi.status === 200, 'Lấy danh sách thông báo in-app (200 OK)');
 
   // Test 8: Đếm số thông báo chưa đọc
   console.log(`\n${colors.yellow}8. Đếm số thông báo chưa đọc của tài khoản${colors.reset}`);
-  const resDemChuaDoc = await callApi('/api/v1/thong-bao/chua-doc/dem', {
+  const resDemChuaDoc = await callApi('/api/thong-bao/chua-doc/dem', {
     headers: { Authorization: `Bearer ${customerToken}` }
   });
   assert(resDemChuaDoc.status === 200, 'Đếm thông báo chưa đọc thành công (200 OK)');
 
   // Test 9: Đánh dấu tất cả đã đọc
   console.log(`\n${colors.yellow}9. Đánh dấu tất cả thông báo của tôi là đã đọc${colors.reset}`);
-  const resDocTatCa = await callApi('/api/v1/thong-bao/da-doc-tat-ca', {
+  const resDocTatCa = await callApi('/api/thong-bao/da-doc-tat-ca', {
     method: 'POST',
     headers: { Authorization: `Bearer ${customerToken}` }
   });
@@ -182,7 +182,7 @@ async function runTests() {
 
   // Test 10: W5-T8-A06 - Khách A không được đánh dấu đọc thông báo của khách B
   console.log(`\n${colors.yellow}10. W5-T8-A06: Bảo vệ scope - Khách không được sửa thông báo của người khác${colors.reset}`);
-  const resScopeLoi = await callApi('/api/v1/thong-bao/999999/da-doc', {
+  const resScopeLoi = await callApi('/api/thong-bao/999999/da-doc', {
     method: 'POST',
     headers: { Authorization: `Bearer ${customerToken}` }
   });
@@ -191,21 +191,21 @@ async function runTests() {
 
   // Test 11: Admin xem danh sách thông báo gửi lỗi (hàng chờ retry)
   console.log(`\n${colors.yellow}11. Admin xem danh sách thông báo gửi lỗi (hàng chờ email)${colors.reset}`);
-  const resAdminGuiLoi = await callApi('/api/v1/admin/thong-bao/gui-loi', {
+  const resAdminGuiLoi = await callApi('/api/thong-bao/gui-loi', {
     headers: { Authorization: `Bearer ${adminToken}` }
   });
   assert(resAdminGuiLoi.status === 200, 'Admin lấy danh sách thông báo gửi lỗi (200 OK)');
 
   // Test 12: Khách hàng bị chặn truy cập endpoint admin thông báo lỗi
   console.log(`\n${colors.yellow}12. Chặn khách hàng truy cập API thông báo lỗi của Admin${colors.reset}`);
-  const resChanKhachAdminTb = await callApi('/api/v1/admin/thong-bao/gui-loi', {
+  const resChanKhachAdminTb = await callApi('/api/thong-bao/gui-loi', {
     headers: { Authorization: `Bearer ${customerToken}` }
   });
   assert(resChanKhachAdminTb.status === 403, 'Khách bị cấm xem thông báo gửi lỗi của hệ thống (403 Forbidden)');
 
   // Test 13: Admin retry gửi thông báo
   console.log(`\n${colors.yellow}13. Admin thực hiện gửi lại thông báo lỗi (ThuLaiAsync)${colors.reset}`);
-  const resRetry = await callApi('/api/v1/admin/thong-bao/1/thu-lai', {
+  const resRetry = await callApi('/api/thong-bao/1/thu-lai', {
     method: 'POST',
     headers: { Authorization: `Bearer ${adminToken}` },
     body: JSON.stringify({ lyDo: 'Thử lại sau khi cấu hình SMTP' })

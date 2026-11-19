@@ -1,10 +1,10 @@
 ﻿import { useApp } from "../App";
-import { CartView } from "./customer/CartView";
-import { CheckoutView } from "./customer/CheckoutView";
-import { OrderConfirmedView } from "./customer/OrderConfirmedView";
-import { MyOrdersView } from "./customer/MyOrdersView";
-import { ProfileView } from "./customer/ProfileView";
-import { AIAdvisorView } from "./customer/AIAdvisorView";
+import { CartView } from "../modules/orders/CartView";
+import { CheckoutView } from "../modules/orders/CheckoutView";
+import { OrderConfirmedView } from "../modules/orders/OrderConfirmedView";
+import { MyOrdersView } from "../modules/orders/MyOrdersView";
+import { ProfileView } from "../modules/auth/ProfileView";
+import { AIAdvisorView } from "../modules/marketing/AIAdvisorView";
 
 export default function CustomerPortal() {
   const app = useApp();

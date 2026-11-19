@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+﻿import { test, expect } from "@playwright/test";
 import { loginUi } from "../../helpers/auth.js";
 import { useSubsystemPage, pauseForViewer } from "../../helpers/subsystemVideo.js";
 
@@ -9,7 +9,7 @@ test.describe.serial("Frontend PH10: Báo cáo, Nhật ký & Kiểm tra Responsi
     const page = getPage();
     await loginUi(page, "admin");
 
-    await page.getByRole("button", { name: "Báo cáo" }).first().click();
+    await page.getByRole("button", { name: "Báo cáo Kho & TC" }).first().click();
     await expect(page.getByText(/Báo cáo/i).first()).toBeVisible();
     await pauseForViewer(page);
 

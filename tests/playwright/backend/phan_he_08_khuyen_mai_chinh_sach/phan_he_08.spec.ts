@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+﻿import { test, expect } from "@playwright/test";
 import { authHeaders, loginApi } from "../../helpers/auth.js";
 import { getFutureRentalDates, uniqueSuffix } from "../../helpers/testData.js";
 
@@ -6,14 +6,14 @@ test.describe("Phân hệ 8: Khuyến mãi & Chính sách (UC8.1 - UC8.5)", () =
   test("UC8.1 & UC8.1.1 - Xem, kiểm tra & ghi phiên bản chính sách", async ({ request }) => {
     const { token } = await loginApi(request, "admin");
 
-    const curRes = await request.get("/api/v1/chinh-sach/hien-hanh");
+    const curRes = await request.get("/api/chinh-sach/hien-hanh");
     expect(curRes.ok()).toBeTruthy();
 
-    const listRes = await request.get("/api/v1/admin/chinh-sach", { headers: authHeaders(token) });
+    const listRes = await request.get("/api/chinh-sach", { headers: authHeaders(token) });
     expect(listRes.ok()).toBeTruthy();
 
     // UC8.1.1: Kiểm tra hợp lệ cấu hình chính sách trước khi ban hành
-    const validateRes = await request.post("/api/v1/admin/chinh-sach/kiem-tra", {
+    const validateRes = await request.post("/api/chinh-sach/kiem-tra", {
       headers: authHeaders(token),
       data: {
         gioKhoiTaoPhienBan: new Date().toISOString(),
@@ -35,12 +35,12 @@ test.describe("Phân hệ 8: Khuyến mãi & Chính sách (UC8.1 - UC8.5)", () =
     const { gioNhanIso, gioTraIso } = getFutureRentalDates(2, 30);
 
     // UC8.4: Tra cứu danh sách khuyến mãi
-    const listRes = await request.get("/api/v1/admin/khuyen-mai", { headers: authHeaders(token) });
+    const listRes = await request.get("/api/khuyen-mai", { headers: authHeaders(token) });
     expect(listRes.ok()).toBeTruthy();
 
     // UC8.2 & UC8.2.1: Tạo chương trình khuyến mãi mới (loaiGiam: 0=PhanTram, phamVi: 0=TatCa)
     const code = `PW${suffix}`;
-    const createRes = await request.post("/api/v1/admin/khuyen-mai", {
+    const createRes = await request.post("/api/khuyen-mai", {
       headers: authHeaders(token),
       data: {
         maGiamGia: code,
@@ -65,7 +65,7 @@ test.describe("Phân hệ 8: Khuyến mãi & Chính sách (UC8.1 - UC8.5)", () =
     expect(kmId).toBeGreaterThan(0);
 
     // UC8.3 & UC8.3.1: Cập nhật khuyến mãi
-    const updRes = await request.put(`/api/v1/admin/khuyen-mai/${kmId}`, {
+    const updRes = await request.put(`/api/khuyen-mai/${kmId}`, {
       headers: authHeaders(token),
       data: {
         tenKhuyenMai: `Khuyến mãi Playwright ${suffix} Edited`,
@@ -82,8 +82,8 @@ test.describe("Phân hệ 8: Khuyến mãi & Chính sách (UC8.1 - UC8.5)", () =
     });
     expect(updRes.ok()).toBeTruthy();
 
-    // UC8.5: Ngừng chương trình khuyến mãi (POST /api/v1/admin/khuyen-mai/{id}/tam-an)
-    const stopRes = await request.post(`/api/v1/admin/khuyen-mai/${kmId}/tam-an`, {
+    // UC8.5: Ngừng chương trình khuyến mãi (POST /api/khuyen-mai/{id}/tam-an)
+    const stopRes = await request.post(`/api/khuyen-mai/${kmId}/tam-an`, {
       headers: authHeaders(token),
       data: { lyDo: "Ngừng chương trình sau kiểm thử Playwright" },
     });

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IdentityModel.Tokens.Jwt;
 using System.Net;
 using System.Net.Http.Headers;
@@ -26,7 +26,7 @@ namespace GearGo.Tests.PhanHeUseCases;
 ///
 /// SKIP vì cần wire-up thêm (seed role + payload KhuyenMai hợp lệ + MaTaiKhoan lấy từ
 /// <see cref="Seed.CoBan"/>). Giữ làm template cho người tiếp tục scope test:
-///   - NhanVien không có KhuyenMai_Quan → POST /api/admin/khuyen-mai → 403.
+///   - NhanVien không có KhuyenMai_Quan → POST /api/khuyen-mai → 403.
 ///   - Admin → POST → 200/201.
 ///   - Gán KhuyenMai_Quan cho role NhanVien qua <see cref="IPermissionService.CapNhatQuyenVaiTroAsync"/>
 ///     → NhanVien gọi lại POST → 200/201.
@@ -116,7 +116,7 @@ public class RbacV2PermissionTests : IDisposable
             batDau = DateTime.UtcNow.AddHours(1),
             ketThuc = DateTime.UtcNow.AddDays(7)
         };
-        var resp = await client.PostAsJsonAsync("/api/admin/khuyen-mai", payload);
+        var resp = await client.PostAsJsonAsync("/api/khuyen-mai", payload);
         if (expectForbidden)
             Assert.Equal(HttpStatusCode.Forbidden, resp.StatusCode);
         else

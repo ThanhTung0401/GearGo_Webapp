@@ -1,4 +1,4 @@
-import {
+﻿import {
   INITIAL_CATEGORIES,
   INITIAL_NOTIFICATIONS,
   INITIAL_ORDERS,
@@ -134,7 +134,7 @@ export const fakeApi = {
 
     async updateProfile(info: { name: string; email: string; phone: string }): Promise<ApiResponse<unknown>> {
       if (isRealApiEnabled()) {
-        return apiClient.put("/api/v1/ho-so/toi", {
+        return apiClient.put("/api/ho-so/toi", {
           hoTen: info.name,
           email: info.email,
           soDienThoai: info.phone,
@@ -336,7 +336,7 @@ export const fakeApi = {
   notifications: {
     async getMine(): Promise<ApiResponse<typeof INITIAL_NOTIFICATIONS>> {
       if (isRealApiEnabled()) {
-        const res = await apiClient.get<{ items: typeof INITIAL_NOTIFICATIONS }>("/api/v1/thong-bao");
+        const res = await apiClient.get<{ items: typeof INITIAL_NOTIFICATIONS }>("/api/thong-bao");
         return { data: res.data.items ?? [], status: res.status };
       }
       await wait();
@@ -345,7 +345,7 @@ export const fakeApi = {
 
     async sendAdmin(payload: { tieuDe: string; noiDung: string; maTaiKhoanNhan?: number }): Promise<ApiResponse<unknown>> {
       if (isRealApiEnabled()) {
-        return apiClient.post("/api/v1/admin/thong-bao", payload);
+        return apiClient.post("/api/thong-bao", payload);
       }
       await wait();
       return { data: payload, status: 201 };
@@ -360,7 +360,7 @@ export const fakeApi = {
         if (params?.trang) qs.set("trang", String(params.trang));
         if (params?.soMoiTrang) qs.set("soMoiTrang", String(params.soMoiTrang));
         const suffix = qs.toString() ? `?${qs.toString()}` : "";
-        return apiClient.get(`/api/v1/admin/nhat-ky${suffix}`);
+        return apiClient.get(`/api/nhat-ky${suffix}`);
       }
       await wait();
       return { data: { items: [], totalItems: 0 }, status: 200 };

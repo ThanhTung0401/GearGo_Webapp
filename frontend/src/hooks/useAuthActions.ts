@@ -170,8 +170,7 @@ export function useAuthActions(params: UseAuthActionsParams) {
         detail: `Đăng nhập thành công với vai trò ${user.role}`,
       });
     }
-    if (user.role === "admin") setPage("admin");
-    else if (user.role === "staff") setPage("staff");
+    if (user.role !== "customer" || (user.permissions && user.permissions.length > 0)) setPage("workspace");
     else setPage("landing");
   };
 

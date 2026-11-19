@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Script kiểm thử tự động toàn diện cho Task W4-T1 của Tuấn Kiệt:
  * - Nhận trả nhiều đợt và kết luận mất (UC12)
  * - Chạy: node backend/test/week4/test_w4_tuankiet.mjs
@@ -115,11 +115,11 @@ async function runTests() {
   console.log(`${colors.bold}[PHẦN 1] Kiểm tra phân quyền truy cập${colors.reset}`);
 
   // Test 1: Không có token -> 401 Unauthorized
-  const t1 = await callApi(`/api/v1/nhan-tra/theo-don/${testDonId}`);
+  const t1 = await callApi(`/api/nhan-tra/theo-don/${testDonId}`);
   assert(t1.status === 401, 'Chặn truy cập khi không có Token (HTTP 401)');
 
   // Test 2: Khách hàng gọi API nhân viên (tạo phiếu nháp) -> 403 Forbidden
-  const t2 = await callApi(`/api/v1/nhan-tra/theo-don/${testDonId}`, {
+  const t2 = await callApi(`/api/nhan-tra/theo-don/${testDonId}`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${customerToken}` },
     body: JSON.stringify({ danhSachChiTietBanGiao: [1] })
@@ -127,7 +127,7 @@ async function runTests() {
   assert(t2.status === 403, 'Khách hàng bị cấm tạo phiếu nhận trả (HTTP 403)');
 
   // Test 3: Nhân viên gọi API duyệt mất (chỉ dành cho Admin) -> 403 Forbidden
-  const t3 = await callApi(`/api/v1/nhan-tra/1/chi-tiet/1/duyet-mat`, {
+  const t3 = await callApi(`/api/nhan-tra/1/chi-tiet/1/duyet-mat`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${staffToken}` },
     body: JSON.stringify({ lyDo: 'Test duyet', maPhuPhiBoiThuong: 1 })
@@ -140,19 +140,19 @@ async function runTests() {
   console.log(`\n${colors.bold}[PHẦN 2] Kiểm tra truy vấn danh sách & thiết bị còn nợ${colors.reset}`);
 
   // Test 4: Đơn không tồn tại -> 404
-  const t4 = await callApi(`/api/v1/nhan-tra/theo-don/999999`, {
+  const t4 = await callApi(`/api/nhan-tra/theo-don/999999`, {
     headers: { Authorization: `Bearer ${staffToken}` }
   });
   assert(t4.status === 404, 'Báo lỗi khi truy vấn đơn không tồn tại (HTTP 404, DON_NOT_FOUND)');
 
   // Test 5: Lấy danh sách các đợt nhận trả của đơn 1
-  const t5 = await callApi(`/api/v1/nhan-tra/theo-don/${testDonId}`, {
+  const t5 = await callApi(`/api/nhan-tra/theo-don/${testDonId}`, {
     headers: { Authorization: `Bearer ${staffToken}` }
   });
   assert(t5.status === 200 && Array.isArray(t5.data), 'Lấy danh sách các đợt nhận trả thành công (HTTP 200)');
 
   // Test 6: Lấy danh sách thiết bị còn nợ
-  const t6 = await callApi(`/api/v1/nhan-tra/theo-don/${testDonId}/con-no`, {
+  const t6 = await callApi(`/api/nhan-tra/theo-don/${testDonId}/con-no`, {
     headers: { Authorization: `Bearer ${staffToken}` }
   });
   assert(t6.status === 200 && Array.isArray(t6.data), 'Lấy danh sách thiết bị còn nợ thành công (HTTP 200)');
@@ -165,7 +165,7 @@ async function runTests() {
   console.log(`\n${colors.bold}[PHẦN 3] Kiểm tra Validation khi tạo phiếu nhận trả nháp${colors.reset}`);
 
   // Test 7: Danh sách thiết bị rỗng -> 400
-  const t7 = await callApi(`/api/v1/nhan-tra/theo-don/${testDonId}`, {
+  const t7 = await callApi(`/api/nhan-tra/theo-don/${testDonId}`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${staffToken}` },
     body: JSON.stringify({ danhSachChiTietBanGiao: [] })
@@ -173,7 +173,7 @@ async function runTests() {
   assert(t7.status === 400, 'Chặn tạo phiếu với danh sách thiết bị rỗng (HTTP 400)');
 
   // Test 8: Thiết bị không thuộc đơn thuê -> 400
-  const t8 = await callApi(`/api/v1/nhan-tra/theo-don/${testDonId}`, {
+  const t8 = await callApi(`/api/nhan-tra/theo-don/${testDonId}`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${staffToken}` },
     body: JSON.stringify({ danhSachChiTietBanGiao: [999999] })
@@ -182,7 +182,7 @@ async function runTests() {
     'Chặn thiết bị không thuộc biên bản bàn giao của đơn (HTTP 400, THIET_BI_KHONG_THUOC_BAN_GIAO)');
 
   // Test 9: Trùng lặp thiết bị trong cùng request -> 400
-  const t9 = await callApi(`/api/v1/nhan-tra/theo-don/${testDonId}`, {
+  const t9 = await callApi(`/api/nhan-tra/theo-don/${testDonId}`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${staffToken}` },
     body: JSON.stringify({ danhSachChiTietBanGiao: [1, 1] })
@@ -197,7 +197,7 @@ async function runTests() {
   // Tìm phiếu đang ở trạng thái Nhap hoặc tạo mới nếu chưa có
   let phieuHienTai = t5.data?.find(p => p.trangThai === 'Nhap');
   if (!phieuHienTai && danhSachConNo.length > 0) {
-    const resTao = await callApi(`/api/v1/nhan-tra/theo-don/${testDonId}`, {
+    const resTao = await callApi(`/api/nhan-tra/theo-don/${testDonId}`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${staffToken}` },
       body: JSON.stringify({ danhSachChiTietBanGiao: [danhSachConNo[0].maChiTietBanGiao] })
@@ -214,7 +214,7 @@ async function runTests() {
 
   // Test 11: Chặn cập nhật thời điểm trả ở tương lai -> 400
   const tuongLai = new Date(Date.now() + 86400000 * 2).toISOString();
-  const t11 = await callApi(`/api/v1/nhan-tra/${phieuHienTaiId}`, {
+  const t11 = await callApi(`/api/nhan-tra/${phieuHienTaiId}`, {
     method: 'PUT',
     headers: { Authorization: `Bearer ${staffToken}` },
     body: JSON.stringify({
@@ -229,7 +229,7 @@ async function runTests() {
     'Chặn ghi nhận thời điểm trả ở tương lai (HTTP 400, THOI_DIEM_TRA_KHONG_HOP_LE)');
 
   // Test 12: Cập nhật phiếu nháp thành công với tình trạng cần vệ sinh
-  const t12 = await callApi(`/api/v1/nhan-tra/${phieuHienTaiId}`, {
+  const t12 = await callApi(`/api/nhan-tra/${phieuHienTaiId}`, {
     method: 'PUT',
     headers: { Authorization: `Bearer ${staffToken}` },
     body: JSON.stringify({
@@ -247,7 +247,7 @@ async function runTests() {
   assert(t12.status === 200, 'Cập nhật thông tin kiểm tra thiết bị thành công (HTTP 200)');
 
   // Test 13: Chặn tách dòng với danh sách rỗng -> 400
-  const t13 = await callApi(`/api/v1/nhan-tra/${phieuHienTaiId}/tach-cho-xu-ly`, {
+  const t13 = await callApi(`/api/nhan-tra/${phieuHienTaiId}/tach-cho-xu-ly`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${staffToken}` },
     body: JSON.stringify({ danhSachChiTietNhanTra: [], lyDo: 'Tách test' })
@@ -255,7 +255,7 @@ async function runTests() {
   assert(t13.status === 400, 'Chặn tách dòng với danh sách rỗng (HTTP 400, DANH_SACH_RONG)');
 
   // Test 14: Chặn tách toàn bộ dòng khiến phiếu gốc rỗng -> 400
-  const t14 = await callApi(`/api/v1/nhan-tra/${phieuHienTaiId}/tach-cho-xu-ly`, {
+  const t14 = await callApi(`/api/nhan-tra/${phieuHienTaiId}/tach-cho-xu-ly`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${staffToken}` },
     body: JSON.stringify({ danhSachChiTietNhanTra: [testCtntId], lyDo: 'Tách hết' })
@@ -269,7 +269,7 @@ async function runTests() {
   console.log(`\n${colors.bold}[PHẦN 5] Kiểm tra Phê duyệt kết luận mất thiết bị${colors.reset}`);
 
   // Test 15: Duyệt mất khi dòng không có kết luận mất -> 400
-  const t15 = await callApi(`/api/v1/nhan-tra/${phieuHienTaiId}/chi-tiet/${testCtntId}/duyet-mat`, {
+  const t15 = await callApi(`/api/nhan-tra/${phieuHienTaiId}/chi-tiet/${testCtntId}/duyet-mat`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${adminToken}` },
     body: JSON.stringify({ lyDo: 'Duyệt mất đồ', maPhuPhiBoiThuong: 1 })
@@ -279,7 +279,7 @@ async function runTests() {
 
   // Test 16: Duyệt mất khi phụ phí chưa được duyệt hoặc không tồn tại -> 404 / 409
   // Đổi kết luận sang MatThietBi trước
-  await callApi(`/api/v1/nhan-tra/${phieuHienTaiId}`, {
+  await callApi(`/api/nhan-tra/${phieuHienTaiId}`, {
     method: 'PUT',
     headers: { Authorization: `Bearer ${staffToken}` },
     body: JSON.stringify({
@@ -291,7 +291,7 @@ async function runTests() {
     })
   });
 
-  const t16 = await callApi(`/api/v1/nhan-tra/${phieuHienTaiId}/chi-tiet/${testCtntId}/duyet-mat`, {
+  const t16 = await callApi(`/api/nhan-tra/${phieuHienTaiId}/chi-tiet/${testCtntId}/duyet-mat`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${adminToken}` },
     body: JSON.stringify({ lyDo: 'Duyệt mất', maPhuPhiBoiThuong: 999999 })
@@ -300,7 +300,7 @@ async function runTests() {
     'Chặn duyệt mất khi phụ phí bồi thường không hợp lệ hoặc chưa được duyệt (HTTP 404/409, PHU_PHI_NOT_FOUND/KET_LUAN_MAT_CHUA_DU)');
 
   // Trả lại kết luận CanVeSinh để tiếp tục chốt nhận trả đồ
-  await callApi(`/api/v1/nhan-tra/${phieuHienTaiId}`, {
+  await callApi(`/api/nhan-tra/${phieuHienTaiId}`, {
     method: 'PUT',
     headers: { Authorization: `Bearer ${staffToken}` },
     body: JSON.stringify({
@@ -319,7 +319,7 @@ async function runTests() {
   console.log(`\n${colors.bold}[PHẦN 6] Kiểm tra Chốt nhận trả & Khởi tạo bảo trì tối thiểu${colors.reset}`);
 
   // Test 17: Chốt nhận trả đợt này thành công
-  const t17 = await callApi(`/api/v1/nhan-tra/${phieuHienTaiId}/chot`, {
+  const t17 = await callApi(`/api/nhan-tra/${phieuHienTaiId}/chot`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${staffToken}` }
   });
@@ -334,7 +334,7 @@ async function runTests() {
   }
 
   // Test 19: Tính bất biến (Idempotency) - Chốt lại cùng phiếu đã chốt trả kết quả cũ
-  const t19 = await callApi(`/api/v1/nhan-tra/${phieuHienTaiId}/chot`, {
+  const t19 = await callApi(`/api/nhan-tra/${phieuHienTaiId}/chot`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${staffToken}` }
   });
@@ -342,7 +342,7 @@ async function runTests() {
     'Gọi lại chốt phiếu đã chốt trả kết quả cũ an toàn (Idempotency HTTP 200)');
 
   // Test 20: Chặn sửa phiếu đã chốt -> 409
-  const t20 = await callApi(`/api/v1/nhan-tra/${phieuHienTaiId}`, {
+  const t20 = await callApi(`/api/nhan-tra/${phieuHienTaiId}`, {
     method: 'PUT',
     headers: { Authorization: `Bearer ${staffToken}` },
     body: JSON.stringify({ ghiChu: 'Sửa bậy' })

@@ -1,5 +1,5 @@
-/**
- * surchargeApi.ts - Phụ phí phát sinh, duyệt và giải quyết tranh chấp (/api/v1/phu-phi)
+﻿/**
+ * surchargeApi.ts - Phụ phí phát sinh, duyệt và giải quyết tranh chấp (/api/phu-phi)
  */
 
 import { apiClient } from "../apiClient";
@@ -49,12 +49,12 @@ export interface PhuPhiBackend {
 
 export const surchargeApi = {
   async layTheoDon(donId: number): Promise<PhuPhiBackend[]> {
-    const res = await apiClient.get<unknown>(`/api/v1/phu-phi/theo-don/${donId}`);
+    const res = await apiClient.get<unknown>(`/api/phu-phi/theo-don/${donId}`);
     return unwrapResult<PhuPhiBackend[]>(res.data);
   },
 
   async goiYPhi(maChiTietBanGiao: number): Promise<GoiYPhuPhiBackend[]> {
-    const res = await apiClient.get<unknown>(`/api/v1/phu-phi/goi-y?maChiTietBanGiao=${maChiTietBanGiao}`);
+    const res = await apiClient.get<unknown>(`/api/phu-phi/goi-y?maChiTietBanGiao=${maChiTietBanGiao}`);
     return unwrapResult<GoiYPhuPhiBackend[]>(res.data);
   },
 
@@ -66,7 +66,7 @@ export const surchargeApi = {
     lyDo: string;
     danhSachAnh?: string[];
   }): Promise<PhuPhiBackend> {
-    const res = await apiClient.post<unknown>("/api/v1/phu-phi", req);
+    const res = await apiClient.post<unknown>("/api/phu-phi", req);
     return unwrapResult<PhuPhiBackend>(res.data);
   },
 
@@ -74,22 +74,22 @@ export const surchargeApi = {
     id: number,
     req: { soTien?: number; lyDo?: string; danhSachAnh?: string[] }
   ): Promise<PhuPhiBackend> {
-    const res = await apiClient.put<unknown>(`/api/v1/phu-phi/${id}`, req);
+    const res = await apiClient.put<unknown>(`/api/phu-phi/${id}`, req);
     return unwrapResult<PhuPhiBackend>(res.data);
   },
 
   async duyetPhi(id: number, lyDo?: string): Promise<PhuPhiBackend> {
-    const res = await apiClient.post<unknown>(`/api/v1/phu-phi/${id}/duyet`, { ketQua: "Duyet", lyDo });
+    const res = await apiClient.post<unknown>(`/api/phu-phi/${id}/duyet`, { ketQua: "Duyet", lyDo });
     return unwrapResult<PhuPhiBackend>(res.data);
   },
 
   async tuChoiPhi(id: number, lyDo: string): Promise<PhuPhiBackend> {
-    const res = await apiClient.post<unknown>(`/api/v1/phu-phi/${id}/tu-choi`, { ketQua: "TuChoi", lyDo });
+    const res = await apiClient.post<unknown>(`/api/phu-phi/${id}/tu-choi`, { ketQua: "TuChoi", lyDo });
     return unwrapResult<PhuPhiBackend>(res.data);
   },
 
   async taoTranhChap(id: number, noiDung: string, danhSachAnh?: string[]): Promise<PhuPhiBackend> {
-    const res = await apiClient.post<unknown>(`/api/v1/phu-phi/${id}/tranh-chap`, {
+    const res = await apiClient.post<unknown>(`/api/phu-phi/${id}/tranh-chap`, {
       noiDung,
       danhSachAnh,
     });
@@ -100,7 +100,7 @@ export const surchargeApi = {
     id: number,
     req: { ketQua: "GiuNguyen" | "HuyPhi" | "DieuChinh"; lyDo: string; soTienDeXuatSauXuLy?: number }
   ): Promise<PhuPhiBackend> {
-    const res = await apiClient.post<unknown>(`/api/v1/phu-phi/${id}/giai-quyet-tranh-chap`, req);
+    const res = await apiClient.post<unknown>(`/api/phu-phi/${id}/giai-quyet-tranh-chap`, req);
     return unwrapResult<PhuPhiBackend>(res.data);
   },
 
@@ -108,7 +108,7 @@ export const surchargeApi = {
     id: number,
     req: { soTienDieuChinhCoDau: number; lyDo: string; danhSachAnh?: string[] }
   ): Promise<PhuPhiBackend> {
-    const res = await apiClient.post<unknown>(`/api/v1/phu-phi/${id}/dieu-chinh`, req);
+    const res = await apiClient.post<unknown>(`/api/phu-phi/${id}/dieu-chinh`, req);
     return unwrapResult<PhuPhiBackend>(res.data);
   },
 };

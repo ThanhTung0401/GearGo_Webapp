@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mapReturnCondToBackend, mapReturnCondToSurchargeType } from "../src/views/staff/returnMapping";
+import { mapReturnCondToBackend, mapReturnCondToSurchargeType } from "../src/modules/orders/returnMapping";
 
 describe("returnMapping", () => {
   it("maps return condition to backend ketLuan enum", () => {
