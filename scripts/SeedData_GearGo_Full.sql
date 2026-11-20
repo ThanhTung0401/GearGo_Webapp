@@ -664,8 +664,137 @@ BEGIN TRY
         VALUES (source.ma_nhat_ky, source.ma_tai_khoan, source.hanh_dong, source.loai_doi_tuong, source.ma_doi_tuong, source.du_lieu_truoc, source.du_lieu_sau, source.thoi_diem, source.ly_do);
     SET IDENTITY_INSERT [NHAT_KY_THAO_TAC] OFF;
 
+    -- ─────────────────────────────────────────────────────────────────────────────────────
+    -- 40. ĐỒNG BỘ DỮ LIỆU MỞ RỘNG TỪ backend/Data/Seeders/Tables (Idempotent)
+    --     (TaiKhoanSeeder, DanhMucSanPhamTableSeeder, PhieuNhapHangSeeder, DonThueSeeder)
+    -- ─────────────────────────────────────────────────────────────────────────────────────
+
+    -- 40.1 Bổ sung tài khoản khách hàng & nhân viên đa dạng trạng thái (TaiKhoanSeeder.cs)
+    MERGE INTO [TAI_KHOAN] AS target
+    USING (VALUES
+        (N'kh.bich@geargo.vn', N'0902000001', N'$2a$11$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', N'KhachHang', N'HoatDong', NULL),
+        (N'kh.duc@geargo.vn',  N'0902000002', N'$2a$11$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', N'KhachHang', N'HoatDong', NULL),
+        (N'kh.linh@geargo.vn', N'0902000003', N'$2a$11$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', N'KhachHang', N'HoatDong', NULL),
+        (N'kh.son@geargo.vn',  N'0902000004', N'$2a$11$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', N'KhachHang', N'TamKhoa', N'Tạm khóa kiểm tra quy trình nội bộ'),
+        (N'nv.hung@geargo.vn', N'0903000001', N'$2a$11$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', N'NhanVien',  N'HoatDong', NULL),
+        (N'nv.thao@geargo.vn', N'0903000002', N'$2a$11$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', N'NhanVien',  N'HoatDong', NULL),
+        (N'nv.cuong@geargo.vn',N'0903000003', N'$2a$11$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', N'NhanVien',  N'TamKhoa', N'Tạm khóa kiểm tra quy trình nội bộ')
+    ) AS src (email, so_dien_thoai, mat_khau_bam, vai_tro, trang_thai, ly_do_khoa)
+    ON target.email = src.email
+    WHEN NOT MATCHED THEN
+        INSERT (email, so_dien_thoai, mat_khau_bam, vai_tro, trang_thai, ly_do_khoa, ngay_tao, ngay_cap_nhat)
+        VALUES (src.email, src.so_dien_thoai, src.mat_khau_bam, src.vai_tro, src.trang_thai, src.ly_do_khoa, GETUTCDATE(), GETUTCDATE());
+
+    INSERT INTO [KHACH_HANG] (ma_tai_khoan, ho_ten, dia_chi)
+    SELECT t.ma_tai_khoan, v.ho_ten, v.dia_chi
+    FROM (VALUES
+        (N'kh.bich@geargo.vn', N'Phạm Ngọc Bích', N'12 Nguyễn Huệ, Quận 1, TP.HCM'),
+        (N'kh.duc@geargo.vn',  N'Lê Hoàng Đức',   N'45 Trần Phú, Hải Châu, Đà Nẵng'),
+        (N'kh.linh@geargo.vn', N'Vũ Thùy Linh',   N'88 Láng Hạ, Đống Đa, Hà Nội'),
+        (N'kh.son@geargo.vn',  N'Đỗ Thanh Sơn',   N'19 Phan Chu Trinh, Nha Trang')
+    ) AS v(email, ho_ten, dia_chi)
+    JOIN [TAI_KHOAN] t ON t.email = v.email
+    WHERE NOT EXISTS (SELECT 1 FROM [KHACH_HANG] kh WHERE kh.ma_tai_khoan = t.ma_tai_khoan);
+
+    INSERT INTO [NHAN_VIEN] (ma_tai_khoan, ho_ten, trang_thai_lam_viec)
+    SELECT t.ma_tai_khoan, v.ho_ten, N'DangLamViec'
+    FROM (VALUES
+        (N'nv.hung@geargo.vn',  N'Nguyễn Mạnh Hùng (NV Giao nhận)'),
+        (N'nv.thao@geargo.vn',  N'Trần Phương Thảo (NV Kiểm kê)'),
+        (N'nv.cuong@geargo.vn', N'Bùi Quốc Cường (NV Thử việc)')
+    ) AS v(email, ho_ten)
+    JOIN [TAI_KHOAN] t ON t.email = v.email
+    WHERE NOT EXISTS (SELECT 1 FROM [NHAN_VIEN] nv WHERE nv.ma_tai_khoan = t.ma_tai_khoan);
+
+    -- 40.2 Bổ sung danh mục, sản phẩm & ảnh Unsplash thật (DanhMucSanPhamTableSeeder.cs)
+    INSERT INTO [DANH_MUC_SAN_PHAM] (ten_danh_muc, mo_ta, thu_tu_hien_thi, trang_thai)
+    SELECT v.ten, v.mo_ta, v.thu_tu, v.tt
+    FROM (VALUES
+        (N'Balo & Gậy Trekking', N'Balo trợ lực 40L-70L, gậy leo núi hợp kim carbon siêu nhẹ.', 5, N'HienThi'),
+        (N'Phụ kiện & Năng lượng', N'Trạm sạc dự phòng ngoài trời, bình lọc nước, áo mưa bộ.', 6, N'HienThi'),
+        (N'Combo Gia Đình', N'Bộ thiết bị trọn gói cho nhóm 4-6 người tiết kiệm chi phí.', 7, N'HienThi'),
+        (N'Thiết bị Mùa Đông (Tạm ẩn)', N'Danh mục lưu trữ ngoài mùa cao điểm.', 8, N'TamAn')
+    ) AS v(ten, mo_ta, thu_tu, tt)
+    WHERE NOT EXISTS (SELECT 1 FROM [DANH_MUC_SAN_PHAM] dm WHERE dm.ten_danh_muc = v.ten);
+
+    INSERT INTO [SAN_PHAM] (ma_danh_muc, ma_san_pham_hien_thi, ten_san_pham, thuong_hieu, mo_ta, suc_chua, kich_thuoc, thong_so, gia_thue_moi_ngay, muc_coc_moi_thiet_bi, gia_tri_boi_thuong, trang_thai_kinh_doanh)
+    SELECT dm.ma_danh_muc, v.ma_ht, v.ten, v.th, v.mo_ta, v.sc, v.kt, v.ts, v.gia, v.coc, v.bt, v.tt
+    FROM (VALUES
+        (N'Lều & Bạt dã ngoại', N'SP-LEU-002',  N'Lều Glamping 6 Người Naturehike Village 6.0', N'Naturehike', N'Lều dựng nhanh tự động không gian rộng cho gia đình.', 6, N'260 x 230 x 180 cm', N'Vải 210D Oxford phủ bạc chống nắng', 280000.00, 1000000.00, 3500000.00, N'DangKinhDoanh'),
+        (N'Balo & Gậy Trekking',N'SP-BALO-001', N'Balo Trekking Osprey Atmos AG 65L', N'Osprey', N'Hệ thống lưng lưới thoáng khí Anti-Gravity giảm áp lực vai.', 1, N'87 x 39 x 41 cm', N'Dung tích 65L, kèm áo mưa trùm balo', 95000.00, 400000.00, 1800000.00, N'DangKinhDoanh'),
+        (N'Balo & Gậy Trekking',N'SP-GAY-001',  N'Cặp Gậy Leo Núi Carbon Naturehike ST09', N'Naturehike', N'Gậy gấp 3 khúc khóa ngoài chắc chắn, tay cầm EVA êm ái.', 1, N'62 - 135 cm', N'Trọng lượng 195g/chiếc', 30000.00, 100000.00, 350000.00, N'DangKinhDoanh'),
+        (N'Phụ kiện & Năng lượng',N'SP-SAC-001', N'Trạm Sạc Dự Phòng EcoFlow River 2 (256Wh)', N'EcoFlow', N'Sạc nhanh AC/USB-C 300W cấp điện cho đèn, quạt, laptop.', 4, N'24 x 21 x 14 cm', N'Dung lượng 256Wh, sạc đầy 60 phút', 180000.00, 800000.00, 2500000.00, N'DangKinhDoanh'),
+        (N'Combo Gia Đình',     N'SP-COMBO-001',N'Combo Cắm Trại 4 Người Tiêu Chuẩn', N'GearGo', N'Gồm 1 Lều 4 người, 1 Bàn cuộn, 4 Ghế Kermit, 1 Đèn LED.', 4, N'Trọn bộ 7 món', N'Tiết kiệm 15% so với thuê lẻ', 250000.00, 900000.00, 2800000.00, N'DangKinhDoanh'),
+        (N'Phụ kiện & Năng lượng',N'SP-QUAT-001',N'Quạt Tích Điện Dã Ngoại Claymore V600+', N'Claymore', N'Quạt treo lều hoặc để bàn 3 chân, pin 7800mAh.', 2, N'24 x 22 x 35 cm', N'Chạy liên tục 30 giờ', 45000.00, 150000.00, 550000.00, N'TamNgung')
+    ) AS v(ten_dm, ma_ht, ten, th, mo_ta, sc, kt, ts, gia, coc, bt, tt)
+    JOIN [DANH_MUC_SAN_PHAM] dm ON dm.ten_danh_muc = v.ten_dm
+    WHERE NOT EXISTS (SELECT 1 FROM [SAN_PHAM] sp WHERE sp.ma_san_pham_hien_thi = v.ma_ht);
+
+    INSERT INTO [HINH_ANH_SAN_PHAM] (ma_san_pham, duong_dan, la_anh_chinh, thu_tu)
+    SELECT sp.ma_san_pham, v.img, 1, 1
+    FROM (VALUES
+        (N'SP-LEU-002',   N'https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?w=600'),
+        (N'SP-BALO-001',  N'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=600'),
+        (N'SP-GAY-001',   N'https://images.unsplash.com/photo-1551632811-561732d1e306?w=600'),
+        (N'SP-SAC-001',   N'https://images.unsplash.com/photo-1509395062183-67c5ad6faff9?w=600'),
+        (N'SP-COMBO-001', N'https://images.unsplash.com/photo-1478131143081-80f7f84ca84d?w=600'),
+        (N'SP-QUAT-001',  N'https://images.unsplash.com/photo-1523987355523-c7b5b0dd90a7?w=600')
+    ) AS v(ma_ht, img)
+    JOIN [SAN_PHAM] sp ON sp.ma_san_pham_hien_thi = v.ma_ht
+    WHERE NOT EXISTS (SELECT 1 FROM [HINH_ANH_SAN_PHAM] h WHERE h.ma_san_pham = sp.ma_san_pham);
+
+    -- Cập nhật các ảnh cũ nếu còn trỏ về domain giả storage.geargo.vn
+    UPDATE [HINH_ANH_SAN_PHAM]
+    SET duong_dan = N'https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?w=600'
+    WHERE duong_dan LIKE N'%storage.geargo.vn%';
+
+    -- 40.3 Bổ sung phiếu nhập đa trạng thái PN-2026-002..005 (PhieuNhapHangSeeder.cs)
+    INSERT INTO [PHIEU_NHAP_HANG] (ma_nha_cung_cap, ma_nguoi_lap, ma_nguoi_xac_nhan, ma_phieu_hien_thi, so_chung_tu_nha_cung_cap, ngay_lap, ngay_nhap_thuc_te, ngay_xac_nhan, tong_tien, ten_nguoi_lap_luc_nhap, ten_nguoi_xac_nhan_luc_nhap, trang_thai)
+    SELECT 1, 1, CASE WHEN v.tt = N'DaNhapKho' THEN 1 ELSE NULL END, v.ma, v.chung_tu, DATEADD(day, v.days_off, GETUTCDATE()),
+           CASE WHEN v.tt = N'DaNhapKho' THEN DATEADD(day, v.days_off, GETUTCDATE()) ELSE NULL END,
+           CASE WHEN v.tt = N'DaNhapKho' THEN DATEADD(day, v.days_off, GETUTCDATE()) ELSE NULL END,
+           v.tong, N'Nguyễn Văn Quản Trị', CASE WHEN v.tt = N'DaNhapKho' THEN N'Nguyễn Văn Quản Trị' ELSE NULL END, v.tt
+    FROM (VALUES
+        (N'PN-2026-002', N'HD-OUT-202602', N'DaNhapKho', 9500000.00,  -25),
+        (N'PN-2026-003', N'HD-OSP-202603', N'DaNhapKho', 12000000.00, -12),
+        (N'PN-2026-004', N'HD-ECO-202604', N'Nhap',      8000000.00,  -2),
+        (N'PN-2026-005', N'HD-DEC-202605', N'DaHuy',     3000000.00,  -18)
+    ) AS v(ma, chung_tu, tt, tong, days_off)
+    WHERE NOT EXISTS (SELECT 1 FROM [PHIEU_NHAP_HANG] p WHERE p.ma_phieu_hien_thi = v.ma);
+
+    -- 40.4 Bổ sung đơn thuê ORD-202611-101..111 & phụ phí đối soát/tranh chấp (DonThueSeeder.cs)
+    INSERT INTO [DON_THUE] (ma_khach_hang, ma_chinh_sach, ma_don_hien_thi, ngay_dat, gio_nhan_du_kien, gio_tra_du_kien, ten_nguoi_nhan, so_dien_thoai_nguoi_nhan, email_lien_he, tong_tien_thue_truoc_giam, tong_tien_giam, tong_tien_coc, trang_thai, tien_thue_giu_lai_khi_huy)
+    SELECT 1, 1, v.ma_don, DATEADD(day, v.nhan_off - 1, GETUTCDATE()), DATEADD(day, v.nhan_off, GETUTCDATE()), DATEADD(day, v.tra_off, GETUTCDATE()),
+           N'Nguyễn Văn An', N'0901000003', N'customer@geargo.vn', v.tong_thue, v.giam, v.coc, v.tt,
+           CASE WHEN v.tt = N'KhachHuy' THEN 50000.00 ELSE 0.00 END
+    FROM (VALUES
+        (N'ORD-202611-101', N'ChoThanhToan',  2,  4, 360000.00, 0.00,     1000000.00),
+        (N'ORD-202611-102', N'DaXacNhan',     1,  3, 280000.00, 28000.00, 800000.00),
+        (N'ORD-202611-103', N'DangChuanBi',   0,  2, 450000.00, 0.00,     1200000.00),
+        (N'ORD-202611-104', N'DangThue',     -1,  2, 320000.00, 50000.00, 700000.00),
+        (N'ORD-202611-105', N'HoanTat',      -7, -5, 560000.00, 0.00,     1000000.00),
+        (N'ORD-202611-106', N'KhachHuy',     -4, -2, 240000.00, 0.00,     500000.00),
+        (N'ORD-202611-107', N'SanSangNhan',   0,  2, 360000.00, 0.00,     800000.00),
+        (N'ORD-202611-108', N'ChoDoiSoat',   -3, -1, 300000.00, 0.00,     500000.00),
+        (N'ORD-202611-109', N'ChoDoiSoat',   -4, -1, 400000.00, 0.00,     1000000.00),
+        (N'ORD-202611-110', N'DaXacNhan',     3,  5, 420000.00, 0.00,     900000.00),
+        (N'ORD-202611-111', N'DangThue',     -2,  1, 360000.00, 0.00,     800000.00)
+    ) AS v(ma_don, tt, nhan_off, tra_off, tong_thue, giam, coc)
+    WHERE NOT EXISTS (SELECT 1 FROM [DON_THUE] d WHERE d.ma_don_hien_thi = v.ma_don);
+
+    INSERT INTO [PHU_PHI] (ma_don_thue, ma_nguoi_lap, ma_nguoi_duyet, loai_phi, so_tien, ly_do, trang_thai_duyet, trang_thai_tranh_chap, thoi_diem_duyet)
+    SELECT d.ma_don_thue, 1, v.nguoi_duyet, v.loai_phi, v.so_tien, v.ly_do, v.tt_duyet, v.tt_tranh_chap,
+           CASE WHEN v.tt_duyet = N'DaDuyet' THEN GETUTCDATE() ELSE NULL END
+    FROM (VALUES
+        (N'ORD-202611-111', NULL, N'HuHongThietBi', 250000.00, N'Rách nhẹ bạt phủ ngoài lều (Khách khiếu nại mức phí)', N'ChoDuyet', N'DangTranhChap'),
+        (N'ORD-202611-108', 1,    N'HuHongThietBi', 900000.00, N'Gãy khung nhôm chính & mất bộ cọc lều', N'DaDuyet', NULL),
+        (N'ORD-202611-109', 1,    N'VeSinh',        150000.00, N'Phí vệ sinh bùn đất bám khung & túi ngủ', N'DaDuyet', NULL)
+    ) AS v(ma_don, nguoi_duyet, loai_phi, so_tien, ly_do, tt_duyet, tt_tranh_chap)
+    JOIN [DON_THUE] d ON d.ma_don_hien_thi = v.ma_don
+    WHERE NOT EXISTS (SELECT 1 FROM [PHU_PHI] pp WHERE pp.ma_don_thue = d.ma_don_thue);
+
     COMMIT TRANSACTION;
-    PRINT N'>> [THÀNH CÔNG] Đã nạp dữ liệu Seed mẫu toàn diện cho tất cả 39 Entities GearGo!';
+    PRINT N'>> [THÀNH CÔNG] Đã nạp và đồng bộ dữ liệu Seed mẫu toàn diện cho tất cả Entities GearGo!';
 
 END TRY
 BEGIN CATCH

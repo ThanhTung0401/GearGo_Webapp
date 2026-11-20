@@ -13,9 +13,13 @@ test.describe.serial("Frontend PH4: Cổng Nhân viên - Chuẩn bị, Bàn giao
     await expect(page.getByRole("heading", { name: /Tổng quan ca làm việc/i })).toBeVisible();
     await pauseForViewer(page);
 
-    // UC4.5: Tab Đơn thuê -> gõ tìm kiếm & mở modal chi tiết đơn đầu tiên nếu có
+    // UC4.5: Tab Đơn thuê -> kiểm tra các bộ lọc vận hành, tìm kiếm & mở modal chi tiết đơn
     await page.getByRole("button", { name: "Đơn thuê" }).first().click();
     await expect(page.getByText(/Bộ lọc ca trực/i)).toBeVisible();
+    const content = page.locator(".internal-content");
+    for (const filterLabel of [/Tất cả/i, /Cần giao hôm nay/i, /Cần thu hôm nay/i, /Quá hạn/i]) {
+      await expect(content.getByRole("button", { name: filterLabel }).first()).toBeVisible({ timeout: 10_000 });
+    }
     const searchOrder = page.getByPlaceholder(/Tìm mã đơn, tên khách, SĐT/i);
     await searchOrder.fill("DT-");
     await pauseForViewer(page);
@@ -49,6 +53,9 @@ test.describe.serial("Frontend PH4: Cổng Nhân viên - Chuẩn bị, Bàn giao
 
     await page.getByRole("button", { name: "Nhận trả & Phụ phí" }).first().click();
     await expect(page.getByText(/Nhận trả|Phụ phí/i).first()).toBeVisible();
+    const content = page.locator(".internal-content");
+    await expect(content.getByRole("button", { name: /Đang xử lý/i }).first()).toBeVisible({ timeout: 10_000 });
+    await expect(content.getByRole("button", { name: /Hoàn tất/i }).first()).toBeVisible();
     const retItem = page.locator('button:has-text("Đang thuê"), button:has-text("Quá hạn")').first();
     if (await retItem.isVisible().catch(() => false)) {
       await retItem.click();

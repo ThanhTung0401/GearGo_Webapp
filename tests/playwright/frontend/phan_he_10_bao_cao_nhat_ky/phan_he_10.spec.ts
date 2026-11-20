@@ -1,4 +1,4 @@
-﻿import { test, expect } from "@playwright/test";
+import { test, expect } from "@playwright/test";
 import { loginUi } from "../../helpers/auth.js";
 import { useSubsystemPage, pauseForViewer } from "../../helpers/subsystemVideo.js";
 
@@ -11,6 +11,10 @@ test.describe.serial("Frontend PH10: Báo cáo, Nhật ký & Kiểm tra Responsi
 
     await page.getByRole("button", { name: "Báo cáo Kho & TC" }).first().click();
     await expect(page.getByText(/Báo cáo/i).first()).toBeVisible();
+    const content = page.locator(".internal-content");
+    await expect(content.getByRole("button", { name: /Doanh thu thuần/i }).first()).toBeVisible({ timeout: 10_000 });
+    await expect(content.getByRole("button", { name: /Dòng tiền thực tế/i }).first()).toBeVisible();
+    await expect(content.getByRole("button", { name: /Nhập kho & Tài sản/i }).first()).toBeVisible();
     await pauseForViewer(page);
 
     await page.getByRole("button", { name: "Audit Log" }).first().click();

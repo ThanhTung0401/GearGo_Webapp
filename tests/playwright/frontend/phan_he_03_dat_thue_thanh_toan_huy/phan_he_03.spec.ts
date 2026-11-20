@@ -27,16 +27,35 @@ test.describe.serial("Frontend PH3: Giỏ thuê, Đặt thuê & Theo dõi đơn 
       await pauseForViewer(page);
     }
 
-    // Mở Giỏ thuê từ header (nút có aria-label hoặc chữ Giỏ thuê)
+    // Mở Giỏ thuê từ header và kiểm tra ô Nhập mã khuyến mãi (SCR-3.1)
     await page.getByRole("button", { name: /Giỏ thuê/i }).first().click();
     await expect(page.getByText(/Tổng thanh toán ban đầu/i)).toBeVisible({ timeout: 10_000 });
+    const promoInput = page.locator('input[placeholder*="CAMPGO"], input[placeholder*="khuyến mãi" i]').first();
+    await expect(promoInput).toBeVisible();
     await pauseForViewer(page);
   });
 
-  test("UC3.3, UC3.4 - Xem danh sách Đơn thuê của tôi", async () => {
+  test("UC3.3, UC3.4 - Xem danh sách Đơn thuê, kiểm tra các tab lọc trạng thái & mở modal Hủy đơn", async () => {
     const page = getPage();
     await page.getByRole("button", { name: "Đơn thuê" }).first().click();
     await expect(page.getByText(/Đơn thuê của tôi|Lịch sử đơn thuê|Mã đơn/i).first()).toBeVisible();
+
+    for (const tabLabel of [/Tất cả/i, /Chờ thanh toán/i, /Đã xác nhận/i, /Đang thuê/i, /Hoàn tất/i, /Hết hạn/i, /Đã hủy/i]) {
+      await expect(page.getByRole("button", { name: tabLabel }).first()).toBeVisible({ timeout: 10_000 });
+    }
+
+    // SCR-3.4: Mở hộp thoại xác nhận hủy đơn thuê từ tab Đã xác nhận
+    await page.getByRole("button", { name: /Đã xác nhận/i }).first().click();
+    const orderItem = page.getByText("ORD-202611-110").first();
+    if (await orderItem.isVisible().catch(() => false)) {
+      await orderItem.click();
+      const reqCancel = page.getByRole("button", { name: /Yêu cầu hủy đơn thuê/i }).first();
+      if (await reqCancel.isVisible().catch(() => false)) {
+        await reqCancel.click();
+        await expect(page.locator("textarea").first()).toBeVisible();
+        await page.keyboard.press("Escape");
+      }
+    }
     await pauseForViewer(page, 1200);
   });
 });

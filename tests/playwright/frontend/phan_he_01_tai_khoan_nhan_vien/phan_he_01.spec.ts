@@ -125,5 +125,88 @@ test.describe.serial("Frontend PH1: Quản lý Tài khoản & Nhân viên (UC1.1
     await page.getByRole("button", { name: "Phân quyền" }).first().click();
     await expect(page.getByText(/Phân quyền|Ma trận quyền/i).first()).toBeVisible();
     await pauseForViewer(page);
+
+    // SCR-1.8: Mở modal Cập nhật thông tin nhân viên
+    await page.getByRole("button", { name: "Nhân viên" }).first().click();
+    await page.locator(".internal-content").getByRole("button", { name: "Sửa", exact: true }).first().click();
+    const staffModal = page.locator('[role="dialog"], .modal-content').first();
+    await expect(staffModal).toBeVisible();
+    const cancelModalBtn = staffModal.getByRole("button", { name: /Hủy|Đóng/i }).first();
+    if (await cancelModalBtn.isVisible().catch(() => false)) {
+      await cancelModalBtn.click();
+    } else {
+      await page.keyboard.press("Escape");
+    }
+  });
+
+  test("SCR-1.2 - Đăng nhập tài khoản bị khóa hiển thị Alert Box cảnh báo", async () => {
+    const page = getPage();
+    await page.getByRole("button", { name: /Trang khách/i }).first().click();
+    await page.getByRole("button", { name: "Thoát" }).first().click();
+    await page.getByRole("button", { name: "Đăng nhập" }).first().click();
+    const loginForm = page.locator("form.auth-form");
+    await expect(loginForm).toBeVisible();
+    await loginForm.locator("input").nth(0).fill("locked.kh@geargo.vn");
+    await loginForm.locator("input").nth(1).fill("GearGo@2026");
+    await loginForm.locator('button[type="submit"]').click();
+    await expect(page.locator(".auth-locked-alert")).toBeVisible({ timeout: 10_000 });
+  });
+});
+
+/**
+ * Gộp từ rbac/rbac_perm_flush.spec.ts (v2 §5.3 — E2E RBAC với flush endpoint).
+ * TODO (bỏ `skip` khi bật `/api/debug/flush-permissions` và biến môi trường RBAC test).
+ */
+test.describe.skip("Frontend PH1 (RBAC v2 §5.3): Phân quyền động & flush cache", () => {
+  const BACKEND_URL = process.env.BACKEND_URL ?? "http://localhost:5000";
+  const FLUSH_ENDPOINT = `${BACKEND_URL}/api/debug/flush-permissions`;
+  const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "admin@geargo.vn";
+  const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD ?? "GearGo@2026";
+  const STAFF_EMAIL = process.env.STAFF_EMAIL ?? "staff@geargo.vn";
+  const STAFF_PASSWORD = process.env.STAFF_PASSWORD ?? "GearGo@2026";
+
+  async function loginForm(page: import("@playwright/test").Page, email: string, password: string) {
+    await page.getByPlaceholder(/email/i).fill(email);
+    await page.getByPlaceholder(/mật khẩu/i).fill(password);
+    await page.getByRole("button", { name: /Đăng nhập/i }).click();
+  }
+
+  test("Bật KhuyenMai_Quan cho NhanVien → flush → tab Khuyến mãi xuất hiện", async ({ page, request }) => {
+    await page.goto("/");
+    await loginForm(page, ADMIN_EMAIL, ADMIN_PASSWORD);
+    await expect(page.getByRole("heading", { name: /Tổng quan|Quản trị/i })).toBeVisible({ timeout: 10_000 });
+
+    await page.getByRole("button", { name: /Phân quyền/i }).click();
+    await page.getByRole("button", { name: /NhanVien/i }).click();
+    const khuyenMaiQuan = page.getByLabel(/KhuyenMai\.Quan/i);
+    if (!(await khuyenMaiQuan.isChecked())) {
+      await khuyenMaiQuan.check();
+      await page.getByRole("button", { name: /Lưu|Cập nhật/i }).click();
+    }
+
+    const flush = await request.post(FLUSH_ENDPOINT);
+    expect(flush.ok()).toBeTruthy();
+
+    await page.getByRole("button", { name: /Đăng xuất/i }).click();
+    await loginForm(page, STAFF_EMAIL, STAFF_PASSWORD);
+    await expect(page.getByRole("button", { name: /Khuyến mãi/i })).toBeVisible({ timeout: 10_000 });
+  });
+
+  test("Gỡ KhuyenMai_Quan → flush → tab Khuyến mãi biến mất", async ({ page, request }) => {
+    await page.goto("/");
+    await loginForm(page, ADMIN_EMAIL, ADMIN_PASSWORD);
+    await page.getByRole("button", { name: /Phân quyền/i }).click();
+    await page.getByRole("button", { name: /NhanVien/i }).click();
+    const khuyenMaiQuan = page.getByLabel(/KhuyenMai\.Quan/i);
+    if (await khuyenMaiQuan.isChecked()) {
+      await khuyenMaiQuan.uncheck();
+      await page.getByRole("button", { name: /Lưu|Cập nhật/i }).click();
+    }
+    const flush = await request.post(FLUSH_ENDPOINT);
+    expect(flush.ok()).toBeTruthy();
+
+    await page.getByRole("button", { name: /Đăng xuất/i }).click();
+    await loginForm(page, STAFF_EMAIL, STAFF_PASSWORD);
+    await expect(page.getByRole("button", { name: /Khuyến mãi/i })).toHaveCount(0);
   });
 });
