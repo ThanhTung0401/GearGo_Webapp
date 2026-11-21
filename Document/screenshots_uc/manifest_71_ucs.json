@@ -809,9 +809,18 @@
     "components": [
       {
         "stt": "1",
-        "name": "Quản lý danh sách đơn thuê của tôi",
+        "name": "Xác nhận đã thanh toán VietQR",
         "type": "Button",
-        "meaning": "Thực hiện thao tác \"Quản lý danh sách đơn thuê của tôi\"",
+        "meaning": "Thực hiện thao tác \"Xác nhận đã thanh toán VietQR\"",
+        "domain": "Null",
+        "defaultVal": "Kích hoạt",
+        "note": ""
+      },
+      {
+        "stt": "2",
+        "name": "Hủy thanh toán & hoàn thiết bị về kho",
+        "type": "Button",
+        "meaning": "Thực hiện thao tác \"Hủy thanh toán & hoàn thiết bị về kho\"",
         "domain": "Null",
         "defaultVal": "Kích hoạt",
         "note": ""
@@ -4212,7 +4221,7 @@
         "type": "Date picker",
         "meaning": "Chọn thời gian bắt đầu",
         "domain": "Ngày/Tháng/Năm",
-        "defaultVal": "2026-07-24T03:39",
+        "defaultVal": "2026-07-24T10:39",
         "note": ""
       },
       {
@@ -4221,7 +4230,7 @@
         "type": "Date picker",
         "meaning": "Chọn thời gian kết thúc",
         "domain": "Ngày/Tháng/Năm",
-        "defaultVal": "2026-10-22T03:39",
+        "defaultVal": "2026-10-22T10:39",
         "note": ""
       },
       {
@@ -4303,7 +4312,7 @@
         "type": "Date picker",
         "meaning": "Chọn thời gian bắt đầu",
         "domain": "Ngày/Tháng/Năm",
-        "defaultVal": "2026-11-21T11:29",
+        "defaultVal": "2026-11-21T12:30",
         "note": ""
       },
       {
@@ -4312,7 +4321,7 @@
         "type": "Date picker",
         "meaning": "Chọn thời gian kết thúc",
         "domain": "Ngày/Tháng/Năm",
-        "defaultVal": "2026-12-21T11:29",
+        "defaultVal": "2026-12-21T12:30",
         "note": ""
       },
       {

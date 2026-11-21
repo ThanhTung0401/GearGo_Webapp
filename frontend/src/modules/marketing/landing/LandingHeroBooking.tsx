@@ -1,6 +1,7 @@
 import type { AppState } from "../../../context/AppContext";
 import Icon from "../../../components/Icon";
 import { LANDING_BOOKING_HOURS } from "./landingData";
+import { addDaysToDateStr, getTodayDateStr, normalizeRentalSchedule } from "../../orders/customerUtils";
 
 interface LandingHeroBookingProps {
   app: AppState;
@@ -11,6 +12,9 @@ interface LandingHeroBookingProps {
  * Phần Hero trang chủ và thanh chọn lịch thuê nổi (Floating Booking Bar).
  */
 export function LandingHeroBooking({ app, hasValidPeriod }: LandingHeroBookingProps) {
+  const todayStr = getTodayDateStr();
+  const minReturnDate = addDaysToDateStr(app.pickupDate && app.pickupDate >= todayStr ? app.pickupDate : todayStr, 1);
+
   return (
     <>
       {/* Hero Section với hiệu ứng ánh sáng thiên nhiên và độ sâu */}
@@ -78,8 +82,13 @@ export function LandingHeroBooking({ app, hasValidPeriod }: LandingHeroBookingPr
               <div className="flex items-center gap-2">
                 <input
                   type="date"
+                  min={todayStr}
                   value={app.pickupDate}
-                  onChange={(e) => app.setPickupDate(e.target.value)}
+                  onChange={(e) => {
+                    const next = normalizeRentalSchedule(e.target.value, app.returnDate, "pickup");
+                    app.setPickupDate(next.pickupDate);
+                    if (next.returnDate !== app.returnDate) app.setReturnDate(next.returnDate);
+                  }}
                   className="lp-booking-date"
                 />
                 <select
@@ -102,8 +111,13 @@ export function LandingHeroBooking({ app, hasValidPeriod }: LandingHeroBookingPr
               <div className="flex items-center gap-2">
                 <input
                   type="date"
+                  min={minReturnDate}
                   value={app.returnDate}
-                  onChange={(e) => app.setReturnDate(e.target.value)}
+                  onChange={(e) => {
+                    const next = normalizeRentalSchedule(app.pickupDate, e.target.value, "return");
+                    if (next.pickupDate !== app.pickupDate) app.setPickupDate(next.pickupDate);
+                    app.setReturnDate(next.returnDate);
+                  }}
                   className="lp-booking-date"
                 />
                 <select

@@ -131,8 +131,28 @@ export function useProductsCatalog() {
     if (redirectToCart) app.setPage("cart");
   };
 
-  const categories = ["Tất cả", ...Array.from(new Set(app.products.map((p) => p.category)))];
-  const brands = ["Tất cả", ...Array.from(new Set(app.products.map((p) => p.brand)))];
+  // Giữ danh sách thương hiệu đầy đủ từ lần tải chưa lọc để không bị mất option khi lọc danh mục
+  const [knownBrands, setKnownBrands] = useState<string[]>([]);
+  useEffect(() => {
+    const incomingBrands = app.products.map((p) => p.brand).filter(Boolean);
+    if (incomingBrands.length === 0) return;
+    setKnownBrands((prev) => Array.from(new Set([...prev, ...incomingBrands])));
+  }, [app.products]);
+
+  const activeCategoryNames = app.categories
+    .filter((c) => c.status === "active")
+    .map((c) => c.name);
+  const categories = [
+    "Tất cả",
+    ...Array.from(
+      new Set(
+        activeCategoryNames.length > 0
+          ? activeCategoryNames
+          : app.products.map((p) => p.category).filter(Boolean)
+      )
+    ),
+  ];
+  const brands = ["Tất cả", ...knownBrands];
 
   const filtered = app.products
     .filter((p) => {

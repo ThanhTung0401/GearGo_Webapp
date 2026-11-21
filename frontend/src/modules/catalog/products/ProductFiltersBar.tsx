@@ -1,4 +1,5 @@
 import Icon from "../../../components/Icon";
+import { addDaysToDateStr, getTodayDateStr, normalizeRentalSchedule } from "../../orders/customerUtils";
 
 interface ProductFiltersBarProps {
   pickupDate: string;
@@ -54,6 +55,21 @@ export function ProductFiltersBar({
   categories,
   onResetFilters,
 }: ProductFiltersBarProps) {
+  const todayStr = getTodayDateStr();
+  const minReturnDate = addDaysToDateStr(pickupDate && pickupDate >= todayStr ? pickupDate : todayStr, 1);
+
+  const handlePickupDateChange = (rawDate: string) => {
+    const next = normalizeRentalSchedule(rawDate, returnDate, "pickup");
+    setPickupDate(next.pickupDate);
+    if (next.returnDate !== returnDate) setReturnDate(next.returnDate);
+  };
+
+  const handleReturnDateChange = (rawDate: string) => {
+    const next = normalizeRentalSchedule(pickupDate, rawDate, "return");
+    if (next.pickupDate !== pickupDate) setPickupDate(next.pickupDate);
+    setReturnDate(next.returnDate);
+  };
+
   return (
     <>
       <div className="lp-filter-card">
@@ -63,8 +79,9 @@ export function ProductFiltersBar({
             <div className="flex gap-1">
               <input
                 type="date"
+                min={todayStr}
                 value={pickupDate}
-                onChange={(e) => setPickupDate(e.target.value)}
+                onChange={(e) => handlePickupDateChange(e.target.value)}
                 className="lp-filter-date"
               />
               <select
@@ -85,8 +102,9 @@ export function ProductFiltersBar({
             <div className="flex gap-1">
               <input
                 type="date"
+                min={minReturnDate}
                 value={returnDate}
-                onChange={(e) => setReturnDate(e.target.value)}
+                onChange={(e) => handleReturnDateChange(e.target.value)}
                 className="lp-filter-date"
               />
               <select

@@ -55,6 +55,14 @@ export function useCartFlow() {
     void loadBackendCart();
   }, [loadBackendCart]);
 
+  // Đồng bộ tồn kho khả dụng theo lịch thuê ngay khi mở Giỏ hàng (kể cả khách chưa đăng nhập)
+  useEffect(() => {
+    if (!app.realApi || !app.hasValidRentalPeriod()) return;
+    const gioNhan = toIsoDateTime(app.pickupDate, app.pickupHour || "09:00");
+    const gioTra = toIsoDateTime(app.returnDate, app.returnHour || "09:00");
+    void app.refreshCatalog?.({ gioNhan, gioTra });
+  }, [app.realApi, app.pickupDate, app.pickupHour, app.returnDate, app.returnHour]);
+
   const localDays = app.getDays();
   const days = app.realApi && backendCart?.baoGia ? backendCart.baoGia.soNgayThue : localDays;
   const datesValid = app.hasValidRentalPeriod();

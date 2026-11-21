@@ -49,9 +49,18 @@ export function useCheckoutFlow() {
       setReceiverEmail((prev) => prev || app.currentUser?.email || "");
     }
     if (app.realApi && app.currentUser) {
-      void rentalCartApi.layGio().then(setBackendQuote).catch(() => {});
+      const syncAndFetchQuote = async () => {
+        if (app.hasValidRentalPeriod()) {
+          const gioNhan = toIsoDateTime(app.pickupDate, app.pickupHour);
+          const gioTra = toIsoDateTime(app.returnDate, app.returnHour);
+          await rentalCartApi.datThoiGian(gioNhan, gioTra).catch(() => {});
+        }
+        const quote = await rentalCartApi.layGio();
+        setBackendQuote(quote);
+      };
+      void syncAndFetchQuote().catch(() => {});
     }
-  }, [app.realApi, app.currentUser?.id]);
+  }, [app.realApi, app.currentUser?.id, app.pickupDate, app.pickupHour, app.returnDate, app.returnHour]);
 
   const localDays = app.getDays();
   const days = app.realApi && backendQuote?.baoGia ? backendQuote.baoGia.soNgayThue : localDays;

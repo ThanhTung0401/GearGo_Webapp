@@ -23,6 +23,9 @@ builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
         options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
+        // Chuẩn hóa DateTime Kind=Unspecified từ SQL Server thành UTC để client JS không bị lệch 7 tiếng
+        options.JsonSerializerOptions.Converters.Add(new UtcDateTimeJsonConverter());
+        options.JsonSerializerOptions.Converters.Add(new UtcNullableDateTimeJsonConverter());
     });
 // Hỗ trợ sinh tài liệu Swagger/OpenAPI
 builder.Services.AddEndpointsApiExplorer();
@@ -367,3 +370,36 @@ app.Run();
 
 // Cho phép WebApplicationFactory<Program> trong tests/GearGo.Tests truy cập entry point.
 public partial class Program { }
+
+/// <summary>
+/// Chuẩn hóa DateTime Kind=Unspecified (đọc từ SQL Server) sang UTC khi serialize JSON
+/// để trình duyệt khách hàng không hiểu nhầm là giờ địa phương.
+/// </summary>
+file sealed class UtcDateTimeJsonConverter : System.Text.Json.Serialization.JsonConverter<DateTime>
+{
+    public override DateTime Read(ref System.Text.Json.Utf8JsonReader reader, Type typeToConvert, System.Text.Json.JsonSerializerOptions options)
+        => reader.GetDateTime();
+
+    public override void Write(System.Text.Json.Utf8JsonWriter writer, DateTime value, System.Text.Json.JsonSerializerOptions options)
+    {
+        var utc = value.Kind == DateTimeKind.Unspecified
+            ? DateTime.SpecifyKind(value, DateTimeKind.Utc)
+            : value.ToUniversalTime();
+        writer.WriteStringValue(utc);
+    }
+}
+
+file sealed class UtcNullableDateTimeJsonConverter : System.Text.Json.Serialization.JsonConverter<DateTime?>
+{
+    public override DateTime? Read(ref System.Text.Json.Utf8JsonReader reader, Type typeToConvert, System.Text.Json.JsonSerializerOptions options)
+        => reader.TokenType == System.Text.Json.JsonTokenType.Null ? null : reader.GetDateTime();
+
+    public override void Write(System.Text.Json.Utf8JsonWriter writer, DateTime? value, System.Text.Json.JsonSerializerOptions options)
+    {
+        if (!value.HasValue) { writer.WriteNullValue(); return; }
+        var utc = value.Value.Kind == DateTimeKind.Unspecified
+            ? DateTime.SpecifyKind(value.Value, DateTimeKind.Utc)
+            : value.Value.ToUniversalTime();
+        writer.WriteStringValue(utc);
+    }
+}

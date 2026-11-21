@@ -33,6 +33,19 @@ test.describe.serial("Frontend PH3: Giỏ thuê, Đặt thuê & Theo dõi đơn 
     const promoInput = page.locator('input[placeholder*="CAMPGO"], input[placeholder*="khuyến mãi" i]').first();
     await expect(promoInput).toBeVisible();
     await pauseForViewer(page);
+
+    // UC3.2 & UC5.1: Tiến hành đặt thuê -> Kiểm tra đồng hồ 15p không bị hết hạn tức thì -> Thanh toán thành công
+    const proceedBtn = page.getByRole("button", { name: /Tiến hành xác nhận thuê/i }).first();
+    await expect(proceedBtn).toBeEnabled();
+    await proceedBtn.click();
+    await page.locator('input[type="checkbox"]').first().check();
+    await page.getByRole("button", { name: /Xác nhận đặt thuê/i }).first().click();
+
+    await expect(page.getByText(/Đơn thuê đang chờ thanh toán \(Giữ chỗ 15 phút\)/i)).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText(/Thời hạn giữ chỗ còn lại:/i)).toBeVisible();
+    await page.getByRole("button", { name: /Xác nhận đã thanh toán VietQR/i }).click();
+    await expect(page.getByText(/Đơn thuê đã được thanh toán & xác nhận!/i)).toBeVisible({ timeout: 15_000 });
+    await pauseForViewer(page);
   });
 
   test("UC3.3, UC3.4 - Xem danh sách Đơn thuê, kiểm tra các tab lọc trạng thái & mở modal Hủy đơn", async () => {

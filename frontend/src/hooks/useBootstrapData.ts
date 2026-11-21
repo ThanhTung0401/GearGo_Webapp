@@ -445,7 +445,6 @@ export function useBootstrapData(params: UseBootstrapDataParams) {
   useEffect(() => {
     if (!REAL_MODE || !currentUser || !getAuthToken()) return;
     void refreshNotifications();
-    void refreshCatalog();
     void refreshOrders();
     void refreshReviews();
     if (role === "customer") {

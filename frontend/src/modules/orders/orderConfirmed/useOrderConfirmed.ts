@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useApp } from "../../../context/AppContext";
 import { orderApi, paymentApi } from "../../../services/api";
 import { mapDonChiTietToOrder } from "../../../services/mappers";
+import { parseServerTimestamp } from "../customerUtils";
 
 /**
  * Hook quản lý đồng hồ giữ chỗ 15 phút, xác nhận thanh toán VietQR và đối chiếu cổng ngân hàng (UC3.2 & UC5.1).
@@ -10,19 +11,23 @@ export function useOrderConfirmed() {
   const app = useApp();
   const [seconds, setSeconds] = useState(0);
   const [processing, setProcessing] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
   const [checkingGateway, setCheckingGateway] = useState(false);
   const [gatewayMessage, setGatewayMessage] = useState("");
   const [payError, setPayError] = useState("");
 
   const order = app.newOrderId ? app.orders.find((o) => o.id === app.newOrderId) : null;
   const paid = order?.status === "Đã xác nhận";
+  const cancelled = order?.status === "Khách hủy" || order?.status === "Cửa hàng hủy";
+  const expiresAtMs = parseServerTimestamp(order?.expiresAt);
   const expired =
     order?.status === "Hết hạn" ||
-    (Boolean(order?.expiresAt) &&
+    (Number.isFinite(expiresAtMs) &&
       seconds === 0 &&
       !paid &&
+      !cancelled &&
       order?.status === "Chờ thanh toán" &&
-      new Date(order.expiresAt!).getTime() <= Date.now());
+      expiresAtMs <= Date.now());
   const latestPayment = order?.transactions
     ?.filter((transaction) => transaction.type === "Thanh toán ban đầu")
     .at(-1);
@@ -49,8 +54,11 @@ export function useOrderConfirmed() {
   // Bộ đếm ngược thời gian giữ chỗ thanh toán 15 phút (UC3.2)
   useEffect(() => {
     if (!order?.expiresAt || paid || order?.status === "Hết hạn") return;
+    const targetMs = parseServerTimestamp(order.expiresAt);
+    if (!Number.isFinite(targetMs)) return;
+
     const updateCountdown = () => {
-      const remaining = Math.max(0, Math.ceil((new Date(order.expiresAt!).getTime() - Date.now()) / 1000));
+      const remaining = Math.max(0, Math.ceil((targetMs - Date.now()) / 1000));
       setSeconds(remaining);
       // Tự động làm mới trạng thái từ backend khi hết giờ giữ chỗ
       if (remaining === 0 && app.realApi) {
@@ -100,6 +108,7 @@ export function useOrderConfirmed() {
           maDonThue: Number(order.backendId ?? order.id),
           phuongThucThanhToan: "VietQR",
           soTienDaTra: totalAmount,
+          maGiaoDichDoiTac: `VQR-${displayOrderCode || order.id}-${Date.now()}`,
         });
         await refreshOrderDetail();
         void app.refreshCatalog?.();
@@ -146,10 +155,32 @@ export function useOrderConfirmed() {
     }, 800);
   };
 
+  // Hủy đơn khi thanh toán không thành công hoặc khách hủy để giải phóng thiết bị ngay về kho
+  const handleCancelOrder = async () => {
+    if (!order) return;
+    setCancelling(true);
+    setPayError("");
+    try {
+      if (app.realApi) {
+        await orderApi.huyDon(Number(order.backendId ?? order.id), "Khách hủy thanh toán / giải phóng giữ chỗ");
+        await refreshOrderDetail();
+        void app.refreshCatalog?.();
+        void app.refreshOrders?.();
+      } else {
+        app.cancelOrder(order.id, "Khách hủy thanh toán / giải phóng giữ chỗ");
+      }
+    } catch (err) {
+      setPayError(err instanceof Error ? err.message : "Không thể hủy đơn lúc này.");
+    } finally {
+      setCancelling(false);
+    }
+  };
+
   return {
     app,
     order,
     paid,
+    cancelled,
     expired,
     seconds,
     mm,
@@ -159,10 +190,12 @@ export function useOrderConfirmed() {
     totalAmount,
     bannerStateClass,
     processing,
+    cancelling,
     checkingGateway,
     gatewayMessage,
     payError,
     handlePay,
+    handleCancelOrder,
     handleCheckGateway,
   };
 }

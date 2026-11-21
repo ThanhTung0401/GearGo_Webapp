@@ -1,4 +1,4 @@
-﻿import { useOrderConfirmed } from "./orderConfirmed/useOrderConfirmed";
+import { useOrderConfirmed } from "./orderConfirmed/useOrderConfirmed";
 import { OrderConfirmedQrBox } from "./orderConfirmed/OrderConfirmedQrBox";
 import { OrderConfirmedItemsAndReceipt } from "./orderConfirmed/OrderConfirmedItemsAndReceipt";
 
@@ -7,11 +7,11 @@ import { OrderConfirmedItemsAndReceipt } from "./orderConfirmed/OrderConfirmedIt
  */
 export function OrderConfirmedView() {
   const vm = useOrderConfirmed();
-  const { app, order, paid, expired, seconds, latestPayment, displayOrderCode, totalAmount } = vm;
+  const { app, order, paid, cancelled, expired, seconds, latestPayment, displayOrderCode, totalAmount } = vm;
 
   if (!order) return null;
 
-  const isPendingActive = !paid && !expired && seconds > 0;
+  const isPendingActive = !paid && !cancelled && !expired && seconds > 0;
 
   return (
     <div className="confirmed-wrap cp-confirmed-wrap">
@@ -19,16 +19,24 @@ export function OrderConfirmedView() {
         {/* Banner trạng thái */}
         <div
           className={`p-6 text-center text-white cp-confirmed-banner ${vm.bannerStateClass} ${
-            paid ? "bg-forest" : expired ? "bg-clay" : "bg-amber"
+            paid ? "bg-forest" : cancelled || expired ? "bg-clay" : "bg-amber"
           }`}
         >
-          <div className="text-4xl mb-2">{paid ? "✓" : expired ? "×" : "⏳"}</div>
+          <div className="text-4xl mb-2">{paid ? "✓" : cancelled || expired ? "×" : "⏳"}</div>
           <h2 className="text-xl font-bold font-display cp-confirmed-banner-title">
-            {paid ? "Đơn thuê đã được thanh toán & xác nhận!" : expired ? "Đơn thuê đã hết thời hạn giữ chỗ" : "Đơn thuê đang chờ thanh toán (Giữ chỗ 15 phút)"}
+            {paid
+              ? "Đơn thuê đã được thanh toán & xác nhận!"
+              : cancelled
+              ? "Đơn thuê đã hủy & hoàn thiết bị về kho"
+              : expired
+              ? "Đơn thuê đã hết thời hạn giữ chỗ"
+              : "Đơn thuê đang chờ thanh toán (Giữ chỗ 15 phút)"}
           </h2>
           <p className="text-sm opacity-90 mt-1 cp-confirmed-banner-desc">
             {paid
               ? "Cửa hàng đã nhận thanh toán, giữ chỗ bảo đảm và nhân viên đang soạn đồ."
+              : cancelled
+              ? "Đơn thuê đã được hủy và toàn bộ thiết bị giữ chỗ đã được giải phóng ngay về kho."
               : expired
               ? "Đã hết 15 phút chờ thanh toán, thiết bị đã được tự động hoàn về kho cho khách khác."
               : "Vui lòng quét mã QR chuyển khoản hoặc thanh toán trước khi hết thời gian giữ chỗ."}
@@ -122,6 +130,17 @@ export function OrderConfirmedView() {
                 </button>
               )}
             </div>
+          )}
+
+          {isPendingActive && (
+            <button
+              type="button"
+              disabled={vm.processing || vm.cancelling}
+              onClick={() => void vm.handleCancelOrder()}
+              className="btn btn-secondary btn-md btn-full text-red-600 border-red-200 mb-3"
+            >
+              {vm.cancelling ? "Đang hủy đơn & giải phóng thiết bị..." : "Hủy thanh toán & hoàn thiết bị về kho"}
+            </button>
           )}
 
           <button

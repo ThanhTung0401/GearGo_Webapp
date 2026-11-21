@@ -89,7 +89,14 @@ export function useCartAndOrderActions(params: UseCartAndOrderActionsParams) {
       (e) => e.productId === productId && !["Đang bảo trì", "Thất lạc", "Ngừng sử dụng"].includes(e.equipmentStatus)
     ).length;
     const booked = orders
-      .filter((o) => ["Chờ thanh toán", "Đã xác nhận", "Đang chuẩn bị", "Sẵn sàng nhận", "Đang thuê"].includes(o.status))
+      .filter((o) => {
+        if (o.status === "Chờ thanh toán") {
+          if (!o.expiresAt) return true;
+          const expMs = new Date(/(?:Z|[+-]\d{2}:\d{2})$/i.test(o.expiresAt) ? o.expiresAt : `${o.expiresAt}Z`).getTime();
+          return !Number.isFinite(expMs) || expMs > Date.now();
+        }
+        return ["Đã xác nhận", "Đang chuẩn bị", "Sẵn sàng nhận", "Đang thuê"].includes(o.status);
+      })
       .filter((o) => {
         const orderStart = new Date(o.pickupTime.replace(" ", "T")).getTime();
         const orderEnd = new Date(o.returnTime.replace(" ", "T")).getTime();

@@ -679,13 +679,21 @@ async function main() {
     }
     await annotateAuto(page, 'UC3.2', 'UC3_2', 'Giao diện Tạo đơn thuê và giữ chỗ (SCR-3.2)', ['main', 'body'], { maxItems: 9 });
 
-    // UC5.1: Thanh toán và xác nhận đơn
+    // UC5.1: Thanh toán và xác nhận đơn (chụp màn hình chờ thanh toán VietQR với đồng hồ 15p còn hiệu lực)
     const confirmBookingBtn = page.getByRole('button', { name: /Xác nhận đặt thuê|Tạo đơn|Thanh toán/i }).first();
     if (await confirmBookingBtn.isVisible().catch(() => false)) {
       await confirmBookingBtn.click().catch(() => {});
+      await page.waitForSelector('text=/Thời hạn giữ chỗ còn lại|Xác nhận đã thanh toán VietQR/i', { timeout: 12000 }).catch(() => {});
+      await page.waitForTimeout(800);
+    }
+    await page.evaluate(() => window.scrollTo(0, 380));
+    await page.waitForTimeout(300);
+    await annotateAuto(page, 'UC5.1', 'UC5_1', 'Giao diện Thanh toán và xác nhận đơn (SCR-5.1)', ['main', 'body'], { maxItems: 7 });
+    const payVietQrBtn = page.getByRole('button', { name: /Xác nhận đã thanh toán VietQR/i }).first();
+    if (await payVietQrBtn.isVisible().catch(() => false)) {
+      await payVietQrBtn.click().catch(() => {});
       await page.waitForTimeout(1000);
     }
-    await annotateAuto(page, 'UC5.1', 'UC5_1', 'Giao diện Thanh toán và xác nhận đơn (SCR-5.1)', ['main', 'body'], { maxItems: 7 });
 
     // UC3.3: Theo dõi đơn thuê
     await page.getByRole('button', { name: 'Đơn thuê' }).first().click().catch(() => {});

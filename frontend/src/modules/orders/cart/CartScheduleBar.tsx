@@ -1,3 +1,5 @@
+import { addDaysToDateStr, getTodayDateStr, normalizeRentalSchedule } from "../customerUtils";
+
 interface CartScheduleBarProps {
   pickupDate: string;
   pickupHour: string;
@@ -29,6 +31,9 @@ export function CartScheduleBar({
   cartApiError,
   onScheduleChange,
 }: CartScheduleBarProps) {
+  const todayStr = getTodayDateStr();
+  const minReturnDate = addDaysToDateStr(pickupDate && pickupDate >= todayStr ? pickupDate : todayStr, 1);
+
   return (
     <div className="cp-cart-schedule-box">
       <div className="cp-cart-schedule-header">
@@ -44,8 +49,12 @@ export function CartScheduleBar({
           <div className="flex gap-1">
             <input
               type="date"
+              min={todayStr}
               value={pickupDate}
-              onChange={(e) => void onScheduleChange(e.target.value, pickupHour || "09:00", returnDate, returnHour || "09:00")}
+              onChange={(e) => {
+                const next = normalizeRentalSchedule(e.target.value, returnDate, "pickup");
+                void onScheduleChange(next.pickupDate, pickupHour || "09:00", next.returnDate, returnHour || "09:00");
+              }}
               className="cp-cart-date-input"
             />
             <select
@@ -67,8 +76,12 @@ export function CartScheduleBar({
           <div className="flex gap-1">
             <input
               type="date"
+              min={minReturnDate}
               value={returnDate}
-              onChange={(e) => void onScheduleChange(pickupDate, pickupHour || "09:00", e.target.value, returnHour || "09:00")}
+              onChange={(e) => {
+                const next = normalizeRentalSchedule(pickupDate, e.target.value, "return");
+                void onScheduleChange(next.pickupDate, pickupHour || "09:00", next.returnDate, returnHour || "09:00");
+              }}
               className="cp-cart-date-input"
             />
             <select
