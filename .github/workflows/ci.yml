@@ -160,7 +160,7 @@ jobs:
         env:
           API_URL: http://localhost:5000
           APP_URL: http://localhost:8443
-        run: npm te
+        run: npm test
 
       - name: Upload Playwright report, videos & failure traces
         if: always()
