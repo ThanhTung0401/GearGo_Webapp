@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { loginUi } from "../../helpers/auth.js";
-import { useSubsystemPage, pauseForViewer } from "../../helpers/subsystemVideo.js";
+import { useSubsystemPage, pauseForViewer, waitVisible } from "../../helpers/subsystemVideo.js";
 
 test.describe.serial("Frontend PH6: Danh mục, Sản phẩm, Thiết bị, Điều chỉnh kho & Bảo trì (UC6.1 - UC6.15)", () => {
   const getPage = useSubsystemPage("phan_he_06_san_pham_thiet_bi_bao_tri");
@@ -15,8 +15,9 @@ test.describe.serial("Frontend PH6: Danh mục, Sản phẩm, Thiết bị, Đi�
     await pauseForViewer(page);
     await page.getByRole("button", { name: /Hủy|Đóng/i }).first().click();
     const editCat = page.getByRole("button", { name: "Sửa", exact: true }).first();
-    if (await editCat.isVisible().catch(() => false)) {
+    if (await waitVisible(editCat)) {
       await editCat.click();
+      await pauseForViewer(page);
       await page.getByRole("button", { name: /Hủy|Đóng/i }).first().click().catch(() => {});
     }
 
@@ -29,8 +30,9 @@ test.describe.serial("Frontend PH6: Danh mục, Sản phẩm, Thiết bị, Đi�
     await pauseForViewer(page);
     await page.getByRole("button", { name: /Hủy|Đóng/i }).first().click();
     const editProd = page.getByRole("button", { name: "Sửa", exact: true }).first();
-    if (await editProd.isVisible().catch(() => false)) {
+    if (await waitVisible(editProd)) {
       await editProd.click();
+      await pauseForViewer(page);
       await page.getByRole("button", { name: /Hủy|Đóng/i }).first().click().catch(() => {});
     }
   });
@@ -50,7 +52,7 @@ test.describe.serial("Frontend PH6: Danh mục, Sản phẩm, Thiết bị, Đi�
     await page.getByRole("button", { name: "Kho & Bảo trì" }).first().click();
     await expect(page.getByText(/Kho|Bảo trì/i).first()).toBeVisible();
     const maintTab = page.locator('button:has-text("Phiếu bảo trì")').first();
-    if (await maintTab.isVisible().catch(() => false)) {
+    if (await waitVisible(maintTab)) {
       await maintTab.click();
       await expect(page.getByText(/Hồ sơ bảo trì/i)).toBeVisible();
     }

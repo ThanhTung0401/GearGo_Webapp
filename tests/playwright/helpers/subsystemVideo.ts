@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { test, type Browser, type BrowserContext, type Page } from "@playwright/test";
+import { test, type Browser, type BrowserContext, type Locator, type Page } from "@playwright/test";
 
 const playwrightRoot = path.resolve(import.meta.dirname, "..");
 const videosAllDir = path.join(playwrightRoot, "videos", "all");
@@ -101,5 +101,17 @@ export function useSubsystemPage(subsystemName: string): () => Page {
 export async function pauseForViewer(page: Page, ms = 900): Promise<void> {
   if (!process.env.CI) {
     await page.waitForTimeout(ms);
+  }
+}
+
+/**
+ * Chờ phần tử thực sự hiển thị tối đa `timeout` ms (tránh isVisible() 0ms bỏ qua bước quay video khi API đang tải).
+ */
+export async function waitVisible(locator: Locator, timeout = 3000): Promise<boolean> {
+  try {
+    await locator.waitFor({ state: "visible", timeout });
+    return true;
+  } catch {
+    return false;
   }
 }

@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { loginUi } from "../../helpers/auth.js";
 import { getFutureRentalDates } from "../../helpers/testData.js";
-import { useSubsystemPage, pauseForViewer } from "../../helpers/subsystemVideo.js";
+import { useSubsystemPage, pauseForViewer, waitVisible } from "../../helpers/subsystemVideo.js";
 
 test.describe.serial("Frontend PH3: Giỏ thuê, Đặt thuê & Theo dõi đơn (UC3.1 - UC3.4)", () => {
   const getPage = useSubsystemPage("phan_he_03_dat_thue_thanh_toan_huy");
@@ -75,12 +75,13 @@ test.describe.serial("Frontend PH3: Giỏ thuê, Đặt thuê & Theo dõi đơn 
     // SCR-3.4: Mở hộp thoại xác nhận hủy đơn thuê từ tab Đã xác nhận
     await page.getByRole("button", { name: /Đã xác nhận/i }).first().click();
     const orderItem = page.getByText("ORD-202611-110").first();
-    if (await orderItem.isVisible().catch(() => false)) {
+    if (await waitVisible(orderItem)) {
       await orderItem.click();
       const reqCancel = page.getByRole("button", { name: /Yêu cầu hủy đơn thuê/i }).first();
-      if (await reqCancel.isVisible().catch(() => false)) {
+      if (await waitVisible(reqCancel)) {
         await reqCancel.click();
         await expect(page.locator("textarea").first()).toBeVisible();
+        await pauseForViewer(page);
         await page.keyboard.press("Escape");
       }
     }

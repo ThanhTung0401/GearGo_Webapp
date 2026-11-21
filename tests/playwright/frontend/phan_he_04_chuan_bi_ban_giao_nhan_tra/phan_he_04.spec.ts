@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { loginUi } from "../../helpers/auth.js";
-import { useSubsystemPage, pauseForViewer } from "../../helpers/subsystemVideo.js";
+import { useSubsystemPage, pauseForViewer, waitVisible } from "../../helpers/subsystemVideo.js";
 
 test.describe.serial("Frontend PH4: Cổng Nhân viên - Chuẩn bị, Bàn giao, Nhận trả & Quá hạn (UC4.1 - UC4.5)", () => {
   const getPage = useSubsystemPage("phan_he_04_chuan_bi_ban_giao_nhan_tra");
@@ -27,11 +27,11 @@ test.describe.serial("Frontend PH4: Cổng Nhân viên - Chuẩn bị, Bàn giao
     await pauseForViewer(page);
 
     const firstOrderBtn = page.locator("table tbody tr button").first();
-    if (await firstOrderBtn.isVisible().catch(() => false)) {
+    if (await waitVisible(firstOrderBtn)) {
       await firstOrderBtn.click();
       await pauseForViewer(page);
       const closeBtn = page.getByRole("button", { name: /✕|Đóng/i }).first();
-      if (await closeBtn.isVisible().catch(() => false)) {
+      if (await waitVisible(closeBtn)) {
         await closeBtn.click();
       }
     }
@@ -42,11 +42,11 @@ test.describe.serial("Frontend PH4: Cổng Nhân viên - Chuẩn bị, Bàn giao
     await page.getByRole("button", { name: "Chuẩn bị & Bàn giao" }).first().click();
     await expect(page.getByText(/Chuẩn bị|Bàn giao/i).first()).toBeVisible();
     const prepItem = page.locator('button:has-text("Đã xác nhận"), button:has-text("ORD-")').first();
-    if (await prepItem.isVisible().catch(() => false)) {
+    if (await waitVisible(prepItem)) {
       await prepItem.click();
     }
     const handoverTab = page.getByRole("button", { name: /2\. Tiếp khách & Bàn giao/i }).first();
-    if (await handoverTab.isVisible().catch(() => false)) {
+    if (await waitVisible(handoverTab)) {
       await handoverTab.click();
     }
     await pauseForViewer(page);
@@ -57,7 +57,7 @@ test.describe.serial("Frontend PH4: Cổng Nhân viên - Chuẩn bị, Bàn giao
     await expect(content.getByRole("button", { name: /Đang xử lý/i }).first()).toBeVisible({ timeout: 10_000 });
     await expect(content.getByRole("button", { name: /Hoàn tất/i }).first()).toBeVisible();
     const retItem = page.locator('button:has-text("Đang thuê"), button:has-text("Quá hạn")').first();
-    if (await retItem.isVisible().catch(() => false)) {
+    if (await waitVisible(retItem)) {
       await retItem.click();
     }
     await pauseForViewer(page);

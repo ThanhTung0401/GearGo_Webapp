@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { loginUi } from "../../helpers/auth.js";
-import { useSubsystemPage, pauseForViewer } from "../../helpers/subsystemVideo.js";
+import { useSubsystemPage, pauseForViewer, waitVisible } from "../../helpers/subsystemVideo.js";
 
 test.describe.serial("Frontend PH7: Nhà cung cấp & Nhập kho (UC7.1 - UC7.10.1)", () => {
   const getPage = useSubsystemPage("phan_he_07_nha_cung_cap_nhap_kho");
@@ -19,15 +19,16 @@ test.describe.serial("Frontend PH7: Nhà cung cấp & Nhập kho (UC7.1 - UC7.10
     await pauseForViewer(page);
     await page.getByRole("button", { name: /Hủy|Đóng/i }).first().click();
     const editNcc = page.getByRole("button", { name: "Sửa", exact: true }).first();
-    if (await editNcc.isVisible().catch(() => false)) {
+    if (await waitVisible(editNcc)) {
       await editNcc.click();
+      await pauseForViewer(page);
       await page.getByRole("button", { name: /Hủy|Đóng/i }).first().click().catch(() => {});
     }
 
     await page.getByRole("button", { name: "Phiếu nhập" }).first().click();
     await expect(page.getByText(/Phiếu nhập/i).first()).toBeVisible();
     const firstReceipt = page.locator('button:has-text("PN-"), button:has-text("Nháp"), button:has-text("Đã xác nhận")').first();
-    if (await firstReceipt.isVisible().catch(() => false)) {
+    if (await waitVisible(firstReceipt)) {
       await firstReceipt.click();
     }
     await pauseForViewer(page);

@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { loginUi } from "../../helpers/auth.js";
-import { useSubsystemPage, pauseForViewer } from "../../helpers/subsystemVideo.js";
+import { useSubsystemPage, pauseForViewer, waitVisible } from "../../helpers/subsystemVideo.js";
 
 test.describe.serial("Frontend PH5: Phụ phí, Đối soát cọc & Bù trừ tài chính (UC5.1 - UC5.7)", () => {
   const getPage = useSubsystemPage("phan_he_05_phu_phi_doi_soat_hoan_tien");
@@ -22,7 +22,7 @@ test.describe.serial("Frontend PH5: Phụ phí, Đối soát cọc & Bù trừ t
     // UC5.4 - UC5.6: Kiểm tra nút Đối soát trên Đơn thuê
     await page.getByRole("button", { name: "Đơn thuê" }).first().click();
     const reconcileBtn = page.getByRole("button", { name: "Đối soát", exact: true }).first();
-    if (await reconcileBtn.isVisible().catch(() => false)) {
+    if (await waitVisible(reconcileBtn)) {
       await reconcileBtn.click();
       await expect(page.getByText(/Đối Soát Cọc/i).first()).toBeVisible();
     }
