@@ -162,7 +162,7 @@ export function useOrderConfirmed() {
     setPayError("");
     try {
       if (app.realApi) {
-        await orderApi.huyDon(Number(order.backendId ?? order.id), "Khách hủy thanh toán / giải phóng giữ chỗ");
+        await orderApi.huyDonChuaThanhToan(Number(order.backendId ?? order.id), "Khách hủy thanh toán / giải phóng giữ chỗ");
         await refreshOrderDetail();
         void app.refreshCatalog?.();
         void app.refreshOrders?.();
