@@ -104,12 +104,18 @@ public partial class QuanTriKhuyenMaiService
     {
         if (tongDangChiem <= 0) return null;
 
+        // Chỉ coi là đổi phạm vi khi danh sách sản phẩm/danh mục mới THỰC SỰ khác danh sách hiện tại (UC8.3)
+        bool doiSanPham = req.SanPhamIds != null &&
+            !new HashSet<long>(req.SanPhamIds).SetEquals(km.KhuyenMaiSanPhams.Select(x => x.MaSanPham));
+        bool doiDanhMuc = req.DanhMucIds != null &&
+            !new HashSet<long>(req.DanhMucIds).SetEquals(km.KhuyenMaiDanhMucs.Select(x => x.MaDanhMuc));
+
         bool doiDieuKhoan = (req.LoaiGiam.HasValue && req.LoaiGiam.Value != km.LoaiGiam)
             || (req.GiaTriGiam.HasValue && req.GiaTriGiam.Value != km.GiaTriGiam)
             || (req.MucGiamToiDa.HasValue && req.MucGiamToiDa.Value != km.MucGiamToiDa)
             || (req.TienThueToiThieu.HasValue && req.TienThueToiThieu.Value != km.TienThueToiThieu)
             || (req.PhamVi.HasValue && req.PhamVi.Value != km.PhamVi)
-            || req.SanPhamIds != null || req.DanhMucIds != null;
+            || doiSanPham || doiDanhMuc;
 
         if (doiDieuKhoan)
             return Result<KhuyenMaiResponse>.Loi("DIEU_KHOAN_MA_DA_CAM_KET",

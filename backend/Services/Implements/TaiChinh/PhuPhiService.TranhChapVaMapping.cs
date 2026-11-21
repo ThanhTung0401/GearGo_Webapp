@@ -25,8 +25,13 @@ public partial class PhuPhiService
 
         phuPhi.TrangThaiTranhChap = "DangTranhChap";
         phuPhi.LyDo = $"{phuPhi.LyDo} [Khách khiếu nại: {dto.NoiDung}]";
+        // Giữ nguyên ảnh bằng chứng ban đầu của nhân viên, nối thêm ảnh khiếu nại của khách (UC5.3)
         if (dto.DanhSachAnh != null && dto.DanhSachAnh.Any())
-            phuPhi.BangChung = JsonSerializer.Serialize(dto.DanhSachAnh);
+        {
+            var existingImgs = TryDeserialize<List<string>>(phuPhi.BangChung) ?? new List<string>();
+            existingImgs.AddRange(dto.DanhSachAnh.Where(img => !string.IsNullOrWhiteSpace(img)));
+            phuPhi.BangChung = JsonSerializer.Serialize(existingImgs.Distinct().ToList());
+        }
 
         await _context.SaveChangesAsync();
         return Result<PhuPhiResponse>.Ok(ChuyenSangPhuPhiResponse(phuPhi));
@@ -43,12 +48,16 @@ public partial class PhuPhiService
         if (phuPhi.TrangThaiTranhChap != "DangTranhChap")
             return Result<PhuPhiResponse>.Loi("TRANG_THAI_KHONG_HOP_LE", "Phụ phí không ở trạng thái đang tranh chấp.");
 
+        // Không được hủy/sửa ngược khoản phụ phí đã khóa vào bảng đối soát (UC5.3 dòng phụ 4.2 -> chuyển UC5.7)
+        if (phuPhi.MaDoiSoat != null && (dto.KetQua == "HuyPhi" || dto.KetQua == "DieuChinh"))
+            return Result<PhuPhiResponse>.Loi("DOI_SOAT_DA_CHOT", "Phụ phí đã được chốt vào bảng đối soát. Vui lòng lập hồ sơ điều chỉnh tài chính sau chốt (UC5.7).");
+
         phuPhi.TrangThaiTranhChap = "DaGiaiQuyet";
         phuPhi.KetQuaGiaiQuyet = $"{dto.KetQua}: {dto.LyDo}";
 
         if (dto.KetQua == "HuyPhi")
             phuPhi.TrangThaiDuyet = "TuChoi";
-        else if (dto.KetQua == "DieuChinh" && dto.SoTienDeXuatSauXuLy.HasValue && phuPhi.MaDoiSoat == null)
+        else if (dto.KetQua == "DieuChinh" && dto.SoTienDeXuatSauXuLy.HasValue)
             phuPhi.SoTien = dto.SoTienDeXuatSauXuLy.Value;
 
         await _context.SaveChangesAsync();

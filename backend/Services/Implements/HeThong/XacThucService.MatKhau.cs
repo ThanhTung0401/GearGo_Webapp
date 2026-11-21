@@ -12,8 +12,16 @@ public partial class XacThucService
     public async Task<Result<string>> TaoTokenQuenMatKhauAsync(string email)
     {
         var cleanEmail = (email ?? "").Trim().ToLowerInvariant();
-        var taiKhoan = await _db.TaiKhoans.FirstOrDefaultAsync(t => t.Email == cleanEmail);
         const string neutralMsg = "Nếu email tồn tại trên hệ thống, bạn sẽ nhận được mã OTP xác minh qua email.";
+
+        // Giới hạn tần suất gửi mã khôi phục mật khẩu (tối đa 5 lần / 15 phút mỗi email — UC1.4 / UC1.4.1)
+        var rateKey = $"reset_rate:{cleanEmail}";
+        var requestCount = _cache.Get<int>(rateKey);
+        if (requestCount >= 5)
+            return Result<string>.Loi("QUA_SO_LAN_YEU_CAU", "Bạn đã yêu cầu gửi mã quá nhiều lần. Vui lòng thử lại sau 15 phút.");
+        _cache.Set(rateKey, requestCount + 1, TimeSpan.FromMinutes(15));
+
+        var taiKhoan = await _db.TaiKhoans.FirstOrDefaultAsync(t => t.Email == cleanEmail);
         if (taiKhoan == null) return Result<string>.Ok(neutralMsg);
 
         var otp = RandomNumberGenerator.GetInt32(100000, 1000000).ToString("D6");
@@ -44,8 +52,9 @@ public partial class XacThucService
             noiDungEmail,
             "AUTH_RESET_PASSWORD");
 
-        _logger.LogInformation("[Email OTP] Đã gửi mã OTP khôi phục mật khẩu cho {Email}: {Otp}", taiKhoan.Email ?? email, otp);
-        return Result<string>.Ok("Mã xác minh OTP đã được gửi đến email của bạn. Vui lòng kiểm tra hộp thư.");
+        _logger.LogInformation("[Email OTP] Đã gửi mã OTP khôi phục mật khẩu cho {Email}", taiKhoan.Email ?? email);
+        // Phản hồi trung tính không tiết lộ tài khoản tồn tại (UC1.4 dòng phụ 2.1.1)
+        return Result<string>.Ok(neutralMsg);
     }
 
     public async Task<Result<string>> XacThucOtpAsync(string email, string otp)
@@ -53,8 +62,10 @@ public partial class XacThucService
         var cleanOtp = (otp ?? "").Trim();
         var cleanEmail = (email ?? "").Trim().ToLowerInvariant();
 
-        // Hỗ trợ mã OTP demo tĩnh 123456 khi kiểm thử cục bộ
-        if (cleanOtp == "123456")
+        // Chỉ cho phép mã OTP test 123456 khi bật cờ AppSettings:AllowDemoOtp (chỉ dùng môi trường Dev/E2E) và đã có yêu cầu OTP hợp lệ
+        if (cleanOtp == "123456"
+            && _config.GetValue<bool>("AppSettings:AllowDemoOtp", false)
+            && _cache.TryGetValue($"reset_otp_user:{cleanEmail}", out string? _))
         {
             var tkDemo = await _db.TaiKhoans.FirstOrDefaultAsync(t => t.Email == cleanEmail);
             if (tkDemo != null)

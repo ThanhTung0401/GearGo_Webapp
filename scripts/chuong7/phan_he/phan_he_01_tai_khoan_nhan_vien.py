@@ -19,9 +19,8 @@ SCREENS = [
 
 NATURAL_EVENTS = {
     'UC1.1': [
-        ('1', 'Nhấn nút "Tạo tài khoản"', 'Hệ thống kiểm tra thông tin đăng ký (họ tên, email, số điện thoại, mật khẩu khớp nhau và đã đồng ý điều khoản). Nếu hợp lệ thì tạo tài khoản mới và thông báo thành công; nếu thiếu hoặc sai định dạng thì hiển thị thông báo lỗi tương ứng.'),
-        ('2', 'Nhấn nút "Hiện" / "Ẩn" tại ô mật khẩu', 'Chuyển đổi chế độ hiển thị hoặc che ký tự mật khẩu đang nhập.'),
-        ('3', 'Nhấn liên kết "Đăng nhập ngay" hoặc "Về trang chủ"', 'Chuyển người dùng sang giao diện Đăng nhập hoặc quay lại trang chủ.'),
+        ('1', 'Nhấn nút "Tạo tài khoản"', 'Hệ thống kiểm tra thông tin đăng ký (họ tên, email, số điện thoại, mật khẩu tối thiểu 8 ký tự khớp nhau và đã đồng ý điều khoản). Nếu hợp lệ thì tạo tài khoản mới và thông báo thành công; nếu thiếu hoặc sai định dạng thì hiển thị thông báo lỗi tương ứng.'),
+        ('2', 'Nhấn liên kết "Đăng nhập"', 'Chuyển người dùng sang giao diện Đăng nhập (/login).'),
     ],
     'UC1.2': [
         ('1', 'Nhấn nút "Đăng nhập hệ thống" (/login) hoặc "Đăng nhập cổng Staff" (/staff/login)', 'Hệ thống kiểm tra thông tin tài khoản, mật khẩu và đối chiếu đúng cổng đăng nhập theo vai trò (Khách hàng tại /login; Quản trị viên và Nhân viên tại /staff/login). Nếu hợp lệ thì đăng nhập và chuyển sang không gian làm việc tương ứng; nếu đăng nhập nhầm cổng thì thông báo hướng dẫn chuyển cổng; nếu tài khoản bị khóa thì hiển thị hộp cảnh báo lý do khóa cùng thông tin liên hệ hỗ trợ.'),
@@ -68,7 +67,7 @@ NATURAL_EVENTS = {
         ('2', 'Nhập lý do và nhấn nút xác nhận trong hộp thoại', 'Hệ thống cập nhật trạng thái khóa/mở khóa của tài khoản, đóng hộp thoại và cập nhật lại trạng thái trên bảng danh sách.'),
     ],
     'UC1.12': [
-        ('1', 'Nhập mật khẩu hiện tại, mật khẩu mới, xác nhận mật khẩu và nhấn nút "Đổi mật khẩu"', 'Hệ thống kiểm tra mật khẩu hiện tại có chính xác không và mật khẩu mới có khớp nhau không; nếu hợp lệ thì cập nhật mật khẩu mới và thông báo thành công.'),
+        ('1', 'Nhập mật khẩu hiện tại, mật khẩu mới (tối thiểu 8 ký tự), xác nhận mật khẩu và nhấn nút "Cập nhật mật khẩu mới"', 'Hệ thống kiểm tra mật khẩu hiện tại có chính xác không và mật khẩu mới có khớp nhau không; nếu hợp lệ thì cập nhật mật khẩu mới, thu hồi phiên cũ và yêu cầu đăng nhập lại.'),
     ],
     'UC1.13': [
         ('1', 'Nhập từ khóa tìm kiếm hoặc chọn bộ lọc trạng thái khách hàng', 'Hệ thống lọc và hiển thị danh sách tài khoản khách hàng khớp với điều kiện tìm kiếm.'),

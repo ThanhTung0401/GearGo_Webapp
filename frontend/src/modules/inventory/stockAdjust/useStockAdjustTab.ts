@@ -96,14 +96,14 @@ export function useStockAdjustTab(app: ReturnType<typeof useApp>) {
           ],
         };
         const created = await inventoryApi.lapPhieu(dto);
+        // Giữ phiếu ở trạng thái Chờ duyệt để Quản trị viên kiểm tra ảnh hưởng lịch trước khi áp dụng (UC6.10)
         await inventoryApi.guiDuyet(created.maPhieuDieuChinh);
-        await inventoryApi.duyetVaApDung(created.maPhieuDieuChinh);
         await Promise.all([loadRealAdjustments(), app.refreshEquipment?.(), app.refreshCatalog?.()]);
         setShowModal(false);
         setSelectedEquipId("");
         setReason("");
         setNotes("");
-        setTabMessage({ type: "success", text: `Đã lập và áp dụng phiếu điều chỉnh #${created.maPhieuDieuChinh} vào kho!` });
+        setTabMessage({ type: "success", text: `Đã lập và gửi duyệt phiếu điều chỉnh #${created.maPhieuDieuChinh} (Chờ quản trị viên phê duyệt)!` });
       } catch (err) {
         setModalError(err instanceof Error ? err.message : "Lỗi lập phiếu điều chỉnh trên máy chủ.");
       } finally {

@@ -147,8 +147,80 @@ public partial class TuVanAIService : ITuVanAIService
         };
     }
 
-    public Task<TuVanBoDoResponse> KiemTraVaTinhLaiBoDoAsync(TuVanBoDoRequest request, CancellationToken cancellationToken = default)
-        => TuVanAsync(request, cancellationToken);
+    public async Task<TuVanBoDoResponse> KiemTraVaTinhLaiBoDoAsync(TuVanBoDoRequest request, CancellationToken cancellationToken = default)
+    {
+        // Nếu khách truyền bộ đồ đã chỉnh sửa thì kiểm tra khả dụng & tính lại giá trực tiếp, không gọi lại AI (UC2.4 bước 5)
+        if (request.CacDongHienTai == null || request.CacDongHienTai.Count == 0)
+            return await TuVanAsync(request, cancellationToken);
+
+        ValidateInput(request);
+        var coNgayThue = request.GioNhan.HasValue && request.GioTra.HasValue;
+        int thoiGianThueNgay = coNgayThue
+            ? CalculationHelpers.TinhSoNgayThue(request.GioNhan!.Value, request.GioTra!.Value)
+            : 1;
+
+        var productIds = request.CacDongHienTai.Select(d => d.MaSanPham).Distinct().ToList();
+        var products = await _context.SanPhams.AsNoTracking()
+            .Where(s => productIds.Contains(s.MaSanPham) && s.TrangThaiKinhDoanh == TrangThaiKinhDoanh.DangKinhDoanh)
+            .ToDictionaryAsync(s => s.MaSanPham, cancellationToken);
+
+        var availability = coNgayThue
+            ? await _khaDungService.LayKhaDungNhieuAsync(productIds, request.GioNhan!.Value, request.GioTra!.Value)
+            : new Dictionary<long, int>();
+
+        var validSelections = new List<DongGoiYResponse>();
+        var thieuThongBao = new List<string>();
+        decimal tongTienThue = 0, tongTienCoc = 0;
+
+        foreach (var item in request.CacDongHienTai)
+        {
+            if (item.SoLuong <= 0 || !products.TryGetValue(item.MaSanPham, out var sp))
+            {
+                thieuThongBao.Add($"Sản phẩm #{item.MaSanPham} không còn kinh doanh hoặc số lượng không hợp lệ.");
+                continue;
+            }
+            var khaDung = coNgayThue ? (availability.TryGetValue(sp.MaSanPham, out var av) ? av : 0) : 99;
+            if (coNgayThue && khaDung < item.SoLuong)
+                thieuThongBao.Add($"{sp.TenSanPham} chỉ còn {khaDung} chiếc (yêu cầu {item.SoLuong}).");
+
+            var tienThue = sp.GiaThueMoiNgay * item.SoLuong * thoiGianThueNgay;
+            var tienCoc = sp.MucCocMoiThietBi * item.SoLuong;
+            tongTienThue += tienThue;
+            tongTienCoc += tienCoc;
+
+            validSelections.Add(new DongGoiYResponse
+            {
+                MaSanPham = sp.MaSanPham,
+                MaSanPhamHienThi = sp.MaSanPhamHienThi,
+                TenSanPham = sp.TenSanPham,
+                SoLuong = item.SoLuong,
+                SucChua = sp.SucChua,
+                DonGiaThueMoiNgay = sp.GiaThueMoiNgay,
+                MucCocMoiThietBi = sp.MucCocMoiThietBi,
+                TienThue = tienThue,
+                TienCoc = tienCoc,
+                SoLuongKhaDung = khaDung,
+                LyDo = "Theo lựa chọn đã chỉnh sửa"
+            });
+        }
+
+        return new TuVanBoDoResponse
+        {
+            NguonGoiY = "KiemTraLai",
+            TrangThai = !coNgayThue ? "CanBoSungThongTin" : (thieuThongBao.Count > 0 ? "KhongDuKhaDung" : "ThanhCong"),
+            GioNhan = request.GioNhan,
+            GioTra = request.GioTra,
+            ThoiGianThueNgay = coNgayThue ? thoiGianThueNgay : null,
+            ThoiDiemKiemTra = DateTime.UtcNow,
+            TongTienThue = coNgayThue ? tongTienThue : null,
+            TongTienCoc = tongTienCoc,
+            TongBanDau = coNgayThue ? tongTienThue + tongTienCoc : null,
+            ThongBaoPhanThieu = thieuThongBao.Count > 0
+                ? string.Join(" ", thieuThongBao)
+                : (coNgayThue ? null : "Chưa có ngày thuê, giá hiển thị chỉ mang tính tham khảo."),
+            CacDong = validSelections
+        };
+    }
 
     private static void ValidateInput(TuVanBoDoRequest request)
     {

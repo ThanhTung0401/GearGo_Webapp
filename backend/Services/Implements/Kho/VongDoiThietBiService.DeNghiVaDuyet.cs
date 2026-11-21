@@ -46,6 +46,8 @@ public partial class VongDoiThietBiService
             var thietBi = await _context.ThietBis.AsNoTracking().FirstOrDefaultAsync(tb => tb.MaThietBi == thietBiId);
             if (thietBi == null)
                 return Result<DeNghiVongDoiResponse>.Loi(DomainConstants.Errors.EquipmentNotFound, "Không tìm thấy thiết bị.");
+            if (thietBi.TrangThaiSuDung == TrangThaiThietBi.NgungSuDung)
+                return Result<DeNghiVongDoiResponse>.Loi(DomainConstants.Errors.InvalidState, "Thiết bị đã ở trạng thái Ngừng sử dụng.");
 
             return await TaoDeNghiDieuChinhVongDoiInternalAsync(
                 thietBiId, actorId, DomainConstants.Lifecycle.Decommission, request.LyDo, request.BangChung,
@@ -68,6 +70,8 @@ public partial class VongDoiThietBiService
                 return Result<DeNghiVongDoiResponse>.Loi(DomainConstants.Errors.InvalidData, "Phiếu điều chỉnh không gắn thiết bị hợp lệ.");
             if (phieu.TrangThai == DomainConstants.Status.Applied)
                 return Result<DeNghiVongDoiResponse>.Ok(MapDeNghiResponse(phieu, chiTiet.MaThietBi.Value));
+            if (phieu.TrangThai == "TuChoi")
+                return Result<DeNghiVongDoiResponse>.Loi(DomainConstants.Errors.InvalidState, "Phiếu đề nghị đã bị từ chối, không thể duyệt áp dụng.");
 
             var thietBi = await _context.ThietBis.FirstOrDefaultAsync(tb => tb.MaThietBi == chiTiet.MaThietBi.Value);
             if (thietBi == null)

@@ -12,7 +12,8 @@ public class BaoGiaService : IBaoGiaService
         DateTime gioNhan,
         DateTime gioTra,
         List<ChiTietBaoGiaRequest> danhSachDong,
-        decimal tongTienDuocGiamTuKhuyenMai)
+        decimal tongTienDuocGiamTuKhuyenMai,
+        string? maKhuyenMai = null)
     {
         var response = new BaoGiaResponse
         {
@@ -43,7 +44,10 @@ public class BaoGiaService : IBaoGiaService
 
         PhanBoTienGiam(response.ChiTiet, response.TongTienGiam, tongThue);
 
-        var hashData = $"{response.TongTienThueTruocGiam}_{response.TongTienCoc}_{response.TongTienGiam}_{response.SoNgayThue}";
+        // Đồng bộ công thức HashBaoGia khớp 100% với DonThueService.HoTro.cs (UC3.2)
+        var itemsPart = string.Join("|", danhSachDong.OrderBy(c => c.MaSanPham).Select(c =>
+            $"{c.MaSanPham}:{c.SoLuong}:{c.DonGiaThueMoiNgay:F2}:{c.MucCocMoiThietBi:F2}"));
+        var hashData = $"{response.SoNgayThue}|{response.TongTienThueTruocGiam:F2}|{response.TongTienGiam:F2}|{response.TongTienCoc:F2}|{maKhuyenMai?.Trim().ToUpperInvariant() ?? ""}|{itemsPart}";
         response.HashBaoGia = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(hashData)));
         return response;
     }

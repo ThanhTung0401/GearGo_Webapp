@@ -1,4 +1,4 @@
-﻿/**
+/**
  * reviewApi.ts - Đánh giá sản phẩm (/api/danh-gia) & Kiểm duyệt/Phản hồi (/api/danh-gia)
  */
 
@@ -7,16 +7,20 @@ import { buildQuery, PagedBackendResponse, unwrapPaged, unwrapResult } from "./a
 
 export interface DanhGiaBackend {
   maDanhGia: number;
-  maChiTietDonThue: number;
-  maDonThue: number;
+  maChiTietDonThue?: number;
+  maChiTietDon?: number;
+  maDonThue?: number;
+  maDonHienThi?: string | null;
   maSanPham: number;
   tenSanPham: string;
-  maKhachHang: number;
-  tenKhachHang: string;
+  maKhachHang?: number;
+  tenKhachHang?: string;
+  tenNguoiDung?: string;
   soSao: number;
   noiDung?: string | null;
   danhSachAnh: string[];
-  thoiDiemTao: string;
+  thoiDiemTao?: string;
+  ngayTao?: string;
   trangThaiHienThi: string; // "HienThi" | "BiAn"
   lyDoAn?: string | null;
   nguoiAn?: string | null;
@@ -33,12 +37,14 @@ export interface TongHopDiemBackend {
 }
 
 export interface SanPhamDuDieuKienDanhGiaBackend {
-  maChiTietDonThue: number;
+  maChiTietDonThue?: number;
+  maChiTietDon?: number;
   maDonThue: number;
   maDonHienThi: string;
   maSanPham: number;
   tenSanPham: string;
-  thoiDiemHoanTat: string;
+  thoiDiemHoanTat?: string;
+  ngayHoanTat?: string;
   daDanhGia: boolean;
 }
 
@@ -70,12 +76,19 @@ export const reviewApi = {
   },
 
   async taoDanhGia(req: {
-    maChiTietDonThue: number;
+    maChiTietDonThue?: number;
+    maChiTietDon?: number;
     soSao: number;
     noiDung?: string;
     danhSachAnh?: string[];
   }): Promise<DanhGiaBackend> {
-    const res = await apiClient.post<unknown>("/api/danh-gia", req);
+    const payload = {
+      maChiTietDon: req.maChiTietDon ?? req.maChiTietDonThue,
+      soSao: req.soSao,
+      noiDung: req.noiDung,
+      danhSachAnh: req.danhSachAnh,
+    };
+    const res = await apiClient.post<unknown>("/api/danh-gia", payload);
     return unwrapResult<DanhGiaBackend>(res.data);
   },
 

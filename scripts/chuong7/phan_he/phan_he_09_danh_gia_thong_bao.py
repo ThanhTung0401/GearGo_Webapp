@@ -10,12 +10,12 @@ SCREENS = [
 
 NATURAL_EVENTS = {
     'UC9.1': [
-        ('1', 'Chọn số sao đánh giá và nhập nội dung nhận xét về sản phẩm đã thuê', 'Ghi nhận mức độ hài lòng và góp ý của khách hàng.'),
-        ('2', 'Nhấn nút gửi đánh giá', 'Hệ thống lưu đánh giá mới vào sản phẩm và hiển thị thông báo cảm ơn.'),
+        ('1', 'Chọn số sao đánh giá (1–5 sao), nhập nhận xét và đính kèm hình ảnh (tùy chọn) cho sản phẩm thuộc đơn đã hoàn tất', 'Kiểm tra điều kiện sở hữu đơn hoàn tất, định dạng ảnh và chống đánh giá trùng lặp.'),
+        ('2', 'Nhấn nút gửi đánh giá', 'Hệ thống lưu đánh giá mới gắn với chứng từ thuê và hiển thị thông báo thành công.'),
     ],
     'UC9.2': [
-        ('1', 'Lọc đánh giá theo trạng thái kiểm duyệt hoặc số sao', 'Hiển thị danh sách đánh giá khách hàng cần kiểm duyệt.'),
-        ('2', 'Nhấn nút "Duyệt" hoặc "Ẩn" tại một đánh giá', 'Hệ thống cập nhật trạng thái hiển thị của đánh giá trên trang sản phẩm.'),
+        ('1', 'Lọc đánh giá theo trạng thái hiển thị hoặc số sao', 'Hiển thị danh sách đánh giá khách hàng kèm căn cứ đơn thuê để xem xét.'),
+        ('2', 'Nhấn nút "Ẩn vi phạm" (kèm lý do) hoặc "Bỏ ẩn" tại một đánh giá', 'Hệ thống cập nhật trạng thái hiển thị công khai và ghi nhật ký kiểm duyệt mà không sửa điểm hay nội dung gốc của khách.'),
     ],
     'UC9.3': [
         ('1', 'Nhấn vào một thông báo trong danh sách', 'Đánh dấu thông báo là đã đọc và mở nội dung chi tiết hoặc đơn thuê liên quan.'),

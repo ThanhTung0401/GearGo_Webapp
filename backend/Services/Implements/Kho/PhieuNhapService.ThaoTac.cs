@@ -39,6 +39,9 @@ public partial class PhieuNhapService
         };
 
         _context.PhieuNhapHangs.Add(phieu);
+        // Lưu trước để lấy MaPhieuNhap tự tăng thật rồi mới ghi nhật ký (tránh MaDoiTuong = "0" — UC7.5)
+        await _context.SaveChangesAsync(ct);
+
         _context.NhatKyThaoTacs.Add(new NhatKyThaoTac
         {
             MaTaiKhoan = maTaiKhoan,

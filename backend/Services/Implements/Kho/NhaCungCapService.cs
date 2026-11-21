@@ -88,6 +88,9 @@ public partial class NhaCungCapService : INhaCungCapService
             GhiChu = request.GhiChu?.Trim(), TrangThaiHopTac = "DangHopTac"
         };
         _context.NhaCungCaps.Add(ncc);
+        // Lưu trước để lấy MaNhaCungCap tự tăng thật rồi mới ghi nhật ký (tránh MaDoiTuong = "0" — UC7.1)
+        await _context.SaveChangesAsync(ct);
+
         GhiNhatKyNcc(maTaiKhoan, "TAO_NHA_CUNG_CAP", ncc.MaNhaCungCap.ToString(),
             $"Tạo nhà cung cấp '{ncc.TenNhaCungCap}' (Mã: {ncc.MaNhaCungCapHienThi})");
 

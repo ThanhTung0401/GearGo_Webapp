@@ -1,4 +1,4 @@
-﻿/**
+/**
  * reconciliationApi.ts - Đối soát cọc 7 bước & điều chỉnh sau chốt (/api/doi-soat)
  */
 
@@ -116,9 +116,19 @@ export const reconciliationApi = {
 
   async lapDieuChinh(
     doiSoatGocId: number,
-    req: { lyDoDieuChinh: string; danhSachMaPhuPhiDieuChinh?: number[]; ghiChu?: string }
+    req: { lyDoDieuChinh?: string; lyDo?: string; danhSachMaPhuPhiDieuChinh?: number[]; ghiChu?: string }
   ): Promise<DoiSoatBackend> {
-    const res = await apiClient.post<unknown>(`/api/doi-soat/${doiSoatGocId}/dieu-chinh`, req);
+    const payload = {
+      lyDo: req.lyDo ?? req.lyDoDieuChinh ?? "",
+      danhSachMaPhuPhiDieuChinh: req.danhSachMaPhuPhiDieuChinh ?? [],
+      ghiChu: req.ghiChu,
+    };
+    const res = await apiClient.post<unknown>(`/api/doi-soat/${doiSoatGocId}/dieu-chinh`, payload);
     return unwrapResult<DoiSoatBackend>(res.data);
+  },
+
+  async layDanhSachDieuChinh(): Promise<DoiSoatBackend[]> {
+    const res = await apiClient.get<unknown>("/api/doi-soat/dieu-chinh");
+    return unwrapResult<DoiSoatBackend[]>(res.data);
   },
 };

@@ -66,6 +66,8 @@ public class NhatKyService : INhatKyService
             query = query.Where(n => n.LoaiDoiTuong == loaiDoiTuong.Trim());
         if (!string.IsNullOrWhiteSpace(maDoiTuong))
             query = query.Where(n => n.MaDoiTuong == maDoiTuong.Trim());
+        if (tuNgay.HasValue && denNgay.HasValue && tuNgay.Value > denNgay.Value)
+            throw new GearGo.Exceptions.DuLieuKhongHopLeException("KHOANG_THOI_GIAN_KHONG_HOP_LE", "Từ ngày không được lớn hơn đến ngày.");
         if (tuNgay.HasValue)
             query = query.Where(n => n.ThoiDiem >= tuNgay.Value);
         if (denNgay.HasValue)
@@ -135,14 +137,14 @@ public class NhatKyService : INhatKyService
 
         return loaiDoiTuong.ToUpperInvariant() switch
         {
-            "DON_THUE" => $"/api/v1/van-hanh/don-thue/{maDoiTuong}",
-            "PHIEU_NHAP" => $"/api/phieu-nhap/{maDoiTuong}",
-            "PHIEU_BAO_TRI" => $"/api/v1/bao-tri/{maDoiTuong}",
-            "PHIEU_DIEU_CHINH_KHO" => $"/api/v1/dieu-chinh-kho/{maDoiTuong}",
-            "DOI_SOAT" => $"/api/v1/doi-soat/{maDoiTuong}",
+            "DON_THUE" => $"/api/don-thue/{maDoiTuong}",
+            "PHIEU_NHAP" or "PHIEUNHAPHANG" => $"/api/phieu-nhap/{maDoiTuong}",
+            "PHIEU_BAO_TRI" => $"/api/bao-tri/{maDoiTuong}",
+            "PHIEU_DIEU_CHINH_KHO" => $"/api/dieu-chinh-kho/{maDoiTuong}",
+            "DOI_SOAT" => $"/api/doi-soat/{maDoiTuong}",
             "THIET_BI" => $"/api/thiet-bi/{maDoiTuong}",
-            "TAI_KHOAN" => laQuanTriVien ? $"/api/v1/admin/tai-khoan/{maDoiTuong}" : null,
-            "NHAN_VIEN" => laQuanTriVien ? $"/api/v1/admin/nhan-vien/{maDoiTuong}" : null,
+            "TAI_KHOAN" => laQuanTriVien ? $"/api/admin/tai-khoan/{maDoiTuong}" : null,
+            "NHAN_VIEN" => laQuanTriVien ? $"/api/admin/nhan-vien/{maDoiTuong}" : null,
             _ => null
         };
     }

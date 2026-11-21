@@ -34,6 +34,8 @@ public partial class NhanVienService : INhanVienService
         if (!string.IsNullOrWhiteSpace(request.VaiTro)) query = query.Where(n => n.TaiKhoan.VaiTro == request.VaiTro);
         if (!string.IsNullOrWhiteSpace(request.TrangThaiLamViec))
             query = query.Where(n => n.TrangThaiLamViec == request.TrangThaiLamViec);
+        if (!string.IsNullOrWhiteSpace(request.TrangThaiTaiKhoan))
+            query = query.Where(n => n.TaiKhoan.TrangThai == request.TrangThaiTaiKhoan);
         if (!string.IsNullOrWhiteSpace(request.TuKhoa))
         {
             var kw = request.TuKhoa.Trim();

@@ -50,6 +50,22 @@ export default function ImportAdjustmentModal({ receipt, app, onClose, onSuccess
         const maChiTietPhieuNhap = selectedLineId && Number.isFinite(Number(selectedLineId))
           ? Number(selectedLineId)
           : undefined;
+        const parsedNewPrice = Number(newValue.replace(/[^\d.-]/g, ""));
+        const giaTriDeNghiSau =
+          loaiDieuChinh === "SaiGiaNhap" && Number.isFinite(parsedNewPrice) && parsedNewPrice >= 0
+            ? {
+                donGiaHieuLuc: parsedNewPrice,
+                donGiaNhap: parsedNewPrice,
+                loai: type,
+                truoc: previousValue.trim(),
+                sau: newValue.trim(),
+              }
+            : {
+                loai: type,
+                truoc: previousValue.trim(),
+                sau: newValue.trim(),
+              };
+
         const created = await inventoryApi.lapPhieu({
           loaiDieuChinh,
           maPhieuNhapLienQuan: phieuNhapId,
@@ -58,11 +74,7 @@ export default function ImportAdjustmentModal({ receipt, app, onClose, onSuccess
           chiTiet: [
             {
               maChiTietPhieuNhap,
-              giaTriDeNghiSau: {
-                loai: type,
-                truoc: previousValue.trim(),
-                sau: newValue.trim(),
-              },
+              giaTriDeNghiSau,
               ghiChu: `${type}: ${previousValue.trim()} -> ${newValue.trim()}`,
             },
           ],

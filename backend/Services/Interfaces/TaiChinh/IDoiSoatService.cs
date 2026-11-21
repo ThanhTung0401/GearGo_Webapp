@@ -39,6 +39,9 @@ public interface IDoiSoatService
     /// </summary>
     Task<Result<DoiSoatResponse>> LapDoiSoatDieuChinhAsync(long doiSoatGocId, DieuChinhDoiSoatRequest dto, long actorId);
 
+    /// <summary>Lấy danh sách các hồ sơ điều chỉnh tài chính sau chốt (UC5.7).</summary>
+    Task<Result<List<DoiSoatResponse>>> LayDanhSachDieuChinhAsync(long actorId);
+
     /// <summary>
     /// Lấy thông tin đối soát theo mã đơn thuê
     /// </summary>

@@ -1,0 +1,50 @@
+{
+  "name": "GearGo - Hỏi đáp FAQ ngắn (Gemini 2.5 Flash)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "geargo-faq-ngan",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-faq",
+      "name": "Webhook GearGo FAQ",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [220, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={{ $env.GEMINI_API_KEY }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"contents\": [{\n    \"parts\": [{\n      \"text\": \"Trả lời ngắn gọn (<= 3 câu) bằng tiếng Việt về quy định thuê đồ dã ngoại GearGo (tính block 24h làm tròn lên, giữ chỗ 15 phút, tiền cọc hoàn lại 100% khi trả đồ nguyên vẹn). Câu hỏi: \" + ($json.body.question || '')\n    }]\n  }]\n}",
+        "options": { "timeout": 10000 }
+      },
+      "id": "http-gemini-faq",
+      "name": "Call Gemini FAQ",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [480, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { answer: $json?.candidates?.[0]?.content?.parts?.[0]?.text || 'Vui lòng liên hệ hotline 0901 234 567 để được hỗ trợ.' } }}",
+        "options": {}
+      },
+      "id": "respond-faq",
+      "name": "Respond FAQ",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [740, 300]
+    }
+  ],
+  "connections": {
+    "Webhook GearGo FAQ": { "main": [[{ "node": "Call Gemini FAQ", "type": "main", "index": 0 }]] },
+    "Call Gemini FAQ": { "main": [[{ "node": "Respond FAQ", "type": "main", "index": 0 }]] }
+  },
+  "active": false
+}

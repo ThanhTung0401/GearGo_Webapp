@@ -104,7 +104,7 @@ export function useInventoryTab(app: ReturnType<typeof useApp>) {
       setServerAdjustments(
         matching.map((dc) => {
           const st: "Chờ duyệt" | "Đã duyệt" | "Từ chối" =
-            dc.trangThai === "DaDuyet" ? "Đã duyệt" : dc.trangThai === "TuChoi" ? "Từ chối" : "Chờ duyệt";
+            dc.trangThai === "DaApDung" || dc.trangThai === "DaDuyet" ? "Đã duyệt" : dc.trangThai === "TuChoi" ? "Từ chối" : "Chờ duyệt";
           const firstLine = dc.chiTiet?.[0];
           return {
             id: String(dc.maPhieuDieuChinh),

@@ -85,7 +85,7 @@ public class ThongBaoService : IThongBaoService
         var items = await q
             .OrderByDescending(t => t.ThoiDiemTao).ThenByDescending(t => t.MaThongBao)
             .Skip((trang - 1) * soMoi).Take(soMoi)
-            .Select(t => new ThongBaoResponse(t.MaThongBao, t.MaDonThue, t.TieuDe, t.NoiDung, t.ThoiDiemTao, t.ThoiDiemDoc))
+            .Select(t => new ThongBaoResponse(t.MaThongBao, t.MaDonThue, t.TieuDe, t.NoiDung, t.ThoiDiemTao, t.ThoiDiemDoc, t.LoaiSuKien))
             .ToListAsync();
 
         return new PagedResult<ThongBaoResponse> { Items = items, TotalItems = total, CurrentPage = trang, PageSize = soMoi };
@@ -99,7 +99,7 @@ public class ThongBaoService : IThongBaoService
 
         return await _context.ThongBaos.AsNoTracking()
                    .Where(t => t.MaThongBao == maThongBao && t.MaTaiKhoan == maTaiKhoan)
-                   .Select(t => new ThongBaoResponse(t.MaThongBao, t.MaDonThue, t.TieuDe, t.NoiDung, t.ThoiDiemTao, t.ThoiDiemDoc))
+                   .Select(t => new ThongBaoResponse(t.MaThongBao, t.MaDonThue, t.TieuDe, t.NoiDung, t.ThoiDiemTao, t.ThoiDiemDoc, t.LoaiSuKien))
                    .FirstOrDefaultAsync()
                ?? throw new ThongBaoKhongTimThayException();
     }
@@ -123,14 +123,33 @@ public class ThongBaoService : IThongBaoService
         List<long> danhSachNguoiNhan;
         if (request.MaTaiKhoanNhan.HasValue)
         {
-            if (!await _context.TaiKhoans.AsNoTracking().AnyAsync(t => t.MaTaiKhoan == request.MaTaiKhoanNhan.Value && t.TrangThai == "HoatDong"))
+            var tkNhan = await _context.TaiKhoans.AsNoTracking()
+                .FirstOrDefaultAsync(t => t.MaTaiKhoan == request.MaTaiKhoanNhan.Value && t.TrangThai == "HoatDong");
+            if (tkNhan == null)
                 return Result<GuiThongBaoAdminResponse>.Loi("TAI_KHOAN_NOT_FOUND", "Không tìm thấy tài khoản người nhận đang hoạt động.");
+
+            // Kiểm tra quyền của người nhận đối với đơn thuê gắn kèm (UC9.4.1 bước 2)
+            if (request.MaDonThue.HasValue && tkNhan.VaiTro == "KhachHang")
+            {
+                var khId = await _context.KhachHangs.AsNoTracking()
+                    .Where(k => k.MaTaiKhoan == tkNhan.MaTaiKhoan).Select(k => k.MaKhachHang).FirstOrDefaultAsync();
+                var donMatch = await _context.DonThues.AsNoTracking()
+                    .AnyAsync(d => d.MaDonThue == request.MaDonThue.Value && d.MaKhachHang == khId);
+                if (!donMatch)
+                    return Result<GuiThongBaoAdminResponse>.Loi("NGUOI_NHAN_KHONG_QUYEN_DON", "Người nhận không sở hữu đơn thuê gắn kèm thông báo.");
+            }
             danhSachNguoiNhan = [request.MaTaiKhoanNhan.Value];
         }
         else
         {
-            danhSachNguoiNhan = await _context.TaiKhoans.AsNoTracking()
-                .Where(t => t.TrangThai == "HoatDong").Select(t => t.MaTaiKhoan).ToListAsync();
+            var qNhan = _context.TaiKhoans.AsNoTracking().Where(t => t.TrangThai == "HoatDong");
+            // Hỗ trợ lọc nhóm người nhận theo vai trò (KhachHang / NhanVien / QuanTriVien — UC9.4)
+            if (!string.IsNullOrWhiteSpace(request.VaiTroNhan) && !string.Equals(request.VaiTroNhan.Trim(), "All", StringComparison.OrdinalIgnoreCase))
+            {
+                var roleFilter = request.VaiTroNhan.Trim();
+                qNhan = qNhan.Where(t => t.VaiTro == roleFilter);
+            }
+            danhSachNguoiNhan = await qNhan.Select(t => t.MaTaiKhoan).ToListAsync();
         }
 
         if (request.MaDonThue.HasValue && !await _context.DonThues.AnyAsync(d => d.MaDonThue == request.MaDonThue.Value))

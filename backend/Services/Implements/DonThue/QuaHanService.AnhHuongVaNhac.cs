@@ -60,6 +60,28 @@ public partial class QuaHanService
 
         var affectedProductIds = unreturned.Select(c => c.PhanCongThietBi.ThietBi.MaSanPhamHienTai).Distinct().ToList();
         await ThemDonThieuSoLuongAsync(don, affectedProductIds, resultList);
+
+        // Bổ sung gợi ý mã thiết bị sẵn sàng thay thế cho từng đơn bị ảnh hưởng (UC4.4 bước 4)
+        if (resultList.Count > 0)
+        {
+            var spIds = resultList.Select(r => r.MaSanPham).Distinct().ToList();
+            var readyDevices = await _context.ThietBis.AsNoTracking()
+                .Where(tb => spIds.Contains(tb.MaSanPhamHienTai)
+                    && tb.TrangThaiSuDung == TrangThaiThietBi.SanSang
+                    && !unreturnedTbIds.Contains(tb.MaThietBi))
+                .Select(tb => new { tb.MaSanPhamHienTai, tb.MaThietBiHienThi })
+                .ToListAsync();
+
+            var byProduct = readyDevices.GroupBy(x => x.MaSanPhamHienTai)
+                .ToDictionary(g => g.Key, g => g.Select(x => x.MaThietBiHienThi).Take(5).ToList());
+
+            foreach (var item in resultList)
+            {
+                if (byProduct.TryGetValue(item.MaSanPham, out var gợiY))
+                    item.MaThietBiThayTheGoiY = gợiY;
+            }
+        }
+
         return Result<List<DonBiAnhHuongResponse>>.Ok(resultList);
     }
 

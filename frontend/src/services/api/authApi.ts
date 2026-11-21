@@ -47,7 +47,7 @@ export interface DatLaiMatKhauRequest {
 export interface DoiMatKhauRequest {
   matKhauHienTai: string;
   matKhauMoi: string;
-  xacNhanMatKhauMoi: string;
+  xacNhanMatKhau: string;
 }
 
 export interface QuyenResponse {

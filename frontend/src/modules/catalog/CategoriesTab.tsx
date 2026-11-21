@@ -14,11 +14,21 @@ import { Permissions } from "../../constants/permissions";
 export function CategoriesTab({ app }: { app: ReturnType<typeof useApp> }) {
   const [action, setAction] = useState<Category | "new" | null>(null);
   const [message, setMessage] = useState("");
-  const catData = [...app.categories].sort((a, b) => a.displayOrder - b.displayOrder).map((category) => ({
-    category,
-    products: app.products.filter((p) => p.categoryId === category.id),
-    equipment: app.equipment.filter((e) => app.products.find((p) => p.id === e.productId)?.categoryId === category.id),
-  }));
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
+  const catData = [...app.categories]
+    .sort((a, b) => a.displayOrder - b.displayOrder)
+    .filter((category) => {
+      const q = searchTerm.trim().toLowerCase();
+      const matchSearch = !q || category.name.toLowerCase().includes(q) || (category.description || "").toLowerCase().includes(q);
+      const matchStatus = statusFilter === "all" || category.status === statusFilter;
+      return matchSearch && matchStatus;
+    })
+    .map((category) => ({
+      category,
+      products: app.products.filter((p) => p.categoryId === category.id),
+      equipment: app.equipment.filter((e) => app.products.find((p) => p.id === e.productId)?.categoryId === category.id),
+    }));
 
   return (
     <div>
@@ -28,6 +38,29 @@ export function CategoriesTab({ app }: { app: ReturnType<typeof useApp> }) {
         <Can perm={Permissions.DanhMuc_Quan}>
           <button onClick={() => setAction("new")} className="adm-btn-primary">+ Thêm danh mục</button>
         </Can>
+      </div>
+      {/* Bộ lọc tra cứu danh mục theo từ khóa và trạng thái (UC6.3) */}
+      <div className="flex gap-2.5 mb-4 flex-wrap items-center">
+        <input
+          type="text"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          placeholder="Tìm kiếm tên danh mục..."
+          aria-label="Tìm kiếm danh mục"
+          className="input-field"
+          style={{ maxWidth: 280 }}
+        />
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value as "all" | "active" | "inactive")}
+          aria-label="Lọc trạng thái danh mục"
+          className="input-field"
+          style={{ maxWidth: 190 }}
+        >
+          <option value="all">Tất cả trạng thái</option>
+          <option value="active">Đang hiển thị</option>
+          <option value="inactive">Đang ẩn</option>
+        </select>
       </div>
       {message && <div role="alert" className="adm-alert is-error-solid adm-alert--block">{message}</div>}
       <div className="adm-cat-grid">

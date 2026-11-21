@@ -81,6 +81,8 @@ public class DonBiAnhHuongResponse
     public string TenSanPham { get; set; } = string.Empty;
     public int SoLuongThieu { get; set; }
     public string NguyenNhan { get; set; } = string.Empty;
+    /// <summary>Danh sách mã thiết bị khả dụng có thể dùng thay thế cho đơn bị ảnh hưởng (UC4.4 bước 4).</summary>
+    public List<string> MaThietBiThayTheGoiY { get; set; } = new();
 }
 
 /// <summary>

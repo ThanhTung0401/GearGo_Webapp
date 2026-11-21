@@ -116,6 +116,17 @@ export const importReceiptApi = {
       ngayNhapThucTe?: string;
       soChungTuNhaCungCap?: string;
       ghiChuXacNhan?: string;
+      danhSachDong?: Array<{
+        maChiTietPhieuNhap: number;
+        thietBi: Array<{
+          maHienThi: string;
+          tinhTrang?: string;
+          canBaoTri?: boolean;
+          moTaLoi?: string;
+          bangChung?: string;
+          ghiChu?: string;
+        }>;
+      }>;
       tinhTrangDong?: Array<{ maChiTietPhieuNhap: number; tinhTrangThucTe?: string; ghiChu?: string }>;
     }
   ): Promise<PhieuNhapBackend> {

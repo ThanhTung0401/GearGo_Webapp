@@ -6,5 +6,5 @@ namespace GearGo.Services.Interfaces;
 
 public interface IBaoGiaService
 {
-    BaoGiaResponse TinhBaoGia(DateTime gioNhan, DateTime gioTra, List<ChiTietBaoGiaRequest> danhSachDong, decimal tongTienDuocGiamTuKhuyenMai);
+    BaoGiaResponse TinhBaoGia(DateTime gioNhan, DateTime gioTra, List<ChiTietBaoGiaRequest> danhSachDong, decimal tongTienDuocGiamTuKhuyenMai, string? maKhuyenMai = null);
 }

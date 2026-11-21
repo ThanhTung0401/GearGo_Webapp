@@ -706,7 +706,12 @@ async function main() {
       await confirmedTab.click().catch(() => {});
       await page.waitForTimeout(500);
     }
-    await page.getByText('ORD-202611-110').first().click().catch(() => {});
+    const specificOrder = page.getByText('ORD-202611-110').first();
+    if (await specificOrder.isVisible().catch(() => false)) {
+      await specificOrder.click().catch(() => {});
+    } else {
+      await page.locator('main button:has-text("DH"), main button:has-text("ORD-"), main [class*="cursor-pointer"]').first().click().catch(() => {});
+    }
     await page.waitForTimeout(600);
     const next34 = await annotateCurated(
       page,
@@ -728,10 +733,10 @@ async function main() {
     const closeCancel = page.locator('[role="dialog"] button:has-text("✕"), [role="dialog"] button:has-text("Đóng")').first();
     if (await closeCancel.isVisible().catch(() => false)) await closeCancel.click().catch(() => {});
 
-    // UC9.3: Xem thông báo
+    // UC9.3: Xem thông báo (nhắm đúng khung danh sách thông báo trên header thay vì main)
     await page.getByRole('button', { name: 'Thông báo' }).first().click().catch(() => {});
     await page.waitForTimeout(500);
-    await annotateAuto(page, 'UC9.3', 'UC9_3', 'Giao diện Xem thông báo (SCR-9.3)', ['main', 'body'], { maxItems: 6 });
+    await annotateAuto(page, 'UC9.3', 'UC9_3', 'Giao diện Xem thông báo (SCR-9.3)', ['header', 'body'], { maxItems: 6 });
 
     await ctx.close();
   }
@@ -831,8 +836,9 @@ async function main() {
     await annotateAuto(page, 'UC1.7', 'UC1_7', 'Giao diện Tạo tài khoản nhân viên (SCR-1.7)', MODAL_SCOPES, { maxItems: 10 });
     await closeModal();
 
-    // UC1.10: Phân quyền nhân viên (mở hộp thoại phân quyền ngay từ bảng Nhân viên)
-    const permBtn = content.getByRole('button', { name: /Phân quyền/i }).first();
+    // UC1.10: Phân quyền nhân viên (chọn nhân viên không phải Admin để hiển thị đầy đủ ma trận checkbox quyền)
+    const permBtns = content.getByRole('button', { name: /Phân quyền/i });
+    const permBtn = (await permBtns.count()) > 1 ? permBtns.nth(1) : permBtns.first();
     if (await permBtn.isVisible().catch(() => false)) {
       await permBtn.click().catch(() => {});
       await page.waitForTimeout(550);
@@ -1213,7 +1219,7 @@ async function main() {
     await annotateAuto(page, 'UC7.10', 'UC7_10', 'Giao diện Xử lý sai lệch phiếu nhập (SCR-7.10)', [...MODAL_SCOPES, '.internal-content'], { maxItems: 8 });
     await closeModal();
 
-    await content.getByRole('button', { name: /\+ Tạo phiếu nhập|\+ Lập phiếu/i }).first().click().catch(() => {});
+    await content.getByRole('button', { name: /Tạo phiếu nháp|\+ Tạo phiếu nhập|\+ Lập phiếu/i }).first().click().catch(() => {});
     await page.waitForTimeout(450);
     await annotateAuto(page, 'UC7.5', 'UC7_5', 'Giao diện Lập phiếu nhập nháp (SCR-7.5)', [...MODAL_SCOPES, '.internal-content'], { maxItems: 9 });
     await closeModal();

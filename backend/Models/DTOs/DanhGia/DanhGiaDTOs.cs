@@ -81,6 +81,10 @@ public class DanhGiaResponse
 
     public long MaChiTietDon { get; set; }
 
+    public long MaDonThue { get; set; }
+
+    public string? MaDonHienThi { get; set; }
+
     public long MaSanPham { get; set; }
 
     public string TenSanPham { get; set; } = null!;

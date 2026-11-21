@@ -1,0 +1,61 @@
+{
+  "name": "GearGo - Tư vấn bộ thiết bị dã ngoại (Gemini 2.5 Flash)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "geargo-tu-van-thiet-bi",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-tu-van",
+      "name": "Webhook GearGo Tu Van",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [220, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://generativelanguage.googleapis.com/v1beta/models/{{ $json.body.model || 'gemini-2.5-flash' }}:generateContent?key={{ $env.GEMINI_API_KEY }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"contents\": [{\n    \"parts\": [{\n      \"text\": \"Bạn là chuyên gia tư vấn thiết bị dã ngoại GearGo. Chỉ chọn từ danh sách candidates sau và trả về đúng JSON {\\\"selections\\\":[{\\\"maSanPham\\\":number,\\\"soLuong\\\":number,\\\"lyDo\\\":string}]}. Nhu cầu: \" + JSON.stringify($json.body.request) + \" Candidates: \" + JSON.stringify($json.body.candidates)\n    }]\n  }],\n  \"generationConfig\": { \"responseMimeType\": \"application/json\" }\n}",
+        "options": { "timeout": 12000 }
+      },
+      "id": "http-gemini",
+      "name": "Call Gemini 2.5 Flash",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [480, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const text = $input.first().json?.candidates?.[0]?.content?.parts?.[0]?.text || '{\"selections\":[]}';\ntry {\n  const parsed = JSON.parse(text);\n  return [{ json: { selections: Array.isArray(parsed.selections) ? parsed.selections : [] } }];\n} catch {\n  return [{ json: { selections: [] } }];\n}"
+      },
+      "id": "parse-json",
+      "name": "Parse Gemini JSON",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [720, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "respond-webhook",
+      "name": "Respond to GearGo",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [960, 300]
+    }
+  ],
+  "connections": {
+    "Webhook GearGo Tu Van": { "main": [[{ "node": "Call Gemini 2.5 Flash", "type": "main", "index": 0 }]] },
+    "Call Gemini 2.5 Flash": { "main": [[{ "node": "Parse Gemini JSON", "type": "main", "index": 0 }]] },
+    "Parse Gemini JSON": { "main": [[{ "node": "Respond to GearGo", "type": "main", "index": 0 }]] }
+  },
+  "active": false
+}

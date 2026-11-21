@@ -109,8 +109,12 @@ public class GuiThongBaoService : IGuiThongBaoService
         if (tb == null) return Result<ThongBaoAdminResponse>.Loi("THONG_BAO_NOT_FOUND", "Thông báo không tồn tại.");
         if (tb.TrangThaiGui == "DangXuLy")
             return Result<ThongBaoAdminResponse>.Loi("THONG_BAO_DANG_XU_LY", "Thông báo đang được worker xử lý gửi, không thể kích hoạt lại.");
+        if (tb.TrangThaiGui == "DaGui")
+            return Result<ThongBaoAdminResponse>.Loi("THONG_BAO_DA_GUI", "Thông báo đã gửi thành công, không gửi trùng lặp (UC9.4).");
 
         tb.TrangThaiGui = "ChuaGui";
+        // Reset số lần thử để worker nhận lại bản ghi đã đạt giới hạn 5 lần (UC9.4 dòng phụ 5.1)
+        tb.SoLanThuGui = 0;
         tb.LoiGuiGanNhat = $"Quản trị viên yêu cầu thử lại: {request?.LyDo ?? "Thử lại thủ công"}";
         _context.NhatKyThaoTacs.Add(new NhatKyThaoTac
         {

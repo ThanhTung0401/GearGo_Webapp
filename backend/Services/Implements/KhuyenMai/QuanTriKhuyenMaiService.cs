@@ -100,18 +100,35 @@ public partial class QuanTriKhuyenMaiService : IQuanTriKhuyenMaiService
     }
 
     public async Task<Result<KhuyenMaiResponse>> TamAnAsync(long id, DoiHienThiKhuyenMaiRequest request, long actorId)
-        => await DoiTrangThaiHienThiAsync(id, TrangThaiKhuyenMai.TamAn);
+        => await DoiTrangThaiHienThiAsync(id, TrangThaiKhuyenMai.TamAn, request?.LyDo, actorId);
 
     public async Task<Result<KhuyenMaiResponse>> HienThiAsync(long id, DoiHienThiKhuyenMaiRequest request, long actorId)
-        => await DoiTrangThaiHienThiAsync(id, TrangThaiKhuyenMai.HienThi);
+        => await DoiTrangThaiHienThiAsync(id, TrangThaiKhuyenMai.HienThi, request?.LyDo, actorId);
 
-    private async Task<Result<KhuyenMaiResponse>> DoiTrangThaiHienThiAsync(long id, TrangThaiKhuyenMai trangThai)
+    private async Task<Result<KhuyenMaiResponse>> DoiTrangThaiHienThiAsync(long id, TrangThaiKhuyenMai trangThai, string? lyDo, long actorId)
     {
         var km = await _context.KhuyenMais.FirstOrDefaultAsync(k => k.MaKhuyenMai == id);
         if (km == null)
             return Result<KhuyenMaiResponse>.Loi("KHUYEN_MAI_NOT_FOUND", "Không tìm thấy chương trình khuyến mãi.");
 
+        // Chặn kích hoạt lại chương trình khuyến mãi đã hết hạn (UC8.5)
+        if (trangThai == TrangThaiKhuyenMai.HienThi && km.KetThuc < DateTime.UtcNow)
+            return Result<KhuyenMaiResponse>.Loi("KHUYEN_MAI_HET_HAN", "Không thể kích hoạt lại chương trình khuyến mãi đã hết hạn.");
+
+        // Idempotent nếu trạng thái đã giống yêu cầu (UC8.5 dòng phụ 4.1)
+        if (km.TrangThai == trangThai)
+            return await LayChiTietAsync(id);
+
         km.TrangThai = trangThai;
+        _context.NhatKyThaoTacs.Add(new Models.Entities.NhatKyThaoTac
+        {
+            MaTaiKhoan = actorId,
+            HanhDong = trangThai == TrangThaiKhuyenMai.TamAn ? "NGUNG_KHUYEN_MAI" : "KICH_HOAT_KHUYEN_MAI",
+            LoaiDoiTuong = "KHUYEN_MAI",
+            MaDoiTuong = km.MaKhuyenMai.ToString(),
+            LyDo = lyDo ?? (trangThai == TrangThaiKhuyenMai.TamAn ? "Ngừng chương trình khuyến mãi" : "Kích hoạt lại khuyến mãi"),
+            ThoiDiem = DateTime.UtcNow
+        });
         await _context.SaveChangesAsync();
         return await LayChiTietAsync(id);
     }

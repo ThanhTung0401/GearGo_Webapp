@@ -1,4 +1,4 @@
-﻿/**
+/**
  * notificationApi.ts - Thông báo người dùng (/api/thong-bao) & Quản trị gửi lỗi/thử lại (/api/thong-bao)
  */
 
@@ -10,10 +10,11 @@ export interface ThongBaoBackend {
   maDonThue?: number | null;
   tieuDe: string;
   noiDung: string;
-  daDoc: boolean;
+  daDoc?: boolean;
+  thoiDiemDoc?: string | null;
   thoiDiemTao: string;
   loaiSuKien?: string | null;
-  trangThaiGui: string;
+  trangThaiGui?: string;
 }
 
 export interface DanhSachThongBaoBackend {

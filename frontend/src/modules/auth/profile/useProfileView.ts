@@ -210,7 +210,7 @@ export function useProfileView() {
         await authApi.doiMatKhau({
           matKhauHienTai: oldPassword,
           matKhauMoi: newPassword,
-          xacNhanMatKhauMoi: confirmPassword,
+          xacNhanMatKhau: confirmPassword,
         });
         setPasswordMsg("✓ Đổi mật khẩu thành công! Hệ thống sẽ đăng xuất để bạn đăng nhập lại bằng mật khẩu mới.");
         setOldPassword("");

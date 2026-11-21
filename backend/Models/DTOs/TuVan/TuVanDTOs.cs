@@ -22,6 +22,8 @@ public class TuVanBoDoRequest
     public string? LoaiNganSach { get; set; } = "TienThue";
 
     public List<string>? NhuCau { get; set; } = new();
+    /// <summary>Danh sách sản phẩm/số lượng khách đã chỉnh sửa để kiểm tra lại khả dụng và giá (UC2.4).</summary>
+    public List<DongThemBoDoRequest>? CacDongHienTai { get; set; }
 }
 
 public class TuVanBoDoResponse

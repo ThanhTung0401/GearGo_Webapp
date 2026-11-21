@@ -39,6 +39,19 @@ public class AIProviderAdapter : IAIProvider
             return XuLyScenarioMock(scenario, request, candidates);
         }
 
+        // Chế độ n8n self-host + Gemini webhook (Plan_Week7_HoanThien mục 1.1 & 4.5)
+        if (string.Equals(_options.Provider, "N8n", StringComparison.OrdinalIgnoreCase))
+        {
+            if (string.IsNullOrWhiteSpace(_options.N8nWebhookUrl))
+            {
+                _logger.LogWarning("Provider là N8n nhưng chưa cấu hình N8nWebhookUrl — chuyển fallback.");
+                return !string.IsNullOrWhiteSpace(_options.ApiKey)
+                    ? await GoiGeminiAnToanAsync(request, candidates, cancellationToken)
+                    : MockChonBoDoThongMinh(request, candidates);
+            }
+            return await GoiN8nAnToanAsync(request, candidates, cancellationToken);
+        }
+
         // Nếu không có API Key hoặc cấu hình Provider là Mock -> chạy Mock thông minh
         if (string.IsNullOrWhiteSpace(_options.ApiKey) || string.Equals(_options.Provider, "Mock", StringComparison.OrdinalIgnoreCase))
         {
@@ -74,6 +87,91 @@ public class AIProviderAdapter : IAIProvider
         {
             _logger.LogError(ex, "Lỗi kết nối AI Provider: {Message}", ex.Message);
             return new AiProviderResult { ThanhCong = false, Loi = ex.Message, ProviderUsed = _options.Provider };
+        }
+    }
+
+    /// <summary>Gọi n8n webhook điều phối Gemini; fallback an toàn khi timeout, 429 rate-limit hoặc 503 down.</summary>
+    private async Task<AiProviderResult> GoiN8nAnToanAsync(TuVanBoDoRequest request, List<AiCandidate> candidates, CancellationToken cancellationToken)
+    {
+        try
+        {
+            using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            cts.CancelAfter(TimeSpan.FromSeconds(_options.TimeoutSeconds > 0 ? _options.TimeoutSeconds : 15));
+
+            var client = _httpClientFactory.CreateClient();
+            using var httpReq = new HttpRequestMessage(HttpMethod.Post, _options.N8nWebhookUrl);
+            if (!string.IsNullOrWhiteSpace(_options.N8nApiKey))
+                httpReq.Headers.TryAddWithoutValidation("X-N8N-API-KEY", _options.N8nApiKey);
+
+            var payload = new
+            {
+                model = _options.Model,
+                request = new { request.DiemDen, request.SoNguoi, request.GioNhan, request.GioTra, request.NganSach, request.LoaiNganSach, request.NhuCau },
+                candidates = candidates.Take(_options.MaxCandidates > 0 ? _options.MaxCandidates : 30).Select(c => new
+                {
+                    c.MaSanPham, c.MaSanPhamHienThi, c.TenSanPham, c.TenDanhMuc, c.SucChua, c.GiaThueMoiNgay, c.MucCocMoiThietBi, c.SoLuongKhaDung
+                })
+            };
+            httpReq.Content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
+
+            using var resp = await client.SendAsync(httpReq, cts.Token);
+            if ((int)resp.StatusCode == 429)
+            {
+                _logger.LogWarning("[n8n+Gemini] Gặp giới hạn tốc độ 429 từ n8n/Gemini — chuyển fallback.");
+                return new AiProviderResult { ThanhCong = false, Loi = "AI_RATE_LIMIT_429", ProviderUsed = "N8n" };
+            }
+            if (!resp.IsSuccessStatusCode)
+            {
+                _logger.LogWarning("[n8n+Gemini] Webhook trả mã lỗi HTTP {Status} — chuyển fallback.", (int)resp.StatusCode);
+                return !string.IsNullOrWhiteSpace(_options.ApiKey)
+                    ? await GoiGeminiAnToanAsync(request, candidates, cancellationToken)
+                    : new AiProviderResult { ThanhCong = false, Loi = $"N8N_HTTP_{(int)resp.StatusCode}", ProviderUsed = "N8n" };
+            }
+
+            var body = await resp.Content.ReadAsStringAsync(cts.Token);
+            using var doc = JsonDocument.Parse(body);
+            var selections = new List<AiSelection>();
+            if (doc.RootElement.TryGetProperty("selections", out var arr) && arr.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var el in arr.EnumerateArray())
+                {
+                    var maSp = el.TryGetProperty("maSanPham", out var pId) ? pId.GetInt64() : (el.TryGetProperty("MaSanPham", out var pId2) ? pId2.GetInt64() : 0);
+                    var sl = el.TryGetProperty("soLuong", out var pSl) ? pSl.GetInt32() : (el.TryGetProperty("SoLuong", out var pSl2) ? pSl2.GetInt32() : 1);
+                    var lyDo = el.TryGetProperty("lyDo", out var pLd) ? pLd.GetString() : (el.TryGetProperty("LyDo", out var pLd2) ? pLd2.GetString() : "");
+                    if (maSp > 0 && sl > 0)
+                        selections.Add(new AiSelection { MaSanPham = maSp, SoLuong = sl, LyDo = lyDo ?? "Gợi ý từ n8n + Gemini" });
+                }
+            }
+            return selections.Count > 0
+                ? new AiProviderResult { ThanhCong = true, ProviderUsed = "N8n-Gemini", Selections = selections }
+                : new AiProviderResult { ThanhCong = false, Loi = "N8N_EMPTY_SELECTIONS", ProviderUsed = "N8n" };
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogWarning("[n8n+Gemini] Webhook timeout sau {Timeout}s.", _options.TimeoutSeconds);
+            return new AiProviderResult { ThanhCong = false, Loi = "TIMEOUT_PROVIDER", ProviderUsed = "N8n" };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "[n8n+Gemini] Không thể kết nối n8n webhook: {Message}", ex.Message);
+            return !string.IsNullOrWhiteSpace(_options.ApiKey)
+                ? await GoiGeminiAnToanAsync(request, candidates, cancellationToken)
+                : new AiProviderResult { ThanhCong = false, Loi = "N8N_UNAVAILABLE", ProviderUsed = "N8n" };
+        }
+    }
+
+    private async Task<AiProviderResult> GoiGeminiAnToanAsync(TuVanBoDoRequest request, List<AiCandidate> candidates, CancellationToken cancellationToken)
+    {
+        try
+        {
+            using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            cts.CancelAfter(TimeSpan.FromSeconds(_options.TimeoutSeconds > 0 ? _options.TimeoutSeconds : 15));
+            return await GoiGeminiAsync(request, candidates, cts.Token);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "[Gemini Fallback] Gọi trực tiếp Gemini thất bại.");
+            return new AiProviderResult { ThanhCong = false, Loi = ex.Message, ProviderUsed = "Gemini" };
         }
     }
 

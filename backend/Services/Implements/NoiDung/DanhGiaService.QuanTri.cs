@@ -29,6 +29,12 @@ public partial class DanhGiaService
 
         var danhGia = await QueryDanhGiaKemChiTiet().FirstOrDefaultAsync(d => d.MaDanhGia == maDanhGia);
         if (danhGia == null) return Result<DanhGiaResponse>.Loi("DANH_GIA_NOT_FOUND", "Đánh giá không tồn tại.");
+        // Idempotent nếu đánh giá đã ở trạng thái BiAn (UC9.2 dòng phụ 4.1)
+        if (danhGia.TrangThaiHienThi == "BiAn")
+            return Result<DanhGiaResponse>.Ok(MapToResponse(danhGia,
+                danhGia.ChiTietDonThue.SanPham.TenSanPham,
+                danhGia.ChiTietDonThue.DonThue.KhachHang?.HoTen ?? "Khách hàng",
+                danhGia.ChiTietDonThue.MaSanPham));
 
         danhGia.TrangThaiHienThi = "BiAn";
         danhGia.LyDoAn = request.LyDo;
@@ -54,6 +60,12 @@ public partial class DanhGiaService
 
         var danhGia = await QueryDanhGiaKemChiTiet().FirstOrDefaultAsync(d => d.MaDanhGia == maDanhGia);
         if (danhGia == null) return Result<DanhGiaResponse>.Loi("DANH_GIA_NOT_FOUND", "Đánh giá không tồn tại.");
+        // Idempotent nếu đánh giá đã ở trạng thái HienThi (UC9.2 dòng phụ 4.1)
+        if (danhGia.TrangThaiHienThi == "HienThi")
+            return Result<DanhGiaResponse>.Ok(MapToResponse(danhGia,
+                danhGia.ChiTietDonThue.SanPham.TenSanPham,
+                danhGia.ChiTietDonThue.DonThue.KhachHang?.HoTen ?? "Khách hàng",
+                danhGia.ChiTietDonThue.MaSanPham));
 
         danhGia.TrangThaiHienThi = "HienThi";
         danhGia.NgayCapNhat = DateTime.UtcNow;
@@ -136,7 +148,10 @@ public partial class DanhGiaService
 
         return new DanhGiaResponse
         {
-            MaDanhGia = d.MaDanhGia, MaChiTietDon = d.MaChiTietDon, MaSanPham = maSanPham,
+            MaDanhGia = d.MaDanhGia, MaChiTietDon = d.MaChiTietDon,
+            MaDonThue = d.ChiTietDonThue?.MaDonThue ?? 0,
+            MaDonHienThi = d.ChiTietDonThue?.DonThue?.MaDonHienThi,
+            MaSanPham = maSanPham,
             TenSanPham = tenSanPham, TenNguoiDung = tenNguoiDung, SoSao = d.SoSao, NoiDung = d.NoiDung,
             DanhSachAnh = danhSachAnh, NgayTao = d.NgayTao, TrangThaiHienThi = d.TrangThaiHienThi,
             LyDoAn = d.LyDoAn, PhanHoiCuaHang = d.PhanHoiCuaHang, ThoiDiemPhanHoi = d.ThoiDiemPhanHoi,

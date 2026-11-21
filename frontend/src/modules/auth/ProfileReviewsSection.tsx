@@ -70,13 +70,15 @@ export function ProfileReviewsSection({
                 vm.reviewingTarget?.orderId === String(el.maDonThue) &&
                 vm.reviewingTarget?.productId === String(el.maSanPham);
 
+              const chiTietId = el.maChiTietDon ?? el.maChiTietDonThue ?? 0;
+              const completedDate = el.thoiDiemHoanTat ?? el.ngayHoanTat;
               return (
-                <div key={el.maChiTietDonThue} className="border border-bone rounded-xl p-4">
+                <div key={chiTietId || `${el.maDonThue}-${el.maSanPham}`} className="border border-bone rounded-xl p-4">
                   <div className="flex justify-between items-center mb-2 pb-2 border-b border-dashed border-bone flex-wrap gap-2">
                     <div>
                       <strong className="font-mono text-forest">{el.maDonHienThi || el.maDonThue}</strong>
                       <span className="text-xs text-gray-400 ml-3">
-                        Hoàn tất: {el.thoiDiemHoanTat ? new Date(el.thoiDiemHoanTat).toLocaleDateString("vi-VN") : "-"}
+                        Hoàn tất: {completedDate ? new Date(completedDate).toLocaleDateString("vi-VN") : "-"}
                       </span>
                     </div>
                     <span className="badge badge-success">Đã hoàn tất</span>
@@ -100,7 +102,7 @@ export function ProfileReviewsSection({
                             orderId: String(el.maDonThue),
                             productId: String(el.maSanPham),
                             productName: el.tenSanPham,
-                            maChiTietDonThue: el.maChiTietDonThue,
+                            maChiTietDonThue: chiTietId,
                           })
                         }
                         className="btn btn-secondary btn-sm"

@@ -169,6 +169,7 @@ export async function confirmApproveLostAction(params: {
     (s) => s.handoverItemId === chiTiet.maChiTietBanGiao && s.type === "Mất đồ" && s.backendId
   );
   let surchargeId = matchedSurcharge?.backendId;
+  let needApproveSurcharge = matchedSurcharge ? matchedSurcharge.status !== "Đã duyệt" : true;
   if (!surchargeId) {
     const created = await surchargeApi.lapPhi({
       maDonThue: donId,
@@ -178,6 +179,12 @@ export async function confirmApproveLostAction(params: {
       lyDo: lostApproveReason.trim() || `Bồi thường mất thiết bị ${chiTiet.maThietBiHienThi}`,
     });
     surchargeId = created.maPhuPhi;
+    needApproveSurcharge = created.trangThaiDuyet !== "DaDuyet";
+  }
+
+  // Phê duyệt phụ phí bồi thường trước khi gọi duyệt kết luận mất (UC4.3)
+  if (needApproveSurcharge && surchargeId) {
+    await surchargeApi.duyetPhi(surchargeId, lostApproveReason.trim() || "Quản trị viên phê duyệt bồi thường mất thiết bị");
   }
 
   await returnApi.duyetKetLuanMat(phieuId, chiTiet.maChiTietNhanTra, {

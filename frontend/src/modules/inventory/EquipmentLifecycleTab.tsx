@@ -10,6 +10,7 @@ import { TransferPanel } from "../reports/TransferPanel";
 
 export function EquipmentTab({ app }: { app: ReturnType<typeof useApp> }) {
   const [view, setView] = useState<"list" | "transfer">("list");
+  const [searchSerial, setSearchSerial] = useState("");
   const [filterProduct, setFilterProduct] = useState("Tất cả");
   const [filterStatus, setFilterStatus] = useState("Tất cả");
   const [editing, setEditing] = useState<ReturnType<typeof useApp>["equipment"][number] | null>(null);
@@ -28,7 +29,10 @@ export function EquipmentTab({ app }: { app: ReturnType<typeof useApp> }) {
 
   const filtered = app.equipment.filter((e) => {
     const pname = app.products.find((p) => p.id === e.productId)?.name || "";
-    return (filterProduct === "Tất cả" || pname === filterProduct) &&
+    const q = searchSerial.trim().toLowerCase();
+    const matchSerial = !q || (e.displayCode ?? "").toLowerCase().includes(q) || e.id.toLowerCase().includes(q) || pname.toLowerCase().includes(q);
+    return matchSerial &&
+      (filterProduct === "Tất cả" || pname === filterProduct) &&
       (filterStatus === "Tất cả" || e.equipmentStatus === filterStatus);
   });
 
@@ -54,6 +58,15 @@ export function EquipmentTab({ app }: { app: ReturnType<typeof useApp> }) {
       </div>
 
       <div className="flex gap-3 mb-4 flex-wrap items-center">
+        <input
+          type="text"
+          value={searchSerial}
+          onChange={(e) => setSearchSerial(e.target.value)}
+          placeholder="🔍 Tìm mã thiết bị (Serial)..."
+          aria-label="Tìm mã thiết bị Serial"
+          className="adm-search-input"
+          style={{ maxWidth: 230 }}
+        />
         <select value={filterProduct} onChange={(e) => setFilterProduct(e.target.value)} className="adm-select adm-select--sm">
           {productNames.map((s) => <option key={s}>{s}</option>)}
         </select>

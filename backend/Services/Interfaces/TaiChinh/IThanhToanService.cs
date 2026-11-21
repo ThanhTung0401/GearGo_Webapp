@@ -10,7 +10,7 @@ public interface IThanhToanService
     /// <summary>
     /// Xác nhận thanh toán ban đầu của đơn thuê (Week 2)
     /// </summary>
-    Task<Result<string>> XacNhanThanhToanAsync(XacNhanThanhToanRequest request);
+    Task<Result<string>> XacNhanThanhToanAsync(XacNhanThanhToanRequest request, long? actorId = null);
     
     /// <summary>
     /// Tạo yêu cầu thu bổ sung phụ phí đối soát (W4-T5)

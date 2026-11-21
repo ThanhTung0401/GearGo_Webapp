@@ -128,6 +128,14 @@ public class BanGiaoService : IBanGiaoService
             if (phieu.TrangThai == DomainConstants.Status.Delivered)
                 return Result<bool>.Loi(DomainConstants.Errors.Locked, "Phiếu đã chốt.");
 
+            // Kiểm tra đơn thuê phải ở trạng thái Sẵn sàng nhận và đủ số lượng thiết bị bàn giao (UC4.2)
+            if (phieu.DonThue.TrangThai != TrangThaiDonThue.SanSangNhan)
+                return Result<bool>.Loi(DomainConstants.Errors.InvalidState, "Đơn thuê chưa ở trạng thái Sẵn sàng nhận để chốt bàn giao.");
+
+            var tongSoLuongDon = phieu.DonThue.ChiTietDonThues.Sum(c => c.SoLuong);
+            if (phieu.ChiTietBanGiaos.Count < tongSoLuongDon)
+                return Result<bool>.Loi(DomainConstants.Errors.InvalidData, $"Chưa đủ thiết bị bàn giao ({phieu.ChiTietBanGiaos.Count}/{tongSoLuongDon}).");
+
             var nhanVienThucHien = await _context.LayNhanVienAsync(maNhanVienChot);
             var tenNhanVien = nhanVienThucHien?.HoTen ?? $"Nhân viên {maNhanVienChot}";
 
@@ -135,9 +143,9 @@ public class BanGiaoService : IBanGiaoService
             if (nhanVienThucHien != null)
                 phieu.MaNhanVien = nhanVienThucHien.MaNhanVien;
 
-            // Kiểm tra điều kiện thanh toán qua Specification
+            // Kiểm tra điều kiện thanh toán qua Specification (bắt buộc nhân đủ SoLuong mỗi dòng — UC4.2)
             decimal tongTienYeuCau = phieu.DonThue.ChiTietDonThues.Sum(c =>
-                c.DonGiaThueMoiNgay * c.SoNgayTinhTien + c.MucCocMoiThietBi - c.TienGiam);
+                (c.DonGiaThueMoiNgay * c.SoNgayTinhTien + c.MucCocMoiThietBi) * c.SoLuong - c.TienGiam);
             decimal tongDaDong = await _context.ThanhToans
                 .Where(t => t.MaDonThue == phieu.MaDonThue && t.TrangThai == DomainConstants.Status.Success)
                 .SumAsync(t => t.TongSoTien);

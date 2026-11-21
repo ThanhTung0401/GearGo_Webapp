@@ -86,6 +86,27 @@ public partial class XacThucService : IXacThucService
             await _db.SaveChangesAsync();
             await tx.CommitAsync();
 
+            // Đẩy Welcome Email vào hàng chờ Outbox sau khi tạo tài khoản thành công (W7-MAIL-01)
+            try
+            {
+                _db.ThongBaos.Add(new ThongBao
+                {
+                    MaTaiKhoan = taiKhoan.MaTaiKhoan,
+                    MaSuKien = $"WELCOME:{taiKhoan.MaTaiKhoan}",
+                    LoaiSuKien = "Welcome",
+                    TieuDe = "Chào mừng bạn đến với GearGo!",
+                    NoiDung = $"Xin chào {khachHang.HoTen},\nTài khoản của bạn ({taiKhoan.Email}) đã sẵn sàng. Bạn có thể bắt đầu tìm kiếm thiết bị, nhận tư vấn bộ đồ AI và đặt thuê trực tuyến ngay bây giờ.",
+                    KenhGui = "Email",
+                    TrangThaiGui = "ChuaGui",
+                    ThoiDiemTao = DateTime.UtcNow
+                });
+                await _db.SaveChangesAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Không thể xếp hàng Welcome Email cho tài khoản #{Id}", taiKhoan.MaTaiKhoan);
+            }
+
             _cache.Set(rateLimitKey, soLanDaDangKy + 1, TimeSpan.FromMinutes(10));
             var (token, hetHanSau) = _jwt.TaoToken(taiKhoan);
             return Result<AuthResponse>.Ok(new AuthResponse

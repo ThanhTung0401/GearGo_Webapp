@@ -897,15 +897,6 @@
         "domain": "Null",
         "defaultVal": "Kích hoạt",
         "note": ""
-      },
-      {
-        "stt": "8",
-        "name": "Tiếp tục thanh toán (15p)",
-        "type": "Button",
-        "meaning": "Thực hiện thao tác \"Tiếp tục thanh toán (15p)\"",
-        "domain": "Null",
-        "defaultVal": "Kích hoạt",
-        "note": ""
       }
     ]
   },
@@ -923,15 +914,6 @@
     "components": [
       {
         "stt": "1",
-        "name": "Yêu cầu hủy đơn thuê",
-        "type": "Button",
-        "meaning": "Mở hộp thoại xác nhận hủy đơn thuê hiện tại",
-        "domain": "Null",
-        "defaultVal": "Kích hoạt",
-        "note": "Chỉ hiển thị với đơn chưa bàn giao"
-      },
-      {
-        "stt": "2",
         "name": "Lý do hủy đơn",
         "type": "Textarea",
         "meaning": "Nhập nội dung lý do hủy đơn",
@@ -940,7 +922,7 @@
         "note": "Bắt buộc nhập"
       },
       {
-        "stt": "3",
+        "stt": "2",
         "name": "Đóng",
         "type": "Button",
         "meaning": "Thực hiện thao tác \"Đóng\"",
@@ -949,7 +931,7 @@
         "note": ""
       },
       {
-        "stt": "4",
+        "stt": "3",
         "name": "Xác nhận hủy đơn thuê",
         "type": "Button",
         "meaning": "Thực hiện thao tác \"Xác nhận hủy đơn thuê\"",
@@ -969,57 +951,57 @@
     "components": [
       {
         "stt": "1",
-        "name": "Tất cả",
+        "name": "GearGo Outdoor Rental & Gear",
         "type": "Button",
-        "meaning": "Thực hiện thao tác \"Tất cả\"",
+        "meaning": "Thực hiện thao tác \"GearGo Outdoor Rental & Gear\"",
         "domain": "Null",
         "defaultVal": "Kích hoạt",
         "note": ""
       },
       {
         "stt": "2",
-        "name": "Chờ thanh toán",
+        "name": "Thuê đồ",
         "type": "Button",
-        "meaning": "Thực hiện thao tác \"Chờ thanh toán\"",
+        "meaning": "Thực hiện thao tác \"Thuê đồ\"",
         "domain": "Null",
         "defaultVal": "Kích hoạt",
         "note": ""
       },
       {
         "stt": "3",
-        "name": "Đã xác nhận",
+        "name": "Cách thuê",
         "type": "Button",
-        "meaning": "Thực hiện thao tác \"Đã xác nhận\"",
+        "meaning": "Thực hiện thao tác \"Cách thuê\"",
         "domain": "Null",
         "defaultVal": "Kích hoạt",
         "note": ""
       },
       {
         "stt": "4",
-        "name": "Đang thuê",
+        "name": "Tư vấn AI",
         "type": "Button",
-        "meaning": "Thực hiện thao tác \"Đang thuê\"",
+        "meaning": "Thực hiện thao tác \"Tư vấn AI\"",
         "domain": "Null",
         "defaultVal": "Kích hoạt",
         "note": ""
       },
       {
         "stt": "5",
-        "name": "Hoàn tất",
+        "name": "Đơn thuê",
         "type": "Button",
-        "meaning": "Thực hiện thao tác \"Hoàn tất\"",
+        "meaning": "Thực hiện thao tác \"Đơn thuê\"",
         "domain": "Null",
         "defaultVal": "Kích hoạt",
         "note": ""
       },
       {
         "stt": "6",
-        "name": "Lý do hủy đơn",
-        "type": "Textarea",
-        "meaning": "Nhập nội dung lý do hủy đơn",
-        "domain": "String",
-        "defaultVal": "Rỗng",
-        "note": "Bắt buộc nhập"
+        "name": "Tài khoản",
+        "type": "Button",
+        "meaning": "Thực hiện thao tác \"Tài khoản\"",
+        "domain": "Null",
+        "defaultVal": "Kích hoạt",
+        "note": ""
       }
     ]
   },
@@ -1333,25 +1315,7 @@
         "type": "Combobox",
         "meaning": "Chọn vai trò tài khoản từ danh sách",
         "domain": "Danh sách chọn",
-        "defaultVal": "Quản trị viên (QuanTriVien)",
-        "note": ""
-      },
-      {
-        "stt": "2",
-        "name": "Hủy",
-        "type": "Button",
-        "meaning": "Thực hiện thao tác \"Hủy\"",
-        "domain": "Null",
-        "defaultVal": "Kích hoạt",
-        "note": ""
-      },
-      {
-        "stt": "3",
-        "name": "Lưu quyền hạn",
-        "type": "Button",
-        "meaning": "Thực hiện thao tác \"Lưu quyền hạn\"",
-        "domain": "Null",
-        "defaultVal": "Kích hoạt",
+        "defaultVal": "Nhân viên vận hành (NhanVien)",
         "note": ""
       }
     ]
@@ -2308,6 +2272,24 @@
       },
       {
         "stt": "3",
+        "name": "Tìm kiếm danh mục",
+        "type": "Text box",
+        "meaning": "Nhập tìm kiếm danh mục",
+        "domain": "String",
+        "defaultVal": "Rỗng",
+        "note": ""
+      },
+      {
+        "stt": "4",
+        "name": "Lọc trạng thái danh mục",
+        "type": "Combobox",
+        "meaning": "Chọn lọc trạng thái danh mục từ danh sách",
+        "domain": "Danh sách chọn",
+        "defaultVal": "Tất cả trạng thái",
+        "note": ""
+      },
+      {
+        "stt": "5",
         "name": "Sửa",
         "type": "Button",
         "meaning": "Thực hiện thao tác \"Sửa\"",
@@ -2316,7 +2298,7 @@
         "note": ""
       },
       {
-        "stt": "4",
+        "stt": "6",
         "name": "Ẩn",
         "type": "Button",
         "meaning": "Thực hiện thao tác \"Ẩn\"",
@@ -2537,6 +2519,15 @@
       },
       {
         "stt": "5",
+        "name": "Lọc trạng thái kinh doanh",
+        "type": "Combobox",
+        "meaning": "Chọn lọc trạng thái kinh doanh từ danh sách",
+        "domain": "Danh sách chọn",
+        "defaultVal": "Tất cả trạng thái",
+        "note": ""
+      },
+      {
+        "stt": "6",
         "name": "Bảng danh sách sản phẩm",
         "type": "Table",
         "meaning": "Hiển thị bảng danh sách sản phẩm theo tiêu chí tìm kiếm và lọc",
@@ -2545,7 +2536,7 @@
         "note": "Hỗ trợ xem và thao tác trên từng dòng"
       },
       {
-        "stt": "6",
+        "stt": "7",
         "name": "Sửa",
         "type": "Button",
         "meaning": "Thực hiện thao tác \"Sửa\"",
@@ -2811,6 +2802,15 @@
       },
       {
         "stt": "3",
+        "name": "Tìm mã thiết bị Serial",
+        "type": "Text box",
+        "meaning": "Nhập tìm mã thiết bị serial",
+        "domain": "String",
+        "defaultVal": "Rỗng",
+        "note": ""
+      },
+      {
+        "stt": "4",
         "name": "Bộ lọc lựa chọn",
         "type": "Combobox",
         "meaning": "Chọn bộ lọc lựa chọn từ danh sách",
@@ -2819,7 +2819,7 @@
         "note": ""
       },
       {
-        "stt": "4",
+        "stt": "5",
         "name": "Bảng danh sách thiết bị vật lý",
         "type": "Table",
         "meaning": "Hiển thị bảng danh sách thiết bị vật lý theo tiêu chí tìm kiếm và lọc",
@@ -2828,7 +2828,7 @@
         "note": "Hỗ trợ xem và thao tác trên từng dòng"
       },
       {
-        "stt": "5",
+        "stt": "6",
         "name": "Sổ đời",
         "type": "Button",
         "meaning": "Thực hiện thao tác \"Sổ đời\"",
@@ -2837,7 +2837,7 @@
         "note": ""
       },
       {
-        "stt": "6",
+        "stt": "7",
         "name": "Sửa",
         "type": "Button",
         "meaning": "Thực hiện thao tác \"Sửa\"",
@@ -3907,65 +3907,83 @@
     "components": [
       {
         "stt": "1",
-        "name": "Tạo phiếu nháp",
-        "type": "Button",
-        "meaning": "Thực hiện thao tác \"Tạo phiếu nháp\"",
-        "domain": "Null",
-        "defaultVal": "Kích hoạt",
-        "note": ""
+        "name": "Mã phiếu nhập",
+        "type": "Text box",
+        "meaning": "Nhập mã phiếu nhập",
+        "domain": "String",
+        "defaultVal": "Rỗng",
+        "note": "Chỉ đọc"
       },
       {
         "stt": "2",
-        "name": "Tìm mã phiếu, NCC, người lập...",
+        "name": "Nhà cung cấp",
+        "type": "Combobox",
+        "meaning": "Chọn nhà cung cấp từ danh sách",
+        "domain": "Danh sách chọn",
+        "defaultVal": "NCC-OUT-02 · Công ty CP Outdoor Pro Việt Nam",
+        "note": ""
+      },
+      {
+        "stt": "3",
+        "name": "Số chứng từ NCC",
         "type": "Text box",
-        "meaning": "Nhập tìm mã phiếu, ncc, người lập...",
+        "meaning": "Nhập số chứng từ ncc",
         "domain": "String",
         "defaultVal": "Rỗng",
         "note": ""
       },
       {
-        "stt": "3",
-        "name": "Lọc theo nhà cung cấp",
-        "type": "Combobox",
-        "meaning": "Chọn lọc theo nhà cung cấp từ danh sách",
-        "domain": "Danh sách chọn",
-        "defaultVal": "Tất cả NCC",
-        "note": ""
-      },
-      {
         "stt": "4",
-        "name": "Lọc theo trạng thái phiếu",
-        "type": "Combobox",
-        "meaning": "Chọn lọc theo trạng thái phiếu từ danh sách",
-        "domain": "Danh sách chọn",
-        "defaultVal": "Tất cả",
-        "note": ""
-      },
-      {
-        "stt": "5",
-        "name": "Chọn ngày",
+        "name": "Ngày nhập dự kiến",
         "type": "Date picker",
-        "meaning": "Chọn chọn ngày",
+        "meaning": "Chọn ngày nhập dự kiến",
         "domain": "Ngày/Tháng/Năm",
         "defaultVal": "Chưa chọn",
         "note": ""
       },
       {
+        "stt": "5",
+        "name": "Ghi chú phiếu",
+        "type": "Textarea",
+        "meaning": "Nhập nội dung ghi chú phiếu",
+        "domain": "String",
+        "defaultVal": "Rỗng",
+        "note": ""
+      },
+      {
         "stt": "6",
-        "name": "Bảng danh sách dữ liệu",
-        "type": "Table",
-        "meaning": "Hiển thị bảng danh sách dữ liệu theo tiêu chí tìm kiếm và lọc",
-        "domain": "Danh sách bản ghi",
-        "defaultVal": "Tải từ hệ thống",
-        "note": "Hỗ trợ xem và thao tác trên từng dòng"
+        "name": "Sản phẩm",
+        "type": "Combobox",
+        "meaning": "Chọn sản phẩm từ danh sách",
+        "domain": "Danh sách chọn",
+        "defaultVal": "SP-LEU-001 · Lều Cắm Trại 4 Người Naturehike P-Series",
+        "note": ""
       },
       {
         "stt": "7",
-        "name": "Đề nghị điều chỉnh",
-        "type": "Button",
-        "meaning": "Thực hiện thao tác \"Đề nghị điều chỉnh\"",
-        "domain": "Null",
-        "defaultVal": "Kích hoạt",
+        "name": "Số lượng",
+        "type": "Number box",
+        "meaning": "Nhập giá trị số lượng",
+        "domain": "Số (>= 0)",
+        "defaultVal": "1",
+        "note": ""
+      },
+      {
+        "stt": "8",
+        "name": "Đơn giá nhập",
+        "type": "Number box",
+        "meaning": "Nhập giá trị đơn giá nhập",
+        "domain": "Số (>= 0)",
+        "defaultVal": "0",
+        "note": ""
+      },
+      {
+        "stt": "9",
+        "name": "Tình trạng khi nhập",
+        "type": "Text box",
+        "meaning": "Nhập tình trạng khi nhập",
+        "domain": "String",
+        "defaultVal": "Rỗng",
         "note": ""
       }
     ]
@@ -4185,14 +4203,14 @@
         "type": "Combobox",
         "meaning": "Chọn loại giảm từ danh sách",
         "domain": "Danh sách chọn",
-        "defaultVal": "Số tiền cố định (VNĐ)",
+        "defaultVal": "Phần trăm (%)",
         "note": ""
       },
       {
         "stt": "4",
-        "name": "Giá trị giảm (VNĐ)",
+        "name": "Giá trị giảm (%)",
         "type": "Number box",
-        "meaning": "Nhập giá trị giá trị giảm (vnđ)",
+        "meaning": "Nhập giá trị giá trị giảm (%)",
         "domain": "Số (>= 0)",
         "defaultVal": "15",
         "note": ""
@@ -4203,7 +4221,7 @@
         "type": "Number box",
         "meaning": "Nhập giá trị mức giảm tối đa (vnđ, để trống nếu không giới hạ",
         "domain": "Số (>= 0)",
-        "defaultVal": "250000",
+        "defaultVal": "120000",
         "note": ""
       },
       {
@@ -4212,7 +4230,7 @@
         "type": "Number box",
         "meaning": "Nhập giá trị tiền thuê tối thiểu (vnđ)",
         "domain": "Số (>= 0)",
-        "defaultVal": "400000",
+        "defaultVal": "100000",
         "note": ""
       },
       {
@@ -4221,7 +4239,7 @@
         "type": "Date picker",
         "meaning": "Chọn thời gian bắt đầu",
         "domain": "Ngày/Tháng/Năm",
-        "defaultVal": "2026-07-24T10:39",
+        "defaultVal": "2026-11-23T09:00",
         "note": ""
       },
       {
@@ -4230,7 +4248,7 @@
         "type": "Date picker",
         "meaning": "Chọn thời gian kết thúc",
         "domain": "Ngày/Tháng/Năm",
-        "defaultVal": "2026-10-22T10:39",
+        "defaultVal": "2026-12-23T09:00",
         "note": ""
       },
       {
@@ -4239,7 +4257,7 @@
         "type": "Number box",
         "meaning": "Nhập giá trị giới hạn tổng lượt dùng (để trống = vô hạn)",
         "domain": "Số (>= 0)",
-        "defaultVal": "200",
+        "defaultVal": "50",
         "note": ""
       }
     ]
@@ -4312,7 +4330,7 @@
         "type": "Date picker",
         "meaning": "Chọn thời gian bắt đầu",
         "domain": "Ngày/Tháng/Năm",
-        "defaultVal": "2026-11-21T12:30",
+        "defaultVal": "2026-11-21T17:22",
         "note": ""
       },
       {
@@ -4321,7 +4339,7 @@
         "type": "Date picker",
         "meaning": "Chọn thời gian kết thúc",
         "domain": "Ngày/Tháng/Năm",
-        "defaultVal": "2026-12-21T12:30",
+        "defaultVal": "2026-12-21T17:22",
         "note": ""
       },
       {

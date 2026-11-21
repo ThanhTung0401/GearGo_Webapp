@@ -49,7 +49,7 @@ export function TransferPanel({ app }: { app: ReturnType<typeof useApp> }) {
     const isDowngrade = (targetProduct?.pricePerDay ?? 0) < (currentProduct?.pricePerDay ?? 0);
     equipmentApi
       .xemAnhHuongThayDoi(idNum, {
-        loaiThayDoi: isDowngrade ? "GiangCapThietBi" : "DieuChuyenSanPham",
+        loaiThayDoi: "GiangCap",
         maSanPhamDich: targetNum,
       })
       .then((res) => {

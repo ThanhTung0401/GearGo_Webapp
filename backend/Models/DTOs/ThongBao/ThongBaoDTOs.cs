@@ -12,8 +12,12 @@ public record ThongBaoResponse(
     string? TieuDe,
     string? NoiDung,
     DateTime ThoiDiemTao,
-    DateTime? ThoiDiemDoc
-);
+    DateTime? ThoiDiemDoc,
+    string? LoaiSuKien = null
+)
+{
+    public bool DaDoc => ThoiDiemDoc.HasValue;
+}
 
 /// <summary>Yêu cầu Admin soạn và gửi thông báo chủ động (UC9.4).</summary>
 public record GuiThongBaoAdminRequest(
@@ -21,7 +25,8 @@ public record GuiThongBaoAdminRequest(
     string NoiDung,
     long? MaTaiKhoanNhan = null,
     long? MaDonThue = null,
-    string? LoaiSuKien = null
+    string? LoaiSuKien = null,
+    string? VaiTroNhan = null
 );
 
 public record GuiThongBaoAdminResponse(

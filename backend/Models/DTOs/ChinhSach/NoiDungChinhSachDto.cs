@@ -31,6 +31,18 @@ public class NoiDungChinhSachDto
     /// <summary>Danh sách mốc nhắc khách (tùy chọn).</summary>
     public List<MocNhacDto>? MocNhac { get; set; }
 
+    /// <summary>Giờ nhận thiết bị tiêu chuẩn (HH:mm — UC8.1).</summary>
+    public string? GioNhanChuan { get; set; }
+
+    /// <summary>Giờ trả thiết bị tiêu chuẩn (HH:mm — UC8.1).</summary>
+    public string? GioTraChuan { get; set; }
+
+    /// <summary>Tỷ lệ bồi thường hư hỏng/mất thiết bị (%) (UC8.1).</summary>
+    public decimal? TyLeBoiThuongHuHong { get; set; }
+
+    /// <summary>Biểu phí mất/hỏng phụ kiện (UC8.1).</summary>
+    public string? BieuPhiPhuKien { get; set; }
+
     public class HuyDonDto
     {
         /// <summary>Tỷ lệ giữ lại khi khách hủy trong 24–48h trước nhận (0..1).</summary>

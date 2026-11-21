@@ -49,7 +49,7 @@ export function useStaffAccounts(app: ReturnType<typeof useApp>) {
       const res = await staffApi.timNhanVien({
         tuKhoa: search.trim() || undefined,
         vaiTro: roleFilter === "all" ? undefined : roleFilter === "Quản trị viên" ? "QuanTriVien" : "NhanVien",
-        trangThaiLamViec: statusFilter === "all" ? undefined : statusFilter === "active" ? "DangLamViec" : "DaNghiViec",
+        trangThaiTaiKhoan: statusFilter === "all" ? undefined : statusFilter === "active" ? "HoatDong" : "BiKhoa",
       });
       const { mapped, tkMap, nvMap } = mapBackendStaffItems(res.items);
       setStaffAccountToTaiKhoanId(tkMap);

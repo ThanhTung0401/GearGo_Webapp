@@ -85,6 +85,12 @@ export function buildTaoChinhSachRequestFromConfig(
         { loai: "TruocNhan", soGioTruoc: Math.max(1, Number(cfg.reminderPickupHoursBefore || 4)) },
         { loai: "TruocTra", soGioTruoc: Math.max(1, Number(cfg.reminderReturnHoursBefore || 2)) },
       ],
+      gioNhanChuan: cfg.standardPickupTime || "08:00",
+      gioTraChuan: cfg.standardReturnTime || "20:00",
+      tyLeBoiThuongHuHong: Number(cfg.damageCompensationPercent ?? 100),
+      bieuPhiPhuKien: Array.isArray(cfg.accessoryLossFeeSchedule)
+        ? JSON.stringify(cfg.accessoryLossFeeSchedule)
+        : String(cfg.accessoryLossFeeSchedule ?? ""),
     },
   };
 }

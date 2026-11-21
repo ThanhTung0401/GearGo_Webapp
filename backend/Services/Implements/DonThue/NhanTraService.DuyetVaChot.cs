@@ -41,6 +41,9 @@ public partial class NhanTraService
                 return Result<ChiTietNhanTraResponse>.Loi(DomainConstants.Errors.LostConclusionIncomplete,
                     "Khoản phụ phí bồi thường mất thiết bị chưa được phê duyệt.");
 
+            // Chỉ Quản trị viên mới có quyền duyệt kết luận mất thiết bị (UC4.3)
+            await ActorGuard.EnsureQuanTriVienAsync(_context, actorId);
+
             var nvResult = await _context.LayNhanVienHopLeAsync(actorId);
             if (!nvResult.ThanhCong)
                 return Result<ChiTietNhanTraResponse>.Loi(nvResult.MaLoi!, "Không tìm thấy hồ sơ nhân viên của quản trị viên.");

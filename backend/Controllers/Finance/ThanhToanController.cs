@@ -1,4 +1,4 @@
-﻿using GearGo.Helpers;
+using GearGo.Helpers;
 using GearGo.Helpers.Authorization;
 using GearGo.Models.DTOs.ThanhToan;
 using GearGo.Services.Interfaces;
@@ -19,10 +19,10 @@ public class ThanhToanController : BaseApiController
     [Authorize]
     public async Task<IActionResult> XacNhanThanhToan([FromBody] XacNhanThanhToanRequest request)
     {
-        var result = await _thanhToanService.XacNhanThanhToanAsync(request);
+        var result = await _thanhToanService.XacNhanThanhToanAsync(request, MaTaiKhoanHienTai);
         return result.ThanhCong
             ? Ok(new { MaThanhToan = result.DuLieu, ThongDiep = "Thanh toán thành công!" })
-            : BadRequest(new { result.MaLoi, result.ThongDiep });
+            : StatusCode(LayStatusCode(result.MaLoi), new { result.MaLoi, result.ThongDiep });
     }
 
     [HttpPost("doi-soat/{doiSoatId:long}/thu-bo-sung")]

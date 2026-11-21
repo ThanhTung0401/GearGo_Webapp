@@ -9,17 +9,18 @@ import type { DanhGiaBackend } from "../api/reviewApi";
 
 export function mapDanhGiaToReview(dg: DanhGiaBackend): Review {
   const hasReply = Boolean(dg.phanHoiCuaHang);
+  const createdAt = dg.thoiDiemTao ?? dg.ngayTao ?? new Date().toISOString();
   return {
     id: String(dg.maDanhGia),
-    orderId: String(dg.maDonThue),
+    orderId: String(dg.maDonThue ?? dg.maChiTietDon ?? ""),
     productId: String(dg.maSanPham),
-    productName: dg.tenSanPham,
-    customerId: String(dg.maKhachHang),
-    customerName: dg.tenKhachHang,
+    productName: dg.tenSanPham ?? "",
+    customerId: String(dg.maKhachHang ?? ""),
+    customerName: dg.tenKhachHang ?? dg.tenNguoiDung ?? "Khách hàng",
     rating: dg.soSao,
     comment: dg.noiDung ?? "",
     images: Array.isArray(dg.danhSachAnh) ? dg.danhSachAnh : [],
-    createdAt: dg.thoiDiemTao,
+    createdAt,
     status: dg.trangThaiHienThi === "BiAn" ? "hidden" : "active",
     hiddenReason: dg.lyDoAn ?? undefined,
     hiddenBy: dg.nguoiAn ?? undefined,
@@ -27,7 +28,7 @@ export function mapDanhGiaToReview(dg: DanhGiaBackend): Review {
     storeResponse: hasReply
       ? {
           response: dg.phanHoiCuaHang!,
-          respondedAt: dg.thoiDiemPhanHoi ?? dg.thoiDiemTao,
+          respondedAt: dg.thoiDiemPhanHoi ?? createdAt,
           respondedBy: dg.nguoiPhanHoi ?? "Cửa hàng",
         }
       : undefined,
@@ -54,7 +55,7 @@ export function mapThongBaoToNotification(
     type: inferNotifType(tb.loaiSuKien),
     targetRole,
     createdAt: tb.thoiDiemTao,
-    isRead: tb.daDoc,
+    isRead: tb.daDoc ?? Boolean(tb.thoiDiemDoc),
     actionLink: tb.maDonThue
       ? {
           type: "order",
@@ -82,8 +83,8 @@ export function mapNhatKyToAuditLog(nk: NhatKyThaoTacBackend): AuditLogEntryWith
   return {
     id: String(nk.maNhatKy),
     timestamp: nk.thoiDiem,
-    actor: nk.nguoiThucHien ?? (nk.maTaiKhoan ? `TK#${nk.maTaiKhoan}` : "Hệ thống"),
-    role: nk.vaiTro ?? "Hệ thống",
+    actor: nk.emailNguoiThucHien ?? nk.nguoiThucHien ?? (nk.maTaiKhoan ? `TK#${nk.maTaiKhoan}` : "Hệ thống"),
+    role: nk.vaiTroNguoiThucHien ?? nk.vaiTro ?? "Hệ thống",
     action: nk.hanhDong,
     targetEntity: nk.loaiDoiTuong,
     targetId: nk.maDoiTuong ?? "-",

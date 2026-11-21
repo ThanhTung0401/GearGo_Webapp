@@ -83,4 +83,17 @@ public partial class DoiSoatService
 
         return Result<DoiSoatResponse>.Ok(await ChuyenSangResponseAsync(doiSoat));
     }
+
+    public async Task<Result<List<DoiSoatResponse>>> LayDanhSachDieuChinhAsync(long actorId)
+    {
+        await ActorGuard.EnsureQuanTriVienAsync(_context, actorId);
+        var list = await TaiDoiSoatDayDuQuery()
+            .Where(d => d.LoaiDoiSoat == "DieuChinh")
+            .OrderByDescending(d => d.ThoiDiemLap)
+            .Take(100)
+            .ToListAsync();
+        var results = new List<DoiSoatResponse>(list.Count);
+        foreach (var item in list) results.Add(await ChuyenSangResponseAsync(item));
+        return Result<List<DoiSoatResponse>>.Ok(results);
+    }
 }

@@ -1,4 +1,4 @@
-﻿using GearGo.Helpers;
+using GearGo.Helpers;
 using GearGo.Helpers.Authorization;
 using GearGo.Models.DTOs.DoiSoat;
 using GearGo.Services.Interfaces;
@@ -62,6 +62,11 @@ public class DoiSoatController : BaseApiController
     [RequirePermission(DomainConstants.Permissions.DoiSoat_Chot)]
     public async Task<IActionResult> LapDoiSoatDieuChinh(long id, [FromBody] DieuChinhDoiSoatRequest request)
         => HandleCreatedResult(await _doiSoatService.LapDoiSoatDieuChinhAsync(id, request, MaTaiKhoanHienTai), LayStatusCode);
+
+    [HttpGet("dieu-chinh")]
+    [RequirePermission(DomainConstants.Permissions.DoiSoat_Xem)]
+    public async Task<IActionResult> LayDanhSachDieuChinh()
+        => HandleResult(await _doiSoatService.LayDanhSachDieuChinhAsync(MaTaiKhoanHienTai), LayStatusCode);
 
     private static int LayStatusCode(string? maLoi) => maLoi switch
     {

@@ -50,8 +50,9 @@ public class BaoCaoVanHanhService : IBaoCaoVanHanhService
         }).ToList();
 
         int tongDon = danhSachDon.Count;
+        // Tách riêng đơn hủy (KhachHuy/CuaHangHuy) khỏi đơn HetHan (UC10.1 / UC10.2)
         int tongDonHuy = danhSachDon.Count(d =>
-            d.TrangThai is TrangThaiDonThue.KhachHuy or TrangThaiDonThue.CuaHangHuy or TrangThaiDonThue.HetHan);
+            d.TrangThai is TrangThaiDonThue.KhachHuy or TrangThaiDonThue.CuaHangHuy);
         int tongDonThanhCong = danhSachDon.Count(d =>
             d.TrangThai is TrangThaiDonThue.HoanTat or TrangThaiDonThue.DangThue
                 or TrangThaiDonThue.DaNhanTra or TrangThaiDonThue.ChoDoiSoat);

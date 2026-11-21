@@ -137,6 +137,10 @@ public partial class DieuChinhKhoService
         if (tb.TrangThaiSuDung == TrangThaiThietBi.DangThue)
             return Result<DieuChinhKhoResponse>.Loi(DomainConstants.Errors.EquipmentNotRecovered, "Thiết bị đang cho thuê, không thể loại bỏ khỏi khai thác.");
 
+        // Kiểm tra cam kết lịch thuê tương lai trước khi loại thiết bị khai báo sai (UC7.10 dòng phụ 4.1)
+        var loiCamKet = await KiemTraCamKetThietBiAsync(tb.MaThietBi, "NgungSuDung", actorId);
+        if (loiCamKet != null) return loiCamKet;
+
         var ttCu = tb.TrangThaiSuDung;
         var tinhTrangCu = tb.TinhTrang;
         tb.TrangThaiSuDung = TrangThaiThietBi.NgungSuDung;
@@ -185,13 +189,25 @@ public partial class DieuChinhKhoService
         var tb = await _context.ThietBis.FirstOrDefaultAsync(t => t.MaThietBi == ct.MaThietBi.Value);
         if (tb == null || string.IsNullOrWhiteSpace(ct.GiaTriSau)) return null;
 
+        if (tb.TrangThaiSuDung == TrangThaiThietBi.DangThue)
+            return Result<DieuChinhKhoResponse>.Loi(DomainConstants.Errors.EquipmentNotRecovered,
+                "Thiết bị đang cho thuê ở khách, không thể điều chỉnh giảm/chuyển trạng thái qua kiểm kê (UC6.11).");
+
         using var doc = JsonDocument.Parse(ct.GiaTriSau);
         var ttCu = tb.TrangThaiSuDung;
         var tinhTrangCu = tb.TinhTrang;
 
         if ((doc.RootElement.TryGetProperty("trangThaiSuDung", out var ttProp) || doc.RootElement.TryGetProperty("TrangThaiSuDung", out ttProp)) &&
             Enum.TryParse<TrangThaiThietBi>(ttProp.GetString(), true, out var newTt))
+        {
+            // Nếu điều chỉnh sang trạng thái không sẵn sàng (Mất/Ngừng sử dụng/Bảo trì) phải kiểm tra cam kết lịch tương lai (UC6.11.1)
+            if (newTt != TrangThaiThietBi.SanSang)
+            {
+                var loiCamKet = await KiemTraCamKetThietBiAsync(tb.MaThietBi, "NgungSuDung", actorId);
+                if (loiCamKet != null) return loiCamKet;
+            }
             tb.TrangThaiSuDung = newTt;
+        }
         if (doc.RootElement.TryGetProperty("tinhTrang", out var condProp) || doc.RootElement.TryGetProperty("TinhTrang", out condProp))
             tb.TinhTrang = condProp.GetString() ?? tb.TinhTrang;
 

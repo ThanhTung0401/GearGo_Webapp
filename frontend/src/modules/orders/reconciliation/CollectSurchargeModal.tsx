@@ -211,7 +211,7 @@ export function CollectSurchargeModal(props: Props) {
                     setReconError(null);
                     try {
                       let ds = await ensureConfirmedDoiSoat();
-                      if (ds.trangThai === "DaXacNhan") {
+                      if (ds.trangThai === "ChoChot" || ds.trangThai === "DaXacNhan") {
                         ds = await reconciliationApi.yeuCauXuLyTien(ds.maDoiSoat);
                       }
                       const reqThu = await paymentApi.taoThuBoSung(

@@ -54,6 +54,12 @@ public partial class TuVanAIService
         if (gio.GioNhanDuKien.HasValue && gio.GioTraDuKien.HasValue)
         {
             bool isDifferent = gio.GioNhanDuKien.Value != request.GioNhan.Value || gio.GioTraDuKien.Value != request.GioTra.Value;
+            // Nếu khách chọn giữ lịch hiện tại của giỏ thì không ghi đè GioNhanDuKien/GioTraDuKien (UC2.4.2)
+            if (isDifferent && string.Equals(request.XuLyXungDotLich, "GiuHienTai", StringComparison.OrdinalIgnoreCase))
+            {
+                gio.NgayCapNhat = DateTime.UtcNow;
+                return;
+            }
             if (isDifferent && !string.Equals(request.XuLyXungDotLich, "ThayThe", StringComparison.OrdinalIgnoreCase))
             {
                 throw new XungDotDuLieuException("NGAY_GIO_KHAC_GIO_HIEN_TAI",

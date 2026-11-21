@@ -1,4 +1,4 @@
-﻿/**
+/**
  * policyApi.ts - Chính sách thuê theo phiên bản (/api/chinh-sach) - UC83–UC84
  */
 
@@ -22,6 +22,10 @@ export interface NoiDungChinhSachBackend {
     loai?: string | null;
     soGioTruoc?: number | null;
   }> | null;
+  gioNhanChuan?: string | null;
+  gioTraChuan?: string | null;
+  tyLeBoiThuongHuHong?: number | null;
+  bieuPhiPhuKien?: string | null;
 }
 
 export interface ChinhSachBackend {

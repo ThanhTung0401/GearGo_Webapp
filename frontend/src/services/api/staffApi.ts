@@ -1,4 +1,4 @@
-﻿/**
+/**
  * staffApi.ts - Quản trị nhân sự, vai trò & tài khoản (WP-M01: UC07 - UC11, UC13, UC16)
  * Kết nối các API admin (/api/nhan-vien, /api/tai-khoan) qua apiClient.
  */
@@ -16,6 +16,7 @@ export interface TimNhanVienParams {
   tuKhoa?: string;
   vaiTro?: string;
   trangThaiLamViec?: string;
+  trangThaiTaiKhoan?: string;
   trang?: number;
   soMoiTrang?: number;
 }

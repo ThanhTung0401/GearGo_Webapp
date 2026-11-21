@@ -18,6 +18,7 @@ public class TimNhanVienRequest
     public string? TuKhoa { get; set; }
     public string? VaiTro { get; set; }
     public string? TrangThaiLamViec { get; set; }
+    public string? TrangThaiTaiKhoan { get; set; }
     public int Trang { get; set; } = 1;
     public int SoMoiTrang { get; set; } = 20;
 }
@@ -35,6 +36,8 @@ public class TaoNhanVienRequest
     public DateOnly? NgayVaoLam { get; set; }
     [Required, MaxLength(50)] public string VaiTro { get; set; } = "";
     [Required, MinLength(8), MaxLength(100)] public string MatKhauKhoiTao { get; set; } = "";
+    /// <summary>Danh sách mã quyền khởi tạo cho nhân viên mới (UC1.7.1).</summary>
+    public List<string>? QuyenBanDau { get; set; }
 }
 
 /// <summary>Không nhận PK/FK/vai trò/trạng thái: đổi vai trò, khóa, nghỉ việc là action riêng.</summary>

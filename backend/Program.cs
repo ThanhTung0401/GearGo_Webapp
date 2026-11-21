@@ -361,6 +361,13 @@ app.MapGet("/", () => new
     testEndpoint = "/api/test"
 });
 
+app.MapGet("/health", () => Results.Ok(new
+{
+    status = "healthy",
+    service = "geargo-api",
+    timestampUtc = DateTime.UtcNow
+}));
+
 app.MapGet("/api/test", () => new {
     message = "Backend API is running thành công cho React!",
     timestamp = DateTime.Now

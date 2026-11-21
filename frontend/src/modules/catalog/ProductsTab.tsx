@@ -13,16 +13,18 @@ export function ProductsTab({ app }: { app: ReturnType<typeof useApp> }) {
   const [action, setAction] = useState<Product | "new" | null>(null);
   const [search, setSearch] = useState("");
   const [catFilter, setCatFilter] = useState("Tất cả");
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
   const [statusError, setStatusError] = useState("");
 
   const categories = ["Tất cả", ...Array.from(new Set(app.products.map((p) => p.category)))];
   const filteredProducts = app.products.filter((p) => {
     const matchCat = catFilter === "Tất cả" || p.category === catFilter;
+    const matchStatus = statusFilter === "all" || p.status === statusFilter;
     const matchSearch =
       p.name.toLowerCase().includes(search.toLowerCase()) ||
       (p.displayCode ?? p.id).toLowerCase().includes(search.toLowerCase()) ||
       p.brand.toLowerCase().includes(search.toLowerCase());
-    return matchCat && matchSearch;
+    return matchCat && matchStatus && matchSearch;
   });
 
   const detail = sel ? app.products.find((p) => p.id === sel) : null;
@@ -58,6 +60,16 @@ export function ProductsTab({ app }: { app: ReturnType<typeof useApp> }) {
           className="adm-select adm-select--min"
         >
           {categories.map((c) => <option key={c} value={c}>{c}</option>)}
+        </select>
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value as "all" | "active" | "inactive")}
+          aria-label="Lọc trạng thái kinh doanh"
+          className="adm-select adm-select--min"
+        >
+          <option value="all">Tất cả trạng thái</option>
+          <option value="active">Đang kinh doanh</option>
+          <option value="inactive">Tạm ngừng / Ngừng KD</option>
         </select>
         <span className="adm-count-text">
           Tìm thấy <strong>{filteredProducts.length}</strong> / {app.products.length} sản phẩm

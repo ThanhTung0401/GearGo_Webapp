@@ -139,32 +139,41 @@ export default function GoodsReceivingModal({ receipt, app, onClose, onSuccess }
       if (!Number.isFinite(phieuId)) return;
       setSubmitting(true);
       try {
+        // Đóng gói đúng schema XacNhanNhapKhoRequest.DanhSachDong.ThietBi của Backend (UC7.7 & UC7.7.2)
+        const danhSachDong = receipt.lines
+          .map((line, index) => {
+            const chiTietId = Number(line.id);
+            if (!Number.isFinite(chiTietId)) return null;
+            const st = lineStates[index];
+            const acceptedDevices = st.acceptedCodes
+              .slice(0, st.acceptedQty)
+              .map((sn: string, i: number) => ({
+                maHienThi: sn.trim() || `TB-${chiTietId}-OK-${i + 1}`,
+                tinhTrang: "Moi",
+                canBaoTri: false,
+                ghiChu: line.note || "Đạt chuẩn kiểm nhận",
+              }));
+            const damagedDevices = st.damagedCodes
+              .slice(0, st.damagedQty)
+              .map((sn: string, i: number) => ({
+                maHienThi: sn.trim() || `TB-${chiTietId}-ERR-${i + 1}`,
+                tinhTrang: "CanBaoTri",
+                canBaoTri: true,
+                moTaLoi: st.damageNotes.trim() || "Hàng nhập có lỗi cần bảo trì kỹ thuật",
+                ghiChu: st.damageNotes.trim() || "Cần bảo trì trước khi cho thuê",
+              }));
+            return {
+              maChiTietPhieuNhap: chiTietId,
+              thietBi: [...acceptedDevices, ...damagedDevices],
+            };
+          })
+          .filter((x): x is NonNullable<typeof x> => x !== null);
+
         await importReceiptApi.xacNhanNhapKho(phieuId, {
           ngayNhapThucTe: new Date().toISOString(),
           soChungTuNhaCungCap: receipt.supplierDocumentNumber,
           ghiChuXacNhan: `${receivingCondition} (Kiểm nhận: ${inspectedBy.trim()})`,
-          tinhTrangDong: receipt.lines
-            .map((line, index) => {
-              const chiTietId = Number(line.id);
-              if (!Number.isFinite(chiTietId)) return null;
-              const st = lineStates[index];
-              const tinhTrangThucTe =
-                st.damagedQty > 0 && st.acceptedQty === 0
-                  ? "CanBaoTri"
-                  : st.damagedQty > 0
-                    ? "CoLoiNho"
-                    : "Moi";
-              const noteParts = [
-                st.damageNotes.trim() ? `Lỗi: ${st.damageNotes.trim()}` : "",
-                st.rejectedQty > 0 ? `Từ chối ${st.rejectedQty}: ${st.rejectionReason.trim()}` : "",
-              ].filter(Boolean);
-              return {
-                maChiTietPhieuNhap: chiTietId,
-                tinhTrangThucTe,
-                ghiChu: noteParts.join(" · ") || line.note || "Đạt chuẩn kiểm nhận",
-              };
-            })
-            .filter((x): x is { maChiTietPhieuNhap: number; tinhTrangThucTe: string; ghiChu: string } => x !== null),
+          danhSachDong,
         });
         await Promise.all([
           app.refreshImportReceipts?.(),
@@ -342,7 +351,7 @@ export default function GoodsReceivingModal({ receipt, app, onClose, onSuccess }
               />
             </div>
             <div>
-              <span style={{ color: "#6B7280", display: "block" }}>Tổng tiền dự kiến $\rightarrow$ Thực nhận:</span>
+              <span style={{ color: "#6B7280", display: "block" }}>Tổng tiền dự kiến → Thực nhận:</span>
               <div style={{ fontWeight: 700, fontSize: "0.95rem", color: "var(--color-forest, #15803D)", marginTop: 4 }}>
                 {fmt(actualTotalAmount)}
               </div>
@@ -362,9 +371,9 @@ export default function GoodsReceivingModal({ receipt, app, onClose, onSuccess }
           >
             <strong>💡 Quy tắc nghiệp vụ kiểm định (UC7.7 & UC7.7.2):</strong>
             <ul style={{ margin: "4px 0 0 16px", padding: 0 }}>
-              <li><strong>Hàng đạt:</strong> Nhập mã serial $\rightarrow$ Kích hoạt trạng thái <code>Sẵn sàng</code> cho thuê.</li>
-              <li><strong>Hàng lỗi (UC7.7.2):</strong> Nhập mã serial $\rightarrow$ Kích hoạt trạng thái <code>Đang bảo trì</code> để xử lý kỹ thuật trước.</li>
-              <li><strong>Hàng từ chối:</strong> Ghi rõ lý do trả hàng $\rightarrow$ KHÔNG sinh mã, KHÔNG tăng kho, tự động trừ tiền thanh toán.</li>
+              <li><strong>Hàng đạt:</strong> Nhập mã serial → Kích hoạt trạng thái <code>Sẵn sàng</code> cho thuê.</li>
+              <li><strong>Hàng lỗi (UC7.7.2):</strong> Nhập mã serial → Kích hoạt trạng thái <code>Đang bảo trì</code> để xử lý kỹ thuật trước.</li>
+              <li><strong>Hàng từ chối:</strong> Ghi rõ lý do trả hàng → KHÔNG sinh mã, KHÔNG tăng kho, tự động trừ tiền thanh toán.</li>
             </ul>
           </div>
 

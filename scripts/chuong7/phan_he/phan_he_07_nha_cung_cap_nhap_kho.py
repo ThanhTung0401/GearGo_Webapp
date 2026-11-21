@@ -30,16 +30,16 @@ NATURAL_EVENTS = {
         ('1', 'Nhấn nút "Ngừng hợp tác" hoặc "Hợp tác lại" tại dòng nhà cung cấp', 'Hệ thống chuyển đổi tình trạng hợp tác của nhà cung cấp và cập nhật ngay nhãn trạng thái trong bảng.'),
     ],
     'UC7.5': [
-        ('1', 'Nhấn nút "Tạo phiếu nhập"', 'Mở hộp thoại lập phiếu nhập hàng mới ở trạng thái nháp.'),
-        ('2', 'Chọn nhà cung cấp, thêm các dòng sản phẩm nhập cùng số lượng, đơn giá và nhấn lưu nháp', 'Hệ thống tính tổng tiền phiếu nhập, lưu phiếu ở trạng thái Nháp và hiển thị trong danh sách.'),
+        ('1', 'Nhấn nút "Tạo phiếu nháp"', 'Mở hộp thoại lập phiếu nhập hàng mới ở trạng thái nháp.'),
+        ('2', 'Chọn nhà cung cấp, thêm các dòng sản phẩm nhập cùng số lượng, đơn giá và nhấn lưu nháp', 'Hệ thống kiểm tra nhà cung cấp đang hợp tác, tính tổng tiền phiếu nhập, lưu phiếu ở trạng thái Nháp (chưa tăng tồn kho) và hiển thị trong danh sách.'),
     ],
     'UC7.6': [
         ('1', 'Chọn một phiếu nhập ở trạng thái Nháp và nhấn nút "Sửa nháp"', 'Mở hộp thoại chỉnh sửa thông tin và chi tiết sản phẩm của phiếu nhập nháp.'),
         ('2', 'Cập nhật số lượng, đơn giá hoặc ghi chú và nhấn lưu', 'Hệ thống lưu thay đổi và tính lại tổng giá trị phiếu nhập.'),
     ],
     'UC7.7': [
-        ('1', 'Chọn phiếu nhập nháp và nhấn nút "Kiểm nhận & Chốt kho"', 'Mở hộp thoại kiểm tra số lượng thực nhận so với chứng từ nhập.'),
-        ('2', 'Nhập số lượng thực nhận và nhấn xác nhận nhập kho', 'Hệ thống chốt phiếu nhập, tự động sinh mã thiết bị vật lý vào kho và chuyển phiếu sang trạng thái Đã nhập kho.'),
+        ('1', 'Chọn phiếu nhập nháp và nhấn nút "Kiểm nhận & Chốt kho"', 'Mở hộp thoại kiểm tra số lượng đạt, hàng lỗi cần bảo trì và hàng từ chối so với chứng từ nhập.'),
+        ('2', 'Nhập mã serial cho hàng đạt/hàng lỗi, lý do từ chối (nếu có) và nhấn xác nhận nhập kho', 'Hệ thống chốt phiếu nhập, sinh mã thiết bị đạt ở trạng thái Sẵn sàng, hàng lỗi ở trạng thái Đang bảo trì và không tăng kho phần bị từ chối.'),
     ],
     'UC7.8': [
         ('1', 'Nhập từ khóa tìm kiếm hoặc lọc theo trạng thái phiếu nhập', 'Hệ thống lọc danh sách phiếu nhập theo điều kiện đã chọn.'),

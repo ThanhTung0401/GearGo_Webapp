@@ -1,4 +1,4 @@
-﻿/**
+/**
  * auditApi.ts - Nhật ký thao tác hệ thống (/api/nhat-ky) - StaffOrAdmin (UC100/UC102)
  */
 
@@ -9,7 +9,9 @@ export interface NhatKyThaoTacBackend {
   maNhatKy: number;
   maTaiKhoan?: number | null;
   nguoiThucHien?: string | null;
+  emailNguoiThucHien?: string | null;
   vaiTro?: string | null;
+  vaiTroNguoiThucHien?: string | null;
   hanhDong: string;
   loaiDoiTuong: string;
   maDoiTuong?: string | null;

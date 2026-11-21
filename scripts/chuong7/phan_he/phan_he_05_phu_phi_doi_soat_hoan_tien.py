@@ -17,8 +17,8 @@ NATURAL_EVENTS = {
         ('2', 'Nhấn nút xác nhận đã thanh toán / kiểm tra trạng thái', 'Hệ thống cập nhật trạng thái đơn sang Đã xác nhận và hiển thị thông báo hoàn tất đặt thuê.'),
     ],
     'UC5.2': [
-        ('1', 'Chọn loại phụ phí, nhập số tiền và mô tả lý do phát sinh', 'Kiểm tra số tiền hợp lệ và lý do đầy đủ trước khi lập.'),
-        ('2', 'Nhấn nút lập phụ phí', 'Hệ thống lưu khoản phụ phí mới vào đơn thuê và cập nhật ngay vào bảng tổng hợp đối soát.'),
+        ('1', 'Chọn loại phụ phí, nhập số tiền và mô tả lý do phát sinh', 'Kiểm tra số tiền hợp lệ, không tính phí hao mòn thông thường và lý do đầy đủ trước khi lập.'),
+        ('2', 'Nhấn nút lập phụ phí', 'Hệ thống lưu khoản phụ phí mới kèm trạng thái duyệt theo thẩm quyền (phí vượt ngưỡng giữ Chờ duyệt; chỉ khoản đã duyệt mới được đưa vào bảng đối soát).'),
     ],
     'UC5.3': [
         ('1', 'Nhấn nút "Xem chứng cứ & Kết luận" tại một yêu cầu tranh chấp phụ phí', 'Mở hộp thoại hiển thị hình ảnh bằng chứng bàn giao/nhận trả và nội dung khiếu nại của khách hàng.'),
