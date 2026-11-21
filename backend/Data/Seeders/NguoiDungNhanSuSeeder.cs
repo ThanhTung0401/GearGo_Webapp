@@ -43,8 +43,8 @@ internal static class NguoiDungNhanSuSeeder
             "Hoàng Văn Khóa", "789 Nguyễn Trãi, Thanh Xuân, Hà Nội", false);
 
         var nv1 = await UpsertNhanVienAsync(context, adminTk.MaTaiKhoan, "Nguyễn Văn Quản Trị");
-        var nv2 = await UpsertNhanVienAsync(context, staffTk.MaTaiKhoan, "Lê Thị Mai (NV Kho)");
-        await UpsertNhanVienAsync(context, staffTk2.MaTaiKhoan, "Trần Tuấn (NV Vận Hành)");
+        var nv2 = await UpsertNhanVienAsync(context, staffTk.MaTaiKhoan, "Lê Thị Mai");
+        await UpsertNhanVienAsync(context, staffTk2.MaTaiKhoan, "Trần Tuấn");
         await context.SaveChangesAsync();
 
         return new SeedActors(adminTk, staffTk, staffTk2, customerTk1, customerTk2, khach1, khach2, nv1, nv2);
@@ -236,7 +236,15 @@ internal static class NguoiDungNhanSuSeeder
     private static async Task<NhanVien> UpsertNhanVienAsync(ApplicationDbContext context, long maTaiKhoan, string hoTen)
     {
         var nv = await context.NhanViens.FirstOrDefaultAsync(n => n.MaTaiKhoan == maTaiKhoan);
-        if (nv != null) return nv;
+        if (nv != null)
+        {
+            // Dọn hậu tố chức danh cũ như (NV Kho), (NV Vận Hành) để đồng bộ mô hình tiệm nhỏ
+            if (nv.HoTen != hoTen && nv.HoTen?.Contains("(NV ") == true)
+            {
+                nv.HoTen = hoTen;
+            }
+            return nv;
+        }
         nv = new NhanVien { MaTaiKhoan = maTaiKhoan, HoTen = hoTen, TrangThaiLamViec = "DangLamViec" };
         context.NhanViens.Add(nv);
         return nv;

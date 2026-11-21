@@ -56,8 +56,7 @@ export function StaffAccountsTable({
         >
           <option value="all">Tất cả vai trò</option>
           <option value="Quản trị viên">Quản trị viên</option>
-          <option value="Nhân viên kho">Nhân viên kho</option>
-          <option value="Nhân viên chăm sóc KH">Nhân viên chăm sóc KH</option>
+          <option value="Nhân viên">Nhân viên</option>
         </select>
         <select
           value={statusFilter}

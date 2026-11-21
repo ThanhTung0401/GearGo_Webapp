@@ -2,7 +2,7 @@ import { chromium } from '@playwright/test';
 import path from 'path';
 import fs from 'fs';
 
-const BASE_URL = 'http://localhost:5173';
+const BASE_URL = process.env.APP_URL || 'http://localhost:8443';
 const OUT_DIR = path.resolve('Document/screenshots_uc');
 const MANIFEST_PATH = path.join(OUT_DIR, 'manifest_71_ucs.json');
 fs.mkdirSync(OUT_DIR, { recursive: true });
@@ -390,9 +390,9 @@ async function annotateAuto(page, ucId, imgName, caption, scopeSelectors, opts =
 }
 
 async function loginForm(page, email, password, isAdmin = false) {
-  await page.goto(BASE_URL, { waitUntil: 'domcontentloaded' });
-  await page.waitForTimeout(800);
-  await page.getByRole('button', { name: 'Đăng nhập' }).first().click();
+  const loginPath = isAdmin ? '/staff/login' : '/login';
+  await page.goto(`${BASE_URL}${loginPath}`, { waitUntil: 'domcontentloaded' });
+  await page.waitForTimeout(700);
   const form = page.locator('form.auth-form');
   await form.waitFor({ state: 'visible', timeout: 10000 });
   await form.locator('input').nth(0).fill(email);
@@ -431,27 +431,44 @@ async function main() {
     await page.getByRole('heading', { name: /Tạo tài khoản GearGo/i }).waitFor({ state: 'visible', timeout: 8000 }).catch(() => {});
     await annotateAuto(page, 'UC1.1', 'UC1_1', 'Giao diện Đăng ký tài khoản (SCR-1.1)', ['.auth-card', 'form.auth-form'], { maxItems: 10 });
 
-    // UC1.2: Đăng nhập (2 hình: Hình a form đăng nhập 1..7, Hình b hộp cảnh báo tài khoản bị khóa 8)
-    await page.getByRole('button', { name: 'Đăng nhập' }).first().click();
+    // UC1.2: Đăng nhập (3 hình: Hình a cổng Khách /login, Hình b cổng Nhân viên /staff/login, Hình c cảnh báo TK bị khóa)
+    await page.goto(`${BASE_URL}/login`, { waitUntil: 'domcontentloaded' });
     await page.locator('form.auth-form').waitFor({ state: 'visible' });
     let next12 = await annotateCurated(
       page,
       'UC1.2',
       'UC1_2_a',
-      'Giao diện Đăng nhập (SCR-1.2)',
+      'Giao diện Đăng nhập Khách hàng tại /login (SCR-1.2)',
       [
-        { loc: (p) => p.locator('form.auth-form input').nth(0), name: 'Email, SĐT hoặc Tên đăng nhập', type: 'Text box', meaning: 'Nhập email, số điện thoại hoặc tên đăng nhập của tài khoản', domain: 'String', defaultVal: 'Rỗng', note: 'Bắt buộc nhập' },
+        { loc: (p) => p.locator('form.auth-form input').nth(0), name: 'Email hoặc Số điện thoại', type: 'Text box', meaning: 'Nhập email hoặc số điện thoại của tài khoản khách hàng', domain: 'String', defaultVal: 'Rỗng', note: 'Bắt buộc nhập' },
         { loc: (p) => p.locator('form.auth-form input').nth(1), name: 'Mật khẩu', type: 'Password box', meaning: 'Nhập mật khẩu của tài khoản', domain: 'String (>= 6 ký tự)', defaultVal: 'Rỗng', note: 'Bắt buộc nhập' },
         { loc: (p) => p.locator('form.auth-form').getByRole('button', { name: /Hiện|Ẩn/i }).first(), name: 'Hiện / Ẩn mật khẩu', type: 'Button', meaning: 'Bật hoặc tắt hiển thị ký tự mật khẩu', domain: 'Null', defaultVal: 'Ẩn', note: '' },
-        { loc: (p) => p.getByRole('button', { name: /Quên mật khẩu/i }).first(), name: 'Quên mật khẩu?', type: 'Button', meaning: 'Chuyển sang giao diện khôi phục mật khẩu', domain: 'Null', defaultVal: 'Kích hoạt', note: '' },
-        { loc: (p) => p.locator('form.auth-form button[type="submit"]').first(), name: 'Đăng nhập hệ thống', type: 'Button', meaning: 'Gửi thông tin xác thực để đăng nhập vào hệ thống', domain: 'Null', defaultVal: 'Kích hoạt', note: '' },
-        { loc: (p) => p.getByRole('button', { name: /Đăng ký ngay/i }).first(), name: 'Đăng ký ngay', type: 'Button', meaning: 'Chuyển sang giao diện đăng ký tài khoản mới', domain: 'Null', defaultVal: 'Kích hoạt', note: '' },
-        { loc: (p) => p.locator('button:has-text("Quản trị viên")').first().locator('..'), name: 'Nhóm nút chọn nhanh tài khoản kiểm thử', type: 'Group Button', meaning: 'Điền nhanh thông tin các tài khoản mẫu (Quản trị viên, Nhân viên kho, Khách hàng, Tài khoản bị khóa)', domain: 'Null', defaultVal: 'Kích hoạt', note: 'Hỗ trợ kiểm thử nhanh' },
+        { loc: (p) => p.getByRole('button', { name: /Quên mật khẩu/i }).first(), name: 'Quên mật khẩu?', type: 'Button', meaning: 'Chuyển sang giao diện khôi phục mật khẩu (/forgot-password)', domain: 'Null', defaultVal: 'Kích hoạt', note: '' },
+        { loc: (p) => p.locator('form.auth-form button[type="submit"]').first(), name: 'Đăng nhập hệ thống', type: 'Button', meaning: 'Gửi thông tin xác thực để đăng nhập tài khoản khách hàng', domain: 'Null', defaultVal: 'Kích hoạt', note: '' },
+        { loc: (p) => p.getByRole('button', { name: /Đăng ký ngay/i }).first(), name: 'Đăng ký ngay', type: 'Button', meaning: 'Chuyển sang giao diện đăng ký tài khoản mới (/register)', domain: 'Null', defaultVal: 'Kích hoạt', note: '' },
+        { loc: (p) => p.locator('.auth-quick-login-grid').first(), name: 'Nhóm nút chọn nhanh tài khoản khách hàng', type: 'Group Button', meaning: 'Điền nhanh thông tin Khách hàng 1 và Khách hàng 2 để kiểm thử', domain: 'Null', defaultVal: 'Kích hoạt', note: 'Hỗ trợ kiểm thử nhanh' },
       ],
       1
     );
 
-    // Kích hoạt cảnh báo tài khoản bị khóa thật từ DB (locked.kh@geargo.vn) để chụp Hình 1.2b có Alert box!
+    // Chụp thêm Hình 1.2b: Cổng đăng nhập nội bộ Nhân viên (/staff/login)
+    await page.goto(`${BASE_URL}/staff/login`, { waitUntil: 'domcontentloaded' });
+    await page.locator('form.auth-form').waitFor({ state: 'visible' });
+    next12 = await annotateCurated(
+      page,
+      'UC1.2',
+      'UC1_2_b',
+      'Giao diện Đăng nhập Nhân viên (Staff Portal) tại /staff/login (SCR-1.2)',
+      [
+        { loc: (p) => p.locator('form.auth-form button[type="submit"]').first(), name: 'Đăng nhập cổng Staff', type: 'Button', meaning: 'Gửi thông tin xác thực cho tài khoản Quản trị viên hoặc Nhân viên tại /staff/login', domain: 'Null', defaultVal: 'Kích hoạt', note: 'Chặn đăng nhập tài khoản khách hàng' },
+        { loc: (p) => p.locator('.auth-quick-login-grid').first(), name: 'Nhóm nút chọn nhanh tài khoản nội bộ', type: 'Group Button', meaning: 'Điền nhanh tài khoản Quản trị viên, Nhân viên 1 và Nhân viên 2', domain: 'Null', defaultVal: 'Kích hoạt', note: 'Hỗ trợ kiểm thử nhanh cổng Staff' },
+      ],
+      next12
+    );
+
+    // Kích hoạt cảnh báo tài khoản bị khóa thật từ DB (locked.kh@geargo.vn) tại /login để chụp Hình 1.2c
+    await page.goto(`${BASE_URL}/login`, { waitUntil: 'domcontentloaded' });
+    await page.locator('form.auth-form').waitFor({ state: 'visible' });
     await page.locator('form.auth-form input').nth(0).fill('locked.kh@geargo.vn');
     await page.locator('form.auth-form input').nth(1).fill('GearGo@2026');
     await page.locator('form.auth-form button[type="submit"]').click();
@@ -461,7 +478,7 @@ async function main() {
       await annotateCurated(
         page,
         'UC1.2',
-        'UC1_2_b',
+        'UC1_2_c',
         'Giao diện Đăng nhập – Cảnh báo tài khoản bị khóa (SCR-1.2)',
         [
           { loc: (p) => p.locator('.auth-locked-alert, [role="alert"], .auth-error').first(), name: 'Hộp cảnh báo tài khoản bị khóa', type: 'Alert box', meaning: 'Hiển thị thông báo trạng thái tài khoản bị khóa kèm lý do và thông tin liên hệ hỗ trợ', domain: 'Null', defaultVal: 'Hiển thị khi đăng nhập tài khoản bị khóa', note: '' },
@@ -758,14 +775,16 @@ async function main() {
     };
 
     // --- PH1 ---
+    await page.getByRole('button', { name: 'Nhân viên', exact: true }).first().waitFor({ state: 'visible', timeout: 10000 }).catch(() => {});
     await clickTab('Nhân viên');
     const searchStaff = page.getByPlaceholder('Tìm theo tên, mã NV, username...').first();
+    await searchStaff.waitFor({ state: 'visible', timeout: 8000 }).catch(() => {});
     if (await searchStaff.isVisible().catch(() => false)) {
-      await searchStaff.fill('Kho');
-      await page.waitForTimeout(450);
+      await searchStaff.fill('Mai');
+      await page.waitForTimeout(600);
       await annotateAuto(page, 'UC1.9', 'UC1_9', 'Giao diện Tra cứu nhân viên (SCR-1.9)', ['.internal-content'], { maxItems: 7, tableName: 'Bảng danh sách nhân viên' });
       await searchStaff.fill('');
-      await page.waitForTimeout(450);
+      await page.waitForTimeout(600);
     } else {
       await annotateAuto(page, 'UC1.9', 'UC1_9', 'Giao diện Tra cứu nhân viên (SCR-1.9)', ['.internal-content'], { maxItems: 7, tableName: 'Bảng danh sách nhân viên' });
     }

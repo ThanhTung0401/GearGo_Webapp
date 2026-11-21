@@ -78,7 +78,6 @@ export default function PublicHeader({
         <div className="flex items-center gap-4 lg:gap-6 min-w-0">
           <button
             onClick={() => {
-              setRole("customer");
               setPage("landing");
             }}
             className="flex items-center gap-2 sm:gap-2.5 bg-transparent border-0 cursor-pointer p-0 text-left select-none min-w-0"
@@ -225,6 +224,20 @@ export default function PublicHeader({
             >
               <Icon name="cart" size={16} />
               <span>{totalCartQty}</span>
+            </button>
+          )}
+
+          {/* Nút quay lại cổng vận hành khi tài khoản nội bộ (Admin / Nhân viên) đang xem trang khách */}
+          {currentUser && (currentUser.role === "admin" || currentUser.role === "staff") && (
+            <button
+              type="button"
+              onClick={() => setPage("workspace")}
+              className="flex items-center gap-1.5 text-xs font-bold text-[#11231B] px-2.5 sm:px-3 py-1.5 rounded-xl bg-amber-300 hover:bg-amber-200 border border-amber-400 shadow-xs transition-colors cursor-pointer whitespace-nowrap shrink-0"
+              title="Quay lại cổng vận hành nhân viên (/staff)"
+            >
+              <Icon name="grid" size={14} />
+              <span className="hidden sm:inline">Về cổng vận hành</span>
+              <span className="sm:hidden">Staff</span>
             </button>
           )}
 

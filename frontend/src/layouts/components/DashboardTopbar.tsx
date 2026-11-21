@@ -20,7 +20,7 @@ export default function DashboardTopbar({
     notifications,
     setNotifications,
     markNotificationRead,
-    setRole,
+    setPage,
     realApi,
     unreadNotificationCount,
     setUnreadNotificationCount,
@@ -60,7 +60,7 @@ export default function DashboardTopbar({
                 {currentUser.name}
               </div>
               <div className="text-[0.65rem] text-gray-500 mt-0.5">
-                {role === "admin" ? "Quản trị viên" : "Nhân viên kho"}
+                {role === "admin" ? "Quản trị viên" : "Nhân viên"}
               </div>
             </div>
           </div>
@@ -149,11 +149,11 @@ export default function DashboardTopbar({
           )}
         </div>
 
-        {/* Back to Customer Button */}
+        {/* Back to Customer Button — chỉ chuyển sang URL trang khách (/), giữ nguyên phiên nội bộ để dễ quay lại /staff */}
         <button
-          onClick={() => setRole("customer")}
+          onClick={() => setPage("landing")}
           className="text-xs font-semibold px-2.5 sm:px-3 py-1.5 rounded-xl border border-[var(--color-bone)] bg-white hover:bg-gray-50 text-[var(--color-bark)] transition-colors cursor-pointer whitespace-nowrap shrink-0"
-          title="Trở về giao diện người thuê"
+          title="Xem giao diện người thuê (có thể quay lại cổng vận hành bất cứ lúc nào)"
         >
           Trang khách →
         </button>

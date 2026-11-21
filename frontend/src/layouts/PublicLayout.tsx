@@ -129,6 +129,16 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
                   </button>
                 )}
 
+                {currentUser && (currentUser.role === "admin" || currentUser.role === "staff") && (
+                  <button
+                    type="button"
+                    onClick={() => navigateCustomer("workspace")}
+                    className="w-full mt-2 py-2.5 rounded-xl bg-amber-300 text-[#11231B] text-xs font-bold border border-amber-400 cursor-pointer"
+                  >
+                    Về cổng vận hành (/staff)
+                  </button>
+                )}
+
                 {!currentUser ? (
                   <button
                     type="button"

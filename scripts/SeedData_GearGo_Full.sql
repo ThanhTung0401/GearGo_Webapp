@@ -62,8 +62,8 @@ BEGIN TRY
     MERGE INTO [NHAN_VIEN] AS target
     USING (VALUES
         (1, 1, N'Nguyễn Văn Quản Trị', N'Số 1 Đại Cồ Việt, Hai Bà Trưng, Hà Nội', CAST('2023-01-01' AS date), NULL, N'DangLamViec'),
-        (2, 2, N'Lê Thị Mai (NV Kho)', N'25 Lạc Long Quân, Tây Hồ, Hà Nội', CAST('2023-06-01' AS date), NULL, N'DangLamViec'),
-        (3, 3, N'Trần Tuấn (NV Vận Hành)', N'88 Hoàng Hoa Thám, Ba Đình, Hà Nội', CAST('2023-08-15' AS date), NULL, N'DangLamViec')
+        (2, 2, N'Lê Thị Mai', N'25 Lạc Long Quân, Tây Hồ, Hà Nội', CAST('2023-06-01' AS date), NULL, N'DangLamViec'),
+        (3, 3, N'Trần Tuấn', N'88 Hoàng Hoa Thám, Ba Đình, Hà Nội', CAST('2023-08-15' AS date), NULL, N'DangLamViec')
     ) AS source (ma_nhan_vien, ma_tai_khoan, ho_ten, dia_chi, ngay_vao_lam, ngay_nghi_viec, trang_thai_lam_viec)
     ON target.ma_nhan_vien = source.ma_nhan_vien
     WHEN MATCHED THEN
@@ -699,9 +699,9 @@ BEGIN TRY
     INSERT INTO [NHAN_VIEN] (ma_tai_khoan, ho_ten, trang_thai_lam_viec)
     SELECT t.ma_tai_khoan, v.ho_ten, N'DangLamViec'
     FROM (VALUES
-        (N'nv.hung@geargo.vn',  N'Nguyễn Mạnh Hùng (NV Giao nhận)'),
-        (N'nv.thao@geargo.vn',  N'Trần Phương Thảo (NV Kiểm kê)'),
-        (N'nv.cuong@geargo.vn', N'Bùi Quốc Cường (NV Thử việc)')
+        (N'nv.hung@geargo.vn',  N'Nguyễn Mạnh Hùng'),
+        (N'nv.thao@geargo.vn',  N'Trần Phương Thảo'),
+        (N'nv.cuong@geargo.vn', N'Bùi Quốc Cường')
     ) AS v(email, ho_ten)
     JOIN [TAI_KHOAN] t ON t.email = v.email
     WHERE NOT EXISTS (SELECT 1 FROM [NHAN_VIEN] nv WHERE nv.ma_tai_khoan = t.ma_tai_khoan);
@@ -792,6 +792,25 @@ BEGIN TRY
     ) AS v(ma_don, nguoi_duyet, loai_phi, so_tien, ly_do, tt_duyet, tt_tranh_chap)
     JOIN [DON_THUE] d ON d.ma_don_hien_thi = v.ma_don
     WHERE NOT EXISTS (SELECT 1 FROM [PHU_PHI] pp WHERE pp.ma_don_thue = d.ma_don_thue);
+
+    -- 40.5 Bổ sung thiết bị SanSang để mỗi sản phẩm DangKinhDoanh có tối thiểu 7 thiết bị sẵn sàng (ThietBiSeeder.cs)
+    DECLARE @ctpnFirst BIGINT = (SELECT TOP 1 ma_chi_tiet_phieu_nhap FROM [CHI_TIET_PHIEU_NHAP] ORDER BY ma_chi_tiet_phieu_nhap);
+    IF @ctpnFirst IS NOT NULL
+    BEGIN
+        INSERT INTO [THIET_BI] (ma_chi_tiet_phieu_nhap, ma_san_pham_hien_tai, ma_thiet_bi_hien_thi, ngay_nhap, gia_nhap, tinh_trang, phu_kien_di_kem, trang_thai_su_dung, ghi_chu)
+        SELECT @ctpnFirst, sp.ma_san_pham,
+               REPLACE(sp.ma_san_pham_hien_thi, N'SP-', N'TB-') + N'-S0' + CAST(n.num AS NVARCHAR(2)),
+               DATEADD(day, -15, GETUTCDATE()),
+               ROUND(ISNULL(NULLIF(sp.gia_tri_boi_thuong, 0), 700000) * 0.7, 0),
+               N'Tốt', N'Đầy đủ phụ kiện tiêu chuẩn', N'SanSang', N'Thiết bị bổ sung sẵn sàng cho thuê'
+        FROM [SAN_PHAM] sp
+        CROSS JOIN (VALUES (1),(2),(3),(4),(5),(6),(7)) AS n(num)
+        WHERE sp.trang_thai_kinh_doanh = N'DangKinhDoanh'
+          AND NOT EXISTS (
+              SELECT 1 FROM [THIET_BI] tb
+              WHERE tb.ma_thiet_bi_hien_thi = REPLACE(sp.ma_san_pham_hien_thi, N'SP-', N'TB-') + N'-S0' + CAST(n.num AS NVARCHAR(2))
+          );
+    END
 
     COMMIT TRANSACTION;
     PRINT N'>> [THÀNH CÔNG] Đã nạp và đồng bộ dữ liệu Seed mẫu toàn diện cho tất cả Entities GearGo!';

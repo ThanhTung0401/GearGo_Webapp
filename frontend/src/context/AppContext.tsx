@@ -12,7 +12,7 @@ export type Page =
   | "cart" | "checkout" | "order-confirmed" | "my-orders"
   | "profile"
   | "ai-advisor"
-  | "login" | "register" | "forgot-password" | "auth"
+  | "login" | "staff-login" | "register" | "forgot-password" | "auth"
   | "workspace" | "staff" | "admin";
 
 export interface AppState {

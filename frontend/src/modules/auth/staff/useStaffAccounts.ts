@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import type { useApp } from "../../../context/AppContext";
 import { isRealApiEnabled } from "../../../services/apiClient";
 import { staffApi } from "../../../services/api/staffApi";
@@ -18,7 +18,7 @@ export function useStaffAccounts(app: ReturnType<typeof useApp>) {
 
   const [editingStaff, setEditingStaff] = useState<StaffAccount | null>(null);
   const [isNew, setIsNew] = useState(false);
-  const [originalEditRole, setOriginalEditRole] = useState<StaffAccount["role"]>("Nhân viên kho");
+  const [originalEditRole, setOriginalEditRole] = useState<StaffAccount["role"]>("Nhân viên");
 
   const [permStaff, setPermStaff] = useState<StaffAccount | null>(null);
   const [permCatalog, setPermCatalog] = useState<QuyenCatalogResponse[]>([]);
@@ -97,7 +97,7 @@ export function useStaffAccounts(app: ReturnType<typeof useApp>) {
       username: `nv_${nextNum}`,
       name: "",
       password: "GearGo@2026",
-      role: "Nhân viên kho",
+      role: "Nhân viên",
       phone: "",
       email: "",
       status: "active",

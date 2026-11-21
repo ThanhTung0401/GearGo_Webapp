@@ -1,5 +1,7 @@
 import { useState, useCallback, useEffect, type ReactNode } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useApp } from "../context/AppContext";
+import { resolveRouteFromPath } from "../routes/routeMap";
 import { orderApi } from "../services/api";
 import { mapDonVanHanhChiTietToOrder } from "../services/mappers";
 import { type IconName } from "../components/Icon";
@@ -123,15 +125,42 @@ export default function WorkspaceView() {
     { key: "permissions", label: "Phân quyền", icon: "shield", perm: Permissions.PhanQuyen_Xem, render: () => <PermissionsTab /> },
   ];
 
+  const location = useLocation();
+  const navigate = useNavigate();
+  const urlTab = resolveRouteFromPath(location.pathname).staffTab as WorkspaceTabKey | null;
+
   const visibleTabs = allTabs.filter((t) => hasPerm(t.perm));
-  const [tab, setTab] = useState<WorkspaceTabKey>("overview");
+  const [tab, setTabState] = useState<WorkspaceTabKey>(urlTab ?? "overview");
+
+  // Đồng bộ URL /staff/:tab khi bấm chuyển tab trong sidebar
+  const setTab = useCallback(
+    (nextTab: WorkspaceTabKey) => {
+      setTabState(nextTab);
+      const nextPath = `/staff/${nextTab}`;
+      if (location.pathname !== nextPath) {
+        navigate(nextPath);
+      }
+    },
+    [location.pathname, navigate]
+  );
+
+  // Đồng bộ tab khi người dùng nhập trực tiếp URL /staff/:tab hoặc bấm Back/Forward
+  useEffect(() => {
+    if (urlTab && visibleTabs.some((t) => t.key === urlTab) && urlTab !== tab) {
+      setTabState(urlTab);
+    }
+  }, [urlTab, visibleTabs, tab]);
 
   // Tự động chọn tab hợp lệ đầu tiên nếu tab hiện tại không nằm trong quyền được cấp
   useEffect(() => {
     if (visibleTabs.length > 0 && !visibleTabs.some((t) => t.key === tab)) {
-      setTab(visibleTabs[0].key);
+      const firstKey = visibleTabs[0].key;
+      setTabState(firstKey);
+      if (location.pathname === "/staff" || location.pathname === "/admin") {
+        navigate(`/staff/${firstKey}`, { replace: true });
+      }
     }
-  }, [visibleTabs, tab]);
+  }, [visibleTabs, tab, location.pathname, navigate]);
 
   const currentTab = visibleTabs.find((item) => item.key === tab) ?? visibleTabs[0];
 

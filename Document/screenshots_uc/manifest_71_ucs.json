@@ -67,19 +67,23 @@
     "images": [
       {
         "file": "UC1_2_a.png",
-        "caption": "Giao diện Đăng nhập (SCR-1.2)"
+        "caption": "Giao diện Đăng nhập Khách hàng tại /login (SCR-1.2)"
       },
       {
         "file": "UC1_2_b.png",
+        "caption": "Giao diện Đăng nhập Nhân viên (Staff Portal) tại /staff/login (SCR-1.2)"
+      },
+      {
+        "file": "UC1_2_c.png",
         "caption": "Giao diện Đăng nhập – Cảnh báo tài khoản bị khóa (SCR-1.2)"
       }
     ],
     "components": [
       {
         "stt": "1",
-        "name": "Email, SĐT hoặc Tên đăng nhập",
+        "name": "Email hoặc Số điện thoại",
         "type": "Text box",
-        "meaning": "Nhập email, số điện thoại hoặc tên đăng nhập của tài khoản",
+        "meaning": "Nhập email hoặc số điện thoại của tài khoản khách hàng",
         "domain": "String",
         "defaultVal": "Rỗng",
         "note": "Bắt buộc nhập"
@@ -106,7 +110,7 @@
         "stt": "4",
         "name": "Quên mật khẩu?",
         "type": "Button",
-        "meaning": "Chuyển sang giao diện khôi phục mật khẩu",
+        "meaning": "Chuyển sang giao diện khôi phục mật khẩu (/forgot-password)",
         "domain": "Null",
         "defaultVal": "Kích hoạt",
         "note": ""
@@ -115,7 +119,7 @@
         "stt": "5",
         "name": "Đăng nhập hệ thống",
         "type": "Button",
-        "meaning": "Gửi thông tin xác thực để đăng nhập vào hệ thống",
+        "meaning": "Gửi thông tin xác thực để đăng nhập tài khoản khách hàng",
         "domain": "Null",
         "defaultVal": "Kích hoạt",
         "note": ""
@@ -124,22 +128,40 @@
         "stt": "6",
         "name": "Đăng ký ngay",
         "type": "Button",
-        "meaning": "Chuyển sang giao diện đăng ký tài khoản mới",
+        "meaning": "Chuyển sang giao diện đăng ký tài khoản mới (/register)",
         "domain": "Null",
         "defaultVal": "Kích hoạt",
         "note": ""
       },
       {
         "stt": "7",
-        "name": "Nhóm nút chọn nhanh tài khoản kiểm thử",
+        "name": "Nhóm nút chọn nhanh tài khoản khách hàng",
         "type": "Group Button",
-        "meaning": "Điền nhanh thông tin các tài khoản mẫu (Quản trị viên, Nhân viên kho, Khách hàng, Tài khoản bị khóa)",
+        "meaning": "Điền nhanh thông tin Khách hàng 1 và Khách hàng 2 để kiểm thử",
         "domain": "Null",
         "defaultVal": "Kích hoạt",
         "note": "Hỗ trợ kiểm thử nhanh"
       },
       {
         "stt": "8",
+        "name": "Đăng nhập cổng Staff",
+        "type": "Button",
+        "meaning": "Gửi thông tin xác thực cho tài khoản Quản trị viên hoặc Nhân viên tại /staff/login",
+        "domain": "Null",
+        "defaultVal": "Kích hoạt",
+        "note": "Chặn đăng nhập tài khoản khách hàng"
+      },
+      {
+        "stt": "9",
+        "name": "Nhóm nút chọn nhanh tài khoản nội bộ",
+        "type": "Group Button",
+        "meaning": "Điền nhanh tài khoản Quản trị viên, Nhân viên 1 và Nhân viên 2",
+        "domain": "Null",
+        "defaultVal": "Kích hoạt",
+        "note": "Hỗ trợ kiểm thử nhanh cổng Staff"
+      },
+      {
+        "stt": "10",
         "name": "Hộp cảnh báo tài khoản bị khóa",
         "type": "Alert box",
         "meaning": "Hiển thị thông báo trạng thái tài khoản bị khóa kèm lý do và thông tin liên hệ hỗ trợ",
@@ -347,9 +369,9 @@
       },
       {
         "stt": "2",
-        "name": "Bộ combo mẫu có sẵn (UC2.4.1)",
+        "name": "Bộ combo mẫu có sẵn",
         "type": "Button",
-        "meaning": "Thực hiện thao tác \"Bộ combo mẫu có sẵn (UC2.4.1)\"",
+        "meaning": "Thực hiện thao tác \"Bộ combo mẫu có sẵn\"",
         "domain": "Null",
         "defaultVal": "Kích hoạt",
         "note": ""
@@ -439,18 +461,18 @@
     "components": [
       {
         "stt": "1",
-        "name": "Hồ sơ cá nhân (UC1.6)",
+        "name": "Hồ sơ cá nhân",
         "type": "Button",
-        "meaning": "Thực hiện thao tác \"Hồ sơ cá nhân (UC1.6)\"",
+        "meaning": "Thực hiện thao tác \"Hồ sơ cá nhân\"",
         "domain": "Null",
         "defaultVal": "Kích hoạt",
         "note": ""
       },
       {
         "stt": "2",
-        "name": "Đổi mật khẩu (UC1.12)",
+        "name": "Đổi mật khẩu",
         "type": "Button",
-        "meaning": "Thực hiện thao tác \"Đổi mật khẩu (UC1.12)\"",
+        "meaning": "Thực hiện thao tác \"Đổi mật khẩu\"",
         "domain": "Null",
         "defaultVal": "Kích hoạt",
         "note": ""
@@ -567,27 +589,27 @@
     "components": [
       {
         "stt": "1",
-        "name": "Hồ sơ cá nhân (UC1.6)",
+        "name": "Hồ sơ cá nhân",
         "type": "Button",
-        "meaning": "Thực hiện thao tác \"Hồ sơ cá nhân (UC1.6)\"",
+        "meaning": "Thực hiện thao tác \"Hồ sơ cá nhân\"",
         "domain": "Null",
         "defaultVal": "Kích hoạt",
         "note": ""
       },
       {
         "stt": "2",
-        "name": "Đổi mật khẩu (UC1.12)",
+        "name": "Đổi mật khẩu",
         "type": "Button",
-        "meaning": "Thực hiện thao tác \"Đổi mật khẩu (UC1.12)\"",
+        "meaning": "Thực hiện thao tác \"Đổi mật khẩu\"",
         "domain": "Null",
         "defaultVal": "Kích hoạt",
         "note": ""
       },
       {
         "stt": "3",
-        "name": "Đánh giá sản phẩm (2)",
+        "name": "Đánh giá sản phẩm",
         "type": "Button",
-        "meaning": "Thực hiện thao tác \"Đánh giá sản phẩm (2)\"",
+        "meaning": "Thực hiện thao tác \"Đánh giá sản phẩm\"",
         "domain": "Null",
         "defaultVal": "Kích hoạt",
         "note": ""
@@ -686,9 +708,9 @@
       },
       {
         "stt": "5",
-        "name": "VD: CAMPGO10",
+        "name": "Nhập mã khuyến mãi",
         "type": "Text box",
-        "meaning": "Nhập vd: campgo10",
+        "meaning": "Nhập nhập mã khuyến mãi",
         "domain": "String",
         "defaultVal": "Rỗng",
         "note": ""
@@ -806,63 +828,63 @@
     "components": [
       {
         "stt": "1",
-        "name": "Tất cả (9)",
+        "name": "Tất cả",
         "type": "Button",
-        "meaning": "Thực hiện thao tác \"Tất cả (9)\"",
+        "meaning": "Thực hiện thao tác \"Tất cả\"",
         "domain": "Null",
         "defaultVal": "Kích hoạt",
         "note": ""
       },
       {
         "stt": "2",
-        "name": "Chờ thanh toán (1)",
+        "name": "Chờ thanh toán",
         "type": "Button",
-        "meaning": "Thực hiện thao tác \"Chờ thanh toán (1)\"",
+        "meaning": "Thực hiện thao tác \"Chờ thanh toán\"",
         "domain": "Null",
         "defaultVal": "Kích hoạt",
         "note": ""
       },
       {
         "stt": "3",
-        "name": "Đã xác nhận (2)",
+        "name": "Đã xác nhận",
         "type": "Button",
-        "meaning": "Thực hiện thao tác \"Đã xác nhận (2)\"",
+        "meaning": "Thực hiện thao tác \"Đã xác nhận\"",
         "domain": "Null",
         "defaultVal": "Kích hoạt",
         "note": ""
       },
       {
         "stt": "4",
-        "name": "Đang thuê (1)",
+        "name": "Đang thuê",
         "type": "Button",
-        "meaning": "Thực hiện thao tác \"Đang thuê (1)\"",
+        "meaning": "Thực hiện thao tác \"Đang thuê\"",
         "domain": "Null",
         "defaultVal": "Kích hoạt",
         "note": ""
       },
       {
         "stt": "5",
-        "name": "Hoàn tất (1)",
+        "name": "Hoàn tất",
         "type": "Button",
-        "meaning": "Thực hiện thao tác \"Hoàn tất (1)\"",
+        "meaning": "Thực hiện thao tác \"Hoàn tất\"",
         "domain": "Null",
         "defaultVal": "Kích hoạt",
         "note": ""
       },
       {
         "stt": "6",
-        "name": "Hết hạn (3)",
+        "name": "Hết hạn",
         "type": "Button",
-        "meaning": "Thực hiện thao tác \"Hết hạn (3)\"",
+        "meaning": "Thực hiện thao tác \"Hết hạn\"",
         "domain": "Null",
         "defaultVal": "Kích hoạt",
         "note": ""
       },
       {
         "stt": "7",
-        "name": "Đã hủy (1)",
+        "name": "Đã hủy",
         "type": "Button",
-        "meaning": "Thực hiện thao tác \"Đã hủy (1)\"",
+        "meaning": "Thực hiện thao tác \"Đã hủy\"",
         "domain": "Null",
         "defaultVal": "Kích hoạt",
         "note": ""
@@ -938,45 +960,45 @@
     "components": [
       {
         "stt": "1",
-        "name": "Tất cả (9)",
+        "name": "Tất cả",
         "type": "Button",
-        "meaning": "Thực hiện thao tác \"Tất cả (9)\"",
+        "meaning": "Thực hiện thao tác \"Tất cả\"",
         "domain": "Null",
         "defaultVal": "Kích hoạt",
         "note": ""
       },
       {
         "stt": "2",
-        "name": "Chờ thanh toán (1)",
+        "name": "Chờ thanh toán",
         "type": "Button",
-        "meaning": "Thực hiện thao tác \"Chờ thanh toán (1)\"",
+        "meaning": "Thực hiện thao tác \"Chờ thanh toán\"",
         "domain": "Null",
         "defaultVal": "Kích hoạt",
         "note": ""
       },
       {
         "stt": "3",
-        "name": "Đã xác nhận (2)",
+        "name": "Đã xác nhận",
         "type": "Button",
-        "meaning": "Thực hiện thao tác \"Đã xác nhận (2)\"",
+        "meaning": "Thực hiện thao tác \"Đã xác nhận\"",
         "domain": "Null",
         "defaultVal": "Kích hoạt",
         "note": ""
       },
       {
         "stt": "4",
-        "name": "Đang thuê (1)",
+        "name": "Đang thuê",
         "type": "Button",
-        "meaning": "Thực hiện thao tác \"Đang thuê (1)\"",
+        "meaning": "Thực hiện thao tác \"Đang thuê\"",
         "domain": "Null",
         "defaultVal": "Kích hoạt",
         "note": ""
       },
       {
         "stt": "5",
-        "name": "Hoàn tất (1)",
+        "name": "Hoàn tất",
         "type": "Button",
-        "meaning": "Thực hiện thao tác \"Hoàn tất (1)\"",
+        "meaning": "Thực hiện thao tác \"Hoàn tất\"",
         "domain": "Null",
         "defaultVal": "Kích hoạt",
         "note": ""
@@ -1256,7 +1278,7 @@
         "type": "Combobox",
         "meaning": "Chọn vai trò từ danh sách",
         "domain": "Danh sách chọn",
-        "defaultVal": "Nhân viên kho",
+        "defaultVal": "Nhân viên",
         "note": ""
       },
       {
@@ -1408,36 +1430,36 @@
       },
       {
         "stt": "2",
-        "name": "Tất cả (22)",
+        "name": "Tất cả",
         "type": "Button",
-        "meaning": "Thực hiện thao tác \"Tất cả (22)\"",
+        "meaning": "Thực hiện thao tác \"Tất cả\"",
         "domain": "Null",
         "defaultVal": "Kích hoạt",
         "note": ""
       },
       {
         "stt": "3",
-        "name": "Cần giao hôm nay (5)",
+        "name": "Cần giao hôm nay",
         "type": "Button",
-        "meaning": "Thực hiện thao tác \"Cần giao hôm nay (5)\"",
+        "meaning": "Thực hiện thao tác \"Cần giao hôm nay\"",
         "domain": "Null",
         "defaultVal": "Kích hoạt",
         "note": ""
       },
       {
         "stt": "4",
-        "name": "Cần thu hôm nay (5)",
+        "name": "Cần thu hôm nay",
         "type": "Button",
-        "meaning": "Thực hiện thao tác \"Cần thu hôm nay (5)\"",
+        "meaning": "Thực hiện thao tác \"Cần thu hôm nay\"",
         "domain": "Null",
         "defaultVal": "Kích hoạt",
         "note": ""
       },
       {
         "stt": "5",
-        "name": "️ Quá hạn (2)",
+        "name": "Quá hạn",
         "type": "Button",
-        "meaning": "Thực hiện thao tác \"️ Quá hạn (2)\"",
+        "meaning": "Thực hiện thao tác \"Quá hạn\"",
         "domain": "Null",
         "defaultVal": "Kích hoạt",
         "note": ""
@@ -1512,33 +1534,42 @@
       },
       {
         "stt": "4",
-        "name": "Đang xử lý (7)",
+        "name": "Đang xử lý",
         "type": "Button",
-        "meaning": "Thực hiện thao tác \"Đang xử lý (7)\"",
+        "meaning": "Thực hiện thao tác \"Đang xử lý\"",
         "domain": "Null",
         "defaultVal": "Kích hoạt",
         "note": ""
       },
       {
         "stt": "5",
-        "name": "Hoàn tất (2)",
+        "name": "Hoàn tất",
         "type": "Button",
-        "meaning": "Thực hiện thao tác \"Hoàn tất (2)\"",
+        "meaning": "Thực hiện thao tác \"Hoàn tất\"",
         "domain": "Null",
         "defaultVal": "Kích hoạt",
         "note": ""
       },
       {
         "stt": "6",
-        "name": "Tất cả (9)",
+        "name": "Tất cả",
         "type": "Button",
-        "meaning": "Thực hiện thao tác \"Tất cả (9)\"",
+        "meaning": "Thực hiện thao tác \"Tất cả\"",
         "domain": "Null",
         "defaultVal": "Kích hoạt",
         "note": ""
       },
       {
         "stt": "7",
+        "name": "ORD-202611-109 Trần Minh Quang Chờ đối soát",
+        "type": "Button",
+        "meaning": "Thực hiện thao tác \"ORD-202611-109 Trần Minh Quang Chờ đối soát\"",
+        "domain": "Null",
+        "defaultVal": "Kích hoạt",
+        "note": ""
+      },
+      {
+        "stt": "8",
         "name": "DT-20241208-015 Trần Minh Quang Đang thuê",
         "type": "Button",
         "meaning": "Thực hiện thao tác \"DT-20241208-015 Trần Minh Quang Đang thuê\"",
@@ -1547,19 +1578,10 @@
         "note": ""
       },
       {
-        "stt": "8",
-        "name": "ORD-202611-109 Đỗ Thanh Sơn Chờ đối soát",
-        "type": "Button",
-        "meaning": "Thực hiện thao tác \"ORD-202611-109 Đỗ Thanh Sơn Chờ đối soát\"",
-        "domain": "Null",
-        "defaultVal": "Kích hoạt",
-        "note": ""
-      },
-      {
         "stt": "9",
-        "name": "ORD-202610-001 Nguyễn Văn An Đang thuê Quá hạn",
+        "name": "ORD-202611-108 Nguyễn Văn An Chờ đối soát",
         "type": "Button",
-        "meaning": "Thực hiện thao tác \"ORD-202610-001 Nguyễn Văn An Đang thuê Quá hạn\"",
+        "meaning": "Thực hiện thao tác \"ORD-202611-108 Nguyễn Văn An Chờ đối soát\"",
         "domain": "Null",
         "defaultVal": "Kích hoạt",
         "note": ""
@@ -1594,36 +1616,36 @@
       },
       {
         "stt": "3",
-        "name": "Ngân hàng thụ hưởng:",
+        "name": "Ngân hàng thụ hưởng",
         "type": "Combobox",
-        "meaning": "Chọn ngân hàng thụ hưởng: từ danh sách",
+        "meaning": "Chọn ngân hàng thụ hưởng từ danh sách",
         "domain": "Danh sách chọn",
         "defaultVal": "Vietcombank",
         "note": ""
       },
       {
         "stt": "4",
-        "name": "Số tài khoản:",
+        "name": "Số tài khoản",
         "type": "Text box",
-        "meaning": "Nhập số tài khoản:",
+        "meaning": "Nhập số tài khoản",
         "domain": "String",
         "defaultVal": "Rỗng",
         "note": ""
       },
       {
         "stt": "5",
-        "name": "Tên chủ tài khoản:",
+        "name": "Tên chủ tài khoản",
         "type": "Text box",
-        "meaning": "Nhập tên chủ tài khoản:",
+        "meaning": "Nhập tên chủ tài khoản",
         "domain": "String",
         "defaultVal": "Rỗng",
         "note": ""
       },
       {
         "stt": "6",
-        "name": "Ghi chú hoàn cọc:",
+        "name": "Ghi chú hoàn cọc",
         "type": "Text box",
-        "meaning": "Nhập ghi chú hoàn cọc:",
+        "meaning": "Nhập ghi chú hoàn cọc",
         "domain": "String",
         "defaultVal": "Rỗng",
         "note": ""
@@ -1685,18 +1707,18 @@
       },
       {
         "stt": "4",
-        "name": "Số tiền khách đưa (đ):",
+        "name": "Số tiền khách đưa (đ)",
         "type": "Number box",
-        "meaning": "Nhập giá trị số tiền khách đưa (đ):",
+        "meaning": "Nhập giá trị số tiền khách đưa (đ)",
         "domain": "Số (>= 0)",
         "defaultVal": "400000",
         "note": ""
       },
       {
         "stt": "5",
-        "name": "Ghi chú chứng từ thu:",
+        "name": "Ghi chú chứng từ thu",
         "type": "Text box",
-        "meaning": "Nhập ghi chú chứng từ thu:",
+        "meaning": "Nhập ghi chú chứng từ thu",
         "domain": "String",
         "defaultVal": "Rỗng",
         "note": ""
@@ -1740,18 +1762,18 @@
       },
       {
         "stt": "2",
-        "name": "1. Chuẩn bị kho (UC4.1) 4",
+        "name": "1. Chuẩn bị kho",
         "type": "Button",
-        "meaning": "Thực hiện thao tác \"1. Chuẩn bị kho (UC4.1) 4\"",
+        "meaning": "Thực hiện thao tác \"1. Chuẩn bị kho\"",
         "domain": "Null",
         "defaultVal": "Kích hoạt",
         "note": ""
       },
       {
         "stt": "3",
-        "name": "2. Tiếp khách & Bàn giao (UC4.2) 1",
+        "name": "2. Tiếp khách & Bàn giao",
         "type": "Button",
-        "meaning": "Thực hiện thao tác \"2. Tiếp khách & Bàn giao (UC4.2) 1\"",
+        "meaning": "Thực hiện thao tác \"2. Tiếp khách & Bàn giao\"",
         "domain": "Null",
         "defaultVal": "Kích hoạt",
         "note": ""
@@ -1767,9 +1789,9 @@
       },
       {
         "stt": "5",
-        "name": "️ Báo thiếu hàng cho QTV",
+        "name": "Báo thiếu hàng cho QTV",
         "type": "Button",
-        "meaning": "Thực hiện thao tác \"️ Báo thiếu hàng cho QTV\"",
+        "meaning": "Thực hiện thao tác \"Báo thiếu hàng cho QTV\"",
         "domain": "Null",
         "defaultVal": "Kích hoạt",
         "note": ""
@@ -1782,6 +1804,15 @@
         "domain": "Danh sách chọn",
         "defaultVal": "-- Chọn mã thiết bị sẵn sàng --",
         "note": ""
+      },
+      {
+        "stt": "7",
+        "name": "Hoàn tất chuẩn bị & Chuyển \"Sẵn sàng nhận\"",
+        "type": "Button",
+        "meaning": "Thực hiện thao tác \"Hoàn tất chuẩn bị & Chuyển \"Sẵn sàng nhận\"\"",
+        "domain": "Null",
+        "defaultVal": "Vô hiệu hóa",
+        "note": "Tạm khóa khi chưa đủ điều kiện"
       }
     ]
   },
@@ -1795,9 +1826,9 @@
     "components": [
       {
         "stt": "1",
-        "name": "Quét QR / Tra nhanh mã đơn tại quầy:",
+        "name": "Quét QR / Tra nhanh mã đơn tại quầy",
         "type": "Text box",
-        "meaning": "Nhập quét qr / tra nhanh mã đơn tại quầy:",
+        "meaning": "Nhập quét qr / tra nhanh mã đơn tại quầy",
         "domain": "String",
         "defaultVal": "Rỗng",
         "note": ""
@@ -1895,18 +1926,18 @@
       },
       {
         "stt": "3",
-        "name": "Đang xử lý (7)",
+        "name": "Đang xử lý",
         "type": "Button",
-        "meaning": "Thực hiện thao tác \"Đang xử lý (7)\"",
+        "meaning": "Thực hiện thao tác \"Đang xử lý\"",
         "domain": "Null",
         "defaultVal": "Kích hoạt",
         "note": ""
       },
       {
         "stt": "4",
-        "name": "Hoàn tất (2)",
+        "name": "Hoàn tất",
         "type": "Button",
-        "meaning": "Thực hiện thao tác \"Hoàn tất (2)\"",
+        "meaning": "Thực hiện thao tác \"Hoàn tất\"",
         "domain": "Null",
         "defaultVal": "Kích hoạt",
         "note": ""
@@ -1935,7 +1966,7 @@
         "type": "Number box",
         "meaning": "Nhập giá trị ô nhập liệu",
         "domain": "Số (>= 0)",
-        "defaultVal": "540000",
+        "defaultVal": "360000",
         "note": ""
       },
       {
@@ -1959,9 +1990,9 @@
     "components": [
       {
         "stt": "1",
-        "name": "DT-20241208-015 Trần Minh Quang Đang thuê",
+        "name": "ORD-202611-109 Trần Minh Quang Chờ đối soát",
         "type": "Button",
-        "meaning": "Thực hiện thao tác \"DT-20241208-015 Trần Minh Quang Đang thuê\"",
+        "meaning": "Thực hiện thao tác \"ORD-202611-109 Trần Minh Quang Chờ đối soát\"",
         "domain": "Null",
         "defaultVal": "Kích hoạt",
         "note": ""
@@ -1977,9 +2008,9 @@
       },
       {
         "stt": "3",
-        "name": "ORD-202611-109 Đỗ Thanh Sơn Chờ đối soát",
+        "name": "DT-20241208-015 Trần Minh Quang Đang thuê",
         "type": "Button",
-        "meaning": "Thực hiện thao tác \"ORD-202611-109 Đỗ Thanh Sơn Chờ đối soát\"",
+        "meaning": "Thực hiện thao tác \"DT-20241208-015 Trần Minh Quang Đang thuê\"",
         "domain": "Null",
         "defaultVal": "Kích hoạt",
         "note": ""
@@ -2017,7 +2048,7 @@
         "type": "Number box",
         "meaning": "Nhập giá trị ô nhập liệu",
         "domain": "Số (>= 0)",
-        "defaultVal": "540000",
+        "defaultVal": "360000",
         "note": ""
       },
       {
@@ -2081,9 +2112,9 @@
       },
       {
         "stt": "5",
-        "name": "Đang xử lý (7)",
+        "name": "Đang xử lý",
         "type": "Button",
-        "meaning": "Thực hiện thao tác \"Đang xử lý (7)\"",
+        "meaning": "Thực hiện thao tác \"Đang xử lý\"",
         "domain": "Null",
         "defaultVal": "Kích hoạt",
         "note": ""
@@ -2830,7 +2861,7 @@
         "type": "Combobox",
         "meaning": "Chọn trạng thái sử dụng từ danh sách",
         "domain": "Danh sách chọn",
-        "defaultVal": "Ngừng sử dụng",
+        "defaultVal": "Sẵn sàng",
         "note": ""
       },
       {
@@ -2890,9 +2921,9 @@
       },
       {
         "stt": "2",
-        "name": "Kiểm kê kho (UC6.10)",
+        "name": "Kiểm kê kho",
         "type": "Button",
-        "meaning": "Thực hiện thao tác \"Kiểm kê kho (UC6.10)\"",
+        "meaning": "Thực hiện thao tác \"Kiểm kê kho\"",
         "domain": "Null",
         "defaultVal": "Kích hoạt",
         "note": ""
@@ -2927,9 +2958,9 @@
     "components": [
       {
         "stt": "1",
-        "name": "Đồ cần có mặt tại kho (17 thiết bị)",
+        "name": "Đồ cần có mặt tại kho",
         "type": "Button",
-        "meaning": "Thực hiện thao tác \"Đồ cần có mặt tại kho (17 thiết bị)\"",
+        "meaning": "Thực hiện thao tác \"Đồ cần có mặt tại kho\"",
         "domain": "Null",
         "defaultVal": "Kích hoạt",
         "note": ""
@@ -3009,27 +3040,27 @@
       },
       {
         "stt": "2",
-        "name": "Danh sách kho (19 thiết bị)",
+        "name": "Danh sách kho",
         "type": "Button",
-        "meaning": "Thực hiện thao tác \"Danh sách kho (19 thiết bị)\"",
+        "meaning": "Thực hiện thao tác \"Danh sách kho\"",
         "domain": "Null",
         "defaultVal": "Kích hoạt",
         "note": ""
       },
       {
         "stt": "3",
-        "name": "Phiếu bảo trì & sửa chữa (5 phiếu)",
+        "name": "Phiếu bảo trì & sửa chữa",
         "type": "Button",
-        "meaning": "Thực hiện thao tác \"Phiếu bảo trì & sửa chữa (5 phiếu)\"",
+        "meaning": "Thực hiện thao tác \"Phiếu bảo trì & sửa chữa\"",
         "domain": "Null",
         "defaultVal": "Kích hoạt",
         "note": ""
       },
       {
         "stt": "4",
-        "name": "Nhập hàng & Kiểm nhận (5 phiếu)",
+        "name": "Nhập hàng & Kiểm nhận",
         "type": "Button",
-        "meaning": "Thực hiện thao tác \"Nhập hàng & Kiểm nhận (5 phiếu)\"",
+        "meaning": "Thực hiện thao tác \"Nhập hàng & Kiểm nhận\"",
         "domain": "Null",
         "defaultVal": "Kích hoạt",
         "note": ""
@@ -3054,9 +3085,9 @@
       },
       {
         "stt": "7",
-        "name": "Kiểm kê kho (UC6.10)",
+        "name": "Kiểm kê kho",
         "type": "Button",
-        "meaning": "Thực hiện thao tác \"Kiểm kê kho (UC6.10)\"",
+        "meaning": "Thực hiện thao tác \"Kiểm kê kho\"",
         "domain": "Null",
         "defaultVal": "Kích hoạt",
         "note": ""
@@ -3091,36 +3122,36 @@
       },
       {
         "stt": "2",
-        "name": "Danh sách kho (19 thiết bị)",
+        "name": "Danh sách kho",
         "type": "Button",
-        "meaning": "Thực hiện thao tác \"Danh sách kho (19 thiết bị)\"",
+        "meaning": "Thực hiện thao tác \"Danh sách kho\"",
         "domain": "Null",
         "defaultVal": "Kích hoạt",
         "note": ""
       },
       {
         "stt": "3",
-        "name": "Phiếu bảo trì & sửa chữa (5 phiếu)",
+        "name": "Phiếu bảo trì & sửa chữa",
         "type": "Button",
-        "meaning": "Thực hiện thao tác \"Phiếu bảo trì & sửa chữa (5 phiếu)\"",
+        "meaning": "Thực hiện thao tác \"Phiếu bảo trì & sửa chữa\"",
         "domain": "Null",
         "defaultVal": "Kích hoạt",
         "note": ""
       },
       {
         "stt": "4",
-        "name": "Nhập hàng & Kiểm nhận (5 phiếu)",
+        "name": "Nhập hàng & Kiểm nhận",
         "type": "Button",
-        "meaning": "Thực hiện thao tác \"Nhập hàng & Kiểm nhận (5 phiếu)\"",
+        "meaning": "Thực hiện thao tác \"Nhập hàng & Kiểm nhận\"",
         "domain": "Null",
         "defaultVal": "Kích hoạt",
         "note": ""
       },
       {
         "stt": "5",
-        "name": "Tạo phiếu bảo trì (UC6.12)",
+        "name": "Tạo phiếu bảo trì",
         "type": "Button",
-        "meaning": "Thực hiện thao tác \"Tạo phiếu bảo trì (UC6.12)\"",
+        "meaning": "Thực hiện thao tác \"Tạo phiếu bảo trì\"",
         "domain": "Null",
         "defaultVal": "Kích hoạt",
         "note": ""
@@ -3136,18 +3167,18 @@
       },
       {
         "stt": "7",
-        "name": "Chi phí sửa chữa thực tế (đ):",
+        "name": "Chi phí sửa chữa thực tế (đ)",
         "type": "Number box",
-        "meaning": "Nhập giá trị chi phí sửa chữa thực tế (đ):",
+        "meaning": "Nhập giá trị chi phí sửa chữa thực tế (đ)",
         "domain": "Số (>= 0)",
         "defaultVal": "0",
         "note": ""
       },
       {
         "stt": "8",
-        "name": "Ghi chú nghiệm thu:",
+        "name": "Ghi chú nghiệm thu",
         "type": "Text box",
-        "meaning": "Nhập ghi chú nghiệm thu:",
+        "meaning": "Nhập ghi chú nghiệm thu",
         "domain": "String",
         "defaultVal": "Rỗng",
         "note": ""
@@ -3173,9 +3204,9 @@
       },
       {
         "stt": "2",
-        "name": "Danh sách kho (19 thiết bị)",
+        "name": "Danh sách kho",
         "type": "Button",
-        "meaning": "Thực hiện thao tác \"Danh sách kho (19 thiết bị)\"",
+        "meaning": "Thực hiện thao tác \"Danh sách kho\"",
         "domain": "Null",
         "defaultVal": "Kích hoạt",
         "note": ""
@@ -3191,45 +3222,45 @@
       },
       {
         "stt": "4",
-        "name": "Thiết bị cần bảo trì:",
+        "name": "Thiết bị cần bảo trì",
         "type": "Combobox",
-        "meaning": "Chọn thiết bị cần bảo trì: từ danh sách",
+        "meaning": "Chọn thiết bị cần bảo trì từ danh sách",
         "domain": "Danh sách chọn",
-        "defaultVal": "TB-SAC-001 - Cặp Gậy Leo Núi Carbon Naturehike ST09 (Hiện tại: Sẵn sàng)",
+        "defaultVal": "TB-COMBO-001-S07 - Combo Cắm Trại 4 Người Tiêu Chuẩn (Hiện tại: Sẵn sàng)",
         "note": ""
       },
       {
         "stt": "5",
-        "name": "Mô tả lỗi / Hư hỏng chi tiết:",
+        "name": "Mô tả lỗi / Hư hỏng chi tiết",
         "type": "Textarea",
-        "meaning": "Nhập nội dung mô tả lỗi / hư hỏng chi tiết:",
+        "meaning": "Nhập nội dung mô tả lỗi / hư hỏng chi tiết",
         "domain": "String",
         "defaultVal": "Rỗng",
         "note": ""
       },
       {
         "stt": "6",
-        "name": "Chi phí dự tính (đ):",
+        "name": "Chi phí dự tính (đ)",
         "type": "Number box",
-        "meaning": "Nhập giá trị chi phí dự tính (đ):",
+        "meaning": "Nhập giá trị chi phí dự tính (đ)",
         "domain": "Số (>= 0)",
         "defaultVal": "150000",
         "note": ""
       },
       {
         "stt": "7",
-        "name": "Đơn liên quan (nếu có):",
+        "name": "Đơn liên quan (nếu có)",
         "type": "Text box",
-        "meaning": "Nhập đơn liên quan (nếu có):",
+        "meaning": "Nhập đơn liên quan (nếu có)",
         "domain": "String",
         "defaultVal": "Rỗng",
         "note": ""
       },
       {
         "stt": "8",
-        "name": "Ghi chú điều phối:",
+        "name": "Ghi chú điều phối",
         "type": "Text box",
-        "meaning": "Nhập ghi chú điều phối:",
+        "meaning": "Nhập ghi chú điều phối",
         "domain": "String",
         "defaultVal": "Rỗng",
         "note": ""
@@ -3277,7 +3308,7 @@
         "type": "Combobox",
         "meaning": "Chọn lọc theo tình trạng hợp tác từ danh sách",
         "domain": "Danh sách chọn",
-        "defaultVal": "Tất cả trạng thái (8)",
+        "defaultVal": "Tất cả trạng thái",
         "note": ""
       },
       {
@@ -3291,9 +3322,9 @@
       },
       {
         "stt": "6",
-        "name": "Hồ sơ NCC (UC7.3)",
+        "name": "Hồ sơ NCC",
         "type": "Button",
-        "meaning": "Thực hiện thao tác \"Hồ sơ NCC (UC7.3)\"",
+        "meaning": "Thực hiện thao tác \"Hồ sơ NCC\"",
         "domain": "Null",
         "defaultVal": "Kích hoạt",
         "note": ""
@@ -3583,9 +3614,9 @@
       },
       {
         "stt": "8",
-        "name": "️ Sửa nháp (UC7.6)",
+        "name": "Sửa nháp",
         "type": "Button",
-        "meaning": "Thực hiện thao tác \"️ Sửa nháp (UC7.6)\"",
+        "meaning": "Thực hiện thao tác \"Sửa nháp\"",
         "domain": "Null",
         "defaultVal": "Kích hoạt",
         "note": ""
@@ -3615,7 +3646,7 @@
         "type": "Combobox",
         "meaning": "Chọn nhà cung cấp từ danh sách",
         "domain": "Danh sách chọn",
-        "defaultVal": "NCC-OSP-03 · Nhà phân phối Osprey & BlackDiamond",
+        "defaultVal": "NCC-ECO-04 · EcoFlow Energy Việt Nam",
         "note": ""
       },
       {
@@ -3702,36 +3733,36 @@
       },
       {
         "stt": "3",
-        "name": "Số lượng đạt:",
+        "name": "Số lượng đạt",
         "type": "Number box",
-        "meaning": "Nhập giá trị số lượng đạt:",
+        "meaning": "Nhập giá trị số lượng đạt",
         "domain": "Số (>= 0)",
         "defaultVal": "10",
         "note": ""
       },
       {
         "stt": "4",
-        "name": "Số lượng lỗi nhận:",
+        "name": "Số lượng lỗi nhận",
         "type": "Number box",
-        "meaning": "Nhập giá trị số lượng lỗi nhận:",
+        "meaning": "Nhập giá trị số lượng lỗi nhận",
         "domain": "Số (>= 0)",
         "defaultVal": "0",
         "note": ""
       },
       {
         "stt": "5",
-        "name": "Số lượng trả lại:",
+        "name": "Số lượng trả lại",
         "type": "Number box",
-        "meaning": "Nhập giá trị số lượng trả lại:",
+        "meaning": "Nhập giá trị số lượng trả lại",
         "domain": "Số (>= 0)",
         "defaultVal": "0",
         "note": ""
       },
       {
         "stt": "6",
-        "name": "Số lượng đạt:",
+        "name": "Số lượng đạt",
         "type": "Text box",
-        "meaning": "Nhập số lượng đạt:",
+        "meaning": "Nhập số lượng đạt",
         "domain": "String",
         "defaultVal": "Rỗng",
         "note": ""
@@ -3747,9 +3778,9 @@
       },
       {
         "stt": "8",
-        "name": "Chốt kiểm nhận & Xác nhận nhập kho (UC7.7)",
+        "name": "Chốt kiểm nhận & Xác nhận nhập kho",
         "type": "Button",
-        "meaning": "Thực hiện thao tác \"Chốt kiểm nhận & Xác nhận nhập kho (UC7.7)\"",
+        "meaning": "Thực hiện thao tác \"Chốt kiểm nhận & Xác nhận nhập kho\"",
         "domain": "Null",
         "defaultVal": "Kích hoạt",
         "note": ""
@@ -3785,63 +3816,63 @@
     "components": [
       {
         "stt": "1",
-        "name": "Dòng sản phẩm liên quan:",
+        "name": "Dòng sản phẩm liên quan",
         "type": "Combobox",
-        "meaning": "Chọn dòng sản phẩm liên quan: từ danh sách",
+        "meaning": "Chọn dòng sản phẩm liên quan từ danh sách",
         "domain": "Danh sách chọn",
-        "defaultVal": "Lều Glamping 6 Người Naturehike Village 6.0 (SL: 4)",
+        "defaultVal": "Balo Trekking Osprey Atmos AG 65L (SL: 4)",
         "note": ""
       },
       {
         "stt": "2",
-        "name": "Phân loại sai lệch cần xử lý:",
+        "name": "Phân loại sai lệch cần xử lý",
         "type": "Combobox",
-        "meaning": "Chọn phân loại sai lệch cần xử lý: từ danh sách",
+        "meaning": "Chọn phân loại sai lệch cần xử lý từ danh sách",
         "domain": "Danh sách chọn",
         "defaultVal": "Sai lệch đơn giá nhập / Chiết khấu hóa đơn NCC",
         "note": ""
       },
       {
         "stt": "3",
-        "name": "Giá trị trước điều chỉnh:",
+        "name": "Giá trị trước điều chỉnh",
         "type": "Text box",
-        "meaning": "Nhập giá trị trước điều chỉnh:",
+        "meaning": "Nhập giá trị trước điều chỉnh",
         "domain": "String",
         "defaultVal": "Rỗng",
         "note": "Bắt buộc nhập"
       },
       {
         "stt": "4",
-        "name": "Giá trị đề nghị sau điều chỉnh:",
+        "name": "Giá trị đề nghị sau điều chỉnh",
         "type": "Text box",
-        "meaning": "Nhập giá trị đề nghị sau điều chỉnh:",
+        "meaning": "Nhập giá trị đề nghị sau điều chỉnh",
         "domain": "String",
         "defaultVal": "Rỗng",
         "note": "Bắt buộc nhập"
       },
       {
         "stt": "5",
-        "name": "Lý do sai lệch & Căn cứ điều chỉnh:",
+        "name": "Lý do sai lệch & Căn cứ điều chỉnh",
         "type": "Textarea",
-        "meaning": "Nhập nội dung lý do sai lệch & căn cứ điều chỉnh:",
+        "meaning": "Nhập nội dung lý do sai lệch & căn cứ điều chỉnh",
         "domain": "String",
         "defaultVal": "Rỗng",
         "note": "Bắt buộc nhập"
       },
       {
         "stt": "6",
-        "name": "Chứng từ đối soát / Số biên bản liên quan:",
+        "name": "Chứng từ đối soát / Số biên bản liên quan",
         "type": "Text box",
-        "meaning": "Nhập chứng từ đối soát / số biên bản liên quan:",
+        "meaning": "Nhập chứng từ đối soát / số biên bản liên quan",
         "domain": "String",
         "defaultVal": "Rỗng",
         "note": ""
       },
       {
         "stt": "7",
-        "name": "Người lập đề nghị:",
+        "name": "Người lập đề nghị",
         "type": "Text box",
-        "meaning": "Nhập người lập đề nghị:",
+        "meaning": "Nhập người lập đề nghị",
         "domain": "String",
         "defaultVal": "Rỗng",
         "note": ""
@@ -4040,9 +4071,9 @@
       },
       {
         "stt": "2",
-        "name": "Tạo mã giảm mới (UC8.2)",
+        "name": "Tạo mã giảm mới",
         "type": "Button",
-        "meaning": "Thực hiện thao tác \"Tạo mã giảm mới (UC8.2)\"",
+        "meaning": "Thực hiện thao tác \"Tạo mã giảm mới\"",
         "domain": "Null",
         "defaultVal": "Kích hoạt",
         "note": ""
@@ -4062,23 +4093,23 @@
         "type": "Combobox",
         "meaning": "Chọn bộ lọc lựa chọn từ danh sách",
         "domain": "Danh sách chọn",
-        "defaultVal": "Tất cả (8)",
+        "defaultVal": "Tất cả",
         "note": ""
       },
       {
         "stt": "5",
-        "name": "Xem đơn áp dụng (UC8.4)",
+        "name": "Xem đơn áp dụng",
         "type": "Button",
-        "meaning": "Thực hiện thao tác \"Xem đơn áp dụng (UC8.4)\"",
+        "meaning": "Thực hiện thao tác \"Xem đơn áp dụng\"",
         "domain": "Null",
         "defaultVal": "Kích hoạt",
         "note": ""
       },
       {
         "stt": "6",
-        "name": "️ Sửa (UC8.3)",
+        "name": "Sửa",
         "type": "Button",
-        "meaning": "Thực hiện thao tác \"️ Sửa (UC8.3)\"",
+        "meaning": "Thực hiện thao tác \"Sửa\"",
         "domain": "Null",
         "defaultVal": "Kích hoạt",
         "note": ""
@@ -4145,14 +4176,14 @@
         "type": "Combobox",
         "meaning": "Chọn loại giảm từ danh sách",
         "domain": "Danh sách chọn",
-        "defaultVal": "Phần trăm (%)",
+        "defaultVal": "Số tiền cố định (VNĐ)",
         "note": ""
       },
       {
         "stt": "4",
-        "name": "Giá trị giảm (%)",
+        "name": "Giá trị giảm (VNĐ)",
         "type": "Number box",
-        "meaning": "Nhập giá trị giá trị giảm (%)",
+        "meaning": "Nhập giá trị giá trị giảm (vnđ)",
         "domain": "Số (>= 0)",
         "defaultVal": "15",
         "note": ""
@@ -4163,7 +4194,7 @@
         "type": "Number box",
         "meaning": "Nhập giá trị mức giảm tối đa (vnđ, để trống nếu không giới hạ",
         "domain": "Số (>= 0)",
-        "defaultVal": "120000",
+        "defaultVal": "250000",
         "note": ""
       },
       {
@@ -4172,7 +4203,7 @@
         "type": "Number box",
         "meaning": "Nhập giá trị tiền thuê tối thiểu (vnđ)",
         "domain": "Số (>= 0)",
-        "defaultVal": "100000",
+        "defaultVal": "400000",
         "note": ""
       },
       {
@@ -4181,7 +4212,7 @@
         "type": "Date picker",
         "meaning": "Chọn thời gian bắt đầu",
         "domain": "Ngày/Tháng/Năm",
-        "defaultVal": "2026-11-21T02:00",
+        "defaultVal": "2026-07-24T03:39",
         "note": ""
       },
       {
@@ -4190,7 +4221,7 @@
         "type": "Date picker",
         "meaning": "Chọn thời gian kết thúc",
         "domain": "Ngày/Tháng/Năm",
-        "defaultVal": "2026-12-21T02:00",
+        "defaultVal": "2026-10-22T03:39",
         "note": ""
       },
       {
@@ -4199,7 +4230,7 @@
         "type": "Number box",
         "meaning": "Nhập giá trị giới hạn tổng lượt dùng (để trống = vô hạn)",
         "domain": "Số (>= 0)",
-        "defaultVal": "50",
+        "defaultVal": "200",
         "note": ""
       }
     ]
@@ -4272,7 +4303,7 @@
         "type": "Date picker",
         "meaning": "Chọn thời gian bắt đầu",
         "domain": "Ngày/Tháng/Năm",
-        "defaultVal": "2026-11-20T07:49",
+        "defaultVal": "2026-11-21T11:29",
         "note": ""
       },
       {
@@ -4281,7 +4312,7 @@
         "type": "Date picker",
         "meaning": "Chọn thời gian kết thúc",
         "domain": "Ngày/Tháng/Năm",
-        "defaultVal": "2026-12-20T07:49",
+        "defaultVal": "2026-12-21T11:29",
         "note": ""
       },
       {
@@ -4427,7 +4458,7 @@
         "type": "Combobox",
         "meaning": "Chọn danh mục nghiệp vụ từ danh sách",
         "domain": "Danh sách chọn",
-        "defaultVal": "️ Hệ thống",
+        "defaultVal": "Hệ thống",
         "note": ""
       },
       {
@@ -4478,9 +4509,9 @@
       },
       {
         "stt": "3",
-        "name": "Nhật ký thao tác (0)",
+        "name": "Nhật ký thao tác",
         "type": "Button",
-        "meaning": "Thực hiện thao tác \"Nhật ký thao tác (0)\"",
+        "meaning": "Thực hiện thao tác \"Nhật ký thao tác\"",
         "domain": "Null",
         "defaultVal": "Kích hoạt",
         "note": ""
@@ -4523,7 +4554,7 @@
         "type": "Date picker",
         "meaning": "Chọn chọn ngày",
         "domain": "Ngày/Tháng/Năm",
-        "defaultVal": "2026-08-22",
+        "defaultVal": "2026-08-23",
         "note": ""
       },
       {
@@ -4537,36 +4568,36 @@
       },
       {
         "stt": "4",
-        "name": "1. Vận hành kho (UC10.1)",
+        "name": "Vận hành kho",
         "type": "Button",
-        "meaning": "Thực hiện thao tác \"1. Vận hành kho (UC10.1)\"",
+        "meaning": "Thực hiện thao tác \"Vận hành kho\"",
         "domain": "Null",
         "defaultVal": "Kích hoạt",
         "note": ""
       },
       {
         "stt": "5",
-        "name": "2. Doanh thu thuần (UC10.2)",
+        "name": "Doanh thu thuần",
         "type": "Button",
-        "meaning": "Thực hiện thao tác \"2. Doanh thu thuần (UC10.2)\"",
+        "meaning": "Thực hiện thao tác \"Doanh thu thuần\"",
         "domain": "Null",
         "defaultVal": "Kích hoạt",
         "note": ""
       },
       {
         "stt": "6",
-        "name": "3. Dòng tiền thực tế (UC10.2.1)",
+        "name": "Dòng tiền thực tế",
         "type": "Button",
-        "meaning": "Thực hiện thao tác \"3. Dòng tiền thực tế (UC10.2.1)\"",
+        "meaning": "Thực hiện thao tác \"Dòng tiền thực tế\"",
         "domain": "Null",
         "defaultVal": "Kích hoạt",
         "note": ""
       },
       {
         "stt": "7",
-        "name": "4. Nhập kho & Tài sản (UC10.3)",
+        "name": "Nhập kho & Tài sản",
         "type": "Button",
-        "meaning": "Thực hiện thao tác \"4. Nhập kho & Tài sản (UC10.3)\"",
+        "meaning": "Thực hiện thao tác \"Nhập kho & Tài sản\"",
         "domain": "Null",
         "defaultVal": "Kích hoạt",
         "note": ""
@@ -4595,7 +4626,7 @@
         "type": "Date picker",
         "meaning": "Chọn chọn ngày",
         "domain": "Ngày/Tháng/Năm",
-        "defaultVal": "2026-08-22",
+        "defaultVal": "2026-08-23",
         "note": ""
       },
       {
@@ -4609,27 +4640,27 @@
       },
       {
         "stt": "12",
-        "name": "1. Vận hành kho (UC10.1)",
+        "name": "Vận hành kho",
         "type": "Button",
-        "meaning": "Thực hiện thao tác \"1. Vận hành kho (UC10.1)\"",
+        "meaning": "Thực hiện thao tác \"Vận hành kho\"",
         "domain": "Null",
         "defaultVal": "Kích hoạt",
         "note": ""
       },
       {
         "stt": "13",
-        "name": "2. Doanh thu thuần (UC10.2)",
+        "name": "Doanh thu thuần",
         "type": "Button",
-        "meaning": "Thực hiện thao tác \"2. Doanh thu thuần (UC10.2)\"",
+        "meaning": "Thực hiện thao tác \"Doanh thu thuần\"",
         "domain": "Null",
         "defaultVal": "Kích hoạt",
         "note": ""
       },
       {
         "stt": "14",
-        "name": "3. Dòng tiền thực tế (UC10.2.1)",
+        "name": "Dòng tiền thực tế",
         "type": "Button",
-        "meaning": "Thực hiện thao tác \"3. Dòng tiền thực tế (UC10.2.1)\"",
+        "meaning": "Thực hiện thao tác \"Dòng tiền thực tế\"",
         "domain": "Null",
         "defaultVal": "Kích hoạt",
         "note": ""
@@ -4668,7 +4699,7 @@
         "type": "Date picker",
         "meaning": "Chọn chọn ngày",
         "domain": "Ngày/Tháng/Năm",
-        "defaultVal": "2026-08-22",
+        "defaultVal": "2026-08-23",
         "note": ""
       },
       {
@@ -4682,27 +4713,27 @@
       },
       {
         "stt": "4",
-        "name": "1. Vận hành kho (UC10.1)",
+        "name": "Vận hành kho",
         "type": "Button",
-        "meaning": "Thực hiện thao tác \"1. Vận hành kho (UC10.1)\"",
+        "meaning": "Thực hiện thao tác \"Vận hành kho\"",
         "domain": "Null",
         "defaultVal": "Kích hoạt",
         "note": ""
       },
       {
         "stt": "5",
-        "name": "2. Doanh thu thuần (UC10.2)",
+        "name": "Doanh thu thuần",
         "type": "Button",
-        "meaning": "Thực hiện thao tác \"2. Doanh thu thuần (UC10.2)\"",
+        "meaning": "Thực hiện thao tác \"Doanh thu thuần\"",
         "domain": "Null",
         "defaultVal": "Kích hoạt",
         "note": ""
       },
       {
         "stt": "6",
-        "name": "3. Dòng tiền thực tế (UC10.2.1)",
+        "name": "Dòng tiền thực tế",
         "type": "Button",
-        "meaning": "Thực hiện thao tác \"3. Dòng tiền thực tế (UC10.2.1)\"",
+        "meaning": "Thực hiện thao tác \"Dòng tiền thực tế\"",
         "domain": "Null",
         "defaultVal": "Kích hoạt",
         "note": ""
@@ -4786,7 +4817,7 @@
         "type": "Date picker",
         "meaning": "Chọn chọn ngày",
         "domain": "Ngày/Tháng/Năm",
-        "defaultVal": "2026-08-22",
+        "defaultVal": "2026-08-23",
         "note": ""
       },
       {
@@ -4800,9 +4831,9 @@
       },
       {
         "stt": "8",
-        "name": "KHACH_HANG: 1",
+        "name": "PhieuBaoTri: PBT-001",
         "type": "Button",
-        "meaning": "Thực hiện thao tác \"KHACH_HANG: 1\"",
+        "meaning": "Thực hiện thao tác \"PhieuBaoTri: PBT-001\"",
         "domain": "Null",
         "defaultVal": "Kích hoạt",
         "note": ""

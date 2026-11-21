@@ -33,16 +33,20 @@ export function authHeaders(token: string): Record<string, string> {
 }
 
 /**
- * Đăng nhập trên giao diện Frontend qua form LoginView thật.
- * Chuyển tài khoản trực tiếp bằng thao tác SPA (Trang khách -> Thoát) để tránh reload gây chớp trắng video.
+ * Đăng nhập trên giao diện Frontend qua đúng 2 cổng độc lập:
+ * - Khách hàng (customer / customer2 / locked) -> /login
+ * - Nhân viên & Quản trị viên (staff / admin)  -> /staff/login
  */
 export async function loginUi(page: Page, role: RoleKey = "customer"): Promise<void> {
   const acc = TEST_ACCOUNTS[role];
+  const isStaffRole = role === "admin" || role === "staff";
+  const targetLoginPath = isStaffRole ? "/staff/login" : "/login";
+
   if (!page.url() || page.url() === "about:blank") {
     await page.goto("/");
   }
 
-  // Nếu đang ở cổng Admin/Staff -> bấm "Trang khách" về giao diện công khai (không reload trang)
+  // Nếu đang ở cổng Admin/Staff -> bấm "Trang khách" về giao diện công khai
   const backPublicBtn = page.getByRole("button", { name: /Trang khách/i }).first();
   if (await backPublicBtn.isVisible().catch(() => false)) {
     await backPublicBtn.click();
@@ -55,24 +59,24 @@ export async function loginUi(page: Page, role: RoleKey = "customer"): Promise<v
     await expect(page.getByRole("button", { name: "Đăng nhập" }).first()).toBeVisible({ timeout: 15_000 });
   }
 
-  // Mở form đăng nhập từ PublicHeader nếu chưa đang ở đúng form Đăng nhập (tránh nhầm form Quên mật khẩu/Đăng ký)
-  const form = page.locator("form.auth-form");
-  const isLoginForm = await form.locator('input[type="password"]').isVisible().catch(() => false);
-  if (!isLoginForm) {
-    const loginBtn = page.getByRole("button", { name: "Đăng nhập" }).first();
-    await loginBtn.click();
+  // Điều hướng trực tiếp tới đúng URL cổng đăng nhập (/login hoặc /staff/login)
+  const currentPath = new URL(page.url()).pathname;
+  if (currentPath !== targetLoginPath) {
+    await page.goto(targetLoginPath);
   }
 
   // Điền form đăng nhập (input đầu là tài khoản, input thứ 2 là mật khẩu)
+  const form = page.locator("form.auth-form");
   await expect(form).toBeVisible({ timeout: 10_000 });
   await form.locator("input").nth(0).fill(acc.email);
   await form.locator("input").nth(1).fill(acc.password);
   await form.locator("button[type='submit']").click();
 
-  // Đợi xác nhận đã đăng nhập thành công (xuất hiện nút Thoát hoặc Trang khách)
-  if (role === "customer") {
-    await expect(page.getByRole("button", { name: "Thoát" })).toBeVisible({ timeout: 15_000 });
-  } else {
+  // Đợi xác nhận đã đăng nhập thành công và chuyển đúng URL
+  if (isStaffRole) {
     await expect(page.getByRole("button", { name: /Trang khách/i })).toBeVisible({ timeout: 15_000 });
+    await expect(page).toHaveURL(/\/staff/);
+  } else {
+    await expect(page.getByRole("button", { name: "Thoát" })).toBeVisible({ timeout: 15_000 });
   }
 }

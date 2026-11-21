@@ -1,5 +1,7 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { getAuthToken } from "./services/apiClient";
+import { PAGE_TO_PATH, resolveRouteFromPath } from "./routes/routeMap";
 import {
   DEMO_ORDER_COMPLETED,
   INITIAL_AUDIT_LOGS,
@@ -73,9 +75,27 @@ export { AppContext, useApp, type Page, type AppState };
 const persistedState = loadPersistedState();
 
 export default function App() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const resolvedRoute = resolveRouteFromPath(location.pathname);
+  const page = resolvedRoute.page;
+
   const [role, setRole] = useState<Role>("customer");
-  const [page, setPage] = useState<Page>("landing");
-  const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
+  const [selectedProductId, setSelectedProductId] = useState<string | null>(resolvedRoute.productId);
+  const pageRef = useRef<Page>(page);
+  pageRef.current = page;
+
+  // Đồng bộ hàm setPage với React Router để mọi thao tác chuyển trang đều cập nhật URL trình duyệt
+  const setPage = useCallback(
+    (next: Page | ((prev: Page) => Page)) => {
+      const target = typeof next === "function" ? next(pageRef.current) : next;
+      const targetPath = PAGE_TO_PATH[target] ?? "/";
+      if (location.pathname !== targetPath) {
+        navigate(targetPath);
+      }
+    },
+    [location.pathname, navigate]
+  );
   const [categories, setCategories] = useState<Category[]>(
     REAL_MODE ? [] : (persistedState?.categories ?? INITIAL_CATEGORIES)
   );
@@ -195,9 +215,23 @@ export default function App() {
   const [returnHour, setReturnHour] = useState(persistedState?.returnHour ?? "09:00");
   const [newOrderId, setNewOrderId] = useState<string | null>(REAL_MODE ? null : (persistedState?.newOrderId ?? null));
   const [appliedPromoCode, setAppliedPromoCode] = useState(REAL_MODE ? "" : (persistedState?.appliedPromoCode ?? ""));
-  const pageRef = useRef<Page>(page);
-  pageRef.current = page;
   const categoriesRef = useRef<Category[]>(categories);
+
+  // Đồng bộ productId khi truy cập trực tiếp URL /products/:id
+  useEffect(() => {
+    if (resolvedRoute.page === "product-detail" && resolvedRoute.productId) {
+      setSelectedProductId(resolvedRoute.productId);
+    }
+  }, [resolvedRoute.page, resolvedRoute.productId]);
+
+  // Bảo vệ cổng vận hành /staff: chưa đăng nhập hoặc tài khoản khách -> chuyển về /staff/login
+  useEffect(() => {
+    if (authLoading) return;
+    const isStaffRoute = page === "workspace" || page === "staff" || page === "admin";
+    if (isStaffRoute && (!currentUser || currentUser.role === "customer")) {
+      navigate("/staff/login", { replace: true });
+    }
+  }, [authLoading, page, currentUser, navigate]);
   categoriesRef.current = categories;
 
   // Tự động hết hạn các đơn giữ chỗ quá thời hạn thanh toán
@@ -451,7 +485,7 @@ export default function App() {
 
   const setSelectedProduct = (id: string) => {
     setSelectedProductId(id);
-    setPage("product-detail");
+    navigate(`/products/${encodeURIComponent(id)}`);
   };
 
   const state: AppState = {
@@ -533,9 +567,10 @@ export default function App() {
           </button>
         </div>
       )}
-      {(page === "login" || page === "register" || page === "forgot-password") && (
+      {(page === "login" || page === "staff-login" || page === "register" || page === "forgot-password") && (
         <AuthLayout>
-          {page === "login" && <LoginView />}
+          {page === "login" && <LoginView portal="customer" />}
+          {page === "staff-login" && <LoginView portal="staff" />}
           {page === "register" && <RegisterView />}
           {page === "forgot-password" && <ForgotPasswordView />}
         </AuthLayout>
@@ -547,7 +582,7 @@ export default function App() {
         </PermissionsProvider>
       )}
 
-      {page !== "login" && page !== "register" && page !== "forgot-password" && page !== "workspace" && page !== "staff" && page !== "admin" && (
+      {page !== "login" && page !== "staff-login" && page !== "register" && page !== "forgot-password" && page !== "workspace" && page !== "staff" && page !== "admin" && (
         <PublicLayout>
           {page === "landing" && <LandingView />}
           {(page === "products" || page === "product-detail") && <ProductsView />}

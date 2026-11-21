@@ -7,7 +7,7 @@ export interface StaffAccount {
   username: string;
   name: string;
   password?: string;
-  role: "Quản trị viên" | "Nhân viên kho" | "Nhân viên chăm sóc KH";
+  role: "Quản trị viên" | "Nhân viên" | "Nhân viên kho" | "Nhân viên chăm sóc KH";
   phone: string;
   email: string;
   status: "active" | "locked";

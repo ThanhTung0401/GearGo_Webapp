@@ -466,7 +466,7 @@ export function useBootstrapData(params: UseBootstrapDataParams) {
               id: String(nv.maNhanVien),
               username: nv.email || `NV-${nv.maNhanVien}`,
               name: nv.hoTen || nv.email || `Nhân viên #${nv.maNhanVien}`,
-              role: nv.vaiTro === "QuanTriVien" ? "Quản trị viên" : "Nhân viên kho",
+              role: nv.vaiTro === "QuanTriVien" ? "Quản trị viên" : "Nhân viên",
               phone: nv.soDienThoai ?? "",
               email: nv.email ?? "",
               status: nv.trangThaiTaiKhoan === "BiKhoa" ? "locked" : "active",

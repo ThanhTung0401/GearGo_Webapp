@@ -106,9 +106,11 @@ test.describe.serial("Frontend PH1: Quản lý Tài khoản & Nhân viên (UC1.1
     await loginUi(page, "admin");
 
     await page.getByRole("button", { name: "Nhân viên" }).first().click();
+    await expect(page).toHaveURL(/\/staff\/staff/);
     await expect(page.getByPlaceholder("Tìm theo tên, mã NV, username...")).toBeVisible();
-    await page.getByPlaceholder("Tìm theo tên, mã NV, username...").fill("Kho");
+    await page.getByPlaceholder("Tìm theo tên, mã NV, username...").fill("Mai");
     await pauseForViewer(page);
+    await expect(page.getByText("Lê Thị Mai", { exact: true }).first()).toBeVisible();
     await page.getByPlaceholder("Tìm theo tên, mã NV, username...").fill("");
 
     // Mở modal Thêm nhân viên mới (UC1.7), điền thử rồi đóng
@@ -139,13 +141,47 @@ test.describe.serial("Frontend PH1: Quản lý Tài khoản & Nhân viên (UC1.1
     }
   });
 
-  test("SCR-1.2 - Đăng nhập tài khoản bị khóa hiển thị Alert Box cảnh báo", async () => {
+  test("SCR-1.2 - Kiểm tra 2 cổng đăng nhập (/login vs /staff/login), nút quay lại cổng vận hành & Alert Box tài khoản bị khóa", async () => {
     const page = getPage();
+
+    // 1. Từ cổng vận hành bấm "Trang khách ->" sang "/", kiểm tra nút "Về cổng vận hành" quay lại "/staff"
+    await page.getByRole("button", { name: /Trang khách/i }).first().click();
+    await expect(page).toHaveURL(/\/$/);
+    const backToStaffBtn = page.getByRole("button", { name: /Về cổng vận hành/i }).first();
+    await expect(backToStaffBtn).toBeVisible({ timeout: 10_000 });
+    await backToStaffBtn.click();
+    await expect(page).toHaveURL(/\/staff/);
+
+    // 2. Thoát phiên nội bộ để kiểm tra 2 cổng đăng nhập độc lập
     await page.getByRole("button", { name: /Trang khách/i }).first().click();
     await page.getByRole("button", { name: "Thoát" }).first().click();
-    await page.getByRole("button", { name: "Đăng nhập" }).first().click();
+
+    // 3. Cổng /login: chỉ hiện đúng 2 gợi ý Khách hàng 1 & 2, chặn tài khoản nội bộ
+    await page.goto("/login");
+    await expect(page.locator(".auth-quick-btn")).toHaveCount(2);
+    await expect(page.getByText("Khách hàng 1")).toBeVisible();
+    await expect(page.getByText("Khách hàng 2")).toBeVisible();
+
     const loginForm = page.locator("form.auth-form");
-    await expect(loginForm).toBeVisible();
+    await loginForm.locator("input").nth(0).fill("admin@geargo.vn");
+    await loginForm.locator("input").nth(1).fill("GearGo@2026");
+    await loginForm.locator('button[type="submit"]').click();
+    await expect(page.getByText(/cổng Nhân viên/i).first()).toBeVisible({ timeout: 10_000 });
+
+    // 4. Cổng /staff/login: hiện đúng 3 gợi ý (Quản trị viên, Nhân viên 1, Nhân viên 2), chặn tài khoản khách
+    await page.goto("/staff/login");
+    await expect(page.locator(".auth-quick-btn")).toHaveCount(3);
+    await expect(page.getByText("Quản trị viên")).toBeVisible();
+    await expect(page.getByText("Nhân viên 1")).toBeVisible();
+    await expect(page.getByText("Nhân viên 2")).toBeVisible();
+
+    await loginForm.locator("input").nth(0).fill("customer@geargo.vn");
+    await loginForm.locator("input").nth(1).fill("GearGo@2026");
+    await loginForm.locator('button[type="submit"]').click();
+    await expect(page.getByText(/cổng Khách hàng/i).first()).toBeVisible({ timeout: 10_000 });
+
+    // 5. Tài khoản bị khóa trên /login hiển thị Alert Box cảnh báo
+    await page.goto("/login");
     await loginForm.locator("input").nth(0).fill("locked.kh@geargo.vn");
     await loginForm.locator("input").nth(1).fill("GearGo@2026");
     await loginForm.locator('button[type="submit"]').click();

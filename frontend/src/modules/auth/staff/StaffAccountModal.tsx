@@ -104,8 +104,7 @@ export function StaffAccountModal({
               onChange={(e) => onChange({ ...editingStaff, role: e.target.value as StaffAccount["role"] })}
               className="adm-field adm-field--compact"
             >
-              <option value="Nhân viên kho">Nhân viên kho</option>
-              <option value="Nhân viên chăm sóc KH">Nhân viên chăm sóc KH</option>
+              <option value="Nhân viên">Nhân viên</option>
               <option value="Quản trị viên">Quản trị viên</option>
             </select>
           </div>

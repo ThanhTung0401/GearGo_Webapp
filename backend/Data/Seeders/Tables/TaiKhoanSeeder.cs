@@ -16,9 +16,9 @@ internal static class TaiKhoanSeeder
             ("kh.duc@geargo.vn", "0902000002", "KhachHang", "HoatDong", "Lê Hoàng Đức", "45 Trần Phú, Hải Châu, Đà Nẵng", true),
             ("kh.linh@geargo.vn", "0902000003", "KhachHang", "HoatDong", "Vũ Thùy Linh", "88 Láng Hạ, Đống Đa, Hà Nội", true),
             ("kh.son@geargo.vn", "0902000004", "KhachHang", "TamKhoa", "Đỗ Thanh Sơn", "19 Phan Chu Trinh, Nha Trang", true),
-            ("nv.hung@geargo.vn", "0903000001", "NhanVien", "HoatDong", "Nguyễn Mạnh Hùng (NV Giao nhận)", "", false),
-            ("nv.thao@geargo.vn", "0903000002", "NhanVien", "HoatDong", "Trần Phương Thảo (NV Kiểm kê)", "", false),
-            ("nv.cuong@geargo.vn", "0903000003", "NhanVien", "TamKhoa", "Bùi Quốc Cường (NV Thử việc)", "", false),
+            ("nv.hung@geargo.vn", "0903000001", "NhanVien", "HoatDong", "Nguyễn Mạnh Hùng", "", false),
+            ("nv.thao@geargo.vn", "0903000002", "NhanVien", "HoatDong", "Trần Phương Thảo", "", false),
+            ("nv.cuong@geargo.vn", "0903000003", "NhanVien", "TamKhoa", "Bùi Quốc Cường", "", false),
         };
 
         foreach (var (email, sdt, role, status, hoTen, diaChi, isCustomer) in users)
@@ -49,9 +49,16 @@ internal static class TaiKhoanSeeder
             }
             else
             {
-                if (!await context.NhanViens.AnyAsync(n => n.MaTaiKhoan == tk.MaTaiKhoan))
+                var existingNv = await context.NhanViens.FirstOrDefaultAsync(n => n.MaTaiKhoan == tk.MaTaiKhoan);
+                if (existingNv == null)
                 {
                     context.NhanViens.Add(new NhanVien { MaTaiKhoan = tk.MaTaiKhoan, HoTen = hoTen });
+                    await context.SaveChangesAsync();
+                }
+                else if (existingNv.HoTen != hoTen && existingNv.HoTen?.Contains("(NV ") == true)
+                {
+                    // Dọn hậu tố chức danh cũ (NV Giao nhận / NV Kiểm kê / NV Thử việc) cho mô hình tiệm nhỏ
+                    existingNv.HoTen = hoTen;
                     await context.SaveChangesAsync();
                 }
             }

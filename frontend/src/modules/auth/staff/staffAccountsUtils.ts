@@ -31,7 +31,7 @@ export function mapBackendStaffItems(items: BackendStaffItem[]) {
       id: staffId,
       username: nv.email ? nv.email.split("@")[0] : `nv_${nv.maNhanVien}`,
       name: nv.hoTen || "Nhân viên",
-      role: nv.vaiTro === "QuanTriVien" ? "Quản trị viên" : "Nhân viên kho",
+      role: nv.vaiTro === "QuanTriVien" ? "Quản trị viên" : "Nhân viên",
       phone: nv.soDienThoai || "",
       email: nv.email || "",
       status: isLocked ? "locked" : "active",

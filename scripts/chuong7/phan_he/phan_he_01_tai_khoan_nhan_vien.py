@@ -24,11 +24,11 @@ NATURAL_EVENTS = {
         ('3', 'Nhấn liên kết "Đăng nhập ngay" hoặc "Về trang chủ"', 'Chuyển người dùng sang giao diện Đăng nhập hoặc quay lại trang chủ.'),
     ],
     'UC1.2': [
-        ('1', 'Nhấn nút "Đăng nhập hệ thống"', 'Hệ thống kiểm tra thông tin tài khoản và mật khẩu. Nếu hợp lệ thì đăng nhập và chuyển sang không gian làm việc tương ứng với vai trò; nếu sai thông tin thì hiển thị thông báo lỗi; nếu tài khoản bị khóa thì hiển thị hộp cảnh báo lý do khóa cùng thông tin liên hệ hỗ trợ.'),
+        ('1', 'Nhấn nút "Đăng nhập hệ thống" (/login) hoặc "Đăng nhập cổng Staff" (/staff/login)', 'Hệ thống kiểm tra thông tin tài khoản, mật khẩu và đối chiếu đúng cổng đăng nhập theo vai trò (Khách hàng tại /login; Quản trị viên và Nhân viên tại /staff/login). Nếu hợp lệ thì đăng nhập và chuyển sang không gian làm việc tương ứng; nếu đăng nhập nhầm cổng thì thông báo hướng dẫn chuyển cổng; nếu tài khoản bị khóa thì hiển thị hộp cảnh báo lý do khóa cùng thông tin liên hệ hỗ trợ.'),
         ('2', 'Nhấn nút "Hiện" / "Ẩn" tại ô mật khẩu', 'Bật hoặc tắt chế độ hiển thị ký tự mật khẩu.'),
-        ('3', 'Nhấn liên kết "Quên mật khẩu?"', 'Chuyển sang giao diện Khôi phục mật khẩu.'),
-        ('4', 'Nhấn liên kết "Đăng ký ngay"', 'Chuyển sang giao diện Đăng ký tài khoản mới.'),
-        ('5', 'Nhấn một trong các nút "Chọn nhanh tài khoản kiểm thử"', 'Tự động điền sẵn thông tin đăng nhập mẫu tương ứng vào ô tài khoản và mật khẩu để kiểm thử nhanh.'),
+        ('3', 'Nhấn liên kết "Quên mật khẩu?"', 'Chuyển sang giao diện Khôi phục mật khẩu (/forgot-password).'),
+        ('4', 'Nhấn liên kết "Đăng ký ngay" hoặc liên kết chuyển cổng', 'Chuyển sang giao diện Đăng ký tài khoản mới (/register) hoặc chuyển đổi giữa cổng Khách hàng (/login) và cổng Nhân viên (/staff/login).'),
+        ('5', 'Nhấn một trong các nút "Chọn nhanh tài khoản"', 'Tự động điền sẵn thông tin đăng nhập mẫu tương ứng theo từng cổng (Khách hàng 1, Khách hàng 2 tại /login; Quản trị viên, Nhân viên 1, Nhân viên 2 tại /staff/login) để kiểm thử nhanh.'),
     ],
     'UC1.3': [
         ('1', 'Nhấn nút "Thoát"', 'Thoát khỏi tài khoản hiện tại, kết thúc phiên làm việc và chuyển về giao diện trang chủ ở trạng thái chưa đăng nhập.'),

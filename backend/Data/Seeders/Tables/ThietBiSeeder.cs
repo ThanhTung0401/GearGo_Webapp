@@ -59,5 +59,58 @@ internal static class ThietBiSeeder
             });
             await context.SaveChangesAsync();
         }
+
+        // Bổ sung tồn kho tự động: đảm bảo mỗi sản phẩm đang kinh doanh có tối thiểu 7 thiết bị SanSang
+        // để khi kiểm thử đặt thuê nhiều đơn liên tiếp không bị hết hàng do các đơn mẫu chiếm chỗ.
+        const int minReadyPerProduct = 7;
+        foreach (var sp in sps.Where(s => s.TrangThaiKinhDoanh == TrangThaiKinhDoanh.DangKinhDoanh))
+        {
+            var readyCount = await context.ThietBis.CountAsync(t =>
+                t.MaSanPhamHienTai == sp.MaSanPham && t.TrangThaiSuDung == TrangThaiThietBi.SanSang);
+            if (readyCount >= minReadyPerProduct) continue;
+
+            var existingCount = await context.ThietBis.CountAsync(t => t.MaSanPhamHienTai == sp.MaSanPham);
+            var codePrefix = (sp.MaSanPhamHienThi ?? $"SP{sp.MaSanPham}").Replace("SP-", "TB-");
+            var needed = minReadyPerProduct - readyCount;
+
+            for (int i = 1; i <= needed; i++)
+            {
+                var seq = existingCount + i;
+                var maThietBi = $"{codePrefix}-S{seq:D2}";
+                while (await context.ThietBis.AnyAsync(t => t.MaThietBiHienThi == maThietBi))
+                {
+                    seq++;
+                    maThietBi = $"{codePrefix}-S{seq:D2}";
+                }
+
+                var tb = new ThietBi
+                {
+                    MaChiTietPhieuNhap = ctpn.MaChiTietPhieuNhap,
+                    MaSanPhamHienTai = sp.MaSanPham,
+                    MaThietBiHienThi = maThietBi,
+                    NgayNhap = DateTime.UtcNow.AddDays(-15),
+                    GiaNhap = sp.GiaTriBoiThuong > 0 ? Math.Round(sp.GiaTriBoiThuong * 0.7m, 0) : 500000m,
+                    TinhTrang = "Tốt",
+                    PhuKienDiKem = "Đầy đủ phụ kiện tiêu chuẩn",
+                    TrangThaiSuDung = TrangThaiThietBi.SanSang,
+                    GhiChu = "Thiết bị bổ sung sẵn sàng cho thuê"
+                };
+                context.ThietBis.Add(tb);
+                await context.SaveChangesAsync();
+
+                context.LichSuTinhTrangThietBis.Add(new LichSuTinhTrangThietBi
+                {
+                    MaThietBi = tb.MaThietBi,
+                    MaNguoiThucHien = tk.MaTaiKhoan,
+                    TrangThaiTruoc = TrangThaiThietBi.SanSang.ToString(),
+                    TrangThaiSau = TrangThaiThietBi.SanSang.ToString(),
+                    TinhTrangTruoc = "Mới",
+                    TinhTrangSau = "Tốt",
+                    LyDo = "Nhập kho bổ sung thiết bị sẵn sàng cho thuê",
+                    ThoiDiem = DateTime.UtcNow.AddDays(-14)
+                });
+                await context.SaveChangesAsync();
+            }
+        }
     }
 }
