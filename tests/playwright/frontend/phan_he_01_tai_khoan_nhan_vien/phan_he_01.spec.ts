@@ -48,9 +48,17 @@ test.describe.serial("Frontend PH1: Quản lý Tài khoản & Nhân viên (UC1.1
 
     // Chuyển sang bước nhập mã OTP 6 số
     await expect(page.getByRole("heading", { name: /Nhập mã xác minh OTP/i })).toBeVisible({ timeout: 15_000 });
-    await page.locator("form.auth-form input").first().fill("123456");
+    const otpInput = page.locator("form.auth-form input").first();
+    await otpInput.fill("123456");
+    await expect(otpInput).toHaveValue("123456");
     await pauseForViewer(page);
-    await page.locator("form.auth-form button[type='submit']").click();
+    const verifyOtpBtn = page.locator("form.auth-form button[type='submit']");
+    await expect(verifyOtpBtn).toBeEnabled();
+    const [otpRes] = await Promise.all([
+      page.waitForResponse((res) => res.url().includes("/api/auth/xac-thuc-otp"), { timeout: 10_000 }),
+      verifyOtpBtn.click(),
+    ]);
+    expect(otpRes.ok(), `Xác minh OTP thất bại (${otpRes.status()}): ${await otpRes.text()}`).toBeTruthy();
     await expect(page.getByRole("heading", { name: /Đặt mật khẩu mới/i })).toBeVisible({ timeout: 10_000 });
     await pauseForViewer(page);
 

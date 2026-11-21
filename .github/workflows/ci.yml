@@ -108,6 +108,7 @@ jobs:
         env:
           ASPNETCORE_ENVIRONMENT: Development
           ASPNETCORE_URLS: http://localhost:5000
+          AppSettings__AllowDemoOtp: "true"
           ConnectionStrings__DefaultConnection: "Server=localhost,1433;Database=GearGoDb;User Id=sa;Password=GearGo@123;TrustServerCertificate=True;MultipleActiveResultSets=true"
           VITE_API_URL: http://localhost:5000
           VITE_USE_MOCK: "false"
@@ -171,4 +172,6 @@ jobs:
             tests/playwright/test-results/
             tests/playwright/videos/all/
             tests/playwright/videos/failed/
+            /tmp/backend.log
+            /tmp/frontend.log
           retention-days: 7
