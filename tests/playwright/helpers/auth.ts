@@ -1,6 +1,7 @@
 import type { APIRequestContext, Page } from "@playwright/test";
 import { expect } from "@playwright/test";
 import { TEST_ACCOUNTS } from "./testData.js";
+import { waitVisible } from "./subsystemVideo.js";
 
 export type RoleKey = keyof typeof TEST_ACCOUNTS;
 
@@ -33,36 +34,64 @@ export function authHeaders(token: string): Record<string, string> {
 }
 
 /**
- * Đăng nhập trên giao diện Frontend qua đúng 2 cổng độc lập:
- * - Khách hàng (customer / customer2 / locked) -> /login
- * - Nhân viên & Quản trị viên (staff / admin)  -> /staff/login
+ * Đăng nhập trên giao diện Frontend qua đúng 2 cổng độc lập (/login và /staff/login),
+ * ưu tiên điều hướng bằng nút SPA để video chuyển cảnh mượt, không chớp trắng do reload trang.
  */
 export async function loginUi(page: Page, role: RoleKey = "customer"): Promise<void> {
   const acc = TEST_ACCOUNTS[role];
   const isStaffRole = role === "admin" || role === "staff";
   const targetLoginPath = isStaffRole ? "/staff/login" : "/login";
 
+  // Đóng modal còn sót (nếu có) trước khi điều hướng
+  await page.keyboard.press("Escape").catch(() => {});
+
+  // Khởi đầu từ trang trắng -> đi thẳng tới cổng đăng nhập đích trong 1 lần gọi (không vòng qua /)
   if (!page.url() || page.url() === "about:blank") {
-    await page.goto("/");
-  }
+    await page.goto(targetLoginPath, { waitUntil: "domcontentloaded" });
+  } else {
+    // 1. Nếu đang ở cổng Admin/Staff -> bấm "Trang khách" về giao diện công khai bằng SPA
+    const backPublicBtn = page.getByRole("button", { name: /Trang khách/i }).first();
+    if (await backPublicBtn.isVisible().catch(() => false)) {
+      await backPublicBtn.click();
+    }
 
-  // Nếu đang ở cổng Admin/Staff -> bấm "Trang khách" về giao diện công khai
-  const backPublicBtn = page.getByRole("button", { name: /Trang khách/i }).first();
-  if (await backPublicBtn.isVisible().catch(() => false)) {
-    await backPublicBtn.click();
-  }
+    // 2. Nếu đang có phiên đăng nhập -> bấm "Thoát" bằng SPA
+    const logoutBtn = page.getByRole("button", { name: "Thoát" }).first();
+    if (await logoutBtn.isVisible().catch(() => false)) {
+      await logoutBtn.click();
+      await expect(page.getByRole("button", { name: "Đăng nhập" }).first()).toBeVisible({ timeout: 15_000 });
+    }
 
-  // Nếu đang đăng nhập -> bấm "Thoát" để đăng xuất sạch trên SPA
-  const logoutBtn = page.getByRole("button", { name: "Thoát" }).first();
-  if (await logoutBtn.isVisible().catch(() => false)) {
-    await logoutBtn.click();
-    await expect(page.getByRole("button", { name: "Đăng nhập" }).first()).toBeVisible({ timeout: 15_000 });
-  }
+    // 3. Điều hướng SPA tới đúng màn hình đăng nhập (/login hoặc /staff/login)
+    let currentPath = new URL(page.url()).pathname;
+    if (currentPath !== targetLoginPath) {
+      if (currentPath === "/login" && isStaffRole) {
+        const toStaffBtn = page.getByRole("button", { name: /Cổng nội bộ nhân viên/i }).first();
+        if (await waitVisible(toStaffBtn, 2000)) {
+          await toStaffBtn.click();
+        }
+      } else if (currentPath === "/staff/login" && !isStaffRole) {
+        const toCustBtn = page.getByRole("button", { name: /Về trang đăng nhập khách/i }).first();
+        if (await waitVisible(toCustBtn, 2000)) {
+          await toCustBtn.click();
+        }
+      } else {
+        const loginNavBtn = page.getByRole("button", { name: "Đăng nhập" }).first();
+        if (await waitVisible(loginNavBtn, 2000)) {
+          await loginNavBtn.click();
+          if (isStaffRole) {
+            const toStaffBtn = page.getByRole("button", { name: /Cổng nội bộ nhân viên/i }).first();
+            await expect(toStaffBtn).toBeVisible({ timeout: 5_000 });
+            await toStaffBtn.click();
+          }
+        }
+      }
 
-  // Điều hướng trực tiếp tới đúng URL cổng đăng nhập (/login hoặc /staff/login)
-  const currentPath = new URL(page.url()).pathname;
-  if (currentPath !== targetLoginPath) {
-    await page.goto(targetLoginPath);
+      currentPath = new URL(page.url()).pathname;
+      if (currentPath !== targetLoginPath) {
+        await page.goto(targetLoginPath, { waitUntil: "domcontentloaded" });
+      }
+    }
   }
 
   // Điền form đăng nhập (input đầu là tài khoản, input thứ 2 là mật khẩu)

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 using GearGo.Models.Enums;
 
 namespace GearGo.Models.DTOs.QuanTriKhuyenMai;
@@ -18,6 +19,7 @@ public class TaoKhuyenMaiRequest
     public string? TenKhuyenMai { get; set; }
 
     [Required(ErrorMessage = "Loại giảm giá là bắt buộc.")]
+    [JsonConverter(typeof(JsonStringEnumConverter))]
     public LoaiKhuyenMai LoaiGiam { get; set; }
 
     [Range(0.01, double.MaxValue, ErrorMessage = "Giá trị giảm phải lớn hơn 0.")]
@@ -29,6 +31,7 @@ public class TaoKhuyenMaiRequest
     public decimal TienThueToiThieu { get; set; } = 0;
 
     [Required(ErrorMessage = "Phạm vi áp dụng là bắt buộc.")]
+    [JsonConverter(typeof(JsonStringEnumConverter))]
     public PhamViApDung PhamVi { get; set; } = PhamViApDung.TatCa;
 
     [Required(ErrorMessage = "Thời điểm bắt đầu là bắt buộc.")]

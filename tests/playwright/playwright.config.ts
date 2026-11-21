@@ -8,6 +8,7 @@ import { defineConfig } from "@playwright/test";
  * - Chạy riêng 1 phân hệ: npx playwright test backend/phan_he_01_tai_khoan_nhan_vien
  */
 export default defineConfig({
+  globalSetup: "./helpers/globalSetup.ts",
   timeout: 120_000,
   expect: {
     timeout: 10_000,

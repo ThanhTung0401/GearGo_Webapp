@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Text.Json.Serialization;
 using GearGo.Models.Enums;
 
 namespace GearGo.Models.DTOs.QuanTriKhuyenMai;
@@ -12,6 +13,7 @@ public class CapNhatKhuyenMaiRequest
 {
     public string? TenKhuyenMai { get; set; }
 
+    [JsonConverter(typeof(JsonStringEnumConverter))]
     public LoaiKhuyenMai? LoaiGiam { get; set; }
 
     public decimal? GiaTriGiam { get; set; }
@@ -20,6 +22,7 @@ public class CapNhatKhuyenMaiRequest
 
     public decimal? TienThueToiThieu { get; set; }
 
+    [JsonConverter(typeof(JsonStringEnumConverter))]
     public PhamViApDung? PhamVi { get; set; }
 
     public DateTime? BatDau { get; set; }

@@ -115,3 +115,22 @@ export async function waitVisible(locator: Locator, timeout = 3000): Promise<boo
     return false;
   }
 }
+
+/**
+ * Đóng modal đang mở một cách an toàn (chỉ tìm nút đóng bên trong dialog trên cùng, tránh bấm nhầm nút nền).
+ */
+export async function closeActiveDialog(page: Page): Promise<void> {
+  const dialog = page.locator('[role="dialog"], .modal-overlay, .adm-modal-overlay').last();
+  if (!(await dialog.isVisible().catch(() => false))) return;
+  const closeBtn = dialog.getByRole("button", { name: /^(×|✕|Đóng|Hủy)$/i }).first();
+  if (await waitVisible(closeBtn, 1500)) {
+    await closeBtn.click();
+    return;
+  }
+  const byAria = dialog.locator('button[aria-label="Đóng"], button[aria-label="Close"]').first();
+  if (await waitVisible(byAria, 1000)) {
+    await byAria.click();
+    return;
+  }
+  await page.keyboard.press("Escape");
+}
