@@ -11,7 +11,9 @@ test.describe.serial("Frontend PH3: Giỏ thuê, Đặt thuê & Theo dõi đơn 
     await loginUi(page, "customer");
 
     await page.getByRole("button", { name: "Thuê đồ" }).first().click();
-    const { pickupDate, returnDate } = getFutureRentalDates(12, 2);
+    // Dùng offset ngày xa động để tránh trùng lịch đặt của các lần chạy test trước đó trong cùng DB
+    const dynamicOffset = 20 + (Date.now() % 60);
+    const { pickupDate, returnDate } = getFutureRentalDates(dynamicOffset, 2);
     const dateInputs = page.locator('input[type="date"]');
     await dateInputs.nth(0).fill(pickupDate);
     await dateInputs.nth(1).fill(returnDate);
@@ -33,6 +35,19 @@ test.describe.serial("Frontend PH3: Giỏ thuê, Đặt thuê & Theo dõi đơn 
     const promoInput = page.locator('input[placeholder*="CAMPGO"], input[placeholder*="khuyến mãi" i]').first();
     await expect(promoInput).toBeVisible();
     await pauseForViewer(page);
+
+    // Dọn các món bị báo hết hàng (nếu còn sót từ lần chạy trước) để nút Tiến hành xác nhận thuê bật hợp lệ
+    for (let i = 0; i < 5; i++) {
+      const outOfStockCard = page.locator("div").filter({ hasText: /Hết hàng trong khoảng ngày đã chọn/i }).last();
+      if (!(await outOfStockCard.isVisible().catch(() => false))) break;
+      const removeBtn = outOfStockCard.locator('button:has-text("×")').first();
+      if (await removeBtn.isVisible().catch(() => false)) {
+        await removeBtn.click();
+        await page.waitForTimeout(400);
+      } else {
+        break;
+      }
+    }
 
     // UC3.2 & UC5.1: Tiến hành đặt thuê -> Kiểm tra đồng hồ 15p không bị hết hạn tức thì -> Thanh toán thành công
     const proceedBtn = page.getByRole("button", { name: /Tiến hành xác nhận thuê/i }).first();

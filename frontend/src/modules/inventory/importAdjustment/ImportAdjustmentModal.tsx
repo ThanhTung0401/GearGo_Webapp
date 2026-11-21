@@ -1,0 +1,159 @@
+import type { useApp } from "../../../App";
+import type { ImportReceipt, ImportReceiptAdjustment } from "../../../store";
+import { useImportAdjustment } from "./useImportAdjustment";
+
+interface Props {
+  receipt: ImportReceipt;
+  app: ReturnType<typeof useApp>;
+  onClose: () => void;
+  onSuccess?: () => void;
+}
+
+/**
+ * UC7.10 & UC7.10.1: Lập đề nghị xử lý sai lệch phiếu nhập sau chốt.
+ */
+export default function ImportAdjustmentModal({ receipt, app, onClose, onSuccess }: Props) {
+  const vm = useImportAdjustment(receipt, app, onClose, onSuccess);
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      className="fixed inset-0 z-[9999] grid place-items-center p-4 bg-slate-900/65 backdrop-blur-xs"
+    >
+      <div className="bg-white rounded-2xl max-w-[580px] w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+        <div className="px-5 py-4 border-b border-[var(--color-bone,#E5E7EB)] flex justify-between items-center bg-[var(--color-cream,#FAFAF9)]">
+          <div>
+            <h3 className="m-0 text-lg font-bold text-[var(--color-bark,#1F2937)] font-[family-name:var(--font-display)]">
+              Lập đề nghị điều chỉnh sai lệch phiếu nhập (UC7.10)
+            </h3>
+            <p className="mt-0.5 mb-0 text-xs text-gray-500">
+              Liên kết chứng từ gốc: <strong className="font-mono">{receipt.displayCode || receipt.id}</strong> ({receipt.supplierName})
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Đóng"
+            className="bg-transparent border-0 text-2xl cursor-pointer text-gray-400 hover:text-gray-700"
+          >
+            ×
+          </button>
+        </div>
+
+        <form onSubmit={vm.handleSubmit} className="p-5 overflow-y-auto grid gap-3.5 text-xs">
+          {vm.submitError && (
+            <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg px-3 py-2 font-semibold">
+              {vm.submitError}
+            </div>
+          )}
+
+          {receipt.lines.length > 0 && (
+            <label className="font-semibold">
+              Dòng sản phẩm liên quan:
+              <select
+                value={vm.selectedLineId}
+                onChange={(e) => vm.setSelectedLineId(e.target.value)}
+                className="w-full p-2 rounded-md border border-gray-300 mt-1 bg-white"
+              >
+                {receipt.lines.map((l, idx) => (
+                  <option key={l.id || idx} value={l.id || ""}>
+                    {l.productNameSnapshot || l.productId} (SL: {l.quantity})
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+
+          <div className="bg-amber-50 border border-amber-300 rounded-lg px-3 py-2 text-amber-800">
+            <strong>Lưu ý:</strong> Phiếu gốc đã nhập kho không bị sửa trực tiếp. Đề nghị sau khi được Quản trị viên duyệt sẽ tạo bản ghi điều chỉnh liên kết và bảo toàn lịch sử ban đầu.
+          </div>
+
+          <label className="font-semibold">
+            Phân loại sai lệch cần xử lý:
+            <select
+              value={vm.type}
+              onChange={(e) => vm.setType(e.target.value as ImportReceiptAdjustment["type"])}
+              className="w-full p-2 rounded-md border border-gray-300 mt-1 bg-white"
+            >
+              <option value="Giá vốn">Sai lệch đơn giá nhập / Chiết khấu hóa đơn NCC</option>
+              <option value="Số lượng">Sai lệch số lượng thiết bị thực tế kiểm tra lại</option>
+              <option value="Thông tin chứng từ">Sai thông tin số hóa đơn / ghi chú nhà cung cấp</option>
+            </select>
+          </label>
+
+          <div className="grid grid-cols-2 gap-3">
+            <label className="font-semibold">
+              Giá trị trước điều chỉnh:
+              <input
+                required
+                placeholder="VD: 1.200.000 ₫ hoặc 5 chiếc"
+                value={vm.previousValue}
+                onChange={(e) => vm.setPreviousValue(e.target.value)}
+                className="w-full p-2 rounded-md border border-gray-300 mt-1"
+              />
+            </label>
+            <label className="font-semibold">
+              Giá trị đề nghị sau điều chỉnh:
+              <input
+                required
+                placeholder="VD: 1.150.000 ₫ hoặc 4 chiếc"
+                value={vm.newValue}
+                onChange={(e) => vm.setNewValue(e.target.value)}
+                className="w-full p-2 rounded-md border border-gray-300 mt-1"
+              />
+            </label>
+          </div>
+
+          <label className="font-semibold">
+            Lý do sai lệch & Căn cứ điều chỉnh:
+            <textarea
+              required
+              rows={2}
+              placeholder="Ghi rõ nguyên nhân phát hiện sai lệch, biên bản kiểm kho hoặc văn bản xác nhận từ NCC..."
+              value={vm.reason}
+              onChange={(e) => vm.setReason(e.target.value)}
+              className="w-full p-2 rounded-md border border-gray-300 mt-1"
+            />
+          </label>
+
+          <label className="font-semibold">
+            Chứng từ đối soát / Số biên bản liên quan:
+            <input
+              placeholder="VD: Hóa đơn GTGT điều chỉnh số 004812, BB thỏa thuận ngày 22/10..."
+              value={vm.evidence}
+              onChange={(e) => vm.setEvidence(e.target.value)}
+              className="w-full p-2 rounded-md border border-gray-300 mt-1"
+            />
+          </label>
+
+          <label className="font-semibold">
+            Người lập đề nghị:
+            <input
+              value={vm.createdBy}
+              onChange={(e) => vm.setCreatedBy(e.target.value)}
+              className="w-full p-2 rounded-md border border-gray-300 mt-1"
+            />
+          </label>
+
+          <div className="flex justify-end gap-2 mt-2 pt-3 border-t border-[var(--color-bone,#E5E7EB)]">
+            <button
+              type="button"
+              onClick={onClose}
+              className="bg-white border border-gray-300 px-3.5 py-1.5 rounded-md cursor-pointer"
+            >
+              Hủy
+            </button>
+            <button
+              type="submit"
+              disabled={vm.submitting}
+              className="bg-[var(--color-amber,#D97706)] text-white border-0 px-4 py-1.5 rounded-md font-bold cursor-pointer disabled:opacity-60"
+            >
+              Gửi đề nghị điều chỉnh (Chờ duyệt)
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}

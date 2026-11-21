@@ -2,8 +2,13 @@ import { defineConfig, type HtmlTagDescriptor, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import path from 'node:path'
+import fs from 'node:fs'
 
-import siteConfiguration from './.figma/make/site.json'
+// Đọc an toàn site.json nếu tồn tại (tránh lỗi build local khi không có thư mục .figma)
+const siteConfigPath = path.resolve(__dirname, './.figma/make/site.json')
+const siteConfiguration: FigmaSiteConfiguration = fs.existsSync(siteConfigPath)
+  ? JSON.parse(fs.readFileSync(siteConfigPath, 'utf-8'))
+  : { title: 'GearGo', language: 'vi' }
 
 // Vite config — https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {

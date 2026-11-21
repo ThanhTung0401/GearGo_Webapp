@@ -14,3 +14,17 @@ export const statusColors: Record<string, { bg: string; text: string }> = {
   "Cửa hàng hủy": { bg: "#FEF2F2", text: "#DC2626" },
   "Trả một phần": { bg: "#FFF7ED", text: "#C2410C" },
 };
+
+/**
+ * Bảng màu chuẩn hóa cho trạng thái cá thể thiết bị dùng chung các modal/tab kho
+ */
+export const equipmentStatusColors: Record<string, { bg: string; text: string; border: string }> = {
+  "Sẵn sàng": { bg: "#DCFCE7", text: "#15803D", border: "#86EFAC" },
+  "Đang thuê": { bg: "#DBEAFE", text: "#1D4ED8", border: "#93C5FD" },
+  "Đang bảo trì": { bg: "#FEF3C7", text: "#B45309", border: "#FCD34D" },
+  "Thất lạc": { bg: "#FEE2E2", text: "#DC2626", border: "#FCA5A5" },
+  "Ngừng sử dụng": { bg: "#F3F4F6", text: "#6B7280", border: "#D1D5DB" },
+};
+
+export const getEquipmentStatusStyle = (status: string) =>
+  equipmentStatusColors[status] || { bg: "#F3F4F6", text: "#374151", border: "#E5E7EB" };
