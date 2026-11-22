@@ -193,8 +193,47 @@ test.describe.serial("Frontend PH1: Quản lý Tài khoản & Nhân viên (UC1.1
 
     // Ma trận phân quyền hệ thống
     await page.getByRole("button", { name: "Phân quyền" }).first().click();
-    await expect(page.getByText(/Phân quyền|Ma trận quyền/i).first()).toBeVisible();
+    await expect(page.getByText(/Phân quyền theo vai trò/i).first()).toBeVisible();
     await pauseForViewer(page);
+  });
+
+  test("RBAC v2 §5.3 - Phân quyền động theo vai trò, lưu version mới & bảo vệ quyền tối thiểu", async () => {
+    const page = getPage();
+    // Kiểm tra thông báo khóa đối với role Khách hàng & Quản trị viên
+    await page.locator(".internal-content").getByRole("button", { name: /Khách hàng/i }).first().click();
+    await expect(page.getByText(/không nhận quyền quản trị/i).first()).toBeVisible();
+    await page.locator(".internal-content").getByRole("button", { name: /Quản trị viên/i }).first().click();
+    await expect(page.getByText(/luôn có mọi quyền/i).first()).toBeVisible();
+
+    // Quay lại role Nhân viên, toggle 1 quyền (nếu chưa bật thì bật, nếu bật rồi thì tắt rồi khôi phục) để kiểm tra lưu version mới
+    await page.locator(".internal-content").getByRole("button", { name: /Nhân viên/i }).first().click();
+    const versionTextBefore = (await page.getByText(/Version hiện tại:/i).first().innerText()).trim();
+    const lastPermCheckbox = page.locator('.internal-content input[type="checkbox"]').last();
+    await expect(lastPermCheckbox).toBeVisible();
+    const wasChecked = await lastPermCheckbox.isChecked();
+
+    await lastPermCheckbox.click();
+    await page.getByRole("button", { name: "Lưu phân quyền" }).click();
+
+    // Nếu quyền vừa gỡ nằm trong MIN_STAFF, ConfirmModal sẽ bật ra -> xác nhận hoặc hủy an toàn
+    const confirmModal = page.locator('[role="dialog"]').filter({ hasText: /gỡ quyền thiết yếu/i });
+    if (await waitVisible(confirmModal, 1200)) {
+      await confirmModal.getByRole("button", { name: "Tiếp tục lưu" }).click();
+    }
+    await expect(page.getByText(/Đã lưu\. Version mới:/i).first()).toBeVisible({ timeout: 10_000 });
+    const versionTextAfter = (await page.getByText(/Version hiện tại:/i).first().innerText()).trim();
+    expect(versionTextAfter).not.toBe(versionTextBefore);
+    await pauseForViewer(page, 600);
+
+    // Khôi phục lại trạng thái quyền ban đầu cho các phân hệ sau
+    if ((await lastPermCheckbox.isChecked()) !== wasChecked) {
+      await lastPermCheckbox.click();
+      await page.getByRole("button", { name: "Lưu phân quyền" }).click();
+      if (await waitVisible(confirmModal, 1000)) {
+        await confirmModal.getByRole("button", { name: "Tiếp tục lưu" }).click();
+      }
+      await expect(page.getByText(/Đã lưu\. Version mới:/i).first()).toBeVisible({ timeout: 10_000 });
+    }
   });
 
   test("SCR-1.2 - Kiểm tra 2 cổng đăng nhập (/login vs /staff/login), chặn chéo & Alert Box khóa", async () => {
@@ -239,8 +278,4 @@ test.describe.serial("Frontend PH1: Quản lý Tài khoản & Nhân viên (UC1.1
     await expect(page.locator(".auth-locked-alert")).toBeVisible({ timeout: 10_000 });
     await pauseForViewer(page, 1200);
   });
-});
-
-test.describe.skip("Frontend PH1 (RBAC v2 §5.3): Phân quyền động & flush cache", () => {
-  test("Placeholder RBAC", async () => {});
 });

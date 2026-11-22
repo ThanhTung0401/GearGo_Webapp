@@ -1,9 +1,12 @@
+import { useState } from "react";
 import { useApp } from "../../context/AppContext";
 import Icon from "../../components/Icon";
+import ConfirmModal from "../../components/ui/ConfirmModal";
 import type { Role } from "../../types";
 
 export default function DemoRoleBanner() {
   const { role, setRole, newOrderId, resetDemo, realApi } = useApp();
+  const [confirmResetOpen, setConfirmResetOpen] = useState(false);
 
   // Khi kết nối Backend thật, ẩn hoàn toàn thanh chuyển vai trò demo & reset dữ liệu giả
   if (realApi) return null;
@@ -45,11 +48,8 @@ export default function DemoRoleBanner() {
           </div>
 
           <button
-            onClick={() => {
-              if (window.confirm("Đặt lại toàn bộ dữ liệu demo về mặc định?")) {
-                resetDemo();
-              }
-            }}
+            type="button"
+            onClick={() => setConfirmResetOpen(true)}
             className="flex items-center gap-1 text-[0.72rem] font-semibold text-rose-600 bg-rose-50 hover:bg-rose-100 border border-rose-200 px-2 py-0.5 rounded-lg transition-colors cursor-pointer"
             title="Đặt lại toàn bộ dữ liệu demo"
           >
@@ -58,6 +58,19 @@ export default function DemoRoleBanner() {
           </button>
         </div>
       </div>
+
+      <ConfirmModal
+        isOpen={confirmResetOpen}
+        onClose={() => setConfirmResetOpen(false)}
+        onConfirm={() => {
+          setConfirmResetOpen(false);
+          resetDemo();
+        }}
+        title="Đặt lại dữ liệu demo"
+        message="Đặt lại toàn bộ dữ liệu demo về trạng thái mặc định ban đầu?"
+        confirmText="Đặt lại"
+        isDanger
+      />
     </div>
   );
 }

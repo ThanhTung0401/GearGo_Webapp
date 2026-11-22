@@ -16,6 +16,7 @@ export function useForgotPassword() {
   const [newPass, setNewPass] = useState("");
   const [confirm, setConfirm] = useState("");
   const [err, setErr] = useState("");
+  const [notice, setNotice] = useState("");
   const [verifiedToken, setVerifiedToken] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -72,15 +73,17 @@ export function useForgotPassword() {
   // Gửi lại mã OTP qua email
   const handleResendOtp = async () => {
     if (!contact.trim()) return;
+    setErr("");
+    setNotice("");
     try {
       if (isRealApiEnabled()) {
         await authApi.quenMatKhau(contact.trim().toLowerCase());
-        alert(`Đã gửi lại mã xác minh OTP mới đến ${contact}. Vui lòng kiểm tra hộp thư!`);
+        setNotice(`Đã gửi lại mã xác minh OTP mới đến ${contact}. Vui lòng kiểm tra hộp thư!`);
       } else {
-        alert("Đã gửi lại mã OTP demo: 123456");
+        setNotice("Đã gửi lại mã OTP demo: 123456");
       }
     } catch (e) {
-      alert(e instanceof Error ? e.message : "Không thể gửi lại mã OTP.");
+      setErr(e instanceof Error ? e.message : "Không thể gửi lại mã OTP.");
     }
   };
 
@@ -184,6 +187,7 @@ export function useForgotPassword() {
     setConfirm,
     err,
     setErr,
+    notice,
     loading,
     handleSubmitContact,
     handleResendOtp,

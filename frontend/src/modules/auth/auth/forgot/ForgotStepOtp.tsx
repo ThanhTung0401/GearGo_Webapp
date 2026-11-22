@@ -6,6 +6,7 @@ interface ForgotStepOtpProps {
   otp: string;
   setOtp: (v: string) => void;
   err: string;
+  notice?: string;
   clearErr: () => void;
   loading: boolean;
   onSubmit: (e: FormEvent) => Promise<void>;
@@ -21,6 +22,7 @@ export function ForgotStepOtp({
   otp,
   setOtp,
   err,
+  notice,
   clearErr,
   loading,
   onSubmit,
@@ -58,6 +60,11 @@ export function ForgotStepOtp({
                 className={`form-input auth-otp-input ${err ? "form-input-error" : ""}`}
               />
               {err && <div className="form-error-msg">{err}</div>}
+              {notice && (
+                <div role="status" className="mt-2 text-xs text-[var(--color-success-text)] bg-[var(--color-success-bg)] border border-[var(--color-bone)] rounded-lg px-3 py-2">
+                  {notice}
+                </div>
+              )}
             </div>
 
             <button type="submit" disabled={loading} className="btn btn-primary btn-lg btn-full mb-3">

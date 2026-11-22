@@ -86,7 +86,17 @@ export function OverviewTab({ app, openOrder }: { app: ReturnType<typeof useApp>
           const actionTab: StaffTab = o.status === "Đang thuê" || o.status === "Chờ đối soát" ? "return" : "handover";
 
           return (
-            <div key={o.id} onClick={() => openOrder(o.id, actionTab)}
+            <div
+              key={o.id}
+              role="button"
+              tabIndex={0}
+              onClick={() => openOrder(o.id, actionTab)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  openOrder(o.id, actionTab);
+                }
+              }}
               className="so-overview-order-row hover:shadow-md transition-shadow"
             >
               <div className="so-flex-1">

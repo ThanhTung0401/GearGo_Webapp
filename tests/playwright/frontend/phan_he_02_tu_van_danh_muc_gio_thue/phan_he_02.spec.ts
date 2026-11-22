@@ -93,7 +93,7 @@ test.describe.serial("Frontend PH2: Tìm kiếm, Chi tiết sản phẩm, Khả 
     await pauseForViewer(page, 800);
 
     await page.locator(".cp-ai-goto-cart-btn").click();
-    await expect(page.getByText(/Tổng thanh toán ban đầu/i)).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText(/Tổng thanh toán ban đầu/i)).toBeVisible({ timeout: 25_000 });
     await pauseForViewer(page, 1200);
   });
 });

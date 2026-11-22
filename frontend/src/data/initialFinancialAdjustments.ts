@@ -15,7 +15,7 @@ export const INITIAL_FINANCIAL_ADJUSTMENTS: FinancialAdjustment[] = [
   {
     id: "PDC-TC-002",
     orderId: "DT-20241210-042",
-    type: "Bù trừ cọc",
+    type: "Hoàn trả",
     amount: 200000,
     reason: "Hoàn bổ sung tiền cọc thu dư do khách thanh toán nhầm 2 lần",
     status: "Chờ duyệt",
@@ -25,7 +25,7 @@ export const INITIAL_FINANCIAL_ADJUSTMENTS: FinancialAdjustment[] = [
   {
     id: "PDC-TC-003",
     orderId: "DT-20241120-008",
-    type: "Điều chỉnh doanh thu",
+    type: "Bù trừ chiết khấu",
     amount: -80000,
     reason: "Miễn giảm phí trễ 2 giờ do lỗi kẹt xe khách quan có xác nhận",
     status: "Đã duyệt",

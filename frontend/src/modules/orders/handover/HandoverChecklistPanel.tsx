@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type React from "react";
 import { useApp } from "../../../context/AppContext";
 import { fmt, Order } from "../../../store";
@@ -48,6 +49,7 @@ export function HandoverChecklistPanel({
   setHandoverNote,
   handleCompleteHandover,
 }: HandoverChecklistPanelProps) {
+  const [photoNotice, setPhotoNotice] = useState("");
   return (
     <div>
       <div className="so-order-header">
@@ -162,12 +164,18 @@ export function HandoverChecklistPanel({
             ))}
             <button
               type="button"
-              onClick={() => alert("Đã chụp thêm 1 ảnh bằng chứng thiết bị tại quầy!")}
+              onClick={() => setPhotoNotice("Đã chụp thêm 1 ảnh bằng chứng thiết bị tại quầy.")}
               className="so-photo-add-btn"
+              aria-label="Chụp thêm ảnh bằng chứng thiết bị"
             >
               📷+
             </button>
           </div>
+          {photoNotice && (
+            <div role="status" className="mt-1.5 text-xs text-[var(--color-success-text)]">
+              {photoNotice}
+            </div>
+          )}
         </div>
 
         <label className="so-field-label-note">Ghi chú hiện trạng bàn giao:</label>

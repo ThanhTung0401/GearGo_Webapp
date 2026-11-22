@@ -9,6 +9,23 @@ import { defineConfig } from "@playwright/test";
  */
 export default defineConfig({
   globalSetup: "./helpers/globalSetup.ts",
+  // Tự động khởi động Backend (5000) và Frontend (8443) nếu chưa mở; tái sử dụng nếu đã chạy sẵn
+  webServer: [
+    {
+      command: "dotnet run --configuration Release --urls http://localhost:5000",
+      cwd: "../../backend",
+      port: 5000,
+      reuseExistingServer: true,
+      timeout: 120_000,
+    },
+    {
+      command: "npm run dev",
+      cwd: "../../frontend",
+      port: 8443,
+      reuseExistingServer: true,
+      timeout: 60_000,
+    },
+  ],
   timeout: 120_000,
   expect: {
     timeout: 10_000,

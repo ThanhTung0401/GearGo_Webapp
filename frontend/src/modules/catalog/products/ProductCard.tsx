@@ -31,8 +31,20 @@ export function ProductCard({
 
   return (
     <div className="card-hover-lift lp-product-card">
-      <div className="lp-product-media lp-clickable" onClick={() => onSelect(p.id)}>
-        <img src={p.image} alt={p.name} className="lp-product-img" />
+      <div
+        role="button"
+        tabIndex={0}
+        aria-label={`Xem chi tiết ${p.name}`}
+        className="lp-product-media lp-clickable"
+        onClick={() => onSelect(p.id)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            onSelect(p.id);
+          }
+        }}
+      >
+        <img src={p.image} alt={p.name} loading="lazy" decoding="async" className="lp-product-img" />
         <div className={`lp-avail-badge lp-avail-badge--catalog ${badgeToneClass}`}>
           {!datesSelected ? "Giá tham khảo" : avail > 0 ? `● Còn ${avail}` : "Hết hàng"}
         </div>

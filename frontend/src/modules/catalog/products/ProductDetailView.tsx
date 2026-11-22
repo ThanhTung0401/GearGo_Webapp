@@ -77,6 +77,8 @@ export function ProductDetailView({
                   key={`${url}-${index}`}
                   src={url}
                   alt={`${p.name} ${index + 1}`}
+                  loading="lazy"
+                  decoding="async"
                   className={`lp-detail-thumb${index === 0 ? " is-active" : ""}`}
                 />
               ))}

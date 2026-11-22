@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useId } from "react";
 import Icon from "../Icon";
 
 export interface ModalProps {
@@ -20,6 +20,8 @@ export default function Modal({
   footer,
   maxWidth = "lg"
 }: ModalProps) {
+  const headlineId = useId();
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
@@ -48,21 +50,22 @@ export default function Modal({
     <div
       role="dialog"
       aria-modal="true"
-      aria-labelledby="modal-headline"
+      aria-labelledby={headlineId}
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in duration-200"
     >
       <div className={`bg-white rounded-2xl shadow-2xl w-full ${maxWidthClass} max-h-[90vh] flex flex-col overflow-hidden transform transition-all`}>
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--color-bone)]">
           <div>
-            <h2 id="modal-headline" className="text-lg font-bold text-[var(--color-bark)] font-[family-name:var(--font-display)]">
+            <h2 id={headlineId} className="text-lg font-bold text-[var(--color-bark)] font-[family-name:var(--font-display)]">
               {title}
             </h2>
             {description && <p className="text-xs text-gray-500 mt-0.5">{description}</p>}
           </div>
           <button
+            type="button"
             onClick={onClose}
-            className="w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer"
+            className="w-11 h-11 rounded-full flex items-center justify-center text-gray-500 hover:text-gray-800 hover:bg-gray-100 transition-colors cursor-pointer"
             aria-label="Đóng"
           >
             <Icon name="close" size={18} />

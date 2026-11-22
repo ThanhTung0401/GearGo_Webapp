@@ -1,13 +1,36 @@
+import { lazy, Suspense } from "react";
 import type { Page } from "../context";
 import type { CurrentUserProfile } from "../hooks/useAppStoreState";
-import LandingView from "../modules/marketing/LandingView";
-import ProductsView from "../modules/catalog/ProductsView";
-import CustomerPortal from "../views/CustomerPortal";
-import WorkspaceView from "../views/WorkspaceView";
-import { LoginView, RegisterView, ForgotPasswordView } from "../modules/auth/AuthViews";
 import { PermissionsProvider } from "../features/permissions/PermissionsContext";
 import { PublicLayout, AuthLayout } from "../layouts";
 import Icon from "../components/Icon";
+
+// Tách bundle theo portal để giảm kích thước tải ban đầu
+const LandingView = lazy(() => import("../modules/marketing/LandingView"));
+const ProductsView = lazy(() => import("../modules/catalog/ProductsView"));
+const CustomerPortal = lazy(() => import("../views/CustomerPortal"));
+const WorkspaceView = lazy(() => import("../views/WorkspaceView"));
+const LoginView = lazy(() =>
+  import("../modules/auth/AuthViews").then((m) => ({ default: m.LoginView }))
+);
+const RegisterView = lazy(() =>
+  import("../modules/auth/AuthViews").then((m) => ({ default: m.RegisterView }))
+);
+const ForgotPasswordView = lazy(() =>
+  import("../modules/auth/AuthViews").then((m) => ({ default: m.ForgotPasswordView }))
+);
+
+function RouteLoadingFallback() {
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      className="min-h-[40vh] flex items-center justify-center text-sm text-[var(--color-sage)]"
+    >
+      Đang tải giao diện…
+    </div>
+  );
+}
 
 interface AppRouterViewProps {
   page: Page;
@@ -51,28 +74,30 @@ export function AppRouterView({
         </div>
       )}
 
-      {isAuthPage && (
-        <AuthLayout>
-          {page === "login" && <LoginView portal="customer" />}
-          {page === "staff-login" && <LoginView portal="staff" />}
-          {page === "register" && <RegisterView />}
-          {page === "forgot-password" && <ForgotPasswordView />}
-        </AuthLayout>
-      )}
+      <Suspense fallback={<RouteLoadingFallback />}>
+        {isAuthPage && (
+          <AuthLayout>
+            {page === "login" && <LoginView portal="customer" />}
+            {page === "staff-login" && <LoginView portal="staff" />}
+            {page === "register" && <RegisterView />}
+            {page === "forgot-password" && <ForgotPasswordView />}
+          </AuthLayout>
+        )}
 
-      {isStaffPage && (
-        <PermissionsProvider userId={currentUser?.id != null ? Number(currentUser.id) || 0 : null}>
-          <WorkspaceView />
-        </PermissionsProvider>
-      )}
+        {isStaffPage && (
+          <PermissionsProvider userId={currentUser?.id != null ? Number(currentUser.id) || 0 : null}>
+            <WorkspaceView />
+          </PermissionsProvider>
+        )}
 
-      {!isAuthPage && !isStaffPage && (
-        <PublicLayout>
-          {page === "landing" && <LandingView />}
-          {(page === "products" || page === "product-detail") && <ProductsView />}
-          {CUSTOMER_PORTAL_PAGES.includes(page) && <CustomerPortal />}
-        </PublicLayout>
-      )}
+        {!isAuthPage && !isStaffPage && (
+          <PublicLayout>
+            {page === "landing" && <LandingView />}
+            {(page === "products" || page === "product-detail") && <ProductsView />}
+            {CUSTOMER_PORTAL_PAGES.includes(page) && <CustomerPortal />}
+          </PublicLayout>
+        )}
+      </Suspense>
     </>
   );
 }

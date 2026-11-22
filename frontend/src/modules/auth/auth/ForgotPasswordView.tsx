@@ -1,4 +1,4 @@
-﻿import { useForgotPassword } from "./forgot/useForgotPassword";
+import { useForgotPassword } from "./forgot/useForgotPassword";
 import { ForgotStepInput } from "./forgot/ForgotStepInput";
 import { ForgotStepOtp } from "./forgot/ForgotStepOtp";
 import { ForgotStepReset } from "./forgot/ForgotStepReset";
@@ -17,6 +17,7 @@ export function ForgotPasswordView() {
         otp={vm.otp}
         setOtp={vm.setOtp}
         err={vm.err}
+        notice={vm.notice}
         clearErr={() => vm.setErr("")}
         loading={vm.loading}
         onSubmit={vm.handleVerifyOtp}

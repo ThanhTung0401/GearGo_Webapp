@@ -21,6 +21,12 @@
   --color-charcoal: #14261C;
   --color-warning: #D97736;
   --color-info: #356276;
+  --color-success: #16A34A;
+  --color-success-bg: #F0FDF4;
+  --color-success-text: #166534;
+  --color-danger: #DC2626;
+  --color-surface: #FFFFFF;
+  --color-border-subtle: #CBD5E1;
 }
 
 * {

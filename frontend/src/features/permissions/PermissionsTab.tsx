@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { MIN_STAFF } from "../../constants/permissions";
+import ConfirmModal from "../../components/ui/ConfirmModal";
 import {
   permissionApi,
   type QuyenCatalogResponse,
@@ -52,6 +53,7 @@ export function PermissionsTab() {
   const [version, setVersion] = useState<number>(0);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  const [confirmMissingPerms, setConfirmMissingPerms] = useState<string[] | null>(null);
 
   const loadAll = useCallback(async () => {
     const [rs, cat] = await Promise.all([permissionApi.listRoles(), permissionApi.catalog()]);
@@ -76,16 +78,7 @@ export function PermissionsTab() {
     });
   };
 
-  const save = async () => {
-    // Chặn admin lỡ tay gỡ các quyền thiết yếu của NhanVien (MIN_STAFF)
-    if (selected === "NhanVien") {
-      const thieu = MIN_STAFF.filter((p) => !selectedPerms.has(p));
-      if (thieu.length > 0) {
-        const ok = window.confirm(`Bạn đang gỡ ${thieu.length} quyền thiết yếu: ${thieu.join(", ")}. Tiếp tục?`);
-        if (!ok) return;
-      }
-    }
-
+  const commitSave = async () => {
     setSaving(true);
     setMsg(null);
     try {
@@ -99,6 +92,18 @@ export function PermissionsTab() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const save = async () => {
+    // Chặn admin lỡ tay gỡ các quyền thiết yếu của NhanVien (MIN_STAFF)
+    if (selected === "NhanVien") {
+      const thieu = MIN_STAFF.filter((p) => !selectedPerms.has(p));
+      if (thieu.length > 0) {
+        setConfirmMissingPerms(thieu);
+        return;
+      }
+    }
+    await commitSave();
   };
 
   const customerLocked = selected === "KhachHang";
@@ -173,6 +178,24 @@ export function PermissionsTab() {
         </button>
         {msg && <span className="text-sm text-gray-600">{msg}</span>}
       </div>
+
+      <ConfirmModal
+        isOpen={Boolean(confirmMissingPerms)}
+        onClose={() => setConfirmMissingPerms(null)}
+        onConfirm={() => {
+          setConfirmMissingPerms(null);
+          void commitSave();
+        }}
+        title="Xác nhận gỡ quyền thiết yếu"
+        message={
+          confirmMissingPerms
+            ? `Bạn đang gỡ ${confirmMissingPerms.length} quyền thiết yếu của Nhân viên: ${confirmMissingPerms.join(", ")}. Tiếp tục lưu?`
+            : ""
+        }
+        confirmText="Tiếp tục lưu"
+        isDanger
+        isLoading={saving}
+      />
     </div>
   );
 }
