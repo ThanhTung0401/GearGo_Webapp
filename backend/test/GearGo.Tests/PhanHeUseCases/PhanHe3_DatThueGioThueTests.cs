@@ -75,4 +75,59 @@ public class PhanHe3_DatThueGioThueTests
         var donDb = await db.DonThues.FindAsync(maDon);
         Assert.Equal(TrangThaiDonThue.KhachHuy, donDb!.TrangThai);
     }
+
+    [Fact]
+    public async Task ResolveMaKhachHang_UuTienMaTaiKhoan_KhongDocNhamGioKhachKhac()
+    {
+        await using var db = TestDbFactory.CreateDb();
+        var seed = await TestHelpers.SeedCoBanAsync(db);
+
+        // Tạo thêm khách hàng khác có MaKhachHang trùng đúng với MaTaiKhoan của khách hiện tại (mô phỏng tình huống IDOR sau seed)
+        var otherTk = new GearGo.Models.Entities.TaiKhoan
+        {
+            Email = "khach.khac@geargo.vn",
+            SoDienThoai = "0909999001",
+            MatKhauBam = "hash",
+            VaiTro = "KhachHang",
+            TrangThai = "HoatDong"
+        };
+        db.TaiKhoans.Add(otherTk);
+        await db.SaveChangesAsync();
+
+        var collidingKh = new GearGo.Models.Entities.KhachHang
+        {
+            MaKhachHang = seed.KhachTk.MaTaiKhoan,
+            MaTaiKhoan = otherTk.MaTaiKhoan,
+            HoTen = "Khách Hàng Trùng ID"
+        };
+        db.KhachHangs.Add(collidingKh);
+        await db.SaveChangesAsync();
+
+        var khaDungSvc = new KhaDungService(db);
+        var kmSvc = new KhuyenMaiService(db);
+        var baoGiaSvc = new BaoGiaService();
+        var gioSvc = new GioThueService(db, baoGiaSvc, kmSvc, khaDungSvc);
+
+        // Giả lập TuVanAIService đã lưu trực tiếp giỏ thuê theo MaKhachHang thật (tra từ MaTaiKhoan)
+        var gioNhan = DateTime.UtcNow.AddDays(4);
+        var gioTra = DateTime.UtcNow.AddDays(6);
+        var gioThat = new GearGo.Models.Entities.GioThue
+        {
+            MaKhachHang = seed.Khach.MaKhachHang,
+            GioNhanDuKien = gioNhan,
+            GioTraDuKien = gioTra,
+            NgayCapNhat = DateTime.UtcNow,
+            ChiTietGioThues = new List<GearGo.Models.Entities.ChiTietGioThue>
+            {
+                new() { MaSanPham = seed.SanPham.MaSanPham, SoLuong = 1 }
+            }
+        };
+        db.GioThues.Add(gioThat);
+        await db.SaveChangesAsync();
+
+        // Khi khách gọi GET /api/gio-thue với MaTaiKhoan từ JWT, phải trả về đúng giỏ của mình chứ không đọc nhầm giỏ của collidingKh
+        var res = await gioSvc.LayGioAsync(seed.KhachTk.MaTaiKhoan);
+        Assert.Equal(gioThat.MaGioThue, res.MaGioThue);
+        Assert.Single(res.ChiTiet);
+    }
 }

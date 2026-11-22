@@ -17,6 +17,7 @@ export function useLoginView(portal: "customer" | "staff") {
   const [wrongPortalHint, setWrongPortalHint] = useState<"customer" | "staff" | null>(null);
   const [lockedAccount, setLockedAccount] = useState<{ name: string; reason: string } | null>(null);
   const [failedAttempts, setFailedAttempts] = useState(0);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const resetFeedback = () => {
     setErr("");
@@ -32,6 +33,8 @@ export function useLoginView(portal: "customer" | "staff") {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    // Chống double-submit gây bắn 2 request đăng nhập song song và ghi đè trạng thái lỗi
+    if (isSubmitting) return;
     resetFeedback();
 
     if (failedAttempts >= 5) {
@@ -44,6 +47,7 @@ export function useLoginView(portal: "customer" | "staff") {
     if (pass.length < 6) return setErr("Mật khẩu tối thiểu 6 ký tự.");
 
     if (isRealApiEnabled()) {
+      setIsSubmitting(true);
       try {
         const res = await authApi.dangNhap({ taiKhoan: accountInput.trim(), matKhau: pass });
         const mappedRole =
@@ -76,6 +80,8 @@ export function useLoginView(portal: "customer" | "staff") {
         } else {
           setErr(error instanceof Error ? error.message : "Đăng nhập thất bại.");
         }
+      } finally {
+        setIsSubmitting(false);
       }
       return;
     }
@@ -162,6 +168,7 @@ export function useLoginView(portal: "customer" | "staff") {
     err,
     wrongPortalHint,
     lockedAccount,
+    isSubmitting,
     resetFeedback,
     fillQuickAccount,
     submit,

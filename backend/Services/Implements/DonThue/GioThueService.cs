@@ -31,11 +31,12 @@ public partial class GioThueService : IGioThueService
     // Chuyển đổi linh hoạt giữa MaTaiKhoan hoặc MaKhachHang để đảm bảo ràng buộc ngoại khóa KHACH_HANG
     private async Task<long> ResolveMaKhachHangAsync(long actorId)
     {
-        var khByMa = await _context.KhachHangs.FirstOrDefaultAsync(k => k.MaKhachHang == actorId);
-        if (khByMa != null) return khByMa.MaKhachHang;
-
+        // Ưu tiên tra theo MaTaiKhoan từ JWT trước để tránh trùng ID với MaKhachHang của khách hàng khác (IDOR)
         var khByTk = await _context.KhachHangs.FirstOrDefaultAsync(k => k.MaTaiKhoan == actorId);
         if (khByTk != null) return khByTk.MaKhachHang;
+
+        var khByMa = await _context.KhachHangs.FirstOrDefaultAsync(k => k.MaKhachHang == actorId);
+        if (khByMa != null) return khByMa.MaKhachHang;
 
         var tk = await _context.TaiKhoans.FirstOrDefaultAsync(t => t.MaTaiKhoan == actorId);
         if (tk == null) return actorId;

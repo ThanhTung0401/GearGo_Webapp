@@ -92,8 +92,9 @@ export function useBootstrapCoreLoaders(params: UseBootstrapDataParams) {
         const pDate = gio.gioNhanDuKien.slice(0, 10);
         const rDate = gio.gioTraDuKien.slice(0, 10);
         if (pDate && rDate) {
-          setPickupDate((prev) => prev || pDate);
-          setReturnDate((prev) => prev || rDate);
+          // Luôn đồng bộ ngày thuê từ backend để phản ánh đúng thay đổi lịch khi AI thay thế lịch giỏ
+          setPickupDate(pDate);
+          setReturnDate(rDate);
         }
       }
     } catch {

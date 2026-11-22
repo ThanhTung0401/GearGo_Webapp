@@ -116,8 +116,12 @@ export function LoginView({ portal = "customer" }: LoginViewProps) {
               </button>
             </div>
 
-            <button type="submit" className="btn btn-primary btn-lg btn-full mt-2">
-              {vm.isStaffPortal ? "Đăng nhập cổng Staff →" : "Đăng nhập hệ thống →"}
+            <button type="submit" disabled={vm.isSubmitting} className="btn btn-primary btn-lg btn-full mt-2">
+              {vm.isSubmitting
+                ? "Đang xác thực..."
+                : vm.isStaffPortal
+                ? "Đăng nhập cổng Staff →"
+                : "Đăng nhập hệ thống →"}
             </button>
 
             {!vm.isStaffPortal ? (

@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
-import { loginUi } from "../../helpers/auth.js";
-import { getFutureRentalDates } from "../../helpers/testData.js";
+import { authHeaders, loginUi } from "../../helpers/auth.js";
+import { getFutureRentalDates, TEST_ACCOUNTS } from "../../helpers/testData.js";
 import { useSubsystemPage, pauseForViewer, waitVisible } from "../../helpers/subsystemVideo.js";
 
 test.describe.serial("Frontend PH2: Tìm kiếm, Chi tiết sản phẩm, Khả dụng & Tư vấn AI (UC2.1 - UC2.4.2)", () => {
@@ -63,8 +63,31 @@ test.describe.serial("Frontend PH2: Tìm kiếm, Chi tiết sản phẩm, Khả 
     await pauseForViewer(page, 600);
   });
 
-  test("UC2.4, UC2.4.1, UC2.4.2 - Tư vấn bộ dụng cụ bằng AI & đưa bộ gợi ý vào giỏ thuê", async () => {
+  test("UC2.4, UC2.4.1, UC2.4.2 - Tư vấn bộ dụng cụ bằng AI & đưa bộ gợi ý vào giỏ thuê", async ({ request }) => {
     const page = getPage();
+    // Dọn giỏ thuê cũ của tài khoản customer (nếu có từ lượt chạy trước) để tránh cộng dồn vượt tồn kho khi thêm combo AI
+    const apiBase = process.env.API_URL || "http://localhost:5000";
+    const loginRes = await request.post(`${apiBase}/api/auth/dang-nhap`, {
+      data: { taiKhoan: TEST_ACCOUNTS.customer.email, matKhau: TEST_ACCOUNTS.customer.password },
+    });
+    if (loginRes.ok()) {
+      const loginBody = (await loginRes.json()) as { token?: string; duLieu?: { token?: string } };
+      const token = loginBody.token ?? loginBody.duLieu?.token ?? "";
+      if (token) {
+        const cartRes = await request.get(`${apiBase}/api/gio-thue`, { headers: authHeaders(token) });
+        if (cartRes.ok()) {
+          const cartBody = (await cartRes.json()) as {
+            chiTiet?: Array<{ maChiTietGio: number }>;
+            duLieu?: { chiTiet?: Array<{ maChiTietGio: number }> };
+          };
+          const lines = cartBody.duLieu?.chiTiet ?? cartBody.chiTiet ?? [];
+          for (const line of lines) {
+            await request.delete(`${apiBase}/api/gio-thue/${line.maChiTietGio}`, { headers: authHeaders(token) });
+          }
+        }
+      }
+    }
+
     await loginUi(page, "customer");
     await page.getByRole("button", { name: "Tư vấn AI" }).first().click();
     await expect(page.getByText(/Trợ lý AI tư vấn bộ đồ cắm trại/i)).toBeVisible();

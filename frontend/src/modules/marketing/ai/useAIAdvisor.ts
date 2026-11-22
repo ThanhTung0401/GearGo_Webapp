@@ -214,13 +214,15 @@ export function useAIAdvisor() {
         setAddedAllNotice(true);
         setTimeout(() => setAddedAllNotice(false), 3500);
       } catch (err) {
-        if (err instanceof ApiError && (err.code === "NGAY_GIO_KHAC_GIO_HIEN_TAI" || err.status === 409) && !conflictResolution) {
+        // Chỉ hiển thị hộp thoại xung đột lịch khi backend trả đúng mã NGAY_GIO_KHAC_GIO_HIEN_TAI (tránh bắt nhầm 409 hết tồn kho)
+        if (err instanceof ApiError && err.code === "NGAY_GIO_KHAC_GIO_HIEN_TAI" && !conflictResolution) {
           setScheduleConflict({
             message: err.message || "Giỏ thuê hiện tại đang chọn khung giờ khác với bộ đồ gợi ý.",
             gioNhan,
             gioTra,
           });
         } else {
+          setScheduleConflict(null);
           setAdvisorError(err instanceof Error ? err.message : "Không thể đưa bộ đồ vào giỏ thuê.");
         }
       } finally {

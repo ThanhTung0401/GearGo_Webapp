@@ -133,14 +133,15 @@ public static class ActorGuard
         return Result<NhanVien>.Ok(nv);
     }
 
-    // Truy vấn dùng chung theo MaTaiKhoan hoặc MaNhanVien, tùy chọn Include(TaiKhoan) khi cần kiểm tra trạng thái khóa.
-    private static Task<NhanVien?> TimNhanVienTheoActorIdAsync(
+    // Truy vấn ưu tiên theo MaTaiKhoan (từ JWT) trước, chỉ fallback sang MaNhanVien để tránh khớp nhầm nhân viên khác (IDOR).
+    private static async Task<NhanVien?> TimNhanVienTheoActorIdAsync(
         ApplicationDbContext ctx, long actorId, bool kemTaiKhoan, CancellationToken ct)
     {
         IQueryable<NhanVien> query = ctx.NhanViens;
         if (kemTaiKhoan)
             query = query.Include(n => n.TaiKhoan);
 
-        return query.FirstOrDefaultAsync(n => n.MaTaiKhoan == actorId || n.MaNhanVien == actorId, ct);
+        return await query.FirstOrDefaultAsync(n => n.MaTaiKhoan == actorId, ct)
+               ?? await query.FirstOrDefaultAsync(n => n.MaNhanVien == actorId, ct);
     }
 }

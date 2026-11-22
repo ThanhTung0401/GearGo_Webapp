@@ -184,8 +184,10 @@ public partial class PermissionService
 
     private async Task<Result<(TaiKhoan Tk, NhanVien? Nv)>> ResolveNhanVienAsync(long id, CancellationToken ct)
     {
-        var nv = await _context.NhanViens.AsNoTracking().Include(n => n.TaiKhoan)
-            .FirstOrDefaultAsync(n => n.MaTaiKhoan == id || n.MaNhanVien == id, ct);
+        // Ưu tiên khớp theo MaTaiKhoan trước, chỉ fallback MaNhanVien để tránh mơ hồ khi 2 cột trùng giá trị
+        var nvQuery = _context.NhanViens.AsNoTracking().Include(n => n.TaiKhoan);
+        var nv = await nvQuery.FirstOrDefaultAsync(n => n.MaTaiKhoan == id, ct)
+                 ?? await nvQuery.FirstOrDefaultAsync(n => n.MaNhanVien == id, ct);
         if (nv != null) return Result<(TaiKhoan, NhanVien?)>.Ok((nv.TaiKhoan, nv));
 
         var tk = await _context.TaiKhoans.AsNoTracking().FirstOrDefaultAsync(t => t.MaTaiKhoan == id, ct);

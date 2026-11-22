@@ -272,9 +272,16 @@ test.describe.serial("Frontend PH1: Quản lý Tài khoản & Nhân viên (UC1.1
 
     // Chuyển SPA về /login kiểm tra Alert Box tài khoản bị khóa (UC1.2.1)
     await page.getByRole("button", { name: /Về trang đăng nhập khách|Chuyển tới cổng Khách hàng/i }).first().click();
+    // Đợi SPA hoàn tất chuyển về cổng /login trước khi điền form (tránh race condition trên CI slowMo=0)
+    await expect(page).toHaveURL(/\/login$/);
+    await expect(page.locator(".auth-quick-btn")).toHaveCount(2);
     await loginForm.locator("input").nth(0).fill("locked.kh@geargo.vn");
     await loginForm.locator("input").nth(1).fill("GearGo@2026");
-    await loginForm.locator('button[type="submit"]').click();
+    const [lockedRes] = await Promise.all([
+      page.waitForResponse((res) => res.url().includes("/api/auth/dang-nhap"), { timeout: 10_000 }),
+      loginForm.locator('button[type="submit"]').click(),
+    ]);
+    expect(lockedRes.status()).toBe(403);
     await expect(page.locator(".auth-locked-alert")).toBeVisible({ timeout: 10_000 });
     await pauseForViewer(page, 1200);
   });

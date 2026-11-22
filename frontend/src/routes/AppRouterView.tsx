@@ -77,8 +77,8 @@ export function AppRouterView({
       <Suspense fallback={<RouteLoadingFallback />}>
         {isAuthPage && (
           <AuthLayout>
-            {page === "login" && <LoginView portal="customer" />}
-            {page === "staff-login" && <LoginView portal="staff" />}
+            {page === "login" && <LoginView key="customer-login" portal="customer" />}
+            {page === "staff-login" && <LoginView key="staff-login" portal="staff" />}
             {page === "register" && <RegisterView />}
             {page === "forgot-password" && <ForgotPasswordView />}
           </AuthLayout>
