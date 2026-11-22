@@ -105,14 +105,17 @@ test.describe.serial("Frontend PH2: Tìm kiếm, Chi tiết sản phẩm, Khả 
     const addAllBtn = page.locator(".cp-ai-add-all-btn").first();
     await expect(addAllBtn).toBeEnabled({ timeout: 5_000 });
     await addAllBtn.click();
-    await pauseForViewer(page, 800);
 
     const replaceBtn = page.getByRole("button", { name: /Thay thế lịch giỏ bằng lịch combo/i }).first();
-    if (await waitVisible(replaceBtn, 2500)) {
+    const addedNotice = page.locator(".cp-ai-added-notice");
+    // Chờ một trong hai xuất hiện ngay lập tức, tránh waitVisible(2500) + pauseForViewer làm banner 3.5s tự ẩn ở local
+    await expect(replaceBtn.or(addedNotice)).toBeVisible({ timeout: 10_000 });
+    if (await replaceBtn.isVisible()) {
+      await pauseForViewer(page, 600);
       await replaceBtn.click();
     }
 
-    await expect(page.locator(".cp-ai-added-notice")).toBeVisible({ timeout: 10_000 });
+    await expect(addedNotice).toBeVisible({ timeout: 10_000 });
     await pauseForViewer(page, 800);
 
     await page.locator(".cp-ai-goto-cart-btn").click();

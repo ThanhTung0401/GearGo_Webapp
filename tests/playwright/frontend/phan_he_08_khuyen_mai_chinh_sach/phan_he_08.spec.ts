@@ -58,8 +58,13 @@ test.describe.serial("Frontend PH8: Khuyến mãi & Chính sách thuê (UC8.1 - 
 
   test("UC8.1 & UC8.1.1 - Cấu hình chính sách, đối chiếu Diff & Lịch sử phiên bản", async () => {
     const page = getPage();
+    const policyResPromise = page
+      .waitForResponse((res) => res.url().includes("/api/chinh-sach/hien-hanh") && res.ok(), { timeout: 10_000 })
+      .catch(() => null);
     await page.getByRole("button", { name: "Chính sách thuê" }).first().click();
     await expect(page.getByText(/Cấu hình chính sách thuê & hủy/i)).toBeVisible();
+    // Đợi API tải chính sách hiện hành hoàn tất để tránh useEffect đồng bộ form ghi đè giá trị vừa nhập
+    await policyResPromise;
     await pauseForViewer(page, 700);
 
     // Chỉnh nhẹ giờ nhắc trả máy trước (1..24) để kích hoạt kiểm tra Diff UC8.1.1

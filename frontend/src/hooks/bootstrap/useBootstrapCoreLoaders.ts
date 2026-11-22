@@ -162,6 +162,8 @@ export function useBootstrapCoreLoaders(params: UseBootstrapDataParams) {
           profileApi.layHoSoToi(),
           authApi.layQuyenCuaToi(),
         ]);
+        // Nếu người dùng đã đăng xuất trong lúc các request hydrate đang bay, tuyệt đối không khôi phục lại phiên
+        if (!getAuthToken()) return;
         if (meRes.status !== "fulfilled") {
           setAuthToken(null);
           setCurrentUser(null);
