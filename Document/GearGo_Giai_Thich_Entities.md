@@ -1,6 +1,6 @@
-# GearGo — Giải thích 39 entities từ nền tảng đến nghiệp vụ
+# GearGo — Giải thích 41 entities từ nền tảng đến nghiệp vụ
 
-Nguồn: `ERD(2).dbml`.
+Nguồn: `ApplicationDbContext.cs` & `ApplicationDbContextModelSnapshot.cs` (cập nhật từ `ERD(2).dbml` ban đầu gồm 39 entities, bổ sung thêm `ROLE_PERMISSION_VERSION` và `NHAT_KY_LIEN_HE_QUA_HAN`, cùng hệ thống phân quyền động dựa trên `AspNetRoles` / `AspNetRoleClaims` của ASP.NET Identity).
 
 Tài liệu sắp xếp theo cách **hiểu bảng nền trước → hiểu bảng phụ thuộc sau**, không đơn thuần đếm số khóa ngoại. Một bảng chỉ có một khóa ngoại vẫn có thể nằm cuối một chuỗi nghiệp vụ dài. Các bảng nhật ký được đặt cuối để dễ học.
 
@@ -26,7 +26,7 @@ Cột có tên `ma_...` chưa chắc là khóa ngoại. Xem phần `Ref` cuối 
 
 **Tham chiếu:** Không có.
 
-Lưu email, số điện thoại, mật khẩu đã băm, vai trò, trạng thái tài khoản và lý do khóa.
+Lưu email, số điện thoại, mật khẩu đã băm, vai trò, trạng thái tài khoản, lý do khóa và `permission_version` (dùng để đồng bộ/vô hiệu hóa cache quyền khi quyền của tài khoản hoặc vai trò thay đổi).
 
 Ví dụ: Minh có tài khoản khách hàng; An có tài khoản nhân viên; Bình có tài khoản quản trị.
 
@@ -199,7 +199,7 @@ Lúc này khách chọn loại đồ và số lượng, chưa chọn chiếc LEU
 
 **Tham chiếu:** `KHACH_HANG`, `CHINH_SACH`, `TAI_KHOAN` hủy đơn nếu có.
 
-Lưu ngày đặt, giờ nhận/trả, hạn thanh toán, thông tin người nhận, tổng tiền thuê, tiền giảm, tiền cọc và trạng thái.
+Lưu ngày đặt, giờ nhận/trả, hạn thanh toán, thông tin người nhận, tổng tiền thuê, tiền giảm, tiền cọc, `idempotency_key` (chống tạo trùng đơn khi gửi lại yêu cầu) và trạng thái.
 
 Ví dụ: DT001 của Minh, thuê từ ngày 20 đến 23, đang chờ thanh toán.
 
@@ -393,9 +393,9 @@ Lưu giá trị trước và sau dưới dạng JSON. Ví dụ: giá nhập thi�
 
 ## 35. DANH_GIA — Khách đánh giá sản phẩm đã thuê
 
-**Tham chiếu:** `CHI_TIET_DON_THUE`, `NHAN_VIEN` ẩn đánh giá nếu có.
+**Tham chiếu:** `CHI_TIET_DON_THUE`, `NHAN_VIEN` ẩn đánh giá nếu có, `TAI_KHOAN` phản hồi đánh giá nếu có.
 
-Lưu số sao, nội dung, ảnh, thời gian và trạng thái hiển thị.
+Lưu số sao, nội dung, ảnh, thời gian, trạng thái hiển thị, lý do ẩn và phản hồi từ cửa hàng (`phan_hoi_cua_hang`, `thoi_diem_phan_hoi`, `ma_nguoi_phan_hoi`).
 
 Qua chi tiết đơn có thể tìm sản phẩm, đơn thuê và khách hàng, nên không cần lưu lại các mã đó.
 
@@ -449,6 +449,26 @@ Khác hai bảng lịch sử chuyên biệt, bảng này ghi thao tác rộng tr
 
 Bảng được đặt cuối để dễ hiểu sau khi biết nghiệp vụ, dù chỉ có một khóa ngoại.
 
+## 40. ROLE_PERMISSION_VERSION — Đồng bộ phiên bản phân quyền theo vai trò
+
+**Tham chiếu:** Không có khóa ngoại trực tiếp (liên kết logic theo `role_name` với `AspNetRoles` và `AspNetRoleClaims` của ASP.NET Identity).
+
+Lưu `role_name` (khóa chính), `version` (số phiên bản tăng dần) và `cap_nhat_luc`.
+
+Mỗi khi quản trị viên thay đổi quyền (claims) của một vai trò trong `AspNetRoleClaims`, `version` của vai trò đó tăng lên để hệ thống biết cần đọc lại quyền mới từ DB thay vì dùng cache cũ (tương tự `TAI_KHOAN.permission_version` ở cấp tài khoản).
+
+> **Lưu ý về ASP.NET Identity:** Hệ thống kế thừa `IdentityDbContext` nên trong database còn các bảng `AspNetRoles` và `AspNetRoleClaims` dùng để lưu vai trò và quyền động; `AspNetUsers` không được dùng cho đăng nhập vì tài khoản vẫn nằm ở `TAI_KHOAN`.
+
+## 41. NHAT_KY_LIEN_HE_QUA_HAN — Theo dõi liên hệ đơn thuê quá hạn
+
+**Tham chiếu:** `DON_THUE`, `TAI_KHOAN` người liên hệ.
+
+Lưu kênh liên hệ (`kenh_lien_he`), kết quả (`ket_qua`), nội dung trao đổi (`noi_dung`), lịch hẹn trả mới (`hen_tra_moi`) và thời điểm liên hệ (`thoi_diem_lien_he`).
+
+Ví dụ: đơn DT001 quá hạn trả lều, nhân viên An gọi điện nhắc Minh và ghi nhận Minh hẹn trả vào 17h ngày hôm sau.
+
+Bảng giúp nhân viên khác nắm ngay lịch sử đã nhắc khách chưa và khách hẹn lại lúc nào, tránh gọi trùng hoặc bỏ sót đơn quá hạn.
+
 ## Nối toàn bộ bằng một quy trình thực tế
 
 | Bước | Bảng tham gia chính |
@@ -467,6 +487,8 @@ Bảng được đặt cuối để dễ hiểu sau khi biết nghiệp vụ, d�
 | Tính phần cọc cần hoàn | `DOI_SOAT_TIEN_COC` |
 | Trả tiền lại cho Minh | `HOAN_TIEN` |
 | Nếu cần thu thêm, liên kết khoản thu | `THANH_TOAN`, `CHI_TIET_THANH_TOAN`, `GIAO_DICH_DOI_SOAT` |
+| Liên hệ nhắc trả nếu đơn quá hạn | `NHAT_KY_LIEN_HE_QUA_HAN` |
+| Kiểm soát quyền động theo vai trò | `ROLE_PERMISSION_VERSION`, `AspNetRoles`, `AspNetRoleClaims` |
 
 ## Những cặp khái niệm dễ nhầm
 
@@ -487,6 +509,6 @@ Bảng được đặt cuối để dễ hiểu sau khi biết nghiệp vụ, d�
 1. Đọc bảng 1–12 để hiểu tài khoản, sản phẩm và nguồn gốc từng thiết bị.
 2. Tập trung bảng 15–27 để hiểu khách chọn gì, đặt gì, trả tiền, được giao chiếc nào và trả chiếc nào.
 3. Đọc bảng 28–31 để hiểu phụ phí, đối soát, thu thêm và hoàn tiền.
-4. Đọc phần khuyến mãi và bảng 32–39 để hiểu bảo trì, điều chỉnh, đánh giá và theo dõi hệ thống.
+4. Đọc phần khuyến mãi và bảng 32–41 để hiểu bảo trì, điều chỉnh, đánh giá, theo dõi hệ thống, phân quyền động và xử lý quá hạn.
 
 Các khóa ngoại mô tả dữ liệu liên quan với nhau. Những quy tắc như không cho thuê trùng lịch, chỉ tính giao dịch thành công, chỉ chốt khoản phí được duyệt hoặc không sửa chứng từ đã chốt vẫn cần được thực hiện bằng ràng buộc phù hợp và xử lý nghiệp vụ.
