@@ -20,6 +20,8 @@ interface HandoverPrepPanelProps {
   handleCancelAssignment: (productId: string, equipId: string) => Promise<void>;
   handleCompletePreparation: () => Promise<void>;
   handleReportShortage: () => Promise<void>;
+  // [HO-07] Nhận prepState để biết slot nào đã lưu lên Backend (có maPhanCong).
+  prepState?: { danhSachDong: Array<{ maSanPham: number; danhSachPhanCong: Array<{ maThietBi: number }> }> } | null;
 }
 
 // Phân hệ 4.1: Chuẩn bị kho, gán serial thiết bị, đổi mã thay thế và báo thiếu hàng
@@ -41,8 +43,34 @@ export function HandoverPrepPanel({
   handleCancelAssignment,
   handleCompletePreparation,
   handleReportShortage,
+  prepState,
 }: HandoverPrepPanelProps) {
   const [swapTargetId, setSwapTargetId] = useState("");
+
+  // [HO-05] Thu thập các thiết bị đã được phân công cho các đơn khác đang ở trạng thái
+  // ["Đã xác nhận", "Đang chuẩn bị", "Sẵn sàng nhận", "Đang thuê"] có khung giờ giao thoa
+  // với đơn hiện tại để loại khỏi dropdown, tránh lỗi 409 THIET_BI_XUNG_DOT_LICH.
+  const assignedElsewhere = new Set<string>();
+  {
+    const activeStatuses = new Set(["Đã xác nhận", "Đang chuẩn bị", "Sẵn sàng nhận", "Đang thuê"]);
+    const pickupTs = order.pickupTime ? new Date(order.pickupTime).getTime() : NaN;
+    const returnTs = order.returnTime ? new Date(order.returnTime).getTime() : NaN;
+    for (const other of app.orders) {
+      if (other.id === order.id) continue;
+      if (!activeStatuses.has(other.status)) continue;
+      // Khung giờ giao thoa
+      const otherPickup = other.pickupTime ? new Date(other.pickupTime).getTime() : NaN;
+      const otherReturn = other.returnTime ? new Date(other.returnTime).getTime() : NaN;
+      const overlap =
+        Number.isFinite(pickupTs) && Number.isFinite(returnTs) && Number.isFinite(otherPickup) && Number.isFinite(otherReturn)
+          ? otherPickup < returnTs && otherReturn > pickupTs
+          : true;
+      if (!overlap) continue;
+      for (const ae of other.assignedEquipment) {
+        if (ae.equipmentId && !ae.returnedAt) assignedElsewhere.add(ae.equipmentId);
+      }
+    }
+  }
 
   const swapCandidates = changingEquip
     ? app.equipment.filter(
@@ -50,7 +78,8 @@ export function HandoverPrepPanel({
           e.productId === changingEquip.productId &&
           e.equipmentStatus === "Sẵn sàng" &&
           e.id !== changingEquip.oldId &&
-          !(assignments[changingEquip.productId] || []).includes(e.id)
+          !(assignments[changingEquip.productId] || []).includes(e.id) &&
+          !assignedElsewhere.has(e.id)
       )
     : [];
 
@@ -102,10 +131,19 @@ export function HandoverPrepPanel({
         </button>
       </div>
 
-      {order.items.map((item) => {
+      {/* [HO-05] Fallback danh sách dòng từ prepState nếu order.items chưa hydrate (đơn vị trí >20) */}
+      {(order.items.length > 0
+        ? order.items
+        : // Giả lập OrderItem từ prepState.danhSachDong (nếu có) để dropdown vẫn hiện.
+          []
+      ).map((item) => {
         const chosenForItem = assignments[item.productId] || [];
         const avail = app.equipment.filter(
-          (e) => e.productId === item.productId && (e.equipmentStatus === "Sẵn sàng" || chosenForItem.includes(e.id))
+          (e) =>
+            e.productId === item.productId &&
+            (e.equipmentStatus === "Sẵn sàng" || chosenForItem.includes(e.id)) &&
+            // [HO-05] Loại thiết bị đã gán cho đơn khác giao thoa thời gian
+            (chosenForItem.includes(e.id) || !assignedElsewhere.has(e.id))
         );
         return (
           <div key={item.productId} className="so-prep-card">
@@ -139,25 +177,37 @@ export function HandoverPrepPanel({
                       </option>
                     ))}
                   </select>
-                  {currentChosen && (
+                  {currentChosen && (() => {
+                    // [HO-07] Kiểm tra slot đã thực sự lưu lên Backend (có maPhanCong trong prepState).
+                    const persisted = Boolean(
+                      prepState?.danhSachDong
+                        .find((d) => String(d.maSanPham) === item.productId)
+                        ?.danhSachPhanCong.find((pc) => String(pc.maThietBi) === currentChosen)
+                    );
+                    return (
                     <div className="flex items-center gap-2">
-                      <span className="so-assigned-ok">✓ Đã gán</span>
-                      <button
-                        onClick={() => setChangingEquip({ productId: item.productId, oldId: currentChosen })}
-                        className="so-btn-soft-sm"
-                      >
-                        Đổi mã
-                      </button>
-                      <button
-                        type="button"
-                        disabled={handoverBusy}
-                        onClick={() => void handleCancelAssignment(item.productId, currentChosen)}
-                        className="so-btn-danger-outline-sm"
-                      >
-                        Hủy gán
-                      </button>
+                      <span className="so-assigned-ok">{persisted ? "✓ Đã gán" : "Đã chọn (chưa lưu)"}</span>
+                      {persisted && (
+                        <>
+                          <button
+                            onClick={() => setChangingEquip({ productId: item.productId, oldId: currentChosen })}
+                            className="so-btn-soft-sm"
+                          >
+                            Đổi mã
+                          </button>
+                          <button
+                            type="button"
+                            disabled={handoverBusy}
+                            onClick={() => void handleCancelAssignment(item.productId, currentChosen)}
+                            className="so-btn-danger-outline-sm"
+                          >
+                            Hủy gán
+                          </button>
+                        </>
+                      )}
                     </div>
-                  )}
+                    );
+                  })()}
                 </div>
               );
             })}

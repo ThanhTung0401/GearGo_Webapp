@@ -22,7 +22,8 @@ export function DashboardTab({ app }: { app: ReturnType<typeof useApp> }) {
           <span className="text-gray-500">
             Role: <strong>{dash.myPerm?.roleName ?? "..."}</strong> · {dash.myPerm?.quyen.length ?? 0} quyền (v{dash.myPerm?.version ?? 0})
           </span>
-          {dash.has("BaoCao.Xuat") && (
+          {/* [DB-07] Backend yêu cầu BaoCaoTaiChinh.Xuat; chấp nhận cả BaoCao.Xuat cho tương thích. */}
+          {(dash.has("BaoCaoTaiChinh.Xuat") || dash.has("BaoCao.Xuat")) && (
             <button type="button" disabled={dash.exportingCsv} onClick={dash.handleExportDashboardReport} className="btn btn-sm btn-primary">
               {dash.exportingCsv ? "Đang xuất..." : "Xuất báo cáo"}
             </button>

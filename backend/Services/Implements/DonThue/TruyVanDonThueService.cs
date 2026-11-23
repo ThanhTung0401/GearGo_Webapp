@@ -119,8 +119,10 @@ public partial class TruyVanDonThueService : ITruyVanDonThueService
         var kh = await _context.DonThues.AsNoTracking().Where(d => d.MaDonThue == maDonThue)
             .Select(d => new { d.MaKhachHang, d.KhachHang.HoTen, d.GhiChu }).FirstAsync();
 
+        // [OD-04] Lọc bỏ phân công đã hủy (DaHuy) để Modal Hồ sơ Đơn không hiển thị thiết bị cũ đã đổi.
         var phanCong = await _context.PhanCongThietBis.AsNoTracking()
-            .Where(pc => pc.ChiTietDon.MaDonThue == maDonThue).OrderBy(pc => pc.MaPhanCong)
+            .Where(pc => pc.ChiTietDon.MaDonThue == maDonThue && pc.TrangThai != "DaHuy")
+            .OrderBy(pc => pc.MaPhanCong)
             .Select(pc => new PhanCongVanHanhResponse(
                 pc.MaPhanCong, pc.MaChiTietDon, pc.MaThietBi, pc.ThietBi.MaThietBiHienThi, pc.TrangThai))
             .ToListAsync();

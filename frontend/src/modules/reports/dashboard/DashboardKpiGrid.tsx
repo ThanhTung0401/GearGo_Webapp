@@ -84,7 +84,8 @@ export function DashboardOverviewGrid({ app }: { app: ReturnType<typeof useApp> 
             <div key={o.id} className="adm-avail-row flex gap-2.5 items-center">
               <div className="flex-1 min-w-0">
                 <div className="adm-cell-title">{o.customerName}</div>
-                <div className="adm-cell-mono text-[0.7rem] text-[#9CA3AF]">{o.id}</div>
+                {/* [DB-02] Hiển thị displayCode (DT-...) thay vì id số thô */}
+                <div className="adm-cell-mono text-[0.7rem] text-[#9CA3AF]">{o.displayCode || o.id}</div>
               </div>
               <div className="adm-cell-right">
                 <div className="adm-cell-mono text-[0.82rem] font-semibold">{fmt(o.rental - o.discount + o.depositTotal)}</div>
@@ -99,10 +100,12 @@ export function DashboardOverviewGrid({ app }: { app: ReturnType<typeof useApp> 
       <div className="adm-card">
         <div className="adm-card-header">Khả dụng thiết bị</div>
         {app.products.map((p) => {
-          // Tính tỷ lệ thiết bị sẵn sàng thực tế trên tổng số thiết bị đạt trạng thái Sẵn sàng
-          const avail = app.getAvailable(p.id);
-          const total = app.equipment.filter((e) => e.productId === p.id && e.equipmentStatus === "Sẵn sàng").length;
-          const ratio = total > 0 ? avail / total : 0;
+          // [DB-08] Mẫu số total phải là tổng thiết bị của sản phẩm (trừ "Ngừng sử dụng"),
+          // không phải chỉ đếm số đang "Sẵn sàng" (dẫn tới hiển thị 1/1 = 100%).
+          const total = app.equipment.filter((e) => e.productId === p.id && e.equipmentStatus !== "Ngừng sử dụng").length;
+          const readyCount = app.equipment.filter((e) => e.productId === p.id && e.equipmentStatus === "Sẵn sàng").length;
+          const avail = app.equipment.length > 0 ? readyCount : app.getAvailable(p.id);
+          const ratio = total > 0 ? Math.min(1, Math.max(0, avail / total)) : 0;
           return (
             <div key={p.id} className="adm-avail-row">
               <div className="flex justify-between mb-1">

@@ -40,7 +40,8 @@ export function useHandoverTab(
   const [receiverIdCard, setReceiverIdCard] = useState("");
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [earlyPickupAccepted, setEarlyPickupAccepted] = useState(true);
-  const [evidencePhotos] = useState<string[]>([
+  // [HO-08] Expose setEvidencePhotos để nút 📷+ thêm ảnh được.
+  const [evidencePhotos, setEvidencePhotos] = useState<string[]>([
     "https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?w=200&auto=format&fit=crop&q=60",
     "https://images.unsplash.com/photo-1478131143081-80f7f84ca84d?w=200&auto=format&fit=crop&q=60",
   ]);
@@ -64,7 +65,9 @@ export function useHandoverTab(
     setAssignments(nextAssignments);
   };
 
-  // Đồng bộ trạng thái đơn, khôi phục serial đã gán và tải tình trạng chuẩn bị / nháp BBBG
+  // [HO-06] useEffect CHỈ reset form (họ tên, SĐT, CCCD, error/success) khi đổi sang đơn khác.
+  // Không reset khi chỉ có selectedOrder.status đổi trên cùng một đơn, để tránh xóa
+  // thông tin người nhận thực tế vừa nhập (BBBG) và thông báo thành công.
   useEffect(() => {
     setHandoverError("");
     setHandoverSuccess("");
@@ -72,12 +75,6 @@ export function useHandoverTab(
       setPrepState(null);
       setDraftBbbg(null);
       return;
-    }
-
-    if (selectedOrder.status === "Sẵn sàng nhận") {
-      setSubTab("handover");
-    } else if (["Đã xác nhận", "Đang chuẩn bị"].includes(selectedOrder.status)) {
-      setSubTab("prep");
     }
 
     const initialAssigned: Record<string, string[]> = {};
@@ -100,12 +97,34 @@ export function useHandoverTab(
       if (Number.isFinite(donId)) {
         void hydrateOperationalOrder(selectedOrder.id);
         void handoverApi.layTinhTrangChuanBi(donId).then(syncFromPrepResponse).catch(() => {});
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedOrder?.id]);
+
+  // [HO-05][HO-06] Chỉ đổi subTab và tải draftBbbg khi status thay đổi - KHÔNG reset form.
+  useEffect(() => {
+    if (!selectedOrder) return;
+
+    if (selectedOrder.status === "Sẵn sàng nhận") {
+      setSubTab("handover");
+    } else if (["Đã xác nhận", "Đang chuẩn bị"].includes(selectedOrder.status)) {
+      setSubTab("prep");
+    }
+
+    if (app.realApi) {
+      const donId = Number(selectedOrder.backendId ?? selectedOrder.id);
+      if (Number.isFinite(donId)) {
         if (selectedOrder.status === "Sẵn sàng nhận") {
           void handoverApi.taoHoacLayNhap(donId).then(setDraftBbbg).catch(() => {});
         } else {
           setDraftBbbg(null);
         }
       }
+    }
+    // [HO-05] Nếu equipment cache rỗng trong Real API, kéo lại để dropdown Serial không rỗng.
+    if (app.realApi && app.equipment.length === 0) {
+      void app.refreshEquipment?.();
     }
   }, [selectedOrder?.id, selectedOrder?.status, app.realApi]);
 
@@ -180,10 +199,11 @@ export function useHandoverTab(
     subTab, setSubTab, assignments, handoverBusy, handoverError, handoverSuccess,
     checklist, setChecklist, handoverNote, setHandoverNote,
     showHandoverModal, setShowHandoverModal, changingEquip, setChangingEquip,
+    prepState, draftBbbg,
     qrCodeSearch, setQrCodeSearch, receiverName, setReceiverName,
     receiverPhone, setReceiverPhone, receiverIdCard, setReceiverIdCard,
     isAuthorized, setIsAuthorized, earlyPickupAccepted, setEarlyPickupAccepted,
-    evidencePhotos, showShortageModal, setShowShortageModal, shortageNote, setShortageNote,
+    evidencePhotos, setEvidencePhotos, showShortageModal, setShowShortageModal, shortageNote, setShortageNote,
     eligiblePrep, eligibleHandover, order, allAssigned, pickEquipment, handleQrSearch,
     ...mutations,
   };

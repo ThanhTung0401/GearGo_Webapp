@@ -129,8 +129,8 @@ export function mapDonChiTietToOrder(
     note: h.nhanHienThi,
   }));
 
-  // Map biên bản bàn giao đầu tiên (nếu có)
-  const firstBg = (dto.banGiao ?? [])[0];
+  // [OD-05] Chỉ map biên bản bàn giao đã chốt (DaGiao), bỏ qua phiếu nháp (ChoGiao).
+  const firstBg = (dto.banGiao ?? []).find((bg) => bg.trangThai === "DaGiao");
   const handoverRecord: HandoverRecord | undefined = firstBg
     ? {
         id: `BBBG-${firstBg.maPhieuBanGiao}`,
@@ -150,16 +150,32 @@ export function mapDonChiTietToOrder(
       }
     : undefined;
 
+  // [OD-05] Đối chiếu với taiChinh.nhanTra.cacDot để lấy isFinalReturn và số lượng thực tế (soTra + soMat).
+  const cacDotMap = new Map<number, { laLanTraCuoi: boolean; soTra: number; soMat: number }>();
+  (dto.taiChinh?.nhanTra?.cacDot ?? []).forEach((dot) => {
+    cacDotMap.set(dot.maPhieuNhanTra, { laLanTraCuoi: dot.laLanTraCuoi, soTra: dot.soTra, soMat: dot.soMat });
+  });
+
   // Map tóm tắt nhận trả các đợt từ taiChinh.nhanTra.cacDot hoặc dto.nhanTra
-  const returnReceipts: ReturnReceipt[] = (dto.nhanTra ?? []).map((nt) => ({
-    id: nt.maPhieuHienThi || `PNT-${nt.maPhieuNhanTra}`,
-    orderId: String(dto.maDonThue),
-    returnRound: nt.lanTra,
-    returnedAt: nt.thoiDiemChot ?? dto.ngayDat,
-    staffName: "Nhân viên kho",
-    items: [],
-    isFinalReturn: false,
-  }));
+  const returnReceipts: ReturnReceipt[] = (dto.nhanTra ?? []).map((nt) => {
+    const dot = cacDotMap.get(nt.maPhieuNhanTra);
+    const soLuong = Math.max(0, (dot?.soTra ?? 0) + (dot?.soMat ?? 0));
+    return {
+      id: nt.maPhieuHienThi || `PNT-${nt.maPhieuNhanTra}`,
+      orderId: String(dto.maDonThue),
+      returnRound: nt.lanTra,
+      returnedAt: nt.thoiDiemChot ?? dto.ngayDat,
+      staffName: "Nhân viên kho",
+      // Tạo placeholder items theo số lượng để UI hiển thị "Đợt N (X món)" đúng (không có serial chi tiết ở DTO tóm tắt).
+      items: Array.from({ length: soLuong }, (_, idx) => ({
+        equipmentId: `RET-${nt.maPhieuNhanTra}-${idx}`,
+        productId: "",
+        condition: "Bình thường" as const,
+        surchargeAmount: 0,
+      })),
+      isFinalReturn: Boolean(dot?.laLanTraCuoi),
+    };
+  });
 
   // Map đối soát mới nhất từ taiChinh.doiSoat
   const latestDoiSoat = dto.taiChinh?.doiSoat?.[0];
@@ -193,14 +209,28 @@ export function mapDonChiTietToOrder(
     };
   }
 
-  const assignedEquipment: AssignedEquipment[] = (extra?.phanCong ?? []).map((pc) => {
+  // [OV-04][OD-04] Loại bỏ các phân công đã hủy (DaHuy) để Modal Hồ sơ không hiển thị thiết bị cũ đã đổi.
+  const conNoCodes = new Set<string>((dto.taiChinh?.nhanTra?.conNo ?? []).map((c) => String(c.maThietBiHienThi)));
+  const effectivePhanCong = (extra?.phanCong ?? []).filter((pc) => pc.trangThai !== "DaHuy");
+  const orderStatusText = mapOrderStatusFromBackend(dto.trangThai);
+  const isAfterHandover = ["Đang thuê", "Đã nhận trả", "Chờ đối soát", "Hoàn tất"].includes(orderStatusText);
+  // Lấy mốc thời điểm chốt đợt nhận trả cuối cùng để gán returnedAt (nếu có).
+  const lastReturnChot = (() => {
+    const cacDot = dto.taiChinh?.nhanTra?.cacDot ?? [];
+    return cacDot.length > 0 ? cacDot[cacDot.length - 1]?.thoiDiemChot : undefined;
+  })();
+
+  const assignedEquipment: AssignedEquipment[] = effectivePhanCong.map((pc) => {
     const matchingLine = (dto.dong ?? []).find((d) => d.maChiTietDon === pc.maChiTietDon);
+    // [OV-04] Nếu đơn đã bàn giao và thiết bị không còn trong danh sách conNo => đã trả.
+    const isReturned = isAfterHandover && pc.maThietBiHienThi && !conNoCodes.has(pc.maThietBiHienThi);
     return {
       equipmentId: String(pc.maThietBi),
       equipmentDisplayCode: pc.maThietBiHienThi,
       allocationId: pc.maPhanCong,
       orderItemId: pc.maChiTietDon,
       productId: matchingLine ? String(matchingLine.maSanPham) : "",
+      returnedAt: isReturned ? (lastReturnChot ?? dto.ngayDat) : undefined,
     };
   });
 
@@ -230,7 +260,9 @@ export function mapDonChiTietToOrder(
     assignedEquipment,
     handoverRecord,
     returnReceipts,
-    surcharges: (dto.phuPhi ?? []).map(mapPhuPhiToSurcharge),
+    // [DB-04] Ưu tiên nguồn phụ phí chi tiết từ taiChinh.phuPhi.items (có trangThaiTranhChap, ketQuaGiaiQuyet)
+    // để không mất nhãn "Tranh chấp" trên DisputeCenterPanel khi chạy Real API.
+    surcharges: ((dto.taiChinh?.phuPhi?.items ?? dto.phuPhi ?? []) as unknown as PhuPhiKhachBackend[]).map(mapPhuPhiToSurcharge),
     transactions: [...thuTx, ...hoanTx],
     cancellationFee: dto.taiChinh?.huy?.tienThueGiuLai,
     cancellationReason: dto.taiChinh?.huy?.lyDoHuy ?? undefined,

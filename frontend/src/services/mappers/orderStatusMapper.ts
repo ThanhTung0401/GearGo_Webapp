@@ -118,6 +118,13 @@ function mapSurchargeStatus(trangThaiDuyet?: string | null, trangThaiTranhChap?:
 export function mapPhuPhiToSurcharge(p: PhuPhiBackend | PhuPhiKhachBackend): Surcharge {
   const full = p as PhuPhiBackend;
   const trangThaiTranhChap = full.trangThaiTranhChap ?? (p as { trangThaiTranhChap?: string | null }).trangThaiTranhChap;
+  // [DB-04] Trích xuất phần khiếu nại của khách từ pattern "[Khách khiếu nại: ...]" trong lyDo.
+  const rawReason = p.lyDo ?? "";
+  let customerResponse: string | undefined;
+  const match = rawReason.match(/\[Khách khiếu nại:\s*([^\]]+)\]/i);
+  if (match) {
+    customerResponse = match[1].trim();
+  }
   return {
     id: String(p.maPhuPhi),
     backendId: p.maPhuPhi,
@@ -126,11 +133,12 @@ export function mapPhuPhiToSurcharge(p: PhuPhiBackend | PhuPhiKhachBackend): Sur
     type: mapSurchargeType(p.loaiPhi),
     equipmentId: full.maChiTietBanGiao ? `CTBG-${full.maChiTietBanGiao}` : "-",
     amount: Number(p.soTien ?? 0),
-    reason: p.lyDo ?? "",
+    reason: rawReason,
     status: mapSurchargeStatus(p.trangThaiDuyet, trangThaiTranhChap),
     createdBy: full.tenNguoiLap ?? "Nhân viên",
     reviewedBy: full.tenNguoiDuyet ?? undefined,
     reviewedAt: full.thoiDiemDuyet ?? undefined,
+    customerResponse,
     resolutionNote: full.ketQuaGiaiQuyet ?? undefined,
     isDisputed: trangThaiTranhChap === "DangTranhChap",
     disputeStatus: trangThaiTranhChap ?? null,

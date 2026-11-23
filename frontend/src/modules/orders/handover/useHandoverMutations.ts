@@ -206,8 +206,27 @@ export function useHandoverMutations(p: UseHandoverMutationsParams) {
 
   const handleCompleteHandover = async () => {
     if (!order) return;
+    // [HO-08] Validate đầu vào trước khi gọi Backend để tránh chốt BBBG với dữ liệu trống.
     if (!receiverName.trim() || !receiverPhone.trim()) {
       setHandoverError("Vui lòng nhập đầy đủ họ tên và số điện thoại người nhận thực tế tại quầy!");
+      return;
+    }
+    const phoneValid = /^[0-9+\-\s]{9,15}$/.test(receiverPhone.trim());
+    if (!phoneValid) {
+      setHandoverError("Số điện thoại người nhận không hợp lệ (9-15 ký tự số, có thể có + - khoảng trắng).");
+      return;
+    }
+    if (isAuthorized && !receiverIdCard.trim()) {
+      setHandoverError("Người nhận thay bắt buộc phải cung cấp số CCCD/Mã định danh.");
+      return;
+    }
+    if (!earlyPickupAccepted) {
+      setHandoverError("Cần xác nhận Quản lý ca đã duyệt bàn giao trước khi lập BBBG.");
+      return;
+    }
+    const allChecklistOk = Object.values(checklist).every(Boolean);
+    if (!allChecklistOk) {
+      setHandoverError("Cần tích đủ các mục checklist an toàn/vệ sinh/phụ kiện trước khi chốt BBBG.");
       return;
     }
     setHandoverBusy(true);

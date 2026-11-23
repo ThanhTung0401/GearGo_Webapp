@@ -1,4 +1,5 @@
 import type { XemTruocHuyBackend } from "../../../services/api/orderApi";
+import { mapOrderStatusFromBackend } from "../../../services/mappers/orderStatusMapper";
 import { fmt, type Order } from "../../../store";
 
 interface StoreCancelOrderModalProps {
@@ -30,7 +31,8 @@ export function StoreCancelOrderModal({
       <div className="adm-modal-dialog is-md p-5.5">
         <div className="modal-header flex justify-between items-center mb-3 p-0 border-0">
           <h3 className="modal-title font-bold text-base text-bark">
-            Cửa hàng hủy đơn {order.id} (UC3.4)
+            {/* [DB-02] Hiển thị displayCode (DT-...) thay vì id số thô */}
+            Cửa hàng hủy đơn {order.displayCode || order.id} (UC3.4)
           </h3>
           <button type="button" onClick={onClose} className="btn btn-ghost btn-sm text-lg">×</button>
         </div>
@@ -42,7 +44,8 @@ export function StoreCancelOrderModal({
 
           {preview && (
             <div className="adm-card--parchment text-[0.8rem] grid gap-1">
-              <div>Trạng thái hiện tại: <strong>{preview.trangThaiHienTai}</strong></div>
+              {/* [DB-03] Dùng mapOrderStatusFromBackend để không in raw enum (DaXacNhan, SanSangNhan...) */}
+              <div>Trạng thái hiện tại: <strong>{mapOrderStatusFromBackend(preview.trangThaiHienTai)}</strong></div>
               <div>Tiền thuê đã thu: <strong>{fmt(preview.tienThueDaThu)}</strong> · Tiền cọc đã thu: <strong>{fmt(preview.tienCocDaThu)}</strong></div>
               <div>Hoàn tiền thuê: <strong>{fmt(preview.tienThueHoan)}</strong> · Hoàn tiền cọc: <strong>{fmt(preview.tienCocHoan)}</strong></div>
               <div>Tổng hoàn dự kiến cho khách: <strong className="text-[var(--color-forest)]">{fmt(preview.tongHoan)}</strong></div>

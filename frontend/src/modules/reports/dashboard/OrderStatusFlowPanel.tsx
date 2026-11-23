@@ -1,4 +1,4 @@
-import { fmt, statusColors, type Order } from "../../../store";
+import { fmt, formatDateTimeVi, statusColors, type Order } from "../../../store";
 
 const ORDER_FLOW_STEPS = [
   "Chờ thanh toán",
@@ -89,17 +89,20 @@ export function OrderStatusFlowPanel({
                 <div key={o.id} className="adm-flow-order-row">
                   <div>
                     <div className="flex items-center gap-2 flex-wrap">
-                      <strong className="adm-cell-code text-[0.88rem]">{o.id}</strong>
+                      {/* [DB-02] Hiển thị mã hiển thị (DT-...) thay vì id số thô */}
+                      <strong className="adm-cell-code text-[0.88rem]">{o.displayCode || o.id}</strong>
                       <span className="adm-cell-title">{o.customerName}</span>
                       <span className="adm-hint-text">({o.customerPhone})</span>
                     </div>
                     <div className="adm-hint-text mt-0.5">
-                      Tiền thuê: {fmt(o.rental - o.discount)} · Tiền cọc: {fmt(o.depositTotal)} · Hẹn trả: {o.returnTime}
+                      {/* [DB-03] Dùng formatDateTimeVi để chuẩn hóa ISO sang dd/MM/yyyy HH:mm */}
+                      Tiền thuê: {fmt(o.rental - o.discount)} · Tiền cọc: {fmt(o.depositTotal)} · Hẹn trả: {formatDateTimeVi(o.returnTime)}
                     </div>
                   </div>
 
                   <div className="flex items-center gap-2 flex-wrap">
-                    {["Chờ thanh toán", "Đã xác nhận", "Đang chuẩn bị", "Sẵn sàng bàn giao"].includes(o.status) && (
+                    {/* [DB-01] Dùng đúng chuỗi trạng thái "Sẵn sàng nhận" theo ORDER_FLOW_STEPS */}
+                    {["Chờ thanh toán", "Đã xác nhận", "Đang chuẩn bị", "Sẵn sàng nhận"].includes(o.status) && (
                       <button
                         type="button"
                         onClick={() => onOpenStoreCancel(o)}

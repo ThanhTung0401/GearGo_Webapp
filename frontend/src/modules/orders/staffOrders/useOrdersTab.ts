@@ -98,6 +98,9 @@ export function useOrdersTab(
           xuLyHuy: false,
           dauVanTayXemTruoc: noShowPreview?.dauVanTay,
         });
+        // [OD-03] Backend không trả cờ noShowReported trên DTO, đồng bộ cờ cục bộ để ẩn nút "No-show"
+        // và hiển thị thẻ "⚠️ Khách vắng mặt" ngay lập tức.
+        app.reportCustomerNoShow?.(noShowTarget.id, noShowNote.trim(), app.currentUser?.name || "Nhân viên kho");
         await hydrateOperationalOrder(noShowTarget.id);
         await app.refreshOrders?.();
         setNoShowTarget(null);
@@ -136,6 +139,14 @@ export function useOrdersTab(
     let matchStatus = filter === "Tất cả" || o.status === filter;
     if (filter === "Quá hạn") matchStatus = isOverdue;
     if (filter === "Trả một phần") matchStatus = isPartial;
+    // [OD-01] Map nhãn dropdown "Hết hạn thanh toán" sang trạng thái thực tế "Hết hạn".
+    if (filter === "Hết hạn thanh toán" || filter === "Hết hạn") {
+      matchStatus = o.status === "Hết hạn" || (o.status as string) === "Hết hạn thanh toán";
+    }
+    // [OD-01] "Không đến nhận" dựa theo cờ noShowReported (Mock) hoặc trạng thái tương ứng.
+    if (filter === "Không đến nhận") {
+      matchStatus = Boolean(o.noShowReported) || (o.status as string) === "Không đến nhận";
+    }
 
     const q = search.toLowerCase();
     const matchSearch =

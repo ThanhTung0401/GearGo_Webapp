@@ -51,13 +51,79 @@ public class BanGiaoService : IBanGiaoService
                 .Include(p => p.ChiTietBanGiaos)
                 .FirstOrDefaultAsync(p => p.MaDonThue == maDonThue);
             if (phieuDaCo != null)
+            {
+                // [HO-02] Đồng bộ lại ChiTietBanGiaos của phiếu nháp với các PhanCongThietBi hiệu lực.
+                // Nếu nhân viên đã hủy gán rồi gán thiết bị mới, tránh để phiếu nháp giữ lại dòng cũ
+                // khiến ChotBanGiaoAsync báo 400 "Chưa đủ thiết bị bàn giao".
+                if (phieuDaCo.TrangThai == DomainConstants.Status.PendingDelivery)
+                {
+                    var chiTietDonIdsCu = await _context.ChiTietDonThues
+                        .Where(c => c.MaDonThue == maDonThue)
+                        .Select(c => c.MaChiTietDon)
+                        .ToListAsync();
+                    var phanCongHieuLuc = await _context.PhanCongThietBis
+                        .Where(pc => chiTietDonIdsCu.Contains(pc.MaChiTietDon)
+                                     && pc.TrangThai == DomainConstants.Status.Assigned)
+                        .Select(pc => pc.MaPhanCong)
+                        .ToListAsync();
+                    var phanCongHieuLucSet = phanCongHieuLuc.ToHashSet();
+                    var dangCo = phieuDaCo.ChiTietBanGiaos.Select(c => c.MaPhanCong).ToHashSet();
+
+                    // Xóa các dòng tham chiếu đến phân công không còn hiệu lực.
+                    var canXoa = phieuDaCo.ChiTietBanGiaos
+                        .Where(c => !phanCongHieuLucSet.Contains(c.MaPhanCong))
+                        .ToList();
+                    if (canXoa.Count > 0)
+                        _context.ChiTietBanGiaos.RemoveRange(canXoa);
+
+                    // Thêm các MaPhanCong mới còn thiếu.
+                    foreach (var maPcMoi in phanCongHieuLuc.Where(id => !dangCo.Contains(id)))
+                    {
+                        _context.ChiTietBanGiaos.Add(new ChiTietBanGiao
+                        {
+                            MaPhieuBanGiao = phieuDaCo.MaPhieuBanGiao,
+                            MaPhanCong = maPcMoi,
+                            TinhTrangTruocThue = DomainConstants.Status.DefaultHandoverCondition
+                        });
+                    }
+
+                    if (canXoa.Count > 0 || phanCongHieuLuc.Any(id => !dangCo.Contains(id)))
+                    {
+                        await _context.SaveChangesAsync();
+                        // Nạp lại bản đồ để ToResponse() phản ánh đúng.
+                        await _context.Entry(phieuDaCo).Collection(p => p.ChiTietBanGiaos).LoadAsync();
+                    }
+                }
                 return Result<PhieuBanGiaoResponse>.Ok(phieuDaCo.ToResponse());
+            }
 
             var nhanVienTao = await _context.LayNhanVienAsync(maNhanVienTao);
+            // [HO-03] Nếu tài khoản không có bản ghi trong bảng NHAN_VIEN (ví dụ Admin), fallback
+            // lấy một nhân viên đang làm việc để tránh lỗi FK_PHIEU_BAN_GIAO_NHAN_VIEN khi gán
+            // thẳng ma_tai_khoan vào cột ma_nhan_vien.
+            long maNhanVienHopLe;
+            if (nhanVienTao != null)
+            {
+                maNhanVienHopLe = nhanVienTao.MaNhanVien;
+            }
+            else
+            {
+                var fallbackMaNhanVien = await _context.NhanViens
+                    .Where(n => n.TrangThaiLamViec == "DangLamViec")
+                    .Select(n => (long?)n.MaNhanVien)
+                    .FirstOrDefaultAsync();
+                if (!fallbackMaNhanVien.HasValue)
+                {
+                    return Result<PhieuBanGiaoResponse>.Loi(
+                        DomainConstants.Errors.InvalidState,
+                        "Tài khoản hiện tại không phải nhân viên và không có nhân viên đang làm việc để lập phiếu bàn giao.");
+                }
+                maNhanVienHopLe = fallbackMaNhanVien.Value;
+            }
             var phieuMoi = new PhieuBanGiao
             {
                 MaDonThue = maDonThue,
-                MaNhanVien = nhanVienTao?.MaNhanVien ?? maNhanVienTao,
+                MaNhanVien = maNhanVienHopLe,
                 TrangThai = DomainConstants.Status.PendingDelivery,
                 ThoiDiemLap = DateTime.UtcNow
             };
@@ -78,6 +144,11 @@ public class BanGiaoService : IBanGiaoService
                     TinhTrangTruocThue = DomainConstants.Status.DefaultHandoverCondition
                 });
             }
+
+            // [HO-01] CRITICAL: SaveChangesAsync TRƯỚC khi gọi ToResponse() để EF Core sinh
+            // MaPhieuBanGiao và MaChiTietBanGiao thực. Nếu không, Frontend sẽ nhận maPhieuBanGiao = 0
+            // và PUT /api/ban-giao/nhap/0 trả 404 Không tìm thấy phiếu.
+            await _context.SaveChangesAsync();
 
             return Result<PhieuBanGiaoResponse>.Ok(phieuMoi.ToResponse());
         }, _logger);

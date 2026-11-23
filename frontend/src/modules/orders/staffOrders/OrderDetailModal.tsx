@@ -68,21 +68,41 @@ export function OrderDetailModal({ order, onClose, openOrder }: OrderDetailModal
             {order.assignedEquipment.length === 0 ? (
               <p className="text-xs text-gray-400 italic">Chưa phân công serial (Đơn đang chờ soạn hàng).</p>
             ) : (
-              order.assignedEquipment.map((ae) => (
+              order.assignedEquipment.map((ae) => {
+                // [OD-04] Phân nhãn trạng thái thiết bị theo đúng trạng thái đơn, không in cứng "Đang thuê".
+                const isPlaceholder = ae.equipmentId.startsWith("ASSIGNED-");
+                const preHandover = ["Đã xác nhận", "Đang chuẩn bị", "Sẵn sàng nhận"].includes(order.status);
+                const postReturn = ["Đã nhận trả", "Chờ đối soát", "Hoàn tất"].includes(order.status);
+                let label: string;
+                let cls: string;
+                if (isPlaceholder) {
+                  label = "Đang tải chi tiết serial...";
+                  cls = "bg-gray-100 text-gray-700";
+                } else if (ae.returnedAt) {
+                  label = `✓ Đã trả (${ae.returnCondition || "Tốt"})`;
+                  cls = "bg-green-100 text-green-800";
+                } else if (postReturn) {
+                  label = "✓ Đã trả";
+                  cls = "bg-green-100 text-green-800";
+                } else if (preHandover) {
+                  label = "Đã phân công chờ giao";
+                  cls = "bg-amber-100 text-amber-800";
+                } else {
+                  label = "Đang thuê";
+                  cls = "bg-blue-100 text-blue-800";
+                }
+                return (
                 <div key={ae.equipmentId} className="flex justify-between items-center bg-gray-50 p-2 rounded text-xs border border-bone">
                   <div>
-                    <strong className="font-mono text-forest">{ae.equipmentDisplayCode || ae.equipmentId}</strong>{" "}
+                    <strong className="font-mono text-forest">
+                      {isPlaceholder ? "Đang tải..." : (ae.equipmentDisplayCode || ae.equipmentId)}
+                    </strong>{" "}
                     {ae.assignedAt ? `(Gán lúc: ${formatDateTimeVi(ae.assignedAt)})` : ""}
                   </div>
-                  <span
-                    className={`px-2 py-0.5 rounded text-[11px] font-bold ${
-                      ae.returnedAt ? "bg-green-100 text-green-800" : "bg-blue-100 text-blue-800"
-                    }`}
-                  >
-                    {ae.returnedAt ? `✓ Đã trả (${ae.returnCondition || "Tốt"})` : "Đang thuê"}
-                  </span>
+                  <span className={`px-2 py-0.5 rounded text-[11px] font-bold ${cls}`}>{label}</span>
                 </div>
-              ))
+                );
+              })
             )}
           </div>
         </div>
@@ -142,7 +162,8 @@ export function OrderDetailModal({ order, onClose, openOrder }: OrderDetailModal
 
         {/* Cho phép nhóm nút modal chi tiết xuống dòng trên mobile 390px */}
         <div className="flex justify-end gap-2 flex-wrap border-t border-bone pt-3">
-          {!["Chờ thanh toán", "Khách hủy", "Cửa hàng hủy", "Hết hạn thanh toán", "Không đến nhận"].includes(order.status) && (
+          {/* [OD-01] Backend trả về trạng thái "Hết hạn" (không phải "Hết hạn thanh toán") */}
+          {!["Chờ thanh toán", "Khách hủy", "Cửa hàng hủy", "Hết hạn", "Hết hạn thanh toán", "Không đến nhận"].includes(order.status) && (
             <button
               onClick={() => {
                 const targetTab: StaffTab = ["Đang thuê", "Quá hạn", "Đã nhận trả", "Chờ đối soát", "Hoàn tất"].includes(order.status)

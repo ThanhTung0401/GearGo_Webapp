@@ -105,6 +105,7 @@ export function HandoverTab({
               handleCancelAssignment={state.handleCancelAssignment}
               handleCompletePreparation={state.handleCompletePreparation}
               handleReportShortage={state.handleReportShortage}
+              prepState={state.prepState}
             />
           ) : (
             <HandoverChecklistPanel
@@ -125,6 +126,7 @@ export function HandoverTab({
               checklist={state.checklist}
               setChecklist={state.setChecklist}
               evidencePhotos={state.evidencePhotos}
+              setEvidencePhotos={state.setEvidencePhotos}
               handoverNote={state.handoverNote}
               setHandoverNote={state.setHandoverNote}
               handleCompleteHandover={state.handleCompleteHandover}
@@ -141,7 +143,11 @@ export function HandoverTab({
               receiverPhone={state.receiverPhone}
               receiverIdCard={state.receiverIdCard}
               isAuthorized={state.isAuthorized}
-              onCloseOnly={() => state.setShowHandoverModal(false)}
+              /* [HO-08] Cả nút ✕ và "Đóng & Hoàn tất" đều reset selectedOrderId vì đơn đã chuyển sang "Đang thuê". */
+              onCloseOnly={() => {
+                state.setShowHandoverModal(false);
+                setSelectedOrderId(null);
+              }}
               onCompleteClose={() => {
                 state.setShowHandoverModal(false);
                 setSelectedOrderId(null);

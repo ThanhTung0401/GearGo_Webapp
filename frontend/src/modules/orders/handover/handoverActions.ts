@@ -209,15 +209,35 @@ export async function completeHandoverAction(params: {
 
   if (app.realApi) {
     const donId = Number(order.backendId ?? order.id);
-    const draft = draftBbbg ?? (await handoverApi.taoHoacLayNhap(donId));
-    const latestPrep = prepState ?? (await handoverApi.layTinhTrangChuanBi(donId));
-    const allPhanCongs = latestPrep.danhSachDong.flatMap((d) => d.danhSachPhanCong);
+    // [HO-01] Đảm bảo luôn có draft hợp lệ (maPhieuBanGiao > 0). Nếu bản sẵn có không hợp lệ,
+    // gọi lại taoHoacLayNhap để lấy ID vừa SaveChangesAsync từ Backend.
+    const draft = (draftBbbg && draftBbbg.maPhieuBanGiao > 0)
+      ? draftBbbg
+      : await handoverApi.taoHoacLayNhap(donId);
+    // [HO-08] Lấy maPhanCong từ draft.chiTiet (đã có sẵn trong phiếu nháp) để tránh gọi
+    // layTinhTrangChuanBi dư thừa gây lỗi 403 nếu nhân viên chỉ có quyền BanGiao.*.
+    let allPhanCongs: Array<{ maPhanCong: number }> = draft.chiTiet.map((c) => ({ maPhanCong: c.maPhanCong }));
+    if (allPhanCongs.length === 0) {
+      const latestPrep = prepState ?? (await handoverApi.layTinhTrangChuanBi(donId));
+      allPhanCongs = latestPrep.danhSachDong.flatMap((d) => d.danhSachPhanCong);
+    }
+
+    // [HO-08] Ghi kèm thông tin người nhận thực tế vào bangChungXacNhan để lưu vết kiểm toán.
+    const evidencePayload = {
+      photos: evidencePhotos,
+      receiverPhone,
+      receiverIdCard,
+      isAuthorized,
+    };
 
     await handoverApi.capNhatNhap(draft.maPhieuBanGiao, {
       tenNguoiNhanThucTe: receiverName.trim(),
       thoiDiemKhachXacNhan: new Date().toISOString(),
-      bangChungXacNhan: JSON.stringify(evidencePhotos),
-      ghiChu: handoverNote || "Thiết bị và phụ kiện bàn giao đầy đủ, đúng hiện trạng cam kết.",
+      bangChungXacNhan: JSON.stringify(evidencePayload),
+      ghiChu:
+        (handoverNote || "Thiết bị và phụ kiện bàn giao đầy đủ, đúng hiện trạng cam kết.") +
+        ` | SĐT người nhận: ${receiverPhone}` +
+        (isAuthorized ? ` | CCCD người nhận thay: ${receiverIdCard}` : ""),
       chiTiet: allPhanCongs.map((pc) => ({
         maPhanCong: pc.maPhanCong,
         tinhTrangTruocThue: "Tốt (Đã kiểm tại quầy)",

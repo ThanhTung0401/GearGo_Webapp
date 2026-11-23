@@ -211,7 +211,13 @@ export function useReturnOverdueActions({ orders, setOrders, equipment, setEquip
   };
 
   const checkOrderOverdue = (order: Order) => {
-    if (["Hoàn tất", "Khách hủy", "Cửa hàng hủy", "Hết hạn", "Đã nhận trả", "Chờ đối soát"].includes(order.status) || !order.returnTime) {
+    // [OV-03] Chỉ tính quá hạn trả cho đơn thực sự đang thuê hoặc đã quá hạn.
+    // Các trạng thái trước bàn giao (Chờ thanh toán, Đã xác nhận, Đang chuẩn bị, Sẵn sàng nhận)
+    // không được tính là "Quá hạn hẹn trả" dù returnTime đã qua thời điểm hiện tại.
+    if (order.status !== "Đang thuê" && (order.status as string) !== "Quá hạn") {
+      return { isOverdue: false, overdueHours: 0, overdueDays: 0, surcharge: 0 };
+    }
+    if (!order.returnTime) {
       return { isOverdue: false, overdueHours: 0, overdueDays: 0, surcharge: 0 };
     }
     const parsedDeadline = new Date(
@@ -226,7 +232,17 @@ export function useReturnOverdueActions({ orders, setOrders, equipment, setEquip
 
     const diffHours = (now - parsedDeadline) / 3600000;
     const overdueDays = Math.max(1, Math.ceil(diffHours / 24));
-    const dailyRentalTotal = order.items.reduce((sum, item) => sum + item.pricePerDay * item.qty, 0);
+    let dailyRentalTotal = order.items.reduce((sum, item) => sum + item.pricePerDay * item.qty, 0);
+    // [OV-03] Fallback khi order.items chưa hydrate: tính theo tổng tiền thuê chia số ngày.
+    if (dailyRentalTotal === 0) {
+      const pickupMs = order.pickupTime ? new Date(order.pickupTime.replace(" ", "T")).getTime() : NaN;
+      const returnMs = parsedDeadline;
+      const rentalBase = Math.max(0, (order.rental || 0) - (order.discount || 0));
+      const rentDays = Number.isFinite(pickupMs) && Number.isFinite(returnMs)
+        ? Math.max(1, Math.ceil((returnMs - pickupMs) / 86400000))
+        : 1;
+      dailyRentalTotal = rentalBase / rentDays;
+    }
     return { isOverdue: true, overdueHours: Math.round(diffHours), overdueDays, surcharge: Math.round(overdueDays * dailyRentalTotal * 1.5) };
   };
 

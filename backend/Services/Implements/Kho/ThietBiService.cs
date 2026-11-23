@@ -80,8 +80,13 @@ public class ThietBiService : IThietBiService
             .ToListAsync();
         var thietBiIds = allThietBi.Select(t => t.MaThietBi).ToList();
 
+        // [HO-04] Chỉ coi là xung đột khi đơn thuê còn ở nhánh hoạt động (chưa trả / chưa hủy).
         var overlaps = (await _context.PhanCongThietBis.Include(pc => pc.ChiTietDon).ThenInclude(c => c.DonThue)
             .Where(pc => thietBiIds.Contains(pc.MaThietBi) && pc.TrangThai != "DaHuy" &&
+                         (pc.ChiTietDon.DonThue.TrangThai == TrangThaiDonThue.DaXacNhan ||
+                          pc.ChiTietDon.DonThue.TrangThai == TrangThaiDonThue.DangChuanBi ||
+                          pc.ChiTietDon.DonThue.TrangThai == TrangThaiDonThue.SanSangNhan ||
+                          pc.ChiTietDon.DonThue.TrangThai == TrangThaiDonThue.DangThue) &&
                          pc.ChiTietDon.DonThue.GioNhanDuKien < chiTietDon.DonThue.GioTraDuKien &&
                          pc.ChiTietDon.DonThue.GioTraDuKien > chiTietDon.DonThue.GioNhanDuKien)
             .Select(pc => pc.MaThietBi).Distinct().ToListAsync()).ToHashSet();
@@ -104,8 +109,14 @@ public class ThietBiService : IThietBiService
             });
         }
 
+        // [HO-04] Chỉ coi là xung đột lịch khi đơn thuê còn ở nhánh hoạt động.
+        // Loại trừ DaNhanTra, ChoDoiSoat, HoanTat, KhachHuy, CuaHangHuy, HetHan để tránh báo oan.
         var query = _context.PhanCongThietBis.Include(pc => pc.ChiTietDon).ThenInclude(c => c.DonThue)
             .Where(pc => pc.MaThietBi == request.MaThietBi && pc.TrangThai != "DaHuy" &&
+                         (pc.ChiTietDon.DonThue.TrangThai == TrangThaiDonThue.DaXacNhan ||
+                          pc.ChiTietDon.DonThue.TrangThai == TrangThaiDonThue.DangChuanBi ||
+                          pc.ChiTietDon.DonThue.TrangThai == TrangThaiDonThue.SanSangNhan ||
+                          pc.ChiTietDon.DonThue.TrangThai == TrangThaiDonThue.DangThue) &&
                          pc.ChiTietDon.DonThue.GioNhanDuKien < request.GioTra &&
                          pc.ChiTietDon.DonThue.GioTraDuKien > request.GioNhan);
         if (request.MaPhanCongLoaiTru.HasValue)
