@@ -61,12 +61,15 @@ export const inventoryApi = {
     soMoiTrang?: number;
     loaiDieuChinh?: string;
     trangThai?: string;
+    // [PN-11] Lọc theo phiếu nhập gốc; BE clamp pageSize 1..100 nên client-side filter sẽ miss.
+    maPhieuNhapLienQuan?: number;
   }): Promise<DanhSachDieuChinhBackend> {
     const qs = new URLSearchParams();
     if (params?.trang) qs.set("trang", String(params.trang));
     if (params?.soMoiTrang) qs.set("soMoiTrang", String(params.soMoiTrang));
     if (params?.loaiDieuChinh) qs.set("loaiDieuChinh", params.loaiDieuChinh);
     if (params?.trangThai) qs.set("trangThai", params.trangThai);
+    if (params?.maPhieuNhapLienQuan) qs.set("maPhieuNhapLienQuan", String(params.maPhieuNhapLienQuan));
     const suffix = qs.toString() ? `?${qs.toString()}` : "";
     const res = await apiClient.get<{ duLieu?: DanhSachDieuChinhBackend } | DanhSachDieuChinhBackend>(
       `/api/dieu-chinh-kho${suffix}`

@@ -108,7 +108,9 @@ export function useInventoryTab(app: ReturnType<typeof useApp>) {
       return;
     }
     try {
-      const res = await inventoryApi.timPhieu({ trang: 1, soMoiTrang: 200 });
+      // [PN-11] Truyền maPhieuNhapLienQuan trực tiếp để BE lọc server-side, tránh miss
+      // do BE clamp soMoiTrang tối đa 100.
+      const res = await inventoryApi.timPhieu({ trang: 1, soMoiTrang: 100, maPhieuNhapLienQuan: receiptIdNum });
       const matching = (res.items ?? []).filter((dc) => dc.maPhieuNhapLienQuan === receiptIdNum);
       setServerAdjustments(
         matching.map((dc) => {

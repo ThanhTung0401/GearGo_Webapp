@@ -33,9 +33,11 @@ public class DieuChinhKhoController : BaseApiController
         [FromQuery] int trang = 1,
         [FromQuery] int soMoiTrang = 20,
         [FromQuery] string? loaiDieuChinh = null,
-        [FromQuery] string? trangThai = null)
+        [FromQuery] string? trangThai = null,
+        // [PN-11] Hỗ trợ lọc theo phiếu nhập gốc để FE hiển thị đủ lịch sử điều chỉnh của 1 phiếu nhập.
+        [FromQuery] long? maPhieuNhapLienQuan = null)
     {
-        return HandleResult(await _dieuChinhKhoService.TimPhieuAsync(trang, soMoiTrang, loaiDieuChinh, trangThai, MaTaiKhoanHienTai));
+        return HandleResult(await _dieuChinhKhoService.TimPhieuAsync(trang, soMoiTrang, loaiDieuChinh, trangThai, MaTaiKhoanHienTai, maPhieuNhapLienQuan));
     }
 
     /// <summary>

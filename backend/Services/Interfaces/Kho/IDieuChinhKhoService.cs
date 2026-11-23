@@ -42,7 +42,7 @@ public interface IDieuChinhKhoService
     /// <summary>
     /// Danh sách phiếu điều chỉnh kho phân trang
     /// </summary>
-    Task<Result<PagedResult<DieuChinhKhoResponse>>> TimPhieuAsync(int trang, int soMoiTrang, string? loaiDieuChinh, string? trangThai, long actorId);
+    Task<Result<PagedResult<DieuChinhKhoResponse>>> TimPhieuAsync(int trang, int soMoiTrang, string? loaiDieuChinh, string? trangThai, long actorId, long? maPhieuNhapLienQuan = null);
 
     /// <summary>
     /// Tính toán giá trị và số lượng nhập hiệu lực của một phiếu nhập gốc sau chuỗi điều chỉnh
