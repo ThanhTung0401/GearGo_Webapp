@@ -153,6 +153,8 @@ export function useReturnTab(
           displayCode: d.maThietBiHienThi,
           productName: d.tenSanPham,
           compensation: prod?.compensation || 1000000,
+          // FN5-05: forward thẳng để UI vô hiệu checkbox
+          maPhieuNhanTraDangGiu: d.maPhieuNhanTraDangGiu ?? null,
         };
       })
     : debtEquipment.map((ae) => {
