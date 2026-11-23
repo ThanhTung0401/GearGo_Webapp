@@ -63,6 +63,20 @@ export function useReconciliationSheet({ order, app, onAfterMutation }: UseRecon
     setBankAccount("");
   }, [order.id, order.customerName]);
 
+  // FN5-14: Reset toàn bộ state backend và các modal con khi đổi đơn để tránh hiển thị dữ liệu đơn cũ.
+  useEffect(() => {
+    setPreviewBackend(null);
+    setDoiSoatBackend(null);
+    setRefundsBackend(null);
+    setSurchargesBackend(null);
+    setPendingCollectReq(null);
+    setShowCollectModal(false);
+    setShowRefundModal(false);
+    setShowAdjustmentModal(false);
+    setReconError(null);
+    setReconSuccess(null);
+  }, [order.id]);
+
   // Trạng thái modal UC5.7: Điều chỉnh tài chính sau chốt
   const [showAdjustmentModal, setShowAdjustmentModal] = useState(false);
   const [adjType, setAdjType] = useState<"Thu bù" | "Hoàn trả" | "Bù trừ chiết khấu">("Hoàn trả");

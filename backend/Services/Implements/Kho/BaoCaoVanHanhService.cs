@@ -20,6 +20,9 @@ public class BaoCaoVanHanhService : IBaoCaoVanHanhService
     {
         var tuNgay = filter.TuNgay ?? DateTime.UtcNow.AddDays(-DomainConstants.Policies.DefaultReportDays);
         var denNgay = filter.DenNgay ?? DateTime.UtcNow;
+        // FN7-04: nếu denNgay là 00:00:00 (chỉ ngày) thì mở rộng tới cuối ngày để không bỏ sót dữ liệu cùng ngày.
+        if (denNgay.TimeOfDay == TimeSpan.Zero)
+            denNgay = denNgay.Date.AddDays(1).AddTicks(-1);
 
         var tongQuan = await TinhTongQuanVanHanhAsync(tuNgay, denNgay);
         var chiSoSanPham = await TinhChiSoTheoSanPhamAsync(filter, tuNgay, denNgay);
@@ -59,9 +62,11 @@ public class BaoCaoVanHanhService : IBaoCaoVanHanhService
 
         var trangThaiThietBis = await _context.ThietBis.AsNoTracking().Select(t => t.TrangThaiSuDung).ToListAsync();
         int tongThietBi = trangThaiThietBis.Count;
+        int soSanSang = trangThaiThietBis.Count(t => t == TrangThaiThietBi.SanSang);
         int soDangThue = trangThaiThietBis.Count(t => t == TrangThaiThietBi.DangThue);
         int soDangBaoTri = trangThaiThietBis.Count(t => t == TrangThaiThietBi.DangBaoTri);
         int soThatLac = trangThaiThietBis.Count(t => t == TrangThaiThietBi.ThatLac);
+        int soNgungSuDung = trangThaiThietBis.Count(t => t == TrangThaiThietBi.NgungSuDung);
 
         var danhSachSoNgay = danhSachDon
             .Where(d => d.TrangThai != TrangThaiDonThue.KhachHuy && d.TrangThai != TrangThaiDonThue.CuaHangHuy && d.TrangThai != TrangThaiDonThue.HetHan)
@@ -81,9 +86,11 @@ public class BaoCaoVanHanhService : IBaoCaoVanHanhService
             TongDonBiHuy = tongDonHuy,
             TyLeHuyDonPhanTram = CalculationHelpers.TinhPhanTram(tongDonHuy, tongDon),
             TongThietBiTrongKho = tongThietBi,
+            SoThietBiSanSang = soSanSang,
             SoThietBiDangChoThue = soDangThue,
             SoThietBiDangBaoTri = soDangBaoTri,
             SoThietBiThatLac = soThatLac,
+            SoThietBiNgungSuDung = soNgungSuDung,
             TyLeHaoMonPhanTram = CalculationHelpers.TinhPhanTram(soDangBaoTri + soThatLac, tongThietBi),
             SoNgayThueTrungBinh = soNgayThueTB,
             TyLeQuayVongThietBi = tongThietBi > 0 ? Math.Round((double)tongLuotThueThietBi / tongThietBi, DomainConstants.Policies.DecimalRoundingDigits) : 0.0
@@ -97,8 +104,13 @@ public class BaoCaoVanHanhService : IBaoCaoVanHanhService
         if (filter.MaSanPham.HasValue) sanPhamQuery = sanPhamQuery.Where(s => s.MaSanPham == filter.MaSanPham.Value);
         var sanPhamList = await sanPhamQuery.ToListAsync();
 
+        // FN7-04: Loại trừ đơn hủy / hết hạn / chờ thanh toán khỏi thống kê lượt thuê & doanh thu ước tính
         var chiTietStats = await _context.ChiTietDonThues.AsNoTracking()
-            .Where(c => c.DonThue.NgayDat >= tuNgay && c.DonThue.NgayDat <= denNgay)
+            .Where(c => c.DonThue.NgayDat >= tuNgay && c.DonThue.NgayDat <= denNgay
+                && c.DonThue.TrangThai != TrangThaiDonThue.KhachHuy
+                && c.DonThue.TrangThai != TrangThaiDonThue.CuaHangHuy
+                && c.DonThue.TrangThai != TrangThaiDonThue.HetHan
+                && c.DonThue.TrangThai != TrangThaiDonThue.ChoThanhToan)
             .GroupBy(c => c.MaSanPham)
             .Select(g => new
             {
@@ -107,8 +119,10 @@ public class BaoCaoVanHanhService : IBaoCaoVanHanhService
                 TongDoanhThu = g.Sum(c => c.DonGiaThueMoiNgay * c.SoLuong * c.SoNgayTinhTien - c.TienGiam)
             }).ToDictionaryAsync(x => x.MaSanPham);
 
+        // FN7-04: Chỉ đếm hỏng hóc / mất ở các phiếu nhận trả đã chốt (loại bỏ phiếu nháp chưa chốt)
         var nhanTraStats = await _context.ChiTietNhanTras.AsNoTracking()
-            .Where(ct => ct.PhieuNhanTra.ThoiDiemLap >= tuNgay && ct.PhieuNhanTra.ThoiDiemLap <= denNgay)
+            .Where(ct => ct.PhieuNhanTra.ThoiDiemLap >= tuNgay && ct.PhieuNhanTra.ThoiDiemLap <= denNgay
+                && ct.PhieuNhanTra.TrangThai == TrangThaiPhieuNhanTra.DaChot)
             .Select(ct => new { MaSanPham = ct.ChiTietBanGiao.PhanCongThietBi.ThietBi.MaSanPhamHienTai, ct.KetLuan })
             .GroupBy(x => x.MaSanPham)
             .Select(g => new

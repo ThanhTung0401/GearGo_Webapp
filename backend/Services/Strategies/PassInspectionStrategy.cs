@@ -7,7 +7,8 @@ namespace GearGo.Services.Strategies;
 public class PassInspectionStrategy : IInspectionStrategy
 {
     public bool CanHandle(string ketLuan)
-        => ketLuan == DomainConstants.InspectionConclusions.Pass;
+        => ketLuan == DomainConstants.InspectionConclusions.Pass
+           || ketLuan == DomainConstants.InspectionConclusions.MissingAccessories;
 
     public Task XuLySauKiemTraAsync(
         ChiTietNhanTra chiTiet,

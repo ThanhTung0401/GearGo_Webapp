@@ -15,9 +15,11 @@ public class TongQuanChiSoVanHanhResponse
     public double TyLeHuyDonPhanTram { get; set; }
 
     public int TongThietBiTrongKho { get; set; }
+    public int SoThietBiSanSang { get; set; }
     public int SoThietBiDangChoThue { get; set; }
     public int SoThietBiDangBaoTri { get; set; }
     public int SoThietBiThatLac { get; set; }
+    public int SoThietBiNgungSuDung { get; set; }
     public double TyLeHaoMonPhanTram { get; set; }
 
     public double SoNgayThueTrungBinh { get; set; }

@@ -164,6 +164,17 @@ public partial class BaoTriService : IBaoTriService
         if (taiKhoan?.VaiTro == "QuanTriVien") return true;
 
         var nhanVien = await _context.LayNhanVienAsync(actorId);
-        return nhanVien != null && phieu.MaNguoiXuLy.HasValue && phieu.MaNguoiXuLy.Value == nhanVien.MaNhanVien;
+        if (nhanVien == null) return false;
+
+        // FN6-02: Cho phép người lập phiếu hoặc nhân viên tự nhận xử lý khi phiếu chưa phân công ai
+        // (tự động gán MaNguoiXuLy cho người đầu tiên thao tác), hoặc người đã được phân công.
+        if (!phieu.MaNguoiXuLy.HasValue)
+        {
+            phieu.MaNguoiXuLy = nhanVien.MaNhanVien;
+            return true;
+        }
+        if (phieu.MaNguoiXuLy.Value == nhanVien.MaNhanVien) return true;
+        if (phieu.MaNguoiLap == nhanVien.MaNhanVien) return true;
+        return false;
     }
 }

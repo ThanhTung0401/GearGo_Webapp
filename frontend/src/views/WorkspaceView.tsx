@@ -77,12 +77,18 @@ export default function WorkspaceView() {
   const isAdminUser = app.role === "admin" || permCtx?.roleName === "QuanTriVien";
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
 
-  const selectedOrder = (selectedOrderId ? app.orders.find((o) => o.id === selectedOrderId) : null) ?? null;
+  // FN7-03: Hỗ trợ mở đơn theo cả id số thuần lẫn displayCode (ORD-..., DT-..., DH-...)
+  const selectedOrder =
+    (selectedOrderId
+      ? app.orders.find((o) => o.id === selectedOrderId || o.displayCode === selectedOrderId)
+      : null) ?? null;
 
   const hydrateOperationalOrder = useCallback(
     async (id: string) => {
       if (!app.realApi) return;
-      const numId = Number(id);
+      // Nếu id là displayCode (không phải số), tìm backendId tương ứng trong app.orders
+      const matched = app.orders.find((o) => o.id === id || o.displayCode === id);
+      const numId = matched?.backendId ?? Number(id);
       if (!Number.isFinite(numId)) return;
       try {
         const dto = await orderApi.layChiTietVanHanh(numId);
@@ -91,7 +97,7 @@ export default function WorkspaceView() {
         // Giữ nguyên dữ liệu hiện có nếu không tải được chi tiết
       }
     },
-    [app.realApi]
+    [app.realApi, app.orders]
   );
 
   // Chuyển sang tab tác nghiệp tương ứng khi mở đơn từ tổng quan/báo cáo
