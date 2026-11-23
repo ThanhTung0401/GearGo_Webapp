@@ -23,7 +23,10 @@ public class ThietBiService : IThietBiService
 
     public async Task<Result<PagedResult<ThietBiResponse>>> TimKiemThietBiAsync(TimThietBiRequest request, long actorId)
     {
-        var query = _context.ThietBis.AsQueryable();
+        // FN6-08: include ChiTietPhieuNhap → PhieuNhapHang để lấy MaPhieuNhapHienThi
+        var query = _context.ThietBis
+            .Include(t => t.ChiTietPhieuNhap).ThenInclude(ct => ct.PhieuNhapHang)
+            .AsQueryable();
         if (!string.IsNullOrEmpty(request.MaHienThi))
             query = query.Where(t => t.MaThietBiHienThi.Contains(request.MaHienThi));
         if (request.MaSanPhamHienTai.HasValue)
@@ -34,9 +37,18 @@ public class ThietBiService : IThietBiService
             query = query.Where(t => t.ChiTietPhieuNhap.MaPhieuNhap == request.NguonNhap.Value);
 
         int total = await query.CountAsync();
-        var items = await query.OrderByDescending(t => t.MaThietBi)
+        var itemsRaw = await query.OrderByDescending(t => t.MaThietBi)
             .Skip((request.Trang - 1) * request.SoMoiTrang).Take(request.SoMoiTrang)
-            .Select(t => MapToResponse(t)).ToListAsync();
+            .ToListAsync();
+        // FN6-08: đếm số lần cho thuê (phân công thiết bị khác trạng thái huỷ) cho các thiết bị trong trang
+        var ids = itemsRaw.Select(t => t.MaThietBi).ToList();
+        var countByTb = await _context.PhanCongThietBis
+            .Where(pc => ids.Contains(pc.MaThietBi) && pc.TrangThai != "DaHuy")
+            .GroupBy(pc => pc.MaThietBi)
+            .Select(g => new { Ma = g.Key, So = g.Count() })
+            .ToListAsync();
+        var countMap = countByTb.ToDictionary(x => x.Ma, x => x.So);
+        var items = itemsRaw.Select(t => MapToResponse(t, countMap.GetValueOrDefault(t.MaThietBi, 0))).ToList();
 
         return Result<PagedResult<ThietBiResponse>>.Ok(new PagedResult<ThietBiResponse>
         {
@@ -46,9 +58,14 @@ public class ThietBiService : IThietBiService
 
     public async Task<Result<ThietBiResponse>> LayChiTietThietBiAsync(long id, long actorId)
     {
-        var t = await _context.ThietBis.FirstOrDefaultAsync(x => x.MaThietBi == id);
+        // FN6-08: include PhieuNhapHang để trả MaPhieuNhapHienThi
+        var t = await _context.ThietBis
+            .Include(x => x.ChiTietPhieuNhap).ThenInclude(ct => ct.PhieuNhapHang)
+            .FirstOrDefaultAsync(x => x.MaThietBi == id);
         if (t == null) return Result<ThietBiResponse>.Loi("NOT_FOUND", "Không tìm thấy thiết bị");
-        return Result<ThietBiResponse>.Ok(MapToResponse(t));
+        var soLanThue = await _context.PhanCongThietBis
+            .CountAsync(pc => pc.MaThietBi == id && pc.TrangThai != "DaHuy");
+        return Result<ThietBiResponse>.Ok(MapToResponse(t, soLanThue));
     }
 
     public async Task<Result<List<PhanCongResponse>>> LayLichThietBiAsync(long id, DateTime? tuNgay, DateTime? denNgay, long actorId)
@@ -137,10 +154,13 @@ public class ThietBiService : IThietBiService
         return Result<KiemTraLichResponse>.Ok(new KiemTraLichResponse { DuDieuKien = true });
     }
 
-    private static ThietBiResponse MapToResponse(ThietBi t) => new()
+    private static ThietBiResponse MapToResponse(ThietBi t, int soLanThue = 0) => new()
     {
         MaThietBi = t.MaThietBi, MaThietBiHienThi = t.MaThietBiHienThi,
         MaSanPhamHienTai = t.MaSanPhamHienTai, MaChiTietPhieuNhap = t.MaChiTietPhieuNhap,
+        // FN6-08: expose mã phiếu nhập gốc và số lần đã cho thuê
+        MaPhieuNhapHienThi = t.ChiTietPhieuNhap?.PhieuNhapHang?.MaPhieuHienThi,
+        SoLanThue = soLanThue,
         TrangThaiSuDung = t.TrangThaiSuDung.ToString(), TinhTrang = t.TinhTrang ?? "",
         GiaNhap = t.GiaNhap, NgayNhap = t.NgayNhap
     };
