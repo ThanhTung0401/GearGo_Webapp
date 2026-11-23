@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { useApp } from "../../../context/AppContext";
 import { isRealApiEnabled } from "../../../services/apiClient";
 import { staffApi } from "../../../services/api/staffApi";
+import { orderApi } from "../../../services/api/orderApi";
+import { mapDonVanHanhChiTietToOrder } from "../../../services/mappers/orderMapper";
 import { type CustomerAccount } from "../../../store";
 
 /**
@@ -169,6 +171,34 @@ export function useCustomersTab(app: ReturnType<typeof useApp>) {
         );
       })
     : [];
+
+  // [CUS-04] Khi mo modal lich su don thue cua khach: voi moi don chua co items (ngoai top 20
+  // layChiTietVanHanh), goi API lay chi tiet de hien thi dung san pham thue thay vi "0 thiet bi".
+  useEffect(() => {
+    if (!selectedCustomer || !realApi) return;
+    const needDetails = customerOrders.filter(
+      (o) => (o.items?.length ?? 0) === 0 && o.backendId
+    );
+    if (needDetails.length === 0) return;
+    let cancelled = false;
+    (async () => {
+      for (const o of needDetails) {
+        if (cancelled) break;
+        try {
+          const detail = await orderApi.layChiTietVanHanh(Number(o.backendId));
+          if (!cancelled) {
+            app.upsertOrder?.(mapDonVanHanhChiTietToOrder(detail));
+          }
+        } catch {
+          // Bo qua loi tung don de khong chan modal
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedCustomer?.id]);
 
   return {
     realApi,
