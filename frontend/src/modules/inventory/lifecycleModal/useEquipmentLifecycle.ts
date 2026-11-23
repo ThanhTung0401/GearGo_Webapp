@@ -53,9 +53,15 @@ export function useEquipmentLifecycle(equipment: Equipment, app: ReturnType<type
     [app.products, equipment.originalProductId]
   );
 
+  // [VD-01] Tra phiếu nhập qua maChiTietPhieuNhap (importReceiptLineId) HOẶC importReceiptId nếu có.
   const importReceipt = useMemo(
-    () => app.importReceipts.find((r) => r.id === equipment.importReceiptId),
-    [app.importReceipts, equipment.importReceiptId]
+    () =>
+      app.importReceipts.find((r) => {
+        if (equipment.importReceiptId && r.id === equipment.importReceiptId) return true;
+        if (equipment.importReceiptLineId && r.lines.some((l) => l.id === equipment.importReceiptLineId)) return true;
+        return false;
+      }),
+    [app.importReceipts, equipment.importReceiptId, equipment.importReceiptLineId]
   );
 
   const supplier = useMemo(
