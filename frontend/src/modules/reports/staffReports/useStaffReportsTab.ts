@@ -2,9 +2,15 @@ import { useState, useEffect } from "react";
 import { useApp } from "../../../context/AppContext";
 import { reportApi, auditApi, type BaoCaoVanHanhBackend } from "../../../services/api";
 import { mapNhatKyToAuditLog, type AuditLogEntryWithRef } from "../../../services/mappers";
+import { useHasPerm } from "../../../features/permissions/PermissionsContext";
+import { Permissions } from "../../../constants/permissions";
 
 // Hook quản lý state, gọi API báo cáo ca trực & nhật ký thao tác nhân viên (UC10.1 & UC10.4)
 export function useStaffReportsTab(app: ReturnType<typeof useApp>) {
+  // FN7-01/02: check perm trước khi gọi API để tránh 403 trên console
+  const hasPerm = useHasPerm();
+  const canXemBaoCao = hasPerm(Permissions.BaoCao_Xem) || hasPerm(Permissions.BaoCaoKho_Xem);
+  const canXemKho = hasPerm(Permissions.Kho_Xem);
   const [subTab, setSubTab] = useState<"shift" | "audit">("shift");
   const [searchAudit, setSearchAudit] = useState("");
   const [opsReport, setOpsReport] = useState<BaoCaoVanHanhBackend | null>(null);
@@ -21,14 +27,15 @@ export function useStaffReportsTab(app: ReturnType<typeof useApp>) {
     let cancelled = false;
     setReportLoading(true);
     setReportError(null);
+    // FN7-01: chỉ gọi hiện trạng kho khi có quyền Kho.Xem, báo cáo khi có BaoCao.Xem
     void Promise.all([
-      reportApi.layBaoCaoVanHanh(),
-      reportApi.layHienTrangKho().catch(() => null),
-      reportApi.layThongKeBaoTri().catch(() => null),
+      canXemBaoCao ? reportApi.layBaoCaoVanHanh().catch(() => null) : Promise.resolve(null),
+      canXemKho ? reportApi.layHienTrangKho().catch(() => null) : Promise.resolve(null),
+      canXemBaoCao ? reportApi.layThongKeBaoTri().catch(() => null) : Promise.resolve(null),
     ])
       .then(([ops, stock, maint]) => {
         if (cancelled) return;
-        setOpsReport(ops);
+        setOpsReport(ops as BaoCaoVanHanhBackend | null);
         setStockReport(stock as Record<string, unknown> | null);
         setMaintReport(maint as Record<string, unknown> | null);
       })
@@ -43,11 +50,12 @@ export function useStaffReportsTab(app: ReturnType<typeof useApp>) {
     return () => {
       cancelled = true;
     };
-  }, [app.realApi]);
+  }, [app.realApi, canXemBaoCao, canXemKho]);
 
   // Debounce 250ms tải nhật ký thao tác hệ thống theo từ khóa tìm kiếm (UC100/UC102)
   useEffect(() => {
-    if (!app.realApi || subTab !== "audit") return;
+    // FN7-02: chặn gọi auditApi khi không có quyền BaoCao.Xem (tránh 403)
+    if (!app.realApi || subTab !== "audit" || !canXemBaoCao) return;
     let cancelled = false;
     const timer = window.setTimeout(() => {
       void auditApi
@@ -67,15 +75,23 @@ export function useStaffReportsTab(app: ReturnType<typeof useApp>) {
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [app.realApi, subTab, searchAudit]);
+  }, [app.realApi, subTab, searchAudit, canXemBaoCao]);
 
   // 1. Chỉ tiêu vận hành ca trực tính từ danh sách đơn hiện hành
   const todayStr = now.toISOString().slice(0, 10);
-  const pickupInShift = app.orders.filter((o) => ["Đã xác nhận", "Đang chuẩn bị", "Sẵn sàng nhận"].includes(o.status));
-  const returnInShift = app.orders.filter((o) => o.status === "Đang thuê");
-  const overdueOrders = app.orders.filter((o) => app.checkOrderOverdue(o).isOverdue);
-  const pendingReconcile = app.orders.filter((o) => o.status === "Chờ đối soát");
-  const handedOverToday = app.orders.filter((o) => o.handedOverAt && o.handedOverAt.slice(0, 10) === todayStr);
+  // FN7-02: loại đơn đã huỷ / hết hạn / chờ thanh toán khỏi thống kê hiệu suất ca trực
+  const EXCLUDED_FROM_PERF = new Set([
+    "Khách hủy",
+    "Cửa hàng hủy",
+    "Hết hạn",
+    "Chờ thanh toán",
+  ]);
+  const perfOrders = app.orders.filter((o) => !EXCLUDED_FROM_PERF.has(o.status));
+  const pickupInShift = perfOrders.filter((o) => ["Đã xác nhận", "Đang chuẩn bị", "Sẵn sàng nhận"].includes(o.status));
+  const returnInShift = perfOrders.filter((o) => o.status === "Đang thuê");
+  const overdueOrders = perfOrders.filter((o) => app.checkOrderOverdue(o).isOverdue);
+  const pendingReconcile = perfOrders.filter((o) => o.status === "Chờ đối soát");
+  const handedOverToday = perfOrders.filter((o) => o.handedOverAt && o.handedOverAt.slice(0, 10) === todayStr);
 
   // Thống kê thiết bị trong kho (ưu tiên tổng quan từ báo cáo máy chủ nếu đã tải)
   const tongQuan = opsReport?.tongQuan;
