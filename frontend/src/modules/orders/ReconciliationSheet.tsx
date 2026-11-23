@@ -1,5 +1,5 @@
 import type { useApp } from "../../context/AppContext";
-import { statusColors, type Order } from "../../store";
+import { formatDateTimeVi, statusColors, type Order } from "../../store";
 import { CollectSurchargeModal } from "./reconciliation/CollectSurchargeModal";
 import { RefundDepositModal } from "./reconciliation/RefundDepositModal";
 import { ReconciliationTraceModals } from "./reconciliation/ReconciliationTraceModals";
@@ -48,7 +48,7 @@ export default function ReconciliationSheet({
             Bảng Đối Soát Cọc & Quyết Toán: Đơn {order.displayCode || order.id}
           </h3>
           <div className="recon-header-sub">
-            Khách hàng: <strong>{order.customerName}</strong> {order.customerPhone ? `(${order.customerPhone})` : ""} · Nhận: {order.pickupTime} · Hẹn trả: {order.returnTime}
+            Khách hàng: <strong>{order.customerName}</strong> {order.customerPhone ? `(${order.customerPhone})` : ""} · Nhận: {formatDateTimeVi(order.pickupTime)} · Hẹn trả: {formatDateTimeVi(order.returnTime)}
           </div>
         </div>
 

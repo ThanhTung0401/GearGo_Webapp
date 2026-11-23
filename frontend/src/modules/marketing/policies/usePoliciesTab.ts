@@ -81,6 +81,19 @@ export function usePoliciesTab(app: ReturnType<typeof useApp>) {
     if (form.reminderReturnHoursBefore !== app.policies.reminderReturnHoursBefore) {
       diffs.push({ field: "Nhắc trả máy trước", oldVal: `${app.policies.reminderReturnHoursBefore}h`, newVal: `${form.reminderReturnHoursBefore}h` });
     }
+    // So sánh biểu phí phụ kiện lẻ để cho phép ban hành khi chỉ thay đổi giá phụ kiện
+    const oldFees = app.policies.accessoryLossFeeSchedule || [];
+    const newFees = form.accessoryLossFeeSchedule || [];
+    newFees.forEach((nf, idx) => {
+      const of = oldFees[idx];
+      if (of && of.defaultFee !== nf.defaultFee) {
+        diffs.push({
+          field: `Phí phụ kiện: ${nf.accessoryName}`,
+          oldVal: fmt(of.defaultFee),
+          newVal: fmt(nf.defaultFee),
+        });
+      }
+    });
     return diffs;
   };
 

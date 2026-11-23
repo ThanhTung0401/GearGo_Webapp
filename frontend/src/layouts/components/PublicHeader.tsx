@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useApp, type Page } from "../../context/AppContext";
 import Icon from "../../components/Icon";
+import ConfirmModal from "../../components/ui/ConfirmModal";
 import { notificationApi } from "../../services/api";
 import type { AppNotification } from "../../types";
 
@@ -31,6 +32,8 @@ export default function PublicHeader({
 
   const [notifDropdownOpen, setNotifDropdownOpen] = useState(false);
   const [notifFilter, setNotifFilter] = useState<"all" | "unread" | "order" | "system">("all");
+  const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
 
   const customerNavigation = [
     { label: "Thuê đồ", p: "products" as Page },
@@ -257,7 +260,8 @@ export default function PublicHeader({
                 </span>
               </button>
               <button
-                onClick={() => logout()}
+                data-testid="public-logout-btn"
+                onClick={() => setLogoutConfirmOpen(true)}
                 className="text-[0.72rem] font-semibold text-rose-300 hover:text-rose-200 px-1.5 sm:px-2 py-1 rounded-lg hover:bg-rose-500/10 transition-colors cursor-pointer whitespace-nowrap"
                 title="Đăng xuất"
               >
@@ -304,6 +308,30 @@ export default function PublicHeader({
           </button>
         </div>
       </div>
+
+      <ConfirmModal
+        isOpen={logoutConfirmOpen}
+        onClose={() => setLogoutConfirmOpen(false)}
+        onConfirm={async () => {
+          setLoggingOut(true);
+          try {
+            await logout();
+            setLogoutConfirmOpen(false);
+          } finally {
+            setLoggingOut(false);
+          }
+        }}
+        title="Xác nhận đăng xuất"
+        message={
+          currentUser
+            ? `Bạn có chắc muốn đăng xuất khỏi tài khoản ${currentUser.name}${currentUser.email ? ` (${currentUser.email})` : ""}?`
+            : "Bạn có chắc muốn đăng xuất khỏi tài khoản hiện tại?"
+        }
+        confirmText="Đăng xuất"
+        cancelText="Ở lại"
+        isDanger
+        isLoading={loggingOut}
+      />
     </header>
   );
 }

@@ -1,4 +1,4 @@
-﻿/**
+/**
  * orderMapper.ts - Ánh xạ DTO Đơn thuê, Bàn giao BBBG, Nhận trả PNT, Phụ phí, Thanh toán & Đối soát 7 bước
  */
 
@@ -48,6 +48,9 @@ export function mapDonTomTatToOrder(dto: DonTomTatBackend, customerName = "Khác
  * Map đơn tóm tắt cho hàng đợi vận hành Staff.
  */
 export function mapDonVanHanhTomTatToOrder(dto: DonVanHanhTomTatBackend): Order {
+  const rental = Number(dto.tongTienThueTruocGiam ?? 0);
+  const discount = Number(dto.tongTienGiam ?? 0);
+  const depositTotal = Number(dto.tongTienCoc ?? 0);
   return {
     id: String(dto.maDonThue),
     backendId: dto.maDonThue,
@@ -60,9 +63,10 @@ export function mapDonVanHanhTomTatToOrder(dto: DonVanHanhTomTatBackend): Order 
     returnTime: dto.gioTraDuKien,
     rentalStartDate: dto.gioNhanDuKien,
     rentalEndDate: dto.gioTraDuKien,
-    rental: 0,
-    discount: 0,
-    depositTotal: 0,
+    rental,
+    discount,
+    depositTotal,
+    total: Math.max(0, rental - discount) + depositTotal,
     status: mapOrderStatusFromBackend(dto.trangThai),
     createdAt: dto.ngayDat,
     assignedEquipment: Array.from({ length: dto.tongThietBiDaGan }, (_, idx) => ({

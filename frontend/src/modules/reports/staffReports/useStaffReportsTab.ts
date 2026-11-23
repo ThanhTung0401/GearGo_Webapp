@@ -51,7 +51,7 @@ export function useStaffReportsTab(app: ReturnType<typeof useApp>) {
     let cancelled = false;
     const timer = window.setTimeout(() => {
       void auditApi
-        .traCuu({ tuKhoa: searchAudit.trim() || undefined, trang: 1, soMoiTrang: 50 })
+        .traCuu({ tuKhoa: searchAudit.trim() || undefined, trang: 1, soMoiTrang: 100 })
         .then((paged) => {
           if (!cancelled) {
             setAuditLogsBackend((paged.items || []).map(mapNhatKyToAuditLog));
@@ -70,15 +70,12 @@ export function useStaffReportsTab(app: ReturnType<typeof useApp>) {
   }, [app.realApi, subTab, searchAudit]);
 
   // 1. Chỉ tiêu vận hành ca trực tính từ danh sách đơn hiện hành
+  const todayStr = now.toISOString().slice(0, 10);
   const pickupInShift = app.orders.filter((o) => ["Đã xác nhận", "Đang chuẩn bị", "Sẵn sàng nhận"].includes(o.status));
   const returnInShift = app.orders.filter((o) => o.status === "Đang thuê");
-  const overdueOrders = app.orders.filter((o) => {
-    if (o.status !== "Đang thuê") return false;
-    const retD = new Date(o.returnTime.replace(" ", "T"));
-    return !isNaN(retD.getTime()) && retD < now;
-  });
+  const overdueOrders = app.orders.filter((o) => app.checkOrderOverdue(o).isOverdue);
   const pendingReconcile = app.orders.filter((o) => o.status === "Chờ đối soát");
-  const handedOverToday = app.orders.filter((o) => o.handedOverAt);
+  const handedOverToday = app.orders.filter((o) => o.handedOverAt && o.handedOverAt.slice(0, 10) === todayStr);
 
   // Thống kê thiết bị trong kho (ưu tiên tổng quan từ báo cáo máy chủ nếu đã tải)
   const tongQuan = opsReport?.tongQuan;

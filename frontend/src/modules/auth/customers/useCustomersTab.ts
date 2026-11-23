@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useApp } from "../../../context/AppContext";
 import { isRealApiEnabled } from "../../../services/apiClient";
 import { staffApi } from "../../../services/api/staffApi";
@@ -34,10 +34,11 @@ export function useCustomersTab(app: ReturnType<typeof useApp>) {
         vaiTro: "KhachHang",
         tuKhoa: searchQuery.trim() || undefined,
         trangThai: statusFilter === "all" ? undefined : statusFilter === "active" ? "HoatDong" : "BiKhoa",
-        soMoiTrang: 50,
+        soMoiTrang: 200,
       });
 
       const idMap: Record<string, number> = {};
+      const cancelledOrUnpaid = ["Chờ thanh toán", "Đã hủy", "Khách hủy", "Cửa hàng hủy", "Hết hạn", "Hết hạn thanh toán", "Không đến nhận"];
       const mapped: CustomerAccount[] = res.items.map((tk) => {
         const rawCustomerId = String(tk.maKhachHang ?? tk.maTaiKhoan);
         const custId = `KH${rawCustomerId.padStart(3, "0")}`;
@@ -51,9 +52,11 @@ export function useCustomersTab(app: ReturnType<typeof useApp>) {
             (tk.soDienThoai && o.customerPhone === tk.soDienThoai)
         );
         const totalOrders = matchingOrders.length;
-        const totalSpent = matchingOrders.reduce((sum, o) => sum + (o.rental - o.discount), 0);
+        const totalSpent = matchingOrders
+          .filter((o) => !cancelledOrUnpaid.includes(o.status))
+          .reduce((sum, o) => sum + Math.max(0, o.rental - o.discount), 0);
         const currentDeposit = matchingOrders
-          .filter((o) => !["Hoàn tất", "Đã hủy", "Hết hạn"].includes(o.status))
+          .filter((o) => !["Hoàn tất", ...cancelledOrUnpaid].includes(o.status))
           .reduce((sum, o) => sum + o.depositTotal, 0);
 
         return {
@@ -81,8 +84,11 @@ export function useCustomersTab(app: ReturnType<typeof useApp>) {
   };
 
   useEffect(() => {
-    void loadCustomerList();
-  }, [realApi, searchQuery, statusFilter]);
+    const timer = window.setTimeout(() => {
+      void loadCustomerList();
+    }, 250);
+    return () => window.clearTimeout(timer);
+  }, [realApi, searchQuery, statusFilter, app.orders.length]);
 
   const filtered = realApi
     ? apiCustomers
@@ -148,7 +154,15 @@ export function useCustomersTab(app: ReturnType<typeof useApp>) {
   };
 
   const customerOrders = selectedCustomer
-    ? app.orders.filter((o) => o.customerId === selectedCustomer.id || o.customerPhone === selectedCustomer.phone)
+    ? app.orders.filter((o) => {
+        const rawNumId = selectedCustomer.id.replace(/^KH0*/, "");
+        const validPhone = selectedCustomer.phone && selectedCustomer.phone !== "Chưa cập nhật";
+        return (
+          o.customerId === selectedCustomer.id ||
+          (rawNumId && o.customerId === rawNumId) ||
+          (validPhone && o.customerPhone === selectedCustomer.phone)
+        );
+      })
     : [];
 
   return {

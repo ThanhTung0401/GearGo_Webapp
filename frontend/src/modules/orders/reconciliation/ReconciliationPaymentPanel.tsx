@@ -1,5 +1,5 @@
 import type { DoiSoatBackend, HoanTienTheoDonBackend } from "../../../services/api";
-import { fmt, type Order } from "../../../store";
+import { fmt, formatBackendEnum, formatDateTimeVi, type Order } from "../../../store";
 
 interface ReconciliationPaymentPanelProps {
   order: Order;
@@ -65,7 +65,7 @@ export function ReconciliationPaymentPanel({
               </strong>
             </div>
             <div className="recon-completed-meta">
-              Thời điểm khóa: <strong>{order.reconciledAt}</strong> · Người chốt: <strong>{order.reconciliation?.lockedBy || "Nhân viên"}</strong>
+              Thời điểm khóa: <strong>{formatDateTimeVi(order.reconciledAt)}</strong> · Người chốt: <strong>{order.reconciliation?.lockedBy || "Nhân viên"}</strong>
             </div>
             <div className="recon-completed-desc">
               Mọi nghĩa vụ thiết bị và tiền cọc đã được quyết toán triệt để. Dữ liệu đã khóa để phục vụ 4 trụ cột báo cáo tài chính.
@@ -139,7 +139,7 @@ export function ReconciliationPaymentPanel({
             <div className="recon-status-confirmed">
               ✓ Đã xác nhận bảng đối soát{" "}
               {doiSoatBackend?.thoiDiemLap || order.reconciliation?.confirmedAt
-                ? `lúc ${doiSoatBackend?.thoiDiemLap || order.reconciliation?.confirmedAt}`
+                ? `lúc ${formatDateTimeVi(doiSoatBackend?.thoiDiemLap || order.reconciliation?.confirmedAt)}`
                 : ""}{" "}
               {doiSoatBackend?.nguoiLap || order.reconciliation?.confirmedBy
                 ? `bởi ${doiSoatBackend?.nguoiLap || order.reconciliation?.confirmedBy}`
@@ -184,12 +184,12 @@ export function ReconciliationPaymentPanel({
                 <div key={ht.maHoanTien} className="recon-refund-row">
                   <div>
                     <strong className="recon-mono-forest">{ht.maYeuCau || `HT-${ht.maHoanTien}`}</strong>
-                    <span className="recon-refund-label">{ht.nhanHienThi}</span>
+                    <span className="recon-refund-label">{formatBackendEnum(ht.nhanHienThi)}</span>
                     <span className="recon-refund-amt">{fmt(ht.soTien)}</span>
                   </div>
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className={`recon-tx-badge ${txBadgeClass}`}>
-                      {ht.trangThai}
+                      {formatBackendEnum(ht.trangThai)}
                     </span>
                     {ht.trangThai !== "ThanhCong" && (
                       <>

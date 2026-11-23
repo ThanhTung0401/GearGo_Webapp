@@ -49,14 +49,33 @@ export function MaintenanceActionModals({
         <div className="so-modal-overlay">
           <div className="so-modal-card-440">
             <h3 className="so-modal-title-10">Phân công xử lý phiếu {assignMaintTarget.id}</h3>
-            <label className="so-field-label">Mã nhân viên xử lý:</label>
-            <input
-              type="number"
-              min={1}
-              value={assignHandlerId}
-              onChange={(e) => setAssignHandlerId(Number(e.target.value))}
-              className="so-input-mb10"
-            />
+            <label className="so-field-label">Nhân viên phụ trách xử lý:</label>
+            {app.staffAccounts.length > 0 ? (
+              <select
+                value={assignHandlerId}
+                onChange={(e) => setAssignHandlerId(Number(e.target.value))}
+                className="so-input-mb10"
+              >
+                {app.staffAccounts
+                  .filter((s) => s.status !== "locked")
+                  .map((s) => {
+                    const numId = Number(s.id) || parseInt(s.id.replace(/\D/g, ""), 10);
+                    return (
+                      <option key={s.id} value={numId || 1}>
+                        {s.name} ({s.role}) — #{s.id}
+                      </option>
+                    );
+                  })}
+              </select>
+            ) : (
+              <input
+                type="number"
+                min={1}
+                value={assignHandlerId}
+                onChange={(e) => setAssignHandlerId(Number(e.target.value))}
+                className="so-input-mb10"
+              />
+            )}
             <label className="so-field-label">Ghi chú / Lý do:</label>
             <input
               value={assignReason}

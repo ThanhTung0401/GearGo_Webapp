@@ -1,32 +1,42 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useApp } from "../../context/AppContext";
 
 import { fmt, type Supplier } from "../../store";
 import Icon from "../../components/Icon";
 
 import SupplierProfileModal from "../../components/SupplierProfileModal";
-
 import { SupplierForm } from "./forms/SupplierForm";
+import { Can } from "../../features/permissions/PermissionsContext";
+import { Permissions } from "../../constants/permissions";
+import Pagination from "../../components/ui/Pagination";
+import { usePagination } from "../../hooks/usePagination";
 
 export function SuppliersTab({ app }: { app: ReturnType<typeof useApp> }) {
+  const navigate = useNavigate();
   const [action, setAction] = useState<Supplier | "new" | null>(null);
   const [supplierSearch, setSupplierSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
-  const [selectedSupplierProfile, setSelectedSupplierProfile] = useState<Supplier | null>(null);
+  // Lưu ID thay vì object snapshot để modal luôn đồng bộ trạng thái mới nhất sau khi refresh
+  const [selectedSupplierId, setSelectedSupplierId] = useState<string | null>(null);
+  const selectedSupplierProfile = selectedSupplierId
+    ? app.suppliers.find((s) => s.id === selectedSupplierId) ?? null
+    : null;
 
   const filteredSuppliers = app.suppliers.filter((s) => {
     const matchStatus = statusFilter === "all" || s.cooperationStatus === statusFilter;
     const query = supplierSearch.toLowerCase().trim();
     const matchSearch =
       !query ||
-      s.name.toLowerCase().includes(query) ||
-      s.displayCode.toLowerCase().includes(query) ||
-      s.contactPerson.toLowerCase().includes(query) ||
-      s.phone.includes(query) ||
+      (s.name || "").toLowerCase().includes(query) ||
+      (s.displayCode || "").toLowerCase().includes(query) ||
+      (s.contactPerson || "").toLowerCase().includes(query) ||
+      (s.phone || "").includes(query) ||
       (s.taxCode && s.taxCode.includes(query)) ||
       (s.address && s.address.toLowerCase().includes(query));
     return matchStatus && matchSearch;
   });
+  const paging = usePagination(filteredSuppliers, 6);
 
   return (
     <div>
@@ -35,7 +45,9 @@ export function SuppliersTab({ app }: { app: ReturnType<typeof useApp> }) {
           <h2 className="adm-page-title adm-page-title--compact">Nhà cung cấp</h2>
           <p className="adm-page-subtitle adm-page-subtitle--sm">Quản lý đối tác cung ứng thiết bị và theo dõi hồ sơ lịch sử nhập hàng (UC7.1 - UC7.4).</p>
         </div>
-        <button onClick={() => setAction("new")} className="adm-btn-primary">+ Thêm NCC mới</button>
+        <Can perm={Permissions.NhaCungCap_Quan}>
+          <button onClick={() => setAction("new")} className="adm-btn-primary">+ Thêm NCC mới</button>
+        </Can>
       </div>
 
       {/* Thanh công cụ tìm kiếm và lọc trạng thái (UC7.3 & UC7.4) */}
@@ -72,7 +84,7 @@ export function SuppliersTab({ app }: { app: ReturnType<typeof useApp> }) {
       </div>
 
       <div className="flex flex-col gap-3">
-        {filteredSuppliers.map((s) => {
+        {paging.pagedItems.map((s) => {
           const receipts = app.importReceipts.filter((receipt) => receipt.supplierId === s.id || receipt.supplierId === s.displayCode);
           const confirmedReceipts = receipts.filter((receipt) => receipt.status === "Đã nhập kho");
           const total = confirmedReceipts.reduce((sum, receipt) => sum + receipt.lines.reduce((lineSum, line) => lineSum + line.quantity * line.unitPrice, 0), 0);
@@ -105,17 +117,19 @@ export function SuppliersTab({ app }: { app: ReturnType<typeof useApp> }) {
                 </div>
                 <div className="flex gap-2">
                   <button
-                    onClick={() => setSelectedSupplierProfile(s)}
+                    onClick={() => setSelectedSupplierId(s.id)}
                     className="adm-btn-forest-solid"
                   >
                     👁 Hồ sơ NCC (UC7.3)
                   </button>
-                  <button
-                    onClick={() => setAction(s)}
-                    className="adm-btn-outline"
-                  >
-                    Sửa
-                  </button>
+                  <Can perm={Permissions.NhaCungCap_Quan}>
+                    <button
+                      onClick={() => setAction(s)}
+                      className="adm-btn-outline"
+                    >
+                      Sửa
+                    </button>
+                  </Can>
                 </div>
               </div>
             </div>
@@ -128,15 +142,25 @@ export function SuppliersTab({ app }: { app: ReturnType<typeof useApp> }) {
         )}
       </div>
 
+      <Pagination
+        page={paging.page}
+        totalPages={paging.totalPages}
+        totalItems={paging.totalItems}
+        startIndex={paging.startIndex}
+        endIndex={paging.endIndex}
+        onPageChange={paging.setPage}
+        itemLabel="nhà cung cấp"
+      />
+
       {action && <SupplierForm app={app} supplier={action === "new" ? undefined : action} onClose={() => setAction(null)} />}
       {selectedSupplierProfile && (
         <SupplierProfileModal
           supplier={selectedSupplierProfile}
           app={app}
-          onClose={() => setSelectedSupplierProfile(null)}
-          onOpenReceipt={(receiptId) => {
-            setSelectedSupplierProfile(null);
-            // Có thể mở xem chi tiết phiếu nếu cần
+          onClose={() => setSelectedSupplierId(null)}
+          onOpenReceipt={() => {
+            setSelectedSupplierId(null);
+            navigate("/staff/inventory");
           }}
         />
       )}

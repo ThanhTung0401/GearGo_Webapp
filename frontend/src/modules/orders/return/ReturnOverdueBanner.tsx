@@ -1,5 +1,5 @@
 import { useApp } from "../../../context/AppContext";
-import { fmt, Order } from "../../../store";
+import { fmt, formatDateTimeVi, Order } from "../../../store";
 import Icon from "../../../components/Icon";
 import type { OverdueInfoState } from "./returnTypes";
 
@@ -9,6 +9,7 @@ interface ReturnOverdueBannerProps {
   overdueInfo: OverdueInfoState;
   overdueConflicts: ReturnType<ReturnType<typeof useApp>["getOverdueConflicts"]>;
   affectedOrdersBackend: Array<Record<string, unknown>>;
+  contactLogCount: number;
   debtCount: number;
   returnedCount: number;
   returnLoading: boolean;
@@ -24,6 +25,7 @@ export function ReturnOverdueBanner({
   overdueInfo,
   overdueConflicts,
   affectedOrdersBackend,
+  contactLogCount,
   debtCount,
   returnedCount,
   returnLoading,
@@ -31,6 +33,8 @@ export function ReturnOverdueBanner({
   onOpenContactModal,
   onApplyOverdueFee,
 }: ReturnOverdueBannerProps) {
+  const totalDelivered = Math.max(order.assignedEquipment.length, debtCount);
+  const canApplyOverdueFee = overdueInfo.surcharge > 0;
   return (
     <>
       {/* Header info đơn */}
@@ -44,18 +48,18 @@ export function ReturnOverdueBanner({
             <div className="so-order-meta">
               Hẹn trả dự kiến:{" "}
               <strong className={`so-overdue-date ${overdueInfo.isOverdue ? "is-overdue" : ""}`}>
-                {order.returnTime}
+                {formatDateTimeVi(order.returnTime)}
               </strong>
             </div>
           </div>
           <div className="so-order-stats">
             <div className="so-order-stat-muted">
-              Tổng thiết bị đã giao: <strong>{order.assignedEquipment.length}</strong>
+              Tổng thiết bị đã giao: <strong>{totalDelivered}</strong>
             </div>
             <div className="so-order-stat-ok">
               Đã trả / xử lý:{" "}
               <strong>
-                {app.realApi ? Math.max(0, order.assignedEquipment.length - debtCount) : returnedCount}
+                {app.realApi ? Math.max(0, totalDelivered - debtCount) : returnedCount}
               </strong>
             </div>
             <div className={`so-order-stat-debt ${debtCount > 0 ? "is-debt" : ""}`}>
@@ -90,16 +94,20 @@ export function ReturnOverdueBanner({
               </div>
               <div className="so-overdue-banner-sub">
                 Phạt trễ 150% đơn giá ngày = <strong>+{fmt(overdueInfo.surcharge)}</strong>.
+                {!canApplyOverdueFee && (
+                  <span className="ml-1 text-rose-700">(Đơn chưa có thiết bị nợ quá hạn hợp lệ để lập phí)</span>
+                )}
               </div>
             </div>
             <div className="flex gap-2 items-center flex-wrap">
               <button onClick={onOpenContactModal} className="so-btn-blue-sm">
-                Nhật ký gọi ({order.contactLogs?.length || 0})
+                Nhật ký gọi ({contactLogCount})
               </button>
               <button
-                disabled={returnBusy}
+                disabled={returnBusy || !canApplyOverdueFee}
                 onClick={() => void onApplyOverdueFee()}
-                className="so-btn-danger-action"
+                title={!canApplyOverdueFee ? "Số tiền phạt dự kiến phải lớn hơn 0đ" : "Lập phụ phí trễ hạn"}
+                className="so-btn-danger-action disabled:opacity-50"
               >
                 + Lập phụ phí trễ
               </button>

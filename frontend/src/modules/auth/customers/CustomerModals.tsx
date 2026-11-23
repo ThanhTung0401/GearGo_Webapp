@@ -1,5 +1,7 @@
 import Icon from "../../../components/Icon";
-import { fmt, statusColors, type CustomerAccount, type Order } from "../../../store";
+import Pagination from "../../../components/ui/Pagination";
+import { usePagination } from "../../../hooks/usePagination";
+import { fmt, formatDateTimeVi, statusColors, type CustomerAccount, type Order } from "../../../store";
 
 interface CustomerModalsProps {
   selectedCustomer: CustomerAccount | null;
@@ -31,6 +33,7 @@ export function CustomerModals({
   onCloseLock,
   onConfirmLock,
 }: CustomerModalsProps) {
+  const ordersPaging = usePagination(customerOrders, 5);
   return (
     <>
       {/* Modal Lịch sử Đơn thuê của khách */}
@@ -49,14 +52,14 @@ export function CustomerModals({
                 <div className="adm-table-empty">Khách hàng chưa có đơn thuê nào trên hệ thống.</div>
               ) : (
                 <div className="flex flex-col gap-3">
-                  {customerOrders.map((o) => {
+                  {ordersPaging.pagedItems.map((o) => {
                     const sc = statusColors[o.status] || { bg: "#F3F4F6", text: "#374151" };
                     return (
                       <div key={o.id} className="adm-card--cream">
                         <div className="flex justify-between items-center mb-2 flex-wrap gap-2">
                           <div>
-                            <strong className="adm-cell-code text-[0.9rem]">{o.id}</strong>
-                            <span className="adm-hint-text ml-2">Tạo lúc: {o.createdAt}</span>
+                            <strong className="adm-cell-code text-[0.9rem]">{o.displayCode || o.id}</strong>
+                            <span className="adm-hint-text ml-2">Tạo lúc: {formatDateTimeVi(o.createdAt)}</span>
                           </div>
                           {/* Huy hiệu trạng thái đơn trong modal lịch sử lấy màu động theo statusColors */}
                           <span className="adm-pill" style={{ background: sc.bg, color: sc.text }}>
@@ -64,16 +67,27 @@ export function CustomerModals({
                           </span>
                         </div>
                         <div className="text-[0.8rem] text-[#4B5563] mb-1.5">
-                          {o.items.map((it) => `${it.productName} (SL: ${it.qty})`).join(", ")}
+                          {o.items.length > 0
+                            ? o.items.map((it) => `${it.productName} (SL: ${it.qty})`).join(", ")
+                            : `${o.assignedEquipment.length} thiết bị`}
                         </div>
                         <div className="flex justify-between items-center text-xs pt-2 border-t border-dashed border-bone flex-wrap gap-2">
-                          <span>Tiền thuê: <strong>{fmt(o.rental - o.discount)}</strong></span>
+                          <span>Tiền thuê: <strong>{fmt(Math.max(0, o.rental - o.discount))}</strong></span>
                           <span>Tiền cọc: <strong className="text-[#B45309]">{fmt(o.depositTotal)}</strong></span>
-                          <span>Thời gian: {o.pickupTime} → {o.returnTime}</span>
+                          <span>Thời gian: {formatDateTimeVi(o.pickupTime)} → {formatDateTimeVi(o.returnTime)}</span>
                         </div>
                       </div>
                     );
                   })}
+                  <Pagination
+                    page={ordersPaging.page}
+                    totalPages={ordersPaging.totalPages}
+                    totalItems={ordersPaging.totalItems}
+                    startIndex={ordersPaging.startIndex}
+                    endIndex={ordersPaging.endIndex}
+                    onPageChange={ordersPaging.setPage}
+                    itemLabel="đơn thuê"
+                  />
                 </div>
               )}
             </div>

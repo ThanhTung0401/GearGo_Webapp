@@ -29,42 +29,45 @@
   --color-border-subtle: #CBD5E1;
 }
 
-* {
-  box-sizing: border-box;
-}
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
 
-html {
-  scroll-behavior: smooth;
-}
+  html {
+    scroll-behavior: smooth;
+  }
 
-body {
-  margin: 0;
-  font-family: var(--font-body);
-  background-color: var(--color-cream);
-  color: var(--color-charcoal);
-}
+  body {
+    margin: 0;
+    font-family: var(--font-body);
+    background-color: var(--color-cream);
+    color: var(--color-charcoal);
+  }
 
-body.menu-open {
-  overflow: hidden;
-}
+  body.menu-open {
+    overflow: hidden;
+  }
 
-h1, h2, h3 {
-  font-family: var(--font-display);
-  letter-spacing: -0.015em;
-}
+  h1, h2, h3 {
+    font-family: var(--font-display);
+    letter-spacing: -0.015em;
+  }
 
-button, input, select, textarea {
-  font: inherit;
-}
+  /* Đặt trong @layer base để không ghi đè utility text-xs / font-bold của Tailwind v4 */
+  button, input, select, textarea {
+    font: inherit;
+  }
 
-button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible,
-a:focus-visible, summary:focus-visible {
-  outline: 3px solid color-mix(in srgb, var(--color-amber) 60%, white);
-  outline-offset: 2px;
-}
+  button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible,
+  a:focus-visible, summary:focus-visible {
+    outline: 3px solid color-mix(in srgb, var(--color-amber) 60%, white);
+    outline-offset: 2px;
+  }
 
-button:disabled {
-  cursor: not-allowed;
+  button:disabled {
+    cursor: not-allowed;
+  }
 }
 
 ::-webkit-scrollbar {

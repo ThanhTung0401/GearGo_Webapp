@@ -7,7 +7,7 @@ import { mapDonVanHanhChiTietToOrder } from "../services/mappers";
 import { type IconName } from "../components/Icon";
 import DashboardLayout from "../layouts/DashboardLayout";
 import { PermissionsTab } from "../features/permissions";
-import { useHasPerm } from "../features/permissions/PermissionsContext";
+import { useHasPerm, usePermissionsContext } from "../features/permissions/PermissionsContext";
 import { Permissions } from "../constants/permissions";
 import type { StaffTab } from "../modules/orders/returnMapping";
 import { OverviewTab } from "../modules/reports/OverviewTab";
@@ -73,6 +73,8 @@ interface WorkspaceTabConfig {
 export default function WorkspaceView() {
   const app = useApp();
   const hasPerm = useHasPerm();
+  const permCtx = usePermissionsContext();
+  const isAdminUser = app.role === "admin" || permCtx?.roleName === "QuanTriVien";
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
 
   const selectedOrder = (selectedOrderId ? app.orders.find((o) => o.id === selectedOrderId) : null) ?? null;
@@ -129,13 +131,17 @@ export default function WorkspaceView() {
   const navigate = useNavigate();
   const urlTab = resolveRouteFromPath(location.pathname).staffTab as WorkspaceTabKey | null;
 
-  const visibleTabs = allTabs.filter((t) => hasPerm(t.perm));
-  const [tab, setTabState] = useState<WorkspaceTabKey>(urlTab ?? "overview");
+  // Tab Phân quyền chỉ dành riêng cho Quản trị viên; mọi tab khác lọc theo quyền DB
+  const visibleTabs = allTabs.filter((t) =>
+    t.key === "permissions" ? isAdminUser && hasPerm(t.perm) : hasPerm(t.perm)
+  );
+  const firstVisibleKey = visibleTabs[0]?.key ?? null;
+  const isUrlTabAllowed = Boolean(urlTab && visibleTabs.some((t) => t.key === urlTab));
+  const activeTabKey: WorkspaceTabKey = isUrlTabAllowed ? urlTab! : (firstVisibleKey ?? "overview");
 
-  // Đồng bộ URL /staff/:tab khi bấm chuyển tab trong sidebar
+  // Điều hướng trực tiếp qua URL làm nguồn chân lý duy nhất (tránh ping-pong state/URL gây remount tab liên tục)
   const setTab = useCallback(
     (nextTab: WorkspaceTabKey) => {
-      setTabState(nextTab);
       const nextPath = `/staff/${nextTab}`;
       if (location.pathname !== nextPath) {
         navigate(nextPath);
@@ -144,38 +150,33 @@ export default function WorkspaceView() {
     [location.pathname, navigate]
   );
 
-  // Đồng bộ tab khi người dùng nhập trực tiếp URL /staff/:tab hoặc bấm Back/Forward
+  // Tự động điều hướng về tab hợp lệ đầu tiên nếu URL gõ tay không nằm trong quyền được cấp (chỉ chạy sau khi đã tải quyền)
   useEffect(() => {
-    if (urlTab && visibleTabs.some((t) => t.key === urlTab) && urlTab !== tab) {
-      setTabState(urlTab);
-    }
-  }, [urlTab, visibleTabs, tab]);
-
-  // Tự động chọn tab hợp lệ đầu tiên nếu tab hiện tại không nằm trong quyền được cấp
-  useEffect(() => {
-    if (visibleTabs.length > 0 && !visibleTabs.some((t) => t.key === tab)) {
-      const firstKey = visibleTabs[0].key;
-      setTabState(firstKey);
-      if (location.pathname === "/staff" || location.pathname === "/admin") {
-        navigate(`/staff/${firstKey}`, { replace: true });
+    if (!permCtx?.loaded || !firstVisibleKey) return;
+    if (!isUrlTabAllowed) {
+      const target = `/staff/${firstVisibleKey}`;
+      if (location.pathname !== target) {
+        navigate(target, { replace: true });
       }
     }
-  }, [visibleTabs, tab, location.pathname, navigate]);
+  }, [permCtx?.loaded, isUrlTabAllowed, firstVisibleKey, location.pathname, navigate]);
 
-  const currentTab = visibleTabs.find((item) => item.key === tab) ?? visibleTabs[0];
+  const currentTab = visibleTabs.find((item) => item.key === activeTabKey) ?? visibleTabs[0];
 
   return (
     <DashboardLayout
       title={currentTab?.label || "Không gian làm việc"}
       subtitle="Không gian vận hành & quản trị GearGo"
       navItems={visibleTabs}
-      activeKey={currentTab?.key ?? tab}
+      activeKey={currentTab?.key ?? activeTabKey}
       onSelectNav={(key) => setTab(key as WorkspaceTabKey)}
       brandSubtitle="Cổng làm việc GearGo"
     >
       {currentTab ? currentTab.render() : (
         <div className="p-8 text-center text-stone-500">
-          Tài khoản chưa được cấp quyền truy cập module nào. Vui lòng liên hệ quản trị viên.
+          {!permCtx?.loaded
+            ? "Đang tải phân quyền tài khoản..."
+            : "Tài khoản chưa được cấp quyền truy cập module nào. Vui lòng liên hệ quản trị viên."}
         </div>
       )}
     </DashboardLayout>

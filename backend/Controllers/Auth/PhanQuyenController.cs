@@ -1,4 +1,4 @@
-﻿using GearGo.Helpers;
+using GearGo.Helpers;
 using GearGo.Helpers.Authorization;
 using GearGo.Models.DTOs.PhanQuyen;
 using GearGo.Services.Interfaces;
@@ -11,7 +11,7 @@ namespace GearGo.Controllers.Auth;
 /// Quản trị phân quyền động (feat/ROLE_Adjustment).
 /// </summary>
 [ApiController]
-[Authorize]
+[Authorize(Roles = DomainConstants.Roles.Admin)]
 [Route("api/phan-quyen")]
 public class PhanQuyenController : BaseApiController
 {

@@ -1,4 +1,6 @@
-import type { RentalPolicyConfig } from "../../../store";
+import { formatDateTimeVi, formatDateVi, type RentalPolicyConfig } from "../../../store";
+import { Can } from "../../../features/permissions/PermissionsContext";
+import { Permissions } from "../../../constants/permissions";
 
 interface PolicyCurrentFormProps {
   form: RentalPolicyConfig;
@@ -255,18 +257,20 @@ export function PolicyCurrentForm({
       <div className="adm-policy-banner">
         <div>
           <div className="text-[0.8rem] text-[var(--color-bark)] font-bold">
-            Chính sách đang áp dụng: <span className="text-[var(--color-forest)]">{currentVer}</span> (Hiệu lực từ {currentPolicy.effectiveDate || "01/12/2024"})
+            Chính sách đang áp dụng: <span className="text-[var(--color-forest)]">{currentVer}</span> (Hiệu lực từ {formatDateVi(currentPolicy.effectiveDate, "01/12/2024")})
           </div>
           <div className="adm-hint-text mt-0.5">
-            Ban hành bởi <strong>{currentPolicy.updatedBy}</strong> lúc {currentPolicy.updatedAt}
+            Ban hành bởi <strong>{currentPolicy.updatedBy}</strong> lúc {formatDateTimeVi(currentPolicy.updatedAt)}
           </div>
         </div>
-        <button
-          type="submit"
-          className="adm-btn-primary px-5 py-2.5 font-bold shadow-sm"
-        >
-          Xem lại tác động & Ban hành phiên bản mới (UC8.1.1) →
-        </button>
+        <Can perm={Permissions.ChinhSach_Quan}>
+          <button
+            type="submit"
+            className="adm-btn-primary px-5 py-2.5 font-bold shadow-sm"
+          >
+            Xem lại tác động & Ban hành phiên bản mới (UC8.1.1) →
+          </button>
+        </Can>
       </div>
     </form>
   );

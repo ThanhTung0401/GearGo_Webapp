@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IdentityModel.Tokens.Jwt;
 using System.Net;
 using System.Net.Http.Headers;
@@ -121,5 +121,69 @@ public class RbacV2PermissionTests : IDisposable
             Assert.Equal(HttpStatusCode.Forbidden, resp.StatusCode);
         else
             Assert.NotEqual(HttpStatusCode.Forbidden, resp.StatusCode);
+    }
+
+    [Fact]
+    public async Task PhanQuyenController_ChiQuanTriVienDuocTruyCap_NhanVienBi403()
+    {
+        var staffClient = Client(_du.TkNhanVien, DomainConstants.Roles.Staff);
+        var adminClient = Client(_du.TkQuanTri, DomainConstants.Roles.Admin);
+
+        Assert.Equal(HttpStatusCode.Forbidden, (await staffClient.GetAsync("/api/phan-quyen/vai-tro")).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await staffClient.GetAsync("/api/phan-quyen/quyen")).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await adminClient.GetAsync("/api/phan-quyen/vai-tro")).StatusCode);
+    }
+
+    [Fact]
+    public async Task CamGanQuyenPhanQuyenChoNhanVien_CaRoleVaRiengLe()
+    {
+        using var scope = _app.Services.CreateScope();
+        var svc = scope.ServiceProvider.GetRequiredService<IPermissionService>();
+
+        var kqRole = await svc.CapNhatQuyenVaiTroAsync(
+            DomainConstants.Roles.Staff,
+            new CapNhatQuyenVaiTroRequest { Quyen = new() { DomainConstants.Permissions.DonThue_Xem, DomainConstants.Permissions.PhanQuyen_Xem } },
+            actor: _du.TkQuanTri);
+        Assert.False(kqRole.ThanhCong);
+        Assert.Equal("QUYEN_CHI_DANH_CHO_QUAN_TRI", kqRole.MaLoi);
+
+        var kqUser = await svc.CapNhatQuyenNhanVienAsync(
+            _du.TkNhanVien,
+            new CapNhatQuyenNhanVienRequest { Quyen = new() { DomainConstants.Permissions.DonThue_Xem, DomainConstants.Permissions.PhanQuyen_Quan } },
+            actor: _du.TkQuanTri);
+        Assert.False(kqUser.ThanhCong);
+        Assert.Equal("QUYEN_CHI_DANH_CHO_QUAN_TRI", kqUser.MaLoi);
+    }
+
+    [Fact]
+    public async Task GoSanPhamXem_ChucNangQuanLySanPhamBi403_CapRiengCho1NhanVienLaiDuoc200()
+    {
+        using var scope = _app.Services.CreateScope();
+        var svc = scope.ServiceProvider.GetRequiredService<IPermissionService>();
+
+        // 1. Gỡ SanPham.Xem khỏi role NhanVien (tất cả nhân viên)
+        var roleWithoutProduct = DomainConstants.Permissions.DefaultStaff
+            .Where(p => p != DomainConstants.Permissions.SanPham_Xem).ToList();
+        var kqRole = await svc.CapNhatQuyenVaiTroAsync(
+            DomainConstants.Roles.Staff,
+            new CapNhatQuyenVaiTroRequest { Quyen = roleWithoutProduct },
+            actor: _du.TkQuanTri);
+        Assert.True(kqRole.ThanhCong);
+
+        var staffClient = Client(_du.TkNhanVien, DomainConstants.Roles.Staff);
+        Assert.Equal(HttpStatusCode.Forbidden, (await staffClient.GetAsync("/api/san-pham/quan-ly")).StatusCode);
+
+        // 2. Cấp riêng SanPham.Xem cho đúng nhân viên đó (per-staff override)
+        var kqStaff = await svc.CapNhatQuyenNhanVienAsync(
+            _du.TkNhanVien,
+            new CapNhatQuyenNhanVienRequest { Quyen = new() { DomainConstants.Permissions.DonThue_Xem, DomainConstants.Permissions.SanPham_Xem } },
+            actor: _du.TkQuanTri);
+        Assert.True(kqStaff.ThanhCong);
+        Assert.Equal(HttpStatusCode.OK, (await staffClient.GetAsync("/api/san-pham/quan-ly")).StatusCode);
+
+        // 3. Xóa override -> quay lại kế thừa role (không có SanPham.Xem) -> 403
+        var kqReset = await svc.XoaPhanQuyenRiengNhanVienAsync(_du.TkNhanVien, actor: _du.TkQuanTri);
+        Assert.True(kqReset.ThanhCong);
+        Assert.Equal(HttpStatusCode.Forbidden, (await staffClient.GetAsync("/api/san-pham/quan-ly")).StatusCode);
     }
 }

@@ -1,9 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useApp } from "../../context/AppContext";
 
-import { type Equipment } from "../../store";
+import { formatDateVi, type Equipment } from "../../store";
 
 import EquipmentLifecycleModal from "../../components/EquipmentLifecycleModal";
+import Pagination from "../../components/ui/Pagination";
+import { usePagination } from "../../hooks/usePagination";
 
 import { EquipmentForm } from "./forms/EquipmentForm";
 import { TransferPanel } from "../reports/TransferPanel";
@@ -35,6 +37,7 @@ export function EquipmentTab({ app }: { app: ReturnType<typeof useApp> }) {
       (filterProduct === "Tất cả" || pname === filterProduct) &&
       (filterStatus === "Tất cả" || e.equipmentStatus === filterStatus);
   });
+  const paging = usePagination(filtered, 10);
 
   if (view === "transfer") {
     return (
@@ -94,39 +97,57 @@ export function EquipmentTab({ app }: { app: ReturnType<typeof useApp> }) {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((e) => {
-                const p = app.products.find((pr) => pr.id === e.productId);
-                const origP = app.products.find((pr) => pr.id === e.originalProductId);
-                const moved = e.productId !== e.originalProductId;
-                const st = statusStyle[e.equipmentStatus] || { bg: "#F3F4F6", text: "#374151" };
-                return (
-                  <tr key={e.id}>
-                    <td className="adm-cell-code">{e.displayCode ?? e.id}</td>
-                    <td>
-                      <div className="font-semibold">{p?.name}</div>
-                      {moved && <div className="text-[0.68rem] text-[var(--color-amber)]">↳ Chuyển từ {origP?.name}</div>}
-                    </td>
-                    <td className="adm-cell-mono adm-muted-note">{e.importReceiptId}</td>
-                    <td className="adm-cell-mono adm-hint-text">{e.importDate}</td>
-                    <td>{e.condition}</td>
-                    <td>
-                      {/* Huy hiệu trạng thái thiết bị tô màu động theo statusStyle */}
-                      <span className="adm-pill adm-pill--round" style={{ background: st.bg, color: st.text }}>{e.equipmentStatus}</span>
-                    </td>
-                    <td className="adm-cell-mono adm-cell-center">{e.rentCount}</td>
-                    <td>
-                      <div className="flex gap-1">
-                        <button onClick={() => setViewingLifecycle(e)} className="adm-btn-forest-outline adm-btn-xs">🔍 Sổ đời</button>
-                        <button onClick={() => setEditing(e)} className="adm-btn-outline adm-btn-xs">Sửa</button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
+              {paging.pagedItems.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="text-center py-8 text-sm text-gray-500">
+                    Không tìm thấy thiết bị nào phù hợp.
+                  </td>
+                </tr>
+              ) : (
+                paging.pagedItems.map((e) => {
+                  const p = app.products.find((pr) => pr.id === e.productId);
+                  const origP = app.products.find((pr) => pr.id === e.originalProductId);
+                  const moved = e.productId !== e.originalProductId;
+                  const st = statusStyle[e.equipmentStatus] || { bg: "#F3F4F6", text: "#374151" };
+                  return (
+                    <tr key={e.id}>
+                      <td className="adm-cell-code">{e.displayCode ?? e.id}</td>
+                      <td>
+                        <div className="font-semibold">{p?.name}</div>
+                        {moved && <div className="text-[0.68rem] text-[var(--color-amber)]">↳ Chuyển từ {origP?.name}</div>}
+                      </td>
+                      <td className="adm-cell-mono adm-muted-note">{e.importReceiptId || "—"}</td>
+                      <td className="adm-cell-mono adm-hint-text">{formatDateVi(e.importDate)}</td>
+                      <td>{e.condition}</td>
+                      <td>
+                        {/* Huy hiệu trạng thái thiết bị tô màu động theo statusStyle */}
+                        <span className="adm-pill adm-pill--round" style={{ background: st.bg, color: st.text }}>{e.equipmentStatus}</span>
+                      </td>
+                      <td className="adm-cell-mono adm-cell-center">{e.rentCount}</td>
+                      <td>
+                        <div className="flex gap-1">
+                          <button onClick={() => setViewingLifecycle(e)} className="adm-btn-forest-outline adm-btn-xs">🔍 Sổ đời</button>
+                          <button onClick={() => setEditing(e)} className="adm-btn-outline adm-btn-xs">Sửa</button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
             </tbody>
           </table>
         </div>
       </div>
+
+      <Pagination
+        page={paging.page}
+        totalPages={paging.totalPages}
+        totalItems={paging.totalItems}
+        startIndex={paging.startIndex}
+        endIndex={paging.endIndex}
+        onPageChange={paging.setPage}
+        itemLabel="thiết bị"
+      />
       {editing && <EquipmentForm app={app} equipment={editing} onClose={() => setEditing(null)} />}
       {viewingLifecycle && <EquipmentLifecycleModal equipment={viewingLifecycle} app={app} onClose={() => setViewingLifecycle(null)} />}
     </div>

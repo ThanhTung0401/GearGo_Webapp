@@ -55,10 +55,14 @@ export async function loginUi(page: Page, role: RoleKey = "customer"): Promise<v
       await backPublicBtn.click();
     }
 
-    // 2. Nếu đang có phiên đăng nhập -> bấm "Thoát" bằng SPA
+    // 2. Nếu đang có phiên đăng nhập -> bấm "Thoát" và xác nhận modal đăng xuất
     const logoutBtn = page.getByRole("button", { name: "Thoát" }).first();
     if (await logoutBtn.isVisible().catch(() => false)) {
       await logoutBtn.click();
+      const confirmLogout = page.getByRole("dialog").getByRole("button", { name: "Đăng xuất" }).first();
+      if (await waitVisible(confirmLogout, 2000)) {
+        await confirmLogout.click();
+      }
       await expect(page.getByRole("button", { name: "Đăng nhập" }).first()).toBeVisible({ timeout: 15_000 });
     }
 

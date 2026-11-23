@@ -1,4 +1,8 @@
-﻿import Icon from "../../../components/Icon";
+import Icon from "../../../components/Icon";
+import Pagination from "../../../components/ui/Pagination";
+import { Can } from "../../../features/permissions/PermissionsContext";
+import { Permissions } from "../../../constants/permissions";
+import { formatBackendEnum, formatDateTimeVi } from "../../../store";
 import { type ThongBaoGuiLoiBackend } from "../../../services/api/notificationApi";
 
 interface NotificationFailedQueueProps {
@@ -126,7 +130,7 @@ export function NotificationFailedQueue({
                         </td>
                         <td>
                           <span className="adm-pill is-danger-dark">
-                            {item.trangThaiGui}
+                            {formatBackendEnum(item.trangThaiGui)}
                           </span>
                           <div className="adm-hint-text mt-1">
                             Đã thử: <strong>{item.soLanThuGui}</strong> lần
@@ -136,21 +140,23 @@ export function NotificationFailedQueue({
                           {item.loiGuiGanNhat || "Lỗi kết nối cổng gửi"}
                         </td>
                         <td className="adm-cell-mono adm-hint-text text-[0.74rem] whitespace-nowrap">
-                          {new Date(item.thoiDiemTao).toLocaleString("vi-VN")}
+                          {formatDateTimeVi(item.thoiDiemTao)}
                         </td>
                         <td>
-                          <button
-                            type="button"
-                            disabled={retryingId === item.maThongBao}
-                            onClick={() => {
-                              setRetryTarget(item);
-                              setRetryReason("Thử gửi lại thông báo qua hàng chờ thủ công");
-                            }}
-                            className="adm-btn-amber-sm"
-                          >
-                            <Icon name="refresh" size={13} />
-                            Thử lại
-                          </button>
+                          <Can perm={Permissions.ThongBao_Gui}>
+                            <button
+                              type="button"
+                              disabled={retryingId === item.maThongBao}
+                              onClick={() => {
+                                setRetryTarget(item);
+                                setRetryReason("Thử gửi lại thông báo qua hàng chờ thủ công");
+                              }}
+                              className="adm-btn-amber-sm"
+                            >
+                              <Icon name="refresh" size={13} />
+                              Thử lại
+                            </button>
+                          </Can>
                         </td>
                       </tr>
                     ))
@@ -159,27 +165,17 @@ export function NotificationFailedQueue({
               </table>
             </div>
 
-            {failedTotal > 10 && (
-              <div className="adm-table-pagination">
-                <span>Trang {failedPage} · Tổng {failedTotal} bản ghi</span>
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    disabled={failedPage <= 1 || failedLoading}
-                    onClick={() => onLoadFailedQueue(failedPage - 1)}
-                    className="btn btn-secondary btn-sm"
-                  >
-                    Trước
-                  </button>
-                  <button
-                    type="button"
-                    disabled={failedPage * 10 >= failedTotal || failedLoading}
-                    onClick={() => onLoadFailedQueue(failedPage + 1)}
-                    className="btn btn-secondary btn-sm"
-                  >
-                    Sau
-                  </button>
-                </div>
+            {failedTotal > 0 && (
+              <div className="px-4 pb-3">
+                <Pagination
+                  page={failedPage}
+                  totalPages={Math.max(1, Math.ceil(failedTotal / 10))}
+                  totalItems={failedTotal}
+                  startIndex={(failedPage - 1) * 10 + 1}
+                  endIndex={Math.min(failedPage * 10, failedTotal)}
+                  onPageChange={onLoadFailedQueue}
+                  itemLabel="bản ghi lỗi"
+                />
               </div>
             )}
           </div>

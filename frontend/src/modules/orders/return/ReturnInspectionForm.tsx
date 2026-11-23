@@ -63,11 +63,11 @@ export function ReturnInspectionForm({
         </div>
         <button
           onClick={() => {
-            const allSel: Record<string, boolean> = {};
             debtRows.forEach((row) => {
-              allSel[row.key] = true;
+              if (!selectedItemsToReturn[row.key]) {
+                onToggleSelect(row.key, row.compensation, row.maChiTietBanGiao);
+              }
             });
-            setSelectedItemsToReturn(allSel);
           }}
           className="so-btn-parchment-sm"
         >
@@ -133,9 +133,14 @@ export function ReturnInspectionForm({
                       <span className="so-fee-label">Phụ phí:</span>
                       <input
                         type="number"
+                        min={0}
+                        step={1000}
                         value={fee}
                         onChange={(e) =>
-                          setItemSurcharges((prev) => ({ ...prev, [row.key]: Number(e.target.value) }))
+                          setItemSurcharges((prev) => ({
+                            ...prev,
+                            [row.key]: Math.max(0, Number(e.target.value) || 0),
+                          }))
                         }
                         className={`so-fee-input ${fee > 0 ? "is-nonzero" : ""}`}
                       />

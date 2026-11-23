@@ -10,12 +10,15 @@ import Icon from "../../components/Icon";
 import { CategoryForm } from "./forms/CategoryForm";
 import { Can } from "../../features/permissions/PermissionsContext";
 import { Permissions } from "../../constants/permissions";
+import Pagination from "../../components/ui/Pagination";
+import { usePagination } from "../../hooks/usePagination";
 
 export function CategoriesTab({ app }: { app: ReturnType<typeof useApp> }) {
   const [action, setAction] = useState<Category | "new" | null>(null);
   const [message, setMessage] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
+  const [togglingId, setTogglingId] = useState<string | null>(null);
   const catData = [...app.categories]
     .sort((a, b) => a.displayOrder - b.displayOrder)
     .filter((category) => {
@@ -29,6 +32,7 @@ export function CategoriesTab({ app }: { app: ReturnType<typeof useApp> }) {
       products: app.products.filter((p) => p.categoryId === category.id),
       equipment: app.equipment.filter((e) => app.products.find((p) => p.id === e.productId)?.categoryId === category.id),
     }));
+  const paging = usePagination(catData, 6);
 
   return (
     <div>
@@ -63,8 +67,13 @@ export function CategoriesTab({ app }: { app: ReturnType<typeof useApp> }) {
         </select>
       </div>
       {message && <div role="alert" className="adm-alert is-error-solid adm-alert--block">{message}</div>}
+      {paging.pagedItems.length === 0 ? (
+        <div className="p-10 text-center bg-white rounded-2xl border border-[var(--color-bone)] text-sm text-gray-500">
+          Không tìm thấy danh mục nào phù hợp với từ khóa hoặc bộ lọc hiện tại.
+        </div>
+      ) : (
       <div className="adm-cat-grid">
-        {catData.map((c) => {
+        {paging.pagedItems.map((c) => {
           const avail = c.equipment.filter((e) => e.equipmentStatus === "Sẵn sàng").length;
           return (
             /* Làm mờ thẻ danh mục khi đang ở trạng thái tạm ẩn */
@@ -99,6 +108,7 @@ export function CategoriesTab({ app }: { app: ReturnType<typeof useApp> }) {
                 <Can perm={Permissions.DanhMuc_Quan}>
                   <button onClick={() => setAction(c.category)} className="adm-btn-parchment adm-btn-flex">Sửa</button>
                   <button
+                    disabled={togglingId === c.category.id}
                     onClick={async () => {
                       const nextStatus = c.category.status === "active" ? "inactive" : "active";
                       if (app.realApi || isRealApiEnabled()) {
@@ -106,12 +116,15 @@ export function CategoriesTab({ app }: { app: ReturnType<typeof useApp> }) {
                         if (Number.isNaN(catId)) {
                           return setMessage("ID danh mục không hợp lệ.");
                         }
+                        setTogglingId(c.category.id);
                         try {
                           await catalogApi.adminDoiTrangThaiDanhMuc(catId, nextStatus === "active" ? "HienThi" : "TamAn");
                           await app.refreshCatalog?.();
                           setMessage("");
                         } catch (err) {
                           setMessage(err instanceof Error ? err.message : "Lỗi cập nhật trạng thái danh mục");
+                        } finally {
+                          setTogglingId(null);
                         }
                         return;
                       }
@@ -120,7 +133,7 @@ export function CategoriesTab({ app }: { app: ReturnType<typeof useApp> }) {
                     }}
                     className="adm-btn-parchment adm-btn-flex"
                   >
-                    {c.category.status === "active" ? "Ẩn" : "Hiện"}
+                    {togglingId === c.category.id ? "Đang lưu..." : c.category.status === "active" ? "Ẩn" : "Hiện"}
                   </button>
                 </Can>
               </div>
@@ -128,6 +141,16 @@ export function CategoriesTab({ app }: { app: ReturnType<typeof useApp> }) {
           );
         })}
       </div>
+      )}
+      <Pagination
+        page={paging.page}
+        totalPages={paging.totalPages}
+        totalItems={paging.totalItems}
+        startIndex={paging.startIndex}
+        endIndex={paging.endIndex}
+        onPageChange={paging.setPage}
+        itemLabel="danh mục"
+      />
       {action && <CategoryForm app={app} category={action === "new" ? undefined : action} onClose={() => setAction(null)} />}
     </div>
   );

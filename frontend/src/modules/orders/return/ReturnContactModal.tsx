@@ -1,7 +1,7 @@
 import { useApp } from "../../../context/AppContext";
 import { isRealApiEnabled } from "../../../services/apiClient";
 import type { NhatKyLienHeQuaHanBackend } from "../../../services/api";
-import type { Order } from "../../../store";
+import { formatBackendEnum, formatDateTimeVi, type Order } from "../../../store";
 import type { ContactOutcome } from "./returnTypes";
 
 interface ReturnContactModalProps {
@@ -73,14 +73,14 @@ export function ReturnContactModal({
                 <div key={log.maNhatKyLienHe} className="so-contact-log-card">
                   <div className="flex justify-between items-center mb-1">
                     <span className="so-contact-log-actor">
-                      {log.tenNguoiLienHe} · {new Date(log.thoiDiemLienHe).toLocaleString("vi-VN")}
+                      {log.tenNguoiLienHe} · {formatDateTimeVi(log.thoiDiemLienHe)}
                     </span>
-                    <span className="so-contact-log-outcome">{log.ketQua}</span>
+                    <span className="so-contact-log-outcome">{formatBackendEnum(log.ketQua)}</span>
                   </div>
                   <div className="so-contact-log-note">{log.noiDung}</div>
                   {log.henTraMoi && (
                     <div className="so-contact-log-expected">
-                      Khách hẹn trả mới: <strong>{new Date(log.henTraMoi).toLocaleString("vi-VN")}</strong>
+                      Khách hẹn trả mới: <strong>{formatDateTimeVi(log.henTraMoi)}</strong>
                     </div>
                   )}
                 </div>

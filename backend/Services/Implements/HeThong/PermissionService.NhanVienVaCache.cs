@@ -56,6 +56,15 @@ public partial class PermissionService
             return Result<QuyenCuaNhanVienResponse>.Loi(DomainConstants.Errors.PermissionNotFound,
                 "Có quyền không nằm trong catalog.", new { khongHopLe });
 
+        // Cấm gán quyền chỉ dành cho Quản trị viên vào phân quyền riêng của Nhân viên
+        if (tk.VaiTro != DomainConstants.Roles.Admin)
+        {
+            var quyenCam = moi.Intersect(DomainConstants.Permissions.AdminOnly, StringComparer.Ordinal).ToList();
+            if (quyenCam.Count > 0)
+                return Result<QuyenCuaNhanVienResponse>.Loi("QUYEN_CHI_DANH_CHO_QUAN_TRI",
+                    $"Nhóm quyền phân quyền chỉ dành cho Quản trị viên: {string.Join(", ", quyenCam)}", new { quyenCam });
+        }
+
         var kq = await TransactionExecutionWrapper.ExecuteInTransactionAsync(_context, async () =>
         {
             var role = await _context.Roles.FirstOrDefaultAsync(r => r.Name == tk.VaiTro, ct);

@@ -42,6 +42,7 @@ export function StaffAccountsTab({ app }: { app: ReturnType<typeof useApp> }) {
       )}
 
       <StaffAccountsTable
+        isAdmin={app.role === "admin"}
         search={staff.search}
         onSearchChange={staff.setSearch}
         roleFilter={staff.roleFilter}
@@ -80,6 +81,7 @@ export function StaffAccountsTab({ app }: { app: ReturnType<typeof useApp> }) {
           isRealApi={staff.isRealApi}
           permStaff={staff.permStaff}
           permRoleName={staff.permRoleName}
+          permHasOverride={staff.permHasOverride}
           permCatalog={staff.permCatalog}
           permLoading={staff.permLoading}
           submitting={staff.submitting}
@@ -87,6 +89,7 @@ export function StaffAccountsTab({ app }: { app: ReturnType<typeof useApp> }) {
           onSwitchRole={staff.handleSwitchPermRole}
           onChangeStaff={staff.setPermStaff}
           onSave={staff.handleSavePermissions}
+          onResetOverride={staff.handleResetStaffPermissions}
           onClose={() => staff.setPermStaff(null)}
         />
       )}

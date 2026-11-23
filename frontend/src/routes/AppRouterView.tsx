@@ -85,7 +85,7 @@ export function AppRouterView({
         )}
 
         {isStaffPage && (
-          <PermissionsProvider userId={currentUser?.id != null ? Number(currentUser.id) || 0 : null}>
+          <PermissionsProvider userId={currentUser ? (currentUser.id ?? currentUser.email ?? currentUser.username ?? "session") : null}>
             <WorkspaceView />
           </PermissionsProvider>
         )}

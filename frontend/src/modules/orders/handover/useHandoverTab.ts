@@ -93,9 +93,7 @@ export function useHandoverTab(
 
     setReceiverName(selectedOrder.customerName);
     setReceiverPhone(selectedOrder.customerPhone);
-    setReceiverIdCard(
-      (selectedOrder.displayCode || selectedOrder.id).replace(/\D/g, "").slice(-4).padStart(12, "07920100")
-    );
+    setReceiverIdCard("");
 
     if (app.realApi) {
       const donId = Number(selectedOrder.backendId ?? selectedOrder.id);
@@ -123,19 +121,22 @@ export function useHandoverTab(
     e.preventDefault();
     if (!qrCodeSearch.trim()) return;
     const term = qrCodeSearch.trim().toLowerCase();
-    const found = app.orders.find(
-      (o) =>
-        (o.displayCode || o.id).toLowerCase().includes(term) ||
-        o.id.toLowerCase().includes(term) ||
-        o.customerPhone.includes(term) ||
-        o.customerName.toLowerCase().includes(term)
-    );
+    // Chỉ tìm trong các đơn hợp lệ cho chuẩn bị/bàn giao, tránh chọn nhầm đơn hủy hoặc đã hoàn tất
+    const primaryPool = subTab === "prep" ? eligiblePrep : eligibleHandover;
+    const secondaryPool = subTab === "prep" ? eligibleHandover : eligiblePrep;
+    const matchOrder = (o: Order) =>
+      (o.displayCode || o.id).toLowerCase().includes(term) ||
+      o.id.toLowerCase().includes(term) ||
+      o.customerPhone.includes(term) ||
+      o.customerName.toLowerCase().includes(term);
+
+    const found = primaryPool.find(matchOrder) ?? secondaryPool.find(matchOrder);
     if (found) {
       setSelectedOrderId(found.id);
       setQrCodeSearch("");
       setHandoverError("");
     } else {
-      setHandoverError(`Không tìm thấy đơn hàng nào khớp với mã/QR "${qrCodeSearch}"!`);
+      setHandoverError(`Không tìm thấy đơn hợp lệ chờ chuẩn bị/bàn giao khớp với "${qrCodeSearch}"!`);
     }
   };
 
@@ -167,9 +168,13 @@ export function useHandoverTab(
     hydrateOperationalOrder,
   });
 
-  const allAssigned = order
-    ? order.items.every((item) => (assignments[item.productId] || []).filter(Boolean).length >= item.qty)
-    : false;
+  const allAssigned =
+    order && order.items.length > 0
+      ? order.items.every((item) => {
+          const picked = (assignments[item.productId] || []).filter(Boolean);
+          return picked.length >= item.qty && new Set(picked).size >= item.qty;
+        })
+      : false;
 
   return {
     subTab, setSubTab, assignments, handoverBusy, handoverError, handoverSuccess,

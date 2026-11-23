@@ -29,3 +29,6 @@ export type { SearchInputProps } from "./SearchInput";
 
 export { default as EmptyState } from "./EmptyState";
 export type { EmptyStateProps } from "./EmptyState";
+
+export { default as Pagination } from "./Pagination";
+export type { PaginationProps } from "./Pagination";

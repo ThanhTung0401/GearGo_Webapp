@@ -1,23 +1,61 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useApp } from "../../context/AppContext";
 import { isRealApiEnabled } from "../../services/apiClient";
-
 import { catalogApi } from "../../services/api/catalogApi";
-
+import { mapSanPhamToProduct } from "../../services/mappers";
 import { fmt, type Product } from "../../store";
-
 import { ProductForm } from "./forms/ProductForm";
+import { Can, useHasPerm } from "../../features/permissions/PermissionsContext";
+import { Permissions } from "../../constants/permissions";
+import Pagination from "../../components/ui/Pagination";
+import { usePagination } from "../../hooks/usePagination";
 
 export function ProductsTab({ app }: { app: ReturnType<typeof useApp> }) {
+  const hasPerm = useHasPerm();
+  const canView = hasPerm(Permissions.SanPham_Xem);
+  const canUpdate = hasPerm(Permissions.SanPham_CapNhat);
+
   const [sel, setSel] = useState<string | null>(null);
   const [action, setAction] = useState<Product | "new" | null>(null);
   const [search, setSearch] = useState("");
   const [catFilter, setCatFilter] = useState("Tất cả");
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
   const [statusError, setStatusError] = useState("");
+  const [adminProducts, setAdminProducts] = useState<Product[] | null>(null);
+  const [loadingList, setLoadingList] = useState(false);
+  const [changingStatus, setChangingStatus] = useState(false);
 
-  const categories = ["Tất cả", ...Array.from(new Set(app.products.map((p) => p.category)))];
-  const filteredProducts = app.products.filter((p) => {
+  const isRealApi = app.realApi || isRealApiEnabled();
+  const categoriesRef = useRef(app.categories);
+  categoriesRef.current = app.categories;
+
+  // Chỉ tải danh sách sản phẩm quản lý từ endpoint có kiểm tra quyền SanPham.Xem (không lấy fallback từ API public)
+  const loadAdminProducts = useCallback(async () => {
+    if (!isRealApi || !canView) {
+      setAdminProducts(null);
+      return;
+    }
+    setLoadingList(true);
+    setStatusError("");
+    try {
+      const res = await catalogApi.adminLayDanhSachSanPham({ soMoiTrang: 200 });
+      const mapped = (res.items ?? []).map((sp) => mapSanPhamToProduct(sp, categoriesRef.current));
+      setAdminProducts(mapped);
+    } catch (err) {
+      setAdminProducts([]);
+      setStatusError(err instanceof Error ? err.message : "Không thể tải danh sách sản phẩm quản lý.");
+    } finally {
+      setLoadingList(false);
+    }
+  }, [isRealApi, canView]);
+
+  useEffect(() => {
+    void loadAdminProducts();
+  }, [loadAdminProducts]);
+
+  const sourceProducts = isRealApi ? (adminProducts ?? []) : app.products;
+  const categories = ["Tất cả", ...Array.from(new Set(sourceProducts.map((p) => p.category)))];
+  const filteredProducts = sourceProducts.filter((p) => {
     const matchCat = catFilter === "Tất cả" || p.category === catFilter;
     const matchStatus = statusFilter === "all" || p.status === statusFilter;
     const matchSearch =
@@ -27,7 +65,17 @@ export function ProductsTab({ app }: { app: ReturnType<typeof useApp> }) {
     return matchCat && matchStatus && matchSearch;
   });
 
-  const detail = sel ? app.products.find((p) => p.id === sel) : null;
+  const paging = usePagination(filteredProducts, 8);
+  const detail = sel ? sourceProducts.find((p) => p.id === sel) : null;
+
+  if (!canView) {
+    return (
+      <div className="p-8 text-center bg-white rounded-2xl border border-[var(--color-bone)] text-sm text-gray-600">
+        Bạn không có quyền <strong>Xem sản phẩm ({Permissions.SanPham_Xem})</strong>. Vui lòng liên hệ Quản trị viên.
+      </div>
+    );
+  }
+
   return (
     <div>
       <div className="flex justify-between items-center mb-4 flex-wrap gap-2">
@@ -35,7 +83,9 @@ export function ProductsTab({ app }: { app: ReturnType<typeof useApp> }) {
           <h2 className="adm-page-title adm-page-title--compact">Quản lý sản phẩm</h2>
           <p className="adm-page-subtitle adm-page-subtitle--sm">Tra cứu, quản lý danh mục và thông tin niêm yết thiết bị cắm trại.</p>
         </div>
-        <button onClick={() => setAction("new")} className="adm-btn-primary">+ Thêm sản phẩm</button>
+        <Can perm={Permissions.SanPham_Tao}>
+          <button onClick={() => setAction("new")} className="adm-btn-primary">+ Thêm sản phẩm</button>
+        </Can>
       </div>
 
       {statusError && (
@@ -48,7 +98,7 @@ export function ProductsTab({ app }: { app: ReturnType<typeof useApp> }) {
       <div className="adm-toolbar">
         <input
           type="text"
-          placeholder="🔍 Tìm tên sản phẩm, mã, thương hiệu..."
+          placeholder="Tìm tên sản phẩm, mã, thương hiệu..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="adm-search-input"
@@ -72,54 +122,79 @@ export function ProductsTab({ app }: { app: ReturnType<typeof useApp> }) {
           <option value="inactive">Tạm ngừng / Ngừng KD</option>
         </select>
         <span className="adm-count-text">
-          Tìm thấy <strong>{filteredProducts.length}</strong> / {app.products.length} sản phẩm
+          Tìm thấy <strong>{filteredProducts.length}</strong> / {sourceProducts.length} sản phẩm
         </span>
       </div>
 
+      {loadingList && <div className="adm-loading-text mb-3">Đang tải danh sách sản phẩm...</div>}
+
       {/* Bố cục 2 cột khi có sản phẩm được chọn xem chi tiết */}
       <div className={`adm-split-detail ${detail ? "has-detail" : ""}`}>
-        <div className="adm-table-wrap">
-          <div className="adm-table-scroll">
-            <table className="adm-table adm-table--zebra adm-table--md">
-              <thead>
-                <tr>
-                  {["Mã", "Sản phẩm", "Danh mục", "Giá/ngày", "Cọc", "Bồi thường", "Khả dụng", ""].map((h) => (
-                    <th key={h}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {filteredProducts.map((p) => {
-                  const avail = app.getAvailable(p.id);
-                  const total = app.equipment.filter((e) => e.productId === p.id).length;
-                  return (
-                    <tr
-                      key={p.id}
-                      onClick={() => setSel(sel === p.id ? null : p.id)}
-                      className={`is-clickable ${sel === p.id ? "is-selected" : ""}`}
-                    >
-                      <td className="adm-cell-mono text-xs text-[var(--color-moss)]">{p.displayCode ?? p.id}</td>
-                      <td>
-                        <div className="font-semibold text-[0.85rem]">{p.name}</div>
-                        <div className="adm-cell-sub">{p.brand}</div>
-                      </td>
-                      <td className="adm-cell-muted">{p.category}</td>
-                      <td className="adm-cell-mono font-semibold text-[0.82rem]">{fmt(p.pricePerDay)}</td>
-                      <td className="adm-cell-mono text-[0.78rem]">{fmt(p.deposit)}</td>
-                      <td className="adm-cell-mono text-[0.78rem]">{fmt(p.compensation)}</td>
-                      <td className="adm-cell-mono text-[0.82rem]">
-                        <span className={`adm-avail-count ${avail > 1 ? "is-ok" : ""}`}>{avail}</span>/{total}
-                      </td>
-                      <td>
-                        <button onClick={(event) => { event.stopPropagation(); setAction(p); }} className="adm-btn-parchment adm-btn-xs">Sửa</button>
+        <div>
+          <div className="adm-table-wrap">
+            <div className="adm-table-scroll">
+              <table className="adm-table adm-table--zebra adm-table--md">
+                <thead>
+                  <tr>
+                    {["Mã", "Sản phẩm", "Danh mục", "Giá/ngày", "Cọc", "Bồi thường", "Khả dụng", ""].map((h) => (
+                      <th key={h}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {paging.pagedItems.length === 0 ? (
+                    <tr>
+                      <td colSpan={8} className="text-center py-8 text-sm text-gray-500">
+                        Không tìm thấy sản phẩm nào phù hợp.
                       </td>
                     </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                  ) : (
+                    paging.pagedItems.map((p) => {
+                      const avail = app.getAvailable(p.id);
+                      const total = app.equipment.filter((e) => e.productId === p.id).length;
+                      return (
+                        <tr
+                          key={p.id}
+                          onClick={() => setSel(sel === p.id ? null : p.id)}
+                          className={`is-clickable ${sel === p.id ? "is-selected" : ""}`}
+                        >
+                          <td className="adm-cell-mono text-xs text-[var(--color-moss)]">{p.displayCode ?? p.id}</td>
+                          <td>
+                            <div className="font-semibold text-[0.85rem]">{p.name}</div>
+                            <div className="adm-cell-sub">{p.brand}</div>
+                          </td>
+                          <td className="adm-cell-muted">{p.category}</td>
+                          <td className="adm-cell-mono font-semibold text-[0.82rem]">{fmt(p.pricePerDay)}</td>
+                          <td className="adm-cell-mono text-[0.78rem]">{fmt(p.deposit)}</td>
+                          <td className="adm-cell-mono text-[0.78rem]">{fmt(p.compensation)}</td>
+                          <td className="adm-cell-mono text-[0.82rem]">
+                            <span className={`adm-avail-count ${avail > 0 ? "is-ok" : ""}`}>{avail}</span>/{total}
+                          </td>
+                          <td>
+                            <Can perm={Permissions.SanPham_CapNhat}>
+                              <button onClick={(event) => { event.stopPropagation(); setAction(p); }} className="adm-btn-parchment adm-btn-xs">Sửa</button>
+                            </Can>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
+
+          <Pagination
+            page={paging.page}
+            totalPages={paging.totalPages}
+            totalItems={paging.totalItems}
+            startIndex={paging.startIndex}
+            endIndex={paging.endIndex}
+            onPageChange={paging.setPage}
+            itemLabel="sản phẩm"
+          />
         </div>
+
         {detail && (
           <div className="adm-detail-panel">
             <div className="flex justify-between items-start mb-3">
@@ -137,25 +212,29 @@ export function ProductsTab({ app }: { app: ReturnType<typeof useApp> }) {
             <div className="flex justify-between items-center mt-3 pt-2 border-t border-dashed border-[var(--color-bone)]">
               <span className="adm-count-text font-semibold">Trạng thái KD:</span>
               <select
-                value={detail.status === "active" ? "DangKinhDoanh" : "TamNgung"}
+                disabled={!canUpdate || changingStatus}
+                value={detail.rawStatus || (detail.status === "active" ? "DangKinhDoanh" : "TamNgung")}
                 onChange={async (e) => {
                   const val = e.target.value;
                   setStatusError("");
-                  if (app.realApi || isRealApiEnabled()) {
+                  if (isRealApi) {
                     const prodId = Number(detail.id);
                     if (Number.isNaN(prodId)) {
                       setStatusError("ID sản phẩm không hợp lệ.");
                       return;
                     }
+                    setChangingStatus(true);
                     try {
                       await catalogApi.adminDoiTrangThaiSanPham(prodId, val);
-                      await app.refreshCatalog?.();
+                      await Promise.all([loadAdminProducts(), app.refreshCatalog?.()]);
                     } catch (err) {
                       setStatusError(err instanceof Error ? err.message : "Lỗi đổi trạng thái kinh doanh.");
+                    } finally {
+                      setChangingStatus(false);
                     }
                     return;
                   }
-                  app.saveProduct({ ...detail, status: val === "DangKinhDoanh" ? "active" : "inactive" });
+                  app.saveProduct({ ...detail, status: val === "DangKinhDoanh" ? "active" : "inactive", rawStatus: val });
                 }}
                 className="adm-select adm-select--xs flex-none"
               >
@@ -168,9 +247,16 @@ export function ProductsTab({ app }: { app: ReturnType<typeof useApp> }) {
           </div>
         )}
       </div>
-      {action && <ProductForm app={app} product={action === "new" ? undefined : action} onClose={() => setAction(null)} />}
+      {action && (
+        <ProductForm
+          app={app}
+          product={action === "new" ? undefined : action}
+          onClose={() => {
+            setAction(null);
+            void loadAdminProducts();
+          }}
+        />
+      )}
     </div>
   );
 }
-
-// ─── Equipment Tab (list + transfer) ─────────────────────────────────────────

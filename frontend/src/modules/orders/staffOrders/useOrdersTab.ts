@@ -8,15 +8,31 @@ export type OrdersQuickFilter = "all" | "delivery_today" | "pickup_today" | "ove
 
 export const ORDER_STATUS_FILTERS = [
   "Tất cả",
+  "Chờ thanh toán",
   "Đã xác nhận",
   "Đang chuẩn bị",
   "Sẵn sàng nhận",
   "Đang thuê",
   "Trả một phần",
   "Quá hạn",
+  "Đã nhận trả",
   "Chờ đối soát",
   "Hoàn tất",
+  "Khách hủy",
+  "Cửa hàng hủy",
+  "Hết hạn thanh toán",
+  "Không đến nhận",
 ];
+
+// Kiểm tra mốc hẹn đến/trước cuối ngày hôm nay (để lọc đơn cần giao/thu trong ca)
+function isDueByEndOfToday(iso?: string): boolean {
+  if (!iso) return false;
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return false;
+  const endOfToday = new Date();
+  endOfToday.setHours(23, 59, 59, 999);
+  return d.getTime() <= endOfToday.getTime();
+}
 
 // Hook quản lý bộ lọc ca trực, chi tiết hồ sơ đơn và quy trình ghi nhận No-Show (UC4.5)
 export function useOrdersTab(
@@ -38,10 +54,12 @@ export function useOrdersTab(
     : null;
 
   // Đếm nhanh số lượng đơn theo nghiệp vụ vận hành trong ca (UC4.5)
-  const deliveryTodayCount = app.orders.filter((o) =>
-    ["Đã xác nhận", "Đang chuẩn bị", "Sẵn sàng nhận"].includes(o.status)
+  const deliveryTodayCount = app.orders.filter(
+    (o) => ["Đã xác nhận", "Đang chuẩn bị", "Sẵn sàng nhận"].includes(o.status) && isDueByEndOfToday(o.pickupTime)
   ).length;
-  const pickupTodayCount = app.orders.filter((o) => ["Đang thuê", "Quá hạn"].includes(o.status)).length;
+  const pickupTodayCount = app.orders.filter(
+    (o) => ["Đang thuê", "Quá hạn"].includes(o.status) && isDueByEndOfToday(o.returnTime)
+  ).length;
   const overdueCount = app.orders.filter((o) => app.checkOrderOverdue(o).isOverdue).length;
   const partialCount = app.orders.filter((o) => {
     if (o.status !== "Đang thuê") return false;
@@ -106,8 +124,12 @@ export function useOrdersTab(
     const isPartial = o.status === "Đang thuê" && returnedCnt > 0 && returnedCnt < o.assignedEquipment.length;
 
     let matchQuick = true;
-    if (quickFilter === "delivery_today") matchQuick = ["Đã xác nhận", "Đang chuẩn bị", "Sẵn sàng nhận"].includes(o.status);
-    if (quickFilter === "pickup_today") matchQuick = ["Đang thuê", "Quá hạn"].includes(o.status);
+    if (quickFilter === "delivery_today") {
+      matchQuick = ["Đã xác nhận", "Đang chuẩn bị", "Sẵn sàng nhận"].includes(o.status) && isDueByEndOfToday(o.pickupTime);
+    }
+    if (quickFilter === "pickup_today") {
+      matchQuick = ["Đang thuê", "Quá hạn"].includes(o.status) && isDueByEndOfToday(o.returnTime);
+    }
     if (quickFilter === "overdue") matchQuick = isOverdue;
     if (quickFilter === "partial") matchQuick = isPartial;
 

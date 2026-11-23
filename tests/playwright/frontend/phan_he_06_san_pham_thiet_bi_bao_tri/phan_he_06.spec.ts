@@ -24,7 +24,15 @@ test.describe.serial("Frontend PH6: Danh mục, Sản phẩm, Thiết bị, Ki�
     await pauseForViewer(page, 700);
     await catModal.locator('button[type="submit"]').click();
     await expect(catModal).not.toBeVisible({ timeout: 10_000 });
+    // Tìm kiếm theo tên danh mục vừa tạo (do danh sách có phân trang 6 mục/trang)
+    const searchCat = page.getByPlaceholder("Tìm kiếm tên danh mục...");
+    if (await waitVisible(searchCat, 2000)) {
+      await searchCat.fill(catName);
+    }
     await expect(page.getByText(catName).first()).toBeVisible({ timeout: 10_000 });
+    if (await searchCat.isVisible().catch(() => false)) {
+      await searchCat.fill("");
+    }
     await pauseForViewer(page, 800);
 
     // UC6.2: Mở form Sửa danh mục

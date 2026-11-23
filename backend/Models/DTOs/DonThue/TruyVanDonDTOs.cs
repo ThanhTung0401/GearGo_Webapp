@@ -50,7 +50,10 @@ public record DonVanHanhTomTatResponse(
     string TrangThai,
     int SoDong,
     int SoThietBiCanPhanCong,
-    int SoThietBiDaPhanCong
+    int SoThietBiDaPhanCong,
+    decimal TongTienThueTruocGiam = 0,
+    decimal TongTienGiam = 0,
+    decimal TongTienCoc = 0
 );
 
 public record DongThueResponse(

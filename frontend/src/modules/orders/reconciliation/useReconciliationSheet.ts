@@ -53,9 +53,15 @@ export function useReconciliationSheet({ order, app, onAfterMutation }: UseRecon
   const [showRefundModal, setShowRefundModal] = useState(false);
   const [refundMethod, setRefundMethod] = useState<"bank" | "cash">("bank");
   const [bankName, setBankName] = useState("Vietcombank");
-  const [bankAccount, setBankAccount] = useState("1029384756");
+  const [bankAccount, setBankAccount] = useState("");
   const [bankHolder, setBankHolder] = useState(order.customerName.toUpperCase());
   const [refundNote, setRefundNote] = useState("");
+
+  // Đồng bộ lại tên chủ tài khoản nhận hoàn cọc mỗi khi đổi đơn
+  useEffect(() => {
+    setBankHolder((order.customerName || "").toUpperCase());
+    setBankAccount("");
+  }, [order.id, order.customerName]);
 
   // Trạng thái modal UC5.7: Điều chỉnh tài chính sau chốt
   const [showAdjustmentModal, setShowAdjustmentModal] = useState(false);

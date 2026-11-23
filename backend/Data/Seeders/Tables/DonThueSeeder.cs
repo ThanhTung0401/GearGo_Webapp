@@ -125,21 +125,22 @@ internal static class DonThueSeeder
                 );
             }
 
-            // Phân công thiết bị cho đơn SanSangNhan (UC4.2), ChoDoiSoat & DangThue chưa trả (UC4.3, UC5.2)
-            if ((maDon == "ORD-202611-107" || maDon == "ORD-202611-108" || maDon == "ORD-202611-109" || maDon == "ORD-202611-111") && readyEquipments.Count > 0)
+            // Phân công thiết bị & phiếu bàn giao cho đơn SanSangNhan (UC4.2), ChoDoiSoat & DangThue (UC4.3, UC5.2)
+            if ((maDon == "ORD-202611-104" || maDon == "ORD-202611-107" || maDon == "ORD-202611-108" || maDon == "ORD-202611-109" || maDon == "ORD-202611-111") && readyEquipments.Count > 0)
             {
                 var eq = readyEquipments[i % readyEquipments.Count];
+                var daBanGiao = maDon != "ORD-202611-107";
                 var pc = new PhanCongThietBi
                 {
                     MaChiTietDon = ctd.MaChiTietDon,
                     MaThietBi = eq.MaThietBi,
                     MaNguoiPhanCong = nv.MaNhanVien,
-                    TrangThai = "DaPhanCong"
+                    TrangThai = daBanGiao ? "DaBanGiao" : "DaPhanCong"
                 };
                 context.PhanCongThietBis.Add(pc);
                 await context.SaveChangesAsync();
 
-                if (maDon == "ORD-202611-111")
+                if (daBanGiao)
                 {
                     var pbg = new PhieuBanGiao
                     {
@@ -149,17 +150,48 @@ internal static class DonThueSeeder
                         ThoiDiemGiaoThucTe = don.GioNhanDuKien,
                         TenNhanVienLucGiao = nv.HoTen,
                         TenNguoiNhanThucTe = don.TenNguoiNhan,
-                        TrangThai = "DaBanGiao"
+                        ThoiDiemKhachXacNhan = don.GioNhanDuKien,
+                        TrangThai = "DaGiao"
                     };
                     context.PhieuBanGiaos.Add(pbg);
                     await context.SaveChangesAsync();
 
-                    context.ChiTietBanGiaos.Add(new ChiTietBanGiao
+                    var ctbg = new ChiTietBanGiao
                     {
                         MaPhieuBanGiao = pbg.MaPhieuBanGiao,
                         MaPhanCong = pc.MaPhanCong,
                         TinhTrangTruocThue = "Ngoại quan tốt, đầy đủ phụ kiện"
-                    });
+                    };
+                    context.ChiTietBanGiaos.Add(ctbg);
+                    await context.SaveChangesAsync();
+
+                    // Đơn ChoDoiSoat đã hoàn tất nhận trả, bổ sung biên bản nhận trả chốt cuối
+                    if (tt == TrangThaiDonThue.ChoDoiSoat)
+                    {
+                        var pnt = new PhieuNhanTra
+                        {
+                            MaDonThue = don.MaDonThue,
+                            MaNhanVien = nv.MaNhanVien,
+                            MaPhieuHienThi = $"PNT-{maDon}",
+                            LanTra = 1,
+                            LaLanTraCuoi = true,
+                            ThoiDiemLap = don.GioTraDuKien,
+                            TenNhanVienLucNhan = nv.HoTen,
+                            TrangThai = TrangThaiPhieuNhanTra.DaChot
+                        };
+                        context.PhieuNhanTras.Add(pnt);
+                        await context.SaveChangesAsync();
+
+                        context.ChiTietNhanTras.Add(new ChiTietNhanTra
+                        {
+                            MaPhieuNhanTra = pnt.MaPhieuNhanTra,
+                            MaChiTietBanGiao = ctbg.MaChiTietBanGiao,
+                            ThoiDiemTraThucTe = don.GioTraDuKien,
+                            KetLuan = "DatChuan",
+                            TinhTrangSauThue = "Đã nhận trả thiết bị, chờ chốt đối soát",
+                            TrangThaiXuLy = "DaXuLy"
+                        });
+                    }
                 }
             }
 
@@ -206,6 +238,100 @@ internal static class DonThueSeeder
                     LyDo = "Phí vệ sinh bùn đất bám khung & túi ngủ",
                     TrangThaiDuyet = "DaDuyet",
                     ThoiDiemDuyet = DateTime.UtcNow
+                });
+            }
+            await context.SaveChangesAsync();
+        }
+
+        // Vá dữ liệu cũ (idempotent): chuẩn hóa các đơn mẫu DangThue / ChoDoiSoat đã tồn tại trên DB
+        var fixCodes = new[] { "ORD-202611-104", "ORD-202611-108", "ORD-202611-109", "ORD-202611-111" };
+        var existingFixOrders = await context.DonThues
+            .Where(d => fixCodes.Contains(d.MaDonHienThi))
+            .ToListAsync();
+        var fallbackEq = await context.ThietBis.OrderBy(t => t.MaThietBi).FirstOrDefaultAsync();
+
+        foreach (var don in existingFixOrders)
+        {
+            var ctd = await context.ChiTietDonThues.FirstOrDefaultAsync(c => c.MaDonThue == don.MaDonThue);
+            if (ctd == null || fallbackEq == null) continue;
+
+            var pc = await context.PhanCongThietBis.FirstOrDefaultAsync(p => p.MaChiTietDon == ctd.MaChiTietDon);
+            if (pc == null)
+            {
+                pc = new PhanCongThietBi
+                {
+                    MaChiTietDon = ctd.MaChiTietDon,
+                    MaThietBi = fallbackEq.MaThietBi,
+                    MaNguoiPhanCong = nv.MaNhanVien,
+                    TrangThai = "DaBanGiao"
+                };
+                context.PhanCongThietBis.Add(pc);
+                await context.SaveChangesAsync();
+            }
+            else if (pc.TrangThai == "DaPhanCong")
+            {
+                pc.TrangThai = "DaBanGiao";
+            }
+
+            var pbg = await context.PhieuBanGiaos.FirstOrDefaultAsync(p => p.MaDonThue == don.MaDonThue);
+            if (pbg == null)
+            {
+                pbg = new PhieuBanGiao
+                {
+                    MaDonThue = don.MaDonThue,
+                    MaNhanVien = nv.MaNhanVien,
+                    ThoiDiemLap = don.NgayDat.AddHours(2),
+                    ThoiDiemGiaoThucTe = don.GioNhanDuKien,
+                    TenNhanVienLucGiao = nv.HoTen,
+                    TenNguoiNhanThucTe = don.TenNguoiNhan ?? "Khách hàng",
+                    ThoiDiemKhachXacNhan = don.GioNhanDuKien,
+                    TrangThai = "DaGiao"
+                };
+                context.PhieuBanGiaos.Add(pbg);
+                await context.SaveChangesAsync();
+            }
+            else if (pbg.TrangThai == "DaBanGiao")
+            {
+                pbg.TrangThai = "DaGiao";
+            }
+
+            var ctbg = await context.ChiTietBanGiaos.FirstOrDefaultAsync(c => c.MaPhieuBanGiao == pbg.MaPhieuBanGiao && c.MaPhanCong == pc.MaPhanCong);
+            if (ctbg == null)
+            {
+                ctbg = new ChiTietBanGiao
+                {
+                    MaPhieuBanGiao = pbg.MaPhieuBanGiao,
+                    MaPhanCong = pc.MaPhanCong,
+                    TinhTrangTruocThue = "Ngoại quan tốt, đầy đủ phụ kiện"
+                };
+                context.ChiTietBanGiaos.Add(ctbg);
+                await context.SaveChangesAsync();
+            }
+
+            if (don.TrangThai == TrangThaiDonThue.ChoDoiSoat && !await context.PhieuNhanTras.AnyAsync(p => p.MaDonThue == don.MaDonThue))
+            {
+                var pnt = new PhieuNhanTra
+                {
+                    MaDonThue = don.MaDonThue,
+                    MaNhanVien = nv.MaNhanVien,
+                    MaPhieuHienThi = $"PNT-{don.MaDonHienThi}",
+                    LanTra = 1,
+                    LaLanTraCuoi = true,
+                    ThoiDiemLap = don.GioTraDuKien,
+                    TenNhanVienLucNhan = nv.HoTen,
+                    TrangThai = TrangThaiPhieuNhanTra.DaChot
+                };
+                context.PhieuNhanTras.Add(pnt);
+                await context.SaveChangesAsync();
+
+                context.ChiTietNhanTras.Add(new ChiTietNhanTra
+                {
+                    MaPhieuNhanTra = pnt.MaPhieuNhanTra,
+                    MaChiTietBanGiao = ctbg.MaChiTietBanGiao,
+                    ThoiDiemTraThucTe = don.GioTraDuKien,
+                    KetLuan = "DatChuan",
+                    TinhTrangSauThue = "Đã nhận trả thiết bị, chờ chốt đối soát",
+                    TrangThaiXuLy = "DaXuLy"
                 });
             }
             await context.SaveChangesAsync();

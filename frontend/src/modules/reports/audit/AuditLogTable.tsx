@@ -1,4 +1,7 @@
 import Icon from "../../../components/Icon";
+import Pagination from "../../../components/ui/Pagination";
+import { usePagination } from "../../../hooks/usePagination";
+import { formatDateTimeVi } from "../../../store";
 import { type AuditLogEntryWithRef } from "../../../services/mappers/reviewNotifAuditMapper";
 import { matchAuditRoleValue } from "./useAuditLogTab";
 
@@ -51,6 +54,11 @@ export function AuditLogTable(props: AuditLogTableProps) {
     onOpenRelatedDoc,
     onSelectEvent,
   } = props;
+
+  const mockPaging = usePagination(filtered, 10);
+  const pageSize = 20;
+  const displayedRows = realApi ? filtered : mockPaging.pagedItems;
+  const serverTotalPages = Math.max(1, Math.ceil(totalLogs / pageSize));
 
   return (
     <>
@@ -116,7 +124,10 @@ export function AuditLogTable(props: AuditLogTableProps) {
 
         <select
           value={roleFilter}
-          onChange={(e) => setRoleFilter(e.target.value)}
+          onChange={(e) => {
+            setRoleFilter(e.target.value);
+            setPage(1);
+          }}
           className="adm-select"
         >
           <option value="all">Tất cả vai trò</option>
@@ -151,7 +162,7 @@ export function AuditLogTable(props: AuditLogTableProps) {
 
       {/* Bảng timeline audit */}
       <div className="adm-table-wrap">
-        <div className="adm-table-scroll">
+        <div className="adm-table-scroll overflow-x-auto">
           <table className="adm-table adm-table--zebra adm-table--md">
             <thead>
               <tr>
@@ -167,17 +178,17 @@ export function AuditLogTable(props: AuditLogTableProps) {
                     Đang tải nhật ký thao tác hệ thống...
                   </td>
                 </tr>
-              ) : filtered.length === 0 ? (
+              ) : displayedRows.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="adm-table-empty py-9">
                     Không tìm thấy nhật ký biến động phù hợp với bộ lọc đã chọn.
                   </td>
                 </tr>
               ) : (
-                filtered.map((log) => (
+                displayedRows.map((log) => (
                   <tr key={log.id}>
                     <td className="adm-cell-mono adm-hint-text whitespace-nowrap">
-                      {log.timestamp}
+                      {formatDateTimeVi(log.timestamp)}
                     </td>
                     <td className="adm-cell-title">
                       {log.actor}
@@ -204,7 +215,7 @@ export function AuditLogTable(props: AuditLogTableProps) {
                         </strong>
                       </button>
                     </td>
-                    <td className="text-[0.8rem] text-[#374151]">
+                    <td className="text-[0.8rem] text-[#374151] max-w-[300px] truncate" title={log.detail}>
                       {log.detail}
                     </td>
                     <td>
@@ -223,19 +234,29 @@ export function AuditLogTable(props: AuditLogTableProps) {
           </table>
         </div>
 
-        {realApi && totalLogs > 50 && (
-          <div className="adm-table-pagination">
-            <span>Trang {page} · Tổng {totalLogs} bản ghi</span>
-            <div className="flex gap-2">
-              <button type="button" disabled={page <= 1 || logsLoading} onClick={() => setPage((p) => Math.max(1, p - 1))} className="btn btn-secondary btn-sm">
-                Trước
-              </button>
-              <button type="button" disabled={page * 50 >= totalLogs || logsLoading} onClick={() => setPage((p) => p + 1)} className="btn btn-secondary btn-sm">
-                Sau
-              </button>
-            </div>
-          </div>
-        )}
+        <div className="px-4 pb-3">
+          {realApi ? (
+            <Pagination
+              page={page}
+              totalPages={serverTotalPages}
+              totalItems={totalLogs}
+              startIndex={totalLogs === 0 ? 0 : (page - 1) * pageSize + 1}
+              endIndex={Math.min(page * pageSize, totalLogs)}
+              onPageChange={(next) => setPage(next)}
+              itemLabel="bản ghi nhật ký"
+            />
+          ) : (
+            <Pagination
+              page={mockPaging.page}
+              totalPages={mockPaging.totalPages}
+              totalItems={mockPaging.totalItems}
+              startIndex={mockPaging.startIndex}
+              endIndex={mockPaging.endIndex}
+              onPageChange={mockPaging.setPage}
+              itemLabel="bản ghi nhật ký"
+            />
+          )}
+        </div>
       </div>
     </>
   );

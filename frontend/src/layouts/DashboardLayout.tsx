@@ -32,7 +32,7 @@ export default function DashboardLayout({
       {/* 1. Top Demo Banner */}
       <DemoRoleBanner />
 
-      <div className="flex-1 flex overflow-hidden relative">
+      <div className="flex-1 flex overflow-x-clip relative">
         {/* 2. Desktop Sidebar */}
         <DashboardSidebar
           isOpen={sidebarOpen}
@@ -89,14 +89,14 @@ export default function DashboardLayout({
           )}
 
         {/* 4. Main Viewport & Topbar */}
-        <div className="internal-content flex-1 flex flex-col min-w-0 overflow-y-auto">
+        <div className="internal-content flex-1 flex flex-col min-w-0">
           <DashboardTopbar
             title={title}
             subtitle={subtitle}
             onToggleSidebar={() => setSidebarOpen(true)}
           />
 
-          <main className="flex-1 p-4 md:p-6 max-w-7xl w-full mx-auto">
+          <main className="flex-1 min-w-0 p-4 md:p-6 max-w-7xl w-full mx-auto">
             {children}
           </main>
         </div>

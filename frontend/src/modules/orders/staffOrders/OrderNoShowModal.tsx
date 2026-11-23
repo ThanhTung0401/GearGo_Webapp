@@ -1,5 +1,5 @@
 import type { XemTruocHuyBackend } from "../../../services/api";
-import { fmt, Order } from "../../../store";
+import { fmt, formatBackendEnum, Order } from "../../../store";
 
 interface OrderNoShowModalProps {
   order: Order;
@@ -34,7 +34,7 @@ export function OrderNoShowModal({
         </p>
         {noShowPreview && (
           <div className="so-preview-warn">
-            <div>Nhánh chính sách: <strong>{noShowPreview.nhanhChinhSach}</strong></div>
+            <div>Nhánh chính sách: <strong>{formatBackendEnum(noShowPreview.nhanhChinhSach)}</strong></div>
             <div>
               Dự kiến giữ lại: <strong>{fmt(noShowPreview.tienThueGiuLai)}</strong> · Dự kiến hoàn:{" "}
               <strong>{fmt(noShowPreview.tongHoan)}</strong>

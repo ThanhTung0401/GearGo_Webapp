@@ -1,5 +1,5 @@
 import type { KiemTraChinhSachBackend } from "../../../services/api/policyApi";
-import { fmt, type PolicyVersion } from "../../../store";
+import { fmt, formatDateTimeVi, formatDateVi, type PolicyVersion } from "../../../store";
 import Icon from "../../../components/Icon";
 import type { PolicyFieldDiff } from "./usePoliciesTab";
 
@@ -35,7 +35,7 @@ export function PolicyConfirmDiffModal({
 }: PolicyConfirmDiffModalProps) {
   return (
     <div className="adm-modal-overlay">
-      <div className="adm-modal-dialog is-md p-6 max-w-[580px]">
+      <div className="adm-modal-dialog is-md p-6 max-w-[580px] max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-start mb-3">
           <div>
             <span className="adm-pill is-success">
@@ -155,31 +155,44 @@ interface PolicySnapshotModalProps {
 export function PolicySnapshotModal({ snapshot, onClose }: PolicySnapshotModalProps) {
   return (
     <div className="adm-modal-overlay">
-      <div className="adm-modal-dialog is-md p-6 max-w-[540px]">
+      <div className="adm-modal-dialog is-md p-6 max-w-[540px] max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-start mb-3">
           <div>
             <span className="adm-pill is-parchment adm-cell-mono">
               SNAPSHOT {snapshot.version}
             </span>
             <h3 className="adm-card-title text-[1.2rem] mt-1">
-              Chính sách có hiệu lực từ {snapshot.effectiveDate}
+              Chính sách có hiệu lực từ {formatDateVi(snapshot.effectiveDate)}
             </h3>
           </div>
           <button type="button" onClick={onClose} className="adm-btn-ghost text-lg">✕</button>
         </div>
 
         <div className="adm-hint-text text-[0.78rem] mb-3">
-          Lý do ban hành: <strong>{snapshot.changeReason}</strong> (Cập nhật bởi {snapshot.updatedBy} lúc {snapshot.updatedAt})
+          Lý do ban hành: <strong>{snapshot.changeReason}</strong> (Cập nhật bởi {snapshot.updatedBy} lúc {formatDateTimeVi(snapshot.updatedAt)})
         </div>
 
-        <div className="adm-card--parchment text-[0.78rem] flex flex-col gap-1.5 max-h-[260px] overflow-y-auto">
+        <div className="adm-card--parchment text-[0.78rem] flex flex-col gap-1.5 max-h-[300px] overflow-y-auto">
           <div className="flex justify-between"><span>Thời gian giữ chỗ:</span><strong>{snapshot.configSnapshot.holdMinutes} phút</strong></div>
           <div className="flex justify-between"><span>Giờ nhận / trả chuẩn:</span><strong>{snapshot.configSnapshot.standardPickupTime || "08:00"} - {snapshot.configSnapshot.standardReturnTime || "20:00"}</strong></div>
+          <div className="flex justify-between"><span>Tỷ lệ đặt cọc tối thiểu:</span><strong>{snapshot.configSnapshot.minDepositPercentage ?? 100}%</strong></div>
           <div className="flex justify-between"><span>Phí phạt hủy 24-48h:</span><strong>{snapshot.configSnapshot.cancellationTier1FeePercent}%</strong></div>
           <div className="flex justify-between"><span>Phí phạt hủy &lt;24h:</span><strong>{snapshot.configSnapshot.cancellationTier2FeePercent}%</strong></div>
           <div className="flex justify-between"><span>Hệ số phạt trễ hạn:</span><strong>{snapshot.configSnapshot.overdueMultiplier}x/ngày</strong></div>
           <div className="flex justify-between"><span>Tỷ lệ bồi thường hỏng:</span><strong>{snapshot.configSnapshot.damageCompensationPercent}%</strong></div>
           <div className="flex justify-between"><span>Ngưỡng duyệt phụ phí:</span><strong>{fmt(snapshot.configSnapshot.adminApprovalFeeThreshold)}</strong></div>
+          <div className="flex justify-between"><span>Nhắc nhận / trả trước:</span><strong>{snapshot.configSnapshot.reminderPickupHoursBefore ?? 4}h / {snapshot.configSnapshot.reminderReturnHoursBefore ?? 2}h</strong></div>
+          {(snapshot.configSnapshot.accessoryLossFeeSchedule?.length ?? 0) > 0 && (
+            <div className="pt-2 mt-1 border-t border-dashed border-[var(--color-bone)]">
+              <div className="font-semibold mb-1">Biểu phí phụ kiện lẻ:</div>
+              {snapshot.configSnapshot.accessoryLossFeeSchedule?.map((a) => (
+                <div key={a.accessoryName} className="flex justify-between text-[0.74rem]">
+                  <span>• {a.accessoryName}</span>
+                  <strong>{fmt(a.defaultFee)}</strong>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="flex justify-end mt-4">

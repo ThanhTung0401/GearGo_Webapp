@@ -365,6 +365,15 @@ public static class DomainConstants
         {
             DonThue_Xem,
         };
+
+        /// <summary>
+        /// Nhóm quyền chỉ dành riêng cho Quản trị viên — cấm gán cho Nhân viên dưới mọi hình thức.
+        /// </summary>
+        public static readonly string[] AdminOnly =
+        {
+            PhanQuyen_Xem,
+            PhanQuyen_Quan,
+        };
     }
 
     /// <summary>

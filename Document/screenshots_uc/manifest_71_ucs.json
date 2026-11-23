@@ -436,7 +436,7 @@
     "images": [
       {
         "file": "UC1_3.png",
-        "caption": "Giao diện Đăng xuất (SCR-1.3)"
+        "caption": "Giao diện Đăng xuất kèm hộp thoại xác nhận (SCR-1.3)"
       }
     ],
     "components": [
@@ -444,10 +444,19 @@
         "stt": "1",
         "name": "Thoát",
         "type": "Button",
-        "meaning": "Thoát khỏi tài khoản hiện tại và kết thúc phiên đăng nhập",
+        "meaning": "Mở hộp thoại xác nhận thoát khỏi tài khoản hiện tại",
         "domain": "Null",
         "defaultVal": "Hiển thị khi đã đăng nhập",
         "note": "Nằm trên thanh điều hướng góc trên bên phải"
+      },
+      {
+        "stt": "2",
+        "name": "Xác nhận đăng xuất",
+        "type": "Button",
+        "meaning": "Xác nhận kết thúc phiên đăng nhập hiện tại",
+        "domain": "Null",
+        "defaultVal": "Kích hoạt",
+        "note": "Trong hộp thoại xác nhận"
       }
     ]
   },
@@ -672,63 +681,72 @@
     "components": [
       {
         "stt": "1",
-        "name": "Ngày & Giờ nhận đồ",
+        "name": "Ngày nhận",
         "type": "Date picker",
-        "meaning": "Chọn ngày & giờ nhận đồ",
+        "meaning": "Chọn ngày nhận",
         "domain": "Ngày/Tháng/Năm",
         "defaultVal": "2026-11-30",
         "note": ""
       },
       {
         "stt": "2",
-        "name": "Ngày & Giờ nhận đồ",
+        "name": "Ngày nhận",
         "type": "Combobox",
-        "meaning": "Chọn ngày & giờ nhận đồ từ danh sách",
+        "meaning": "Chọn ngày nhận từ danh sách",
         "domain": "Danh sách chọn",
         "defaultVal": "09:00",
         "note": ""
       },
       {
         "stt": "3",
-        "name": "Ngày & Giờ trả đồ",
+        "name": "Ngày trả",
         "type": "Date picker",
-        "meaning": "Chọn ngày & giờ trả đồ",
+        "meaning": "Chọn ngày trả",
         "domain": "Ngày/Tháng/Năm",
         "defaultVal": "2026-12-02",
         "note": ""
       },
       {
         "stt": "4",
-        "name": "Ngày & Giờ trả đồ",
+        "name": "Ngày trả",
         "type": "Combobox",
-        "meaning": "Chọn ngày & giờ trả đồ từ danh sách",
+        "meaning": "Chọn ngày trả từ danh sách",
         "domain": "Danh sách chọn",
         "defaultVal": "09:00",
         "note": ""
       },
       {
         "stt": "5",
-        "name": "Nhập mã khuyến mãi",
+        "name": "Tìm tên, thương hiệu...",
         "type": "Text box",
-        "meaning": "Nhập nhập mã khuyến mãi",
+        "meaning": "Nhập tìm tên, thương hiệu...",
         "domain": "String",
         "defaultVal": "Rỗng",
         "note": ""
       },
       {
         "stt": "6",
-        "name": "Áp dụng",
-        "type": "Button",
-        "meaning": "Thực hiện thao tác \"Áp dụng\"",
-        "domain": "Null",
-        "defaultVal": "Kích hoạt",
+        "name": "Lọc theo thương hiệu",
+        "type": "Combobox",
+        "meaning": "Chọn lọc theo thương hiệu từ danh sách",
+        "domain": "Danh sách chọn",
+        "defaultVal": "Tất cả",
         "note": ""
       },
       {
         "stt": "7",
-        "name": "Tiến hành xác nhận thuê",
+        "name": "Sắp xếp sản phẩm",
+        "type": "Combobox",
+        "meaning": "Chọn sắp xếp sản phẩm từ danh sách",
+        "domain": "Danh sách chọn",
+        "defaultVal": "Phổ biến nhất",
+        "note": ""
+      },
+      {
+        "stt": "8",
+        "name": "Tất cả",
         "type": "Button",
-        "meaning": "Thực hiện thao tác \"Tiến hành xác nhận thuê\"",
+        "meaning": "Thực hiện thao tác \"Tất cả\"",
         "domain": "Null",
         "defaultVal": "Kích hoạt",
         "note": ""
@@ -745,54 +763,81 @@
     "components": [
       {
         "stt": "1",
-        "name": "Quay lại giỏ hàng",
-        "type": "Button",
-        "meaning": "Thực hiện thao tác \"Quay lại giỏ hàng\"",
-        "domain": "Null",
-        "defaultVal": "Kích hoạt",
+        "name": "Ngày nhận",
+        "type": "Date picker",
+        "meaning": "Chọn ngày nhận",
+        "domain": "Ngày/Tháng/Năm",
+        "defaultVal": "2026-11-30",
         "note": ""
       },
       {
         "stt": "2",
-        "name": "Họ và tên người nhận",
-        "type": "Text box",
-        "meaning": "Nhập họ và tên người nhận",
-        "domain": "String",
-        "defaultVal": "Rỗng",
-        "note": "Bắt buộc nhập"
+        "name": "Ngày nhận",
+        "type": "Combobox",
+        "meaning": "Chọn ngày nhận từ danh sách",
+        "domain": "Danh sách chọn",
+        "defaultVal": "09:00",
+        "note": ""
       },
       {
         "stt": "3",
-        "name": "Số điện thoại liên hệ",
-        "type": "Text box",
-        "meaning": "Nhập số điện thoại liên hệ",
-        "domain": "String",
-        "defaultVal": "Rỗng",
-        "note": "Bắt buộc nhập"
+        "name": "Ngày trả",
+        "type": "Date picker",
+        "meaning": "Chọn ngày trả",
+        "domain": "Ngày/Tháng/Năm",
+        "defaultVal": "2026-12-02",
+        "note": ""
       },
       {
         "stt": "4",
-        "name": "Email nhận biên lai điện tử",
-        "type": "Text box",
-        "meaning": "Nhập email nhận biên lai điện tử",
-        "domain": "String",
-        "defaultVal": "Rỗng",
+        "name": "Ngày trả",
+        "type": "Combobox",
+        "meaning": "Chọn ngày trả từ danh sách",
+        "domain": "Danh sách chọn",
+        "defaultVal": "09:00",
         "note": ""
       },
       {
         "stt": "5",
-        "name": "Ghi chú cho cửa hàng (tùy chọn)",
+        "name": "Tìm tên, thương hiệu...",
         "type": "Text box",
-        "meaning": "Nhập ghi chú cho cửa hàng (tùy chọn)",
+        "meaning": "Nhập tìm tên, thương hiệu...",
         "domain": "String",
         "defaultVal": "Rỗng",
         "note": ""
       },
       {
         "stt": "6",
-        "name": "Xác nhận đặt thuê & Giữ chỗ 15 phút",
+        "name": "Lọc theo thương hiệu",
+        "type": "Combobox",
+        "meaning": "Chọn lọc theo thương hiệu từ danh sách",
+        "domain": "Danh sách chọn",
+        "defaultVal": "Tất cả",
+        "note": ""
+      },
+      {
+        "stt": "7",
+        "name": "Sắp xếp sản phẩm",
+        "type": "Combobox",
+        "meaning": "Chọn sắp xếp sản phẩm từ danh sách",
+        "domain": "Danh sách chọn",
+        "defaultVal": "Phổ biến nhất",
+        "note": ""
+      },
+      {
+        "stt": "8",
+        "name": "Tất cả",
         "type": "Button",
-        "meaning": "Thực hiện thao tác \"Xác nhận đặt thuê & Giữ chỗ 15 phút\"",
+        "meaning": "Thực hiện thao tác \"Tất cả\"",
+        "domain": "Null",
+        "defaultVal": "Kích hoạt",
+        "note": ""
+      },
+      {
+        "stt": "9",
+        "name": "Lều & Bạt dã ngoại",
+        "type": "Button",
+        "meaning": "Thực hiện thao tác \"Lều & Bạt dã ngoại\"",
         "domain": "Null",
         "defaultVal": "Kích hoạt",
         "note": ""
@@ -809,18 +854,63 @@
     "components": [
       {
         "stt": "1",
-        "name": "Xác nhận đã thanh toán VietQR",
+        "name": "Tất cả",
         "type": "Button",
-        "meaning": "Thực hiện thao tác \"Xác nhận đã thanh toán VietQR\"",
+        "meaning": "Thực hiện thao tác \"Tất cả\"",
         "domain": "Null",
         "defaultVal": "Kích hoạt",
         "note": ""
       },
       {
         "stt": "2",
-        "name": "Hủy thanh toán & hoàn thiết bị về kho",
+        "name": "Lều & Bạt dã ngoại",
         "type": "Button",
-        "meaning": "Thực hiện thao tác \"Hủy thanh toán & hoàn thiết bị về kho\"",
+        "meaning": "Thực hiện thao tác \"Lều & Bạt dã ngoại\"",
+        "domain": "Null",
+        "defaultVal": "Kích hoạt",
+        "note": ""
+      },
+      {
+        "stt": "3",
+        "name": "Bếp & Dụng cụ nấu nướng",
+        "type": "Button",
+        "meaning": "Thực hiện thao tác \"Bếp & Dụng cụ nấu nướng\"",
+        "domain": "Null",
+        "defaultVal": "Kích hoạt",
+        "note": ""
+      },
+      {
+        "stt": "4",
+        "name": "Bàn ghế & Đèn cắm trại",
+        "type": "Button",
+        "meaning": "Thực hiện thao tác \"Bàn ghế & Đèn cắm trại\"",
+        "domain": "Null",
+        "defaultVal": "Kích hoạt",
+        "note": ""
+      },
+      {
+        "stt": "5",
+        "name": "Túi ngủ & Đệm hơi",
+        "type": "Button",
+        "meaning": "Thực hiện thao tác \"Túi ngủ & Đệm hơi\"",
+        "domain": "Null",
+        "defaultVal": "Kích hoạt",
+        "note": ""
+      },
+      {
+        "stt": "6",
+        "name": "Balo & Gậy Trekking",
+        "type": "Button",
+        "meaning": "Thực hiện thao tác \"Balo & Gậy Trekking\"",
+        "domain": "Null",
+        "defaultVal": "Kích hoạt",
+        "note": ""
+      },
+      {
+        "stt": "7",
+        "name": "Phụ kiện & Năng lượng",
+        "type": "Button",
+        "meaning": "Thực hiện thao tác \"Phụ kiện & Năng lượng\"",
         "domain": "Null",
         "defaultVal": "Kích hoạt",
         "note": ""
@@ -837,63 +927,18 @@
     "components": [
       {
         "stt": "1",
-        "name": "Tất cả",
+        "name": "Trước",
         "type": "Button",
-        "meaning": "Thực hiện thao tác \"Tất cả\"",
+        "meaning": "Thực hiện thao tác \"Trước\"",
         "domain": "Null",
-        "defaultVal": "Kích hoạt",
-        "note": ""
+        "defaultVal": "Vô hiệu hóa",
+        "note": "Tạm khóa khi chưa đủ điều kiện"
       },
       {
         "stt": "2",
-        "name": "Chờ thanh toán",
+        "name": "Sau",
         "type": "Button",
-        "meaning": "Thực hiện thao tác \"Chờ thanh toán\"",
-        "domain": "Null",
-        "defaultVal": "Kích hoạt",
-        "note": ""
-      },
-      {
-        "stt": "3",
-        "name": "Đã xác nhận",
-        "type": "Button",
-        "meaning": "Thực hiện thao tác \"Đã xác nhận\"",
-        "domain": "Null",
-        "defaultVal": "Kích hoạt",
-        "note": ""
-      },
-      {
-        "stt": "4",
-        "name": "Đang thuê",
-        "type": "Button",
-        "meaning": "Thực hiện thao tác \"Đang thuê\"",
-        "domain": "Null",
-        "defaultVal": "Kích hoạt",
-        "note": ""
-      },
-      {
-        "stt": "5",
-        "name": "Hoàn tất",
-        "type": "Button",
-        "meaning": "Thực hiện thao tác \"Hoàn tất\"",
-        "domain": "Null",
-        "defaultVal": "Kích hoạt",
-        "note": ""
-      },
-      {
-        "stt": "6",
-        "name": "Hết hạn",
-        "type": "Button",
-        "meaning": "Thực hiện thao tác \"Hết hạn\"",
-        "domain": "Null",
-        "defaultVal": "Kích hoạt",
-        "note": ""
-      },
-      {
-        "stt": "7",
-        "name": "Đã hủy",
-        "type": "Button",
-        "meaning": "Thực hiện thao tác \"Đã hủy\"",
+        "meaning": "Thực hiện thao tác \"Sau\"",
         "domain": "Null",
         "defaultVal": "Kích hoạt",
         "note": ""
@@ -914,6 +959,15 @@
     "components": [
       {
         "stt": "1",
+        "name": "Yêu cầu hủy đơn thuê",
+        "type": "Button",
+        "meaning": "Mở hộp thoại xác nhận hủy đơn thuê hiện tại",
+        "domain": "Null",
+        "defaultVal": "Kích hoạt",
+        "note": "Chỉ hiển thị với đơn chưa bàn giao"
+      },
+      {
+        "stt": "2",
         "name": "Lý do hủy đơn",
         "type": "Textarea",
         "meaning": "Nhập nội dung lý do hủy đơn",
@@ -922,7 +976,7 @@
         "note": "Bắt buộc nhập"
       },
       {
-        "stt": "2",
+        "stt": "3",
         "name": "Đóng",
         "type": "Button",
         "meaning": "Thực hiện thao tác \"Đóng\"",
@@ -931,7 +985,7 @@
         "note": ""
       },
       {
-        "stt": "3",
+        "stt": "4",
         "name": "Xác nhận hủy đơn thuê",
         "type": "Button",
         "meaning": "Thực hiện thao tác \"Xác nhận hủy đơn thuê\"",
@@ -1015,6 +1069,15 @@
     "components": [
       {
         "stt": "1",
+        "name": "N Nguyễn Văn Quản Trị Quản trị viên",
+        "type": "Button",
+        "meaning": "Thực hiện thao tác \"N Nguyễn Văn Quản Trị Quản trị viên\"",
+        "domain": "Null",
+        "defaultVal": "Kích hoạt",
+        "note": ""
+      },
+      {
+        "stt": "2",
         "name": "Trang khách",
         "type": "Button",
         "meaning": "Thực hiện thao tác \"Trang khách\"",
@@ -1023,7 +1086,16 @@
         "note": ""
       },
       {
-        "stt": "2",
+        "stt": "3",
+        "name": "Đăng xuất",
+        "type": "Button",
+        "meaning": "Thực hiện thao tác \"Đăng xuất\"",
+        "domain": "Null",
+        "defaultVal": "Kích hoạt",
+        "note": ""
+      },
+      {
+        "stt": "4",
         "name": "Thêm nhân viên mới",
         "type": "Button",
         "meaning": "Thực hiện thao tác \"Thêm nhân viên mới\"",
@@ -1032,7 +1104,7 @@
         "note": ""
       },
       {
-        "stt": "3",
+        "stt": "5",
         "name": "Tìm theo tên, mã NV, username...",
         "type": "Text box",
         "meaning": "Nhập tìm theo tên, mã nv, username...",
@@ -1041,7 +1113,7 @@
         "note": ""
       },
       {
-        "stt": "4",
+        "stt": "6",
         "name": "Bộ lọc lựa chọn",
         "type": "Combobox",
         "meaning": "Chọn bộ lọc lựa chọn từ danh sách",
@@ -1050,31 +1122,13 @@
         "note": ""
       },
       {
-        "stt": "5",
+        "stt": "7",
         "name": "Bảng danh sách nhân viên",
         "type": "Table",
         "meaning": "Hiển thị bảng danh sách nhân viên theo tiêu chí tìm kiếm và lọc",
         "domain": "Danh sách bản ghi",
         "defaultVal": "Tải từ hệ thống",
         "note": "Hỗ trợ xem và thao tác trên từng dòng"
-      },
-      {
-        "stt": "6",
-        "name": "Sửa",
-        "type": "Button",
-        "meaning": "Thực hiện thao tác \"Sửa\"",
-        "domain": "Null",
-        "defaultVal": "Kích hoạt",
-        "note": ""
-      },
-      {
-        "stt": "7",
-        "name": "Phân quyền",
-        "type": "Button",
-        "meaning": "Thực hiện thao tác \"Phân quyền\"",
-        "domain": "Null",
-        "defaultVal": "Kích hoạt",
-        "note": ""
       }
     ]
   },
@@ -1330,6 +1384,15 @@
     "components": [
       {
         "stt": "1",
+        "name": "N Nguyễn Văn Quản Trị Quản trị viên",
+        "type": "Button",
+        "meaning": "Thực hiện thao tác \"N Nguyễn Văn Quản Trị Quản trị viên\"",
+        "domain": "Null",
+        "defaultVal": "Kích hoạt",
+        "note": ""
+      },
+      {
+        "stt": "2",
         "name": "Trang khách",
         "type": "Button",
         "meaning": "Thực hiện thao tác \"Trang khách\"",
@@ -1338,7 +1401,16 @@
         "note": ""
       },
       {
-        "stt": "2",
+        "stt": "3",
+        "name": "Đăng xuất",
+        "type": "Button",
+        "meaning": "Thực hiện thao tác \"Đăng xuất\"",
+        "domain": "Null",
+        "defaultVal": "Kích hoạt",
+        "note": ""
+      },
+      {
+        "stt": "4",
         "name": "Tìm theo tên, SĐT, email...",
         "type": "Text box",
         "meaning": "Nhập tìm theo tên, sđt, email...",
@@ -1347,7 +1419,7 @@
         "note": ""
       },
       {
-        "stt": "3",
+        "stt": "5",
         "name": "Bộ lọc lựa chọn",
         "type": "Combobox",
         "meaning": "Chọn bộ lọc lựa chọn từ danh sách",
@@ -1356,7 +1428,7 @@
         "note": ""
       },
       {
-        "stt": "4",
+        "stt": "6",
         "name": "Bảng danh sách khách hàng",
         "type": "Table",
         "meaning": "Hiển thị bảng danh sách khách hàng theo tiêu chí tìm kiếm và lọc",
@@ -1365,19 +1437,10 @@
         "note": "Hỗ trợ xem và thao tác trên từng dòng"
       },
       {
-        "stt": "5",
+        "stt": "7",
         "name": "Đơn thuê",
         "type": "Button",
         "meaning": "Thực hiện thao tác \"Đơn thuê\"",
-        "domain": "Null",
-        "defaultVal": "Kích hoạt",
-        "note": ""
-      },
-      {
-        "stt": "6",
-        "name": "Khóa",
-        "type": "Button",
-        "meaning": "Thực hiện thao tác \"Khóa\"",
         "domain": "Null",
         "defaultVal": "Kích hoạt",
         "note": ""
@@ -1394,6 +1457,15 @@
     "components": [
       {
         "stt": "1",
+        "name": "N Nguyễn Văn Quản Trị Quản trị viên",
+        "type": "Button",
+        "meaning": "Thực hiện thao tác \"N Nguyễn Văn Quản Trị Quản trị viên\"",
+        "domain": "Null",
+        "defaultVal": "Kích hoạt",
+        "note": ""
+      },
+      {
+        "stt": "2",
         "name": "Trang khách",
         "type": "Button",
         "meaning": "Thực hiện thao tác \"Trang khách\"",
@@ -1402,7 +1474,16 @@
         "note": ""
       },
       {
-        "stt": "2",
+        "stt": "3",
+        "name": "Đăng xuất",
+        "type": "Button",
+        "meaning": "Thực hiện thao tác \"Đăng xuất\"",
+        "domain": "Null",
+        "defaultVal": "Kích hoạt",
+        "note": ""
+      },
+      {
+        "stt": "4",
         "name": "Tất cả",
         "type": "Button",
         "meaning": "Thực hiện thao tác \"Tất cả\"",
@@ -1411,28 +1492,10 @@
         "note": ""
       },
       {
-        "stt": "3",
+        "stt": "5",
         "name": "Cần giao hôm nay",
         "type": "Button",
         "meaning": "Thực hiện thao tác \"Cần giao hôm nay\"",
-        "domain": "Null",
-        "defaultVal": "Kích hoạt",
-        "note": ""
-      },
-      {
-        "stt": "4",
-        "name": "Cần thu hôm nay",
-        "type": "Button",
-        "meaning": "Thực hiện thao tác \"Cần thu hôm nay\"",
-        "domain": "Null",
-        "defaultVal": "Kích hoạt",
-        "note": ""
-      },
-      {
-        "stt": "5",
-        "name": "Quá hạn",
-        "type": "Button",
-        "meaning": "Thực hiện thao tác \"Quá hạn\"",
         "domain": "Null",
         "defaultVal": "Kích hoạt",
         "note": ""
@@ -1489,6 +1552,15 @@
       },
       {
         "stt": "2",
+        "name": "N Nguyễn Văn Quản Trị Quản trị viên",
+        "type": "Button",
+        "meaning": "Thực hiện thao tác \"N Nguyễn Văn Quản Trị Quản trị viên\"",
+        "domain": "Null",
+        "defaultVal": "Kích hoạt",
+        "note": ""
+      },
+      {
+        "stt": "3",
         "name": "Trang khách",
         "type": "Button",
         "meaning": "Thực hiện thao tác \"Trang khách\"",
@@ -1497,7 +1569,16 @@
         "note": ""
       },
       {
-        "stt": "3",
+        "stt": "4",
+        "name": "Đăng xuất",
+        "type": "Button",
+        "meaning": "Thực hiện thao tác \"Đăng xuất\"",
+        "domain": "Null",
+        "defaultVal": "Kích hoạt",
+        "note": ""
+      },
+      {
+        "stt": "5",
         "name": "Quét nhắc",
         "type": "Button",
         "meaning": "Thực hiện thao tác \"Quét nhắc\"",
@@ -1506,7 +1587,7 @@
         "note": ""
       },
       {
-        "stt": "4",
+        "stt": "6",
         "name": "Đang xử lý",
         "type": "Button",
         "meaning": "Thực hiện thao tác \"Đang xử lý\"",
@@ -1515,7 +1596,7 @@
         "note": ""
       },
       {
-        "stt": "5",
+        "stt": "7",
         "name": "Hoàn tất",
         "type": "Button",
         "meaning": "Thực hiện thao tác \"Hoàn tất\"",
@@ -1524,7 +1605,7 @@
         "note": ""
       },
       {
-        "stt": "6",
+        "stt": "8",
         "name": "Tất cả",
         "type": "Button",
         "meaning": "Thực hiện thao tác \"Tất cả\"",
@@ -1533,28 +1614,10 @@
         "note": ""
       },
       {
-        "stt": "7",
+        "stt": "9",
         "name": "ORD-202611-109 Trần Minh Quang Chờ đối soát",
         "type": "Button",
         "meaning": "Thực hiện thao tác \"ORD-202611-109 Trần Minh Quang Chờ đối soát\"",
-        "domain": "Null",
-        "defaultVal": "Kích hoạt",
-        "note": ""
-      },
-      {
-        "stt": "8",
-        "name": "DT-20241208-015 Trần Minh Quang Đang thuê",
-        "type": "Button",
-        "meaning": "Thực hiện thao tác \"DT-20241208-015 Trần Minh Quang Đang thuê\"",
-        "domain": "Null",
-        "defaultVal": "Kích hoạt",
-        "note": ""
-      },
-      {
-        "stt": "9",
-        "name": "ORD-202611-108 Nguyễn Văn An Chờ đối soát",
-        "type": "Button",
-        "meaning": "Thực hiện thao tác \"ORD-202611-108 Nguyễn Văn An Chờ đối soát\"",
         "domain": "Null",
         "defaultVal": "Kích hoạt",
         "note": ""
@@ -1726,6 +1789,15 @@
     "components": [
       {
         "stt": "1",
+        "name": "N Nguyễn Văn Quản Trị Quản trị viên",
+        "type": "Button",
+        "meaning": "Thực hiện thao tác \"N Nguyễn Văn Quản Trị Quản trị viên\"",
+        "domain": "Null",
+        "defaultVal": "Kích hoạt",
+        "note": ""
+      },
+      {
+        "stt": "2",
         "name": "Trang khách",
         "type": "Button",
         "meaning": "Thực hiện thao tác \"Trang khách\"",
@@ -1734,7 +1806,16 @@
         "note": ""
       },
       {
-        "stt": "2",
+        "stt": "3",
+        "name": "Đăng xuất",
+        "type": "Button",
+        "meaning": "Thực hiện thao tác \"Đăng xuất\"",
+        "domain": "Null",
+        "defaultVal": "Kích hoạt",
+        "note": ""
+      },
+      {
+        "stt": "4",
         "name": "1. Chuẩn bị kho",
         "type": "Button",
         "meaning": "Thực hiện thao tác \"1. Chuẩn bị kho\"",
@@ -1743,7 +1824,7 @@
         "note": ""
       },
       {
-        "stt": "3",
+        "stt": "5",
         "name": "2. Tiếp khách & Bàn giao",
         "type": "Button",
         "meaning": "Thực hiện thao tác \"2. Tiếp khách & Bàn giao\"",
@@ -1752,16 +1833,7 @@
         "note": ""
       },
       {
-        "stt": "4",
-        "name": "Nhận soạn hàng",
-        "type": "Button",
-        "meaning": "Thực hiện thao tác \"Nhận soạn hàng\"",
-        "domain": "Null",
-        "defaultVal": "Kích hoạt",
-        "note": ""
-      },
-      {
-        "stt": "5",
+        "stt": "6",
         "name": "Báo thiếu hàng cho QTV",
         "type": "Button",
         "meaning": "Thực hiện thao tác \"Báo thiếu hàng cho QTV\"",
@@ -1770,7 +1842,7 @@
         "note": ""
       },
       {
-        "stt": "6",
+        "stt": "7",
         "name": "Bộ lọc lựa chọn",
         "type": "Combobox",
         "meaning": "Chọn bộ lọc lựa chọn từ danh sách",
@@ -1779,7 +1851,7 @@
         "note": ""
       },
       {
-        "stt": "7",
+        "stt": "8",
         "name": "Hoàn tất chuẩn bị & Chuyển \"Sẵn sàng nhận\"",
         "type": "Button",
         "meaning": "Thực hiện thao tác \"Hoàn tất chuẩn bị & Chuyển \"Sẵn sàng nhận\"\"",
@@ -1881,6 +1953,15 @@
     "components": [
       {
         "stt": "1",
+        "name": "N Nguyễn Văn Quản Trị Quản trị viên",
+        "type": "Button",
+        "meaning": "Thực hiện thao tác \"N Nguyễn Văn Quản Trị Quản trị viên\"",
+        "domain": "Null",
+        "defaultVal": "Kích hoạt",
+        "note": ""
+      },
+      {
+        "stt": "2",
         "name": "Trang khách",
         "type": "Button",
         "meaning": "Thực hiện thao tác \"Trang khách\"",
@@ -1889,28 +1970,19 @@
         "note": ""
       },
       {
-        "stt": "2",
-        "name": "Quét nhắc",
-        "type": "Button",
-        "meaning": "Thực hiện thao tác \"Quét nhắc\"",
-        "domain": "Null",
-        "defaultVal": "Kích hoạt",
-        "note": ""
-      },
-      {
         "stt": "3",
-        "name": "Đang xử lý",
+        "name": "Đăng xuất",
         "type": "Button",
-        "meaning": "Thực hiện thao tác \"Đang xử lý\"",
+        "meaning": "Thực hiện thao tác \"Đăng xuất\"",
         "domain": "Null",
         "defaultVal": "Kích hoạt",
         "note": ""
       },
       {
         "stt": "4",
-        "name": "Hoàn tất",
+        "name": "Quét nhắc",
         "type": "Button",
-        "meaning": "Thực hiện thao tác \"Hoàn tất\"",
+        "meaning": "Thực hiện thao tác \"Quét nhắc\"",
         "domain": "Null",
         "defaultVal": "Kích hoạt",
         "note": ""
@@ -1939,7 +2011,7 @@
         "type": "Number box",
         "meaning": "Nhập giá trị ô nhập liệu",
         "domain": "Số (>= 0)",
-        "defaultVal": "360000",
+        "defaultVal": "720000",
         "note": ""
       },
       {
@@ -1981,9 +2053,9 @@
       },
       {
         "stt": "3",
-        "name": "DT-20241208-015 Trần Minh Quang Đang thuê",
+        "name": "ORD-202611-108 Nguyễn Văn An Chờ đối soát",
         "type": "Button",
-        "meaning": "Thực hiện thao tác \"DT-20241208-015 Trần Minh Quang Đang thuê\"",
+        "meaning": "Thực hiện thao tác \"ORD-202611-108 Nguyễn Văn An Chờ đối soát\"",
         "domain": "Null",
         "defaultVal": "Kích hoạt",
         "note": ""
@@ -1999,9 +2071,9 @@
       },
       {
         "stt": "5",
-        "name": "Bình thường",
+        "name": "ORD-202610-001 Nguyễn Văn An Đang thuê Quá hạn",
         "type": "Button",
-        "meaning": "Thực hiện thao tác \"Bình thường\"",
+        "meaning": "Thực hiện thao tác \"ORD-202610-001 Nguyễn Văn An Đang thuê Quá hạn\"",
         "domain": "Null",
         "defaultVal": "Kích hoạt",
         "note": ""
@@ -2021,7 +2093,7 @@
         "type": "Number box",
         "meaning": "Nhập giá trị ô nhập liệu",
         "domain": "Số (>= 0)",
-        "defaultVal": "360000",
+        "defaultVal": "720000",
         "note": ""
       },
       {
@@ -2067,6 +2139,15 @@
       },
       {
         "stt": "3",
+        "name": "N Nguyễn Văn Quản Trị Quản trị viên",
+        "type": "Button",
+        "meaning": "Thực hiện thao tác \"N Nguyễn Văn Quản Trị Quản trị viên\"",
+        "domain": "Null",
+        "defaultVal": "Kích hoạt",
+        "note": ""
+      },
+      {
+        "stt": "4",
         "name": "Trang khách",
         "type": "Button",
         "meaning": "Thực hiện thao tác \"Trang khách\"",
@@ -2075,19 +2156,10 @@
         "note": ""
       },
       {
-        "stt": "4",
-        "name": "Quét nhắc",
-        "type": "Button",
-        "meaning": "Thực hiện thao tác \"Quét nhắc\"",
-        "domain": "Null",
-        "defaultVal": "Kích hoạt",
-        "note": ""
-      },
-      {
         "stt": "5",
-        "name": "Đang xử lý",
+        "name": "Đăng xuất",
         "type": "Button",
-        "meaning": "Thực hiện thao tác \"Đang xử lý\"",
+        "meaning": "Thực hiện thao tác \"Đăng xuất\"",
         "domain": "Null",
         "defaultVal": "Kích hoạt",
         "note": ""
@@ -2126,50 +2198,9 @@
       {
         "file": "UC5_3_a.png",
         "caption": "Giao diện Duyệt và xử lý tranh chấp phụ phí – Trung tâm xử lý tranh chấp (SCR-5.3)"
-      },
-      {
-        "file": "UC5_3_b.png",
-        "caption": "Giao diện Duyệt và xử lý tranh chấp phụ phí – Hộp thoại xem chứng cứ và kết luận (SCR-5.3)"
       }
     ],
-    "components": [
-      {
-        "stt": "1",
-        "name": "Xem chứng cứ & Kết luận",
-        "type": "Button",
-        "meaning": "Mở hộp thoại đối chiếu bằng chứng và ra quyết định xử lý tranh chấp phụ phí",
-        "domain": "Null",
-        "defaultVal": "Kích hoạt",
-        "note": ""
-      },
-      {
-        "stt": "2",
-        "name": "Ghi chú kết luận & Căn cứ xử lý (Lưu vết kiểm to",
-        "type": "Textarea",
-        "meaning": "Nhập nội dung ghi chú kết luận & căn cứ xử lý (lưu vết kiểm to",
-        "domain": "String",
-        "defaultVal": "Rỗng",
-        "note": ""
-      },
-      {
-        "stt": "3",
-        "name": "Đóng",
-        "type": "Button",
-        "meaning": "Thực hiện thao tác \"Đóng\"",
-        "domain": "Null",
-        "defaultVal": "Kích hoạt",
-        "note": ""
-      },
-      {
-        "stt": "4",
-        "name": "Xác nhận kết luận & Cập nhật đưa vào đối soát",
-        "type": "Button",
-        "meaning": "Thực hiện thao tác \"Xác nhận kết luận & Cập nhật đưa vào đối soát\"",
-        "domain": "Null",
-        "defaultVal": "Kích hoạt",
-        "note": ""
-      }
-    ]
+    "components": []
   },
   "UC5.7": {
     "images": [
@@ -2254,6 +2285,15 @@
     "components": [
       {
         "stt": "1",
+        "name": "N Nguyễn Văn Quản Trị Quản trị viên",
+        "type": "Button",
+        "meaning": "Thực hiện thao tác \"N Nguyễn Văn Quản Trị Quản trị viên\"",
+        "domain": "Null",
+        "defaultVal": "Kích hoạt",
+        "note": ""
+      },
+      {
+        "stt": "2",
         "name": "Trang khách",
         "type": "Button",
         "meaning": "Thực hiện thao tác \"Trang khách\"",
@@ -2262,7 +2302,16 @@
         "note": ""
       },
       {
-        "stt": "2",
+        "stt": "3",
+        "name": "Đăng xuất",
+        "type": "Button",
+        "meaning": "Thực hiện thao tác \"Đăng xuất\"",
+        "domain": "Null",
+        "defaultVal": "Kích hoạt",
+        "note": ""
+      },
+      {
+        "stt": "4",
         "name": "Thêm danh mục",
         "type": "Button",
         "meaning": "Thực hiện thao tác \"Thêm danh mục\"",
@@ -2271,7 +2320,7 @@
         "note": ""
       },
       {
-        "stt": "3",
+        "stt": "5",
         "name": "Tìm kiếm danh mục",
         "type": "Text box",
         "meaning": "Nhập tìm kiếm danh mục",
@@ -2280,7 +2329,7 @@
         "note": ""
       },
       {
-        "stt": "4",
+        "stt": "6",
         "name": "Lọc trạng thái danh mục",
         "type": "Combobox",
         "meaning": "Chọn lọc trạng thái danh mục từ danh sách",
@@ -2289,19 +2338,10 @@
         "note": ""
       },
       {
-        "stt": "5",
+        "stt": "7",
         "name": "Sửa",
         "type": "Button",
         "meaning": "Thực hiện thao tác \"Sửa\"",
-        "domain": "Null",
-        "defaultVal": "Kích hoạt",
-        "note": ""
-      },
-      {
-        "stt": "6",
-        "name": "Ẩn",
-        "type": "Button",
-        "meaning": "Thực hiện thao tác \"Ẩn\"",
         "domain": "Null",
         "defaultVal": "Kích hoạt",
         "note": ""
@@ -2432,7 +2472,7 @@
         "type": "Number box",
         "meaning": "Nhập giá trị thứ tự hiển thị",
         "domain": "Số (>= 0)",
-        "defaultVal": "9",
+        "defaultVal": "19",
         "note": ""
       },
       {
@@ -2483,6 +2523,15 @@
     "components": [
       {
         "stt": "1",
+        "name": "N Nguyễn Văn Quản Trị Quản trị viên",
+        "type": "Button",
+        "meaning": "Thực hiện thao tác \"N Nguyễn Văn Quản Trị Quản trị viên\"",
+        "domain": "Null",
+        "defaultVal": "Kích hoạt",
+        "note": ""
+      },
+      {
+        "stt": "2",
         "name": "Trang khách",
         "type": "Button",
         "meaning": "Thực hiện thao tác \"Trang khách\"",
@@ -2491,16 +2540,16 @@
         "note": ""
       },
       {
-        "stt": "2",
-        "name": "Thêm sản phẩm",
+        "stt": "3",
+        "name": "Đăng xuất",
         "type": "Button",
-        "meaning": "Thực hiện thao tác \"Thêm sản phẩm\"",
+        "meaning": "Thực hiện thao tác \"Đăng xuất\"",
         "domain": "Null",
         "defaultVal": "Kích hoạt",
         "note": ""
       },
       {
-        "stt": "3",
+        "stt": "4",
         "name": "Tìm tên sản phẩm, mã, thương hiệu...",
         "type": "Text box",
         "meaning": "Nhập tìm tên sản phẩm, mã, thương hiệu...",
@@ -2509,7 +2558,7 @@
         "note": ""
       },
       {
-        "stt": "4",
+        "stt": "5",
         "name": "Lọc theo danh mục",
         "type": "Combobox",
         "meaning": "Chọn lọc theo danh mục từ danh sách",
@@ -2518,7 +2567,7 @@
         "note": ""
       },
       {
-        "stt": "5",
+        "stt": "6",
         "name": "Lọc trạng thái kinh doanh",
         "type": "Combobox",
         "meaning": "Chọn lọc trạng thái kinh doanh từ danh sách",
@@ -2527,22 +2576,13 @@
         "note": ""
       },
       {
-        "stt": "6",
+        "stt": "7",
         "name": "Bảng danh sách sản phẩm",
         "type": "Table",
         "meaning": "Hiển thị bảng danh sách sản phẩm theo tiêu chí tìm kiếm và lọc",
         "domain": "Danh sách bản ghi",
         "defaultVal": "Tải từ hệ thống",
         "note": "Hỗ trợ xem và thao tác trên từng dòng"
-      },
-      {
-        "stt": "7",
-        "name": "Sửa",
-        "type": "Button",
-        "meaning": "Thực hiện thao tác \"Sửa\"",
-        "domain": "Null",
-        "defaultVal": "Kích hoạt",
-        "note": ""
       }
     ]
   },
@@ -2784,6 +2824,15 @@
     "components": [
       {
         "stt": "1",
+        "name": "N Nguyễn Văn Quản Trị Quản trị viên",
+        "type": "Button",
+        "meaning": "Thực hiện thao tác \"N Nguyễn Văn Quản Trị Quản trị viên\"",
+        "domain": "Null",
+        "defaultVal": "Kích hoạt",
+        "note": ""
+      },
+      {
+        "stt": "2",
         "name": "Trang khách",
         "type": "Button",
         "meaning": "Thực hiện thao tác \"Trang khách\"",
@@ -2792,7 +2841,16 @@
         "note": ""
       },
       {
-        "stt": "2",
+        "stt": "3",
+        "name": "Đăng xuất",
+        "type": "Button",
+        "meaning": "Thực hiện thao tác \"Đăng xuất\"",
+        "domain": "Null",
+        "defaultVal": "Kích hoạt",
+        "note": ""
+      },
+      {
+        "stt": "4",
         "name": "Chuyển loại thiết bị",
         "type": "Button",
         "meaning": "Thực hiện thao tác \"Chuyển loại thiết bị\"",
@@ -2801,7 +2859,7 @@
         "note": ""
       },
       {
-        "stt": "3",
+        "stt": "5",
         "name": "Tìm mã thiết bị Serial",
         "type": "Text box",
         "meaning": "Nhập tìm mã thiết bị serial",
@@ -2810,7 +2868,7 @@
         "note": ""
       },
       {
-        "stt": "4",
+        "stt": "6",
         "name": "Bộ lọc lựa chọn",
         "type": "Combobox",
         "meaning": "Chọn bộ lọc lựa chọn từ danh sách",
@@ -2819,31 +2877,13 @@
         "note": ""
       },
       {
-        "stt": "5",
+        "stt": "7",
         "name": "Bảng danh sách thiết bị vật lý",
         "type": "Table",
         "meaning": "Hiển thị bảng danh sách thiết bị vật lý theo tiêu chí tìm kiếm và lọc",
         "domain": "Danh sách bản ghi",
         "defaultVal": "Tải từ hệ thống",
         "note": "Hỗ trợ xem và thao tác trên từng dòng"
-      },
-      {
-        "stt": "6",
-        "name": "Sổ đời",
-        "type": "Button",
-        "meaning": "Thực hiện thao tác \"Sổ đời\"",
-        "domain": "Null",
-        "defaultVal": "Kích hoạt",
-        "note": ""
-      },
-      {
-        "stt": "7",
-        "name": "Sửa",
-        "type": "Button",
-        "meaning": "Thực hiện thao tác \"Sửa\"",
-        "domain": "Null",
-        "defaultVal": "Kích hoạt",
-        "note": ""
       }
     ]
   },
@@ -2921,6 +2961,15 @@
     "components": [
       {
         "stt": "1",
+        "name": "N Nguyễn Văn Quản Trị Quản trị viên",
+        "type": "Button",
+        "meaning": "Thực hiện thao tác \"N Nguyễn Văn Quản Trị Quản trị viên\"",
+        "domain": "Null",
+        "defaultVal": "Kích hoạt",
+        "note": ""
+      },
+      {
+        "stt": "2",
         "name": "Trang khách",
         "type": "Button",
         "meaning": "Thực hiện thao tác \"Trang khách\"",
@@ -2929,7 +2978,16 @@
         "note": ""
       },
       {
-        "stt": "2",
+        "stt": "3",
+        "name": "Đăng xuất",
+        "type": "Button",
+        "meaning": "Thực hiện thao tác \"Đăng xuất\"",
+        "domain": "Null",
+        "defaultVal": "Kích hoạt",
+        "note": ""
+      },
+      {
+        "stt": "4",
         "name": "Kiểm kê kho",
         "type": "Button",
         "meaning": "Thực hiện thao tác \"Kiểm kê kho\"",
@@ -2938,7 +2996,7 @@
         "note": ""
       },
       {
-        "stt": "3",
+        "stt": "5",
         "name": "Lập phiếu thủ công",
         "type": "Button",
         "meaning": "Thực hiện thao tác \"Lập phiếu thủ công\"",
@@ -2947,7 +3005,7 @@
         "note": ""
       },
       {
-        "stt": "4",
+        "stt": "6",
         "name": "Bảng danh sách dữ liệu",
         "type": "Table",
         "meaning": "Hiển thị bảng danh sách dữ liệu theo tiêu chí tìm kiếm và lọc",
@@ -3040,6 +3098,15 @@
     "components": [
       {
         "stt": "1",
+        "name": "N Nguyễn Văn Quản Trị Quản trị viên",
+        "type": "Button",
+        "meaning": "Thực hiện thao tác \"N Nguyễn Văn Quản Trị Quản trị viên\"",
+        "domain": "Null",
+        "defaultVal": "Kích hoạt",
+        "note": ""
+      },
+      {
+        "stt": "2",
         "name": "Trang khách",
         "type": "Button",
         "meaning": "Thực hiện thao tác \"Trang khách\"",
@@ -3048,7 +3115,16 @@
         "note": ""
       },
       {
-        "stt": "2",
+        "stt": "3",
+        "name": "Đăng xuất",
+        "type": "Button",
+        "meaning": "Thực hiện thao tác \"Đăng xuất\"",
+        "domain": "Null",
+        "defaultVal": "Kích hoạt",
+        "note": ""
+      },
+      {
+        "stt": "4",
         "name": "Danh sách kho",
         "type": "Button",
         "meaning": "Thực hiện thao tác \"Danh sách kho\"",
@@ -3057,7 +3133,7 @@
         "note": ""
       },
       {
-        "stt": "3",
+        "stt": "5",
         "name": "Phiếu bảo trì & sửa chữa",
         "type": "Button",
         "meaning": "Thực hiện thao tác \"Phiếu bảo trì & sửa chữa\"",
@@ -3066,16 +3142,7 @@
         "note": ""
       },
       {
-        "stt": "4",
-        "name": "Nhập hàng & Kiểm nhận",
-        "type": "Button",
-        "meaning": "Thực hiện thao tác \"Nhập hàng & Kiểm nhận\"",
-        "domain": "Null",
-        "defaultVal": "Kích hoạt",
-        "note": ""
-      },
-      {
-        "stt": "5",
+        "stt": "6",
         "name": "Lọc theo trạng thái thiết bị",
         "type": "Combobox",
         "meaning": "Chọn lọc theo trạng thái thiết bị từ danh sách",
@@ -3084,21 +3151,12 @@
         "note": ""
       },
       {
-        "stt": "6",
+        "stt": "7",
         "name": "Lọc theo sản phẩm",
         "type": "Combobox",
         "meaning": "Chọn lọc theo sản phẩm từ danh sách",
         "domain": "Danh sách chọn",
         "defaultVal": "Tất cả",
-        "note": ""
-      },
-      {
-        "stt": "7",
-        "name": "Kiểm kê kho",
-        "type": "Button",
-        "meaning": "Thực hiện thao tác \"Kiểm kê kho\"",
-        "domain": "Null",
-        "defaultVal": "Kích hoạt",
         "note": ""
       },
       {
@@ -3122,6 +3180,15 @@
     "components": [
       {
         "stt": "1",
+        "name": "N Nguyễn Văn Quản Trị Quản trị viên",
+        "type": "Button",
+        "meaning": "Thực hiện thao tác \"N Nguyễn Văn Quản Trị Quản trị viên\"",
+        "domain": "Null",
+        "defaultVal": "Kích hoạt",
+        "note": ""
+      },
+      {
+        "stt": "2",
         "name": "Trang khách",
         "type": "Button",
         "meaning": "Thực hiện thao tác \"Trang khách\"",
@@ -3130,7 +3197,16 @@
         "note": ""
       },
       {
-        "stt": "2",
+        "stt": "3",
+        "name": "Đăng xuất",
+        "type": "Button",
+        "meaning": "Thực hiện thao tác \"Đăng xuất\"",
+        "domain": "Null",
+        "defaultVal": "Kích hoạt",
+        "note": ""
+      },
+      {
+        "stt": "4",
         "name": "Danh sách kho",
         "type": "Button",
         "meaning": "Thực hiện thao tác \"Danh sách kho\"",
@@ -3139,28 +3215,10 @@
         "note": ""
       },
       {
-        "stt": "3",
+        "stt": "5",
         "name": "Phiếu bảo trì & sửa chữa",
         "type": "Button",
         "meaning": "Thực hiện thao tác \"Phiếu bảo trì & sửa chữa\"",
-        "domain": "Null",
-        "defaultVal": "Kích hoạt",
-        "note": ""
-      },
-      {
-        "stt": "4",
-        "name": "Nhập hàng & Kiểm nhận",
-        "type": "Button",
-        "meaning": "Thực hiện thao tác \"Nhập hàng & Kiểm nhận\"",
-        "domain": "Null",
-        "defaultVal": "Kích hoạt",
-        "note": ""
-      },
-      {
-        "stt": "5",
-        "name": "Tạo phiếu bảo trì",
-        "type": "Button",
-        "meaning": "Thực hiện thao tác \"Tạo phiếu bảo trì\"",
         "domain": "Null",
         "defaultVal": "Kích hoạt",
         "note": ""
@@ -3204,18 +3262,18 @@
     "components": [
       {
         "stt": "1",
-        "name": "Trang khách",
+        "name": "N Nguyễn Văn Quản Trị Quản trị viên",
         "type": "Button",
-        "meaning": "Thực hiện thao tác \"Trang khách\"",
+        "meaning": "Thực hiện thao tác \"N Nguyễn Văn Quản Trị Quản trị viên\"",
         "domain": "Null",
         "defaultVal": "Kích hoạt",
         "note": ""
       },
       {
         "stt": "2",
-        "name": "Danh sách kho",
+        "name": "Trang khách",
         "type": "Button",
-        "meaning": "Thực hiện thao tác \"Danh sách kho\"",
+        "meaning": "Thực hiện thao tác \"Trang khách\"",
         "domain": "Null",
         "defaultVal": "Kích hoạt",
         "note": ""
@@ -3286,6 +3344,15 @@
     "components": [
       {
         "stt": "1",
+        "name": "N Nguyễn Văn Quản Trị Quản trị viên",
+        "type": "Button",
+        "meaning": "Thực hiện thao tác \"N Nguyễn Văn Quản Trị Quản trị viên\"",
+        "domain": "Null",
+        "defaultVal": "Kích hoạt",
+        "note": ""
+      },
+      {
+        "stt": "2",
         "name": "Trang khách",
         "type": "Button",
         "meaning": "Thực hiện thao tác \"Trang khách\"",
@@ -3294,7 +3361,16 @@
         "note": ""
       },
       {
-        "stt": "2",
+        "stt": "3",
+        "name": "Đăng xuất",
+        "type": "Button",
+        "meaning": "Thực hiện thao tác \"Đăng xuất\"",
+        "domain": "Null",
+        "defaultVal": "Kích hoạt",
+        "note": ""
+      },
+      {
+        "stt": "4",
         "name": "Thêm NCC mới",
         "type": "Button",
         "meaning": "Thực hiện thao tác \"Thêm NCC mới\"",
@@ -3303,7 +3379,7 @@
         "note": ""
       },
       {
-        "stt": "3",
+        "stt": "5",
         "name": "Tìm theo mã NCC, tên công ty, người liên hệ, SĐT",
         "type": "Text box",
         "meaning": "Nhập tìm theo mã ncc, tên công ty, người liên hệ, sđt",
@@ -3312,7 +3388,7 @@
         "note": ""
       },
       {
-        "stt": "4",
+        "stt": "6",
         "name": "Lọc theo tình trạng hợp tác",
         "type": "Combobox",
         "meaning": "Chọn lọc theo tình trạng hợp tác từ danh sách",
@@ -3321,28 +3397,10 @@
         "note": ""
       },
       {
-        "stt": "5",
+        "stt": "7",
         "name": "Xóa lọc",
         "type": "Button",
         "meaning": "Thực hiện thao tác \"Xóa lọc\"",
-        "domain": "Null",
-        "defaultVal": "Kích hoạt",
-        "note": ""
-      },
-      {
-        "stt": "6",
-        "name": "Hồ sơ NCC",
-        "type": "Button",
-        "meaning": "Thực hiện thao tác \"Hồ sơ NCC\"",
-        "domain": "Null",
-        "defaultVal": "Kích hoạt",
-        "note": ""
-      },
-      {
-        "stt": "7",
-        "name": "Sửa",
-        "type": "Button",
-        "meaning": "Thực hiện thao tác \"Sửa\"",
         "domain": "Null",
         "defaultVal": "Kích hoạt",
         "note": ""
@@ -3560,6 +3618,15 @@
     "components": [
       {
         "stt": "1",
+        "name": "N Nguyễn Văn Quản Trị Quản trị viên",
+        "type": "Button",
+        "meaning": "Thực hiện thao tác \"N Nguyễn Văn Quản Trị Quản trị viên\"",
+        "domain": "Null",
+        "defaultVal": "Kích hoạt",
+        "note": ""
+      },
+      {
+        "stt": "2",
         "name": "Trang khách",
         "type": "Button",
         "meaning": "Thực hiện thao tác \"Trang khách\"",
@@ -3568,16 +3635,16 @@
         "note": ""
       },
       {
-        "stt": "2",
-        "name": "Tạo phiếu nháp",
+        "stt": "3",
+        "name": "Đăng xuất",
         "type": "Button",
-        "meaning": "Thực hiện thao tác \"Tạo phiếu nháp\"",
+        "meaning": "Thực hiện thao tác \"Đăng xuất\"",
         "domain": "Null",
         "defaultVal": "Kích hoạt",
         "note": ""
       },
       {
-        "stt": "3",
+        "stt": "4",
         "name": "Tìm mã phiếu, NCC, người lập...",
         "type": "Text box",
         "meaning": "Nhập tìm mã phiếu, ncc, người lập...",
@@ -3586,7 +3653,7 @@
         "note": ""
       },
       {
-        "stt": "4",
+        "stt": "5",
         "name": "Lọc theo nhà cung cấp",
         "type": "Combobox",
         "meaning": "Chọn lọc theo nhà cung cấp từ danh sách",
@@ -3595,7 +3662,7 @@
         "note": ""
       },
       {
-        "stt": "5",
+        "stt": "6",
         "name": "Lọc theo trạng thái phiếu",
         "type": "Combobox",
         "meaning": "Chọn lọc theo trạng thái phiếu từ danh sách",
@@ -3604,7 +3671,7 @@
         "note": ""
       },
       {
-        "stt": "6",
+        "stt": "7",
         "name": "Chọn ngày",
         "type": "Date picker",
         "meaning": "Chọn chọn ngày",
@@ -3613,22 +3680,13 @@
         "note": ""
       },
       {
-        "stt": "7",
+        "stt": "8",
         "name": "Bảng chi tiết phiếu nhập",
         "type": "Table",
         "meaning": "Hiển thị bảng chi tiết phiếu nhập theo tiêu chí tìm kiếm và lọc",
         "domain": "Danh sách bản ghi",
         "defaultVal": "Tải từ hệ thống",
         "note": "Hỗ trợ xem và thao tác trên từng dòng"
-      },
-      {
-        "stt": "8",
-        "name": "Sửa nháp",
-        "type": "Button",
-        "meaning": "Thực hiện thao tác \"Sửa nháp\"",
-        "domain": "Null",
-        "defaultVal": "Kích hoạt",
-        "note": ""
       }
     ]
   },
@@ -3742,15 +3800,6 @@
       },
       {
         "stt": "3",
-        "name": "Số lượng đạt",
-        "type": "Number box",
-        "meaning": "Nhập giá trị số lượng đạt",
-        "domain": "Số (>= 0)",
-        "defaultVal": "10",
-        "note": ""
-      },
-      {
-        "stt": "4",
         "name": "Số lượng lỗi nhận",
         "type": "Number box",
         "meaning": "Nhập giá trị số lượng lỗi nhận",
@@ -3759,12 +3808,21 @@
         "note": ""
       },
       {
-        "stt": "5",
+        "stt": "4",
         "name": "Số lượng trả lại",
         "type": "Number box",
         "meaning": "Nhập giá trị số lượng trả lại",
         "domain": "Số (>= 0)",
         "defaultVal": "0",
+        "note": ""
+      },
+      {
+        "stt": "5",
+        "name": "Số lượng đạt",
+        "type": "Number box",
+        "meaning": "Nhập giá trị số lượng đạt",
+        "domain": "Số (>= 0)",
+        "defaultVal": "10",
         "note": ""
       },
       {
@@ -3998,9 +4056,9 @@
     "components": [
       {
         "stt": "1",
-        "name": "Trang khách",
+        "name": "N Nguyễn Văn Quản Trị Quản trị viên",
         "type": "Button",
-        "meaning": "Thực hiện thao tác \"Trang khách\"",
+        "meaning": "Thực hiện thao tác \"N Nguyễn Văn Quản Trị Quản trị viên\"",
         "domain": "Null",
         "defaultVal": "Kích hoạt",
         "note": ""
@@ -4089,6 +4147,15 @@
     "components": [
       {
         "stt": "1",
+        "name": "N Nguyễn Văn Quản Trị Quản trị viên",
+        "type": "Button",
+        "meaning": "Thực hiện thao tác \"N Nguyễn Văn Quản Trị Quản trị viên\"",
+        "domain": "Null",
+        "defaultVal": "Kích hoạt",
+        "note": ""
+      },
+      {
+        "stt": "2",
         "name": "Trang khách",
         "type": "Button",
         "meaning": "Thực hiện thao tác \"Trang khách\"",
@@ -4097,7 +4164,16 @@
         "note": ""
       },
       {
-        "stt": "2",
+        "stt": "3",
+        "name": "Đăng xuất",
+        "type": "Button",
+        "meaning": "Thực hiện thao tác \"Đăng xuất\"",
+        "domain": "Null",
+        "defaultVal": "Kích hoạt",
+        "note": ""
+      },
+      {
+        "stt": "4",
         "name": "Tạo mã giảm mới",
         "type": "Button",
         "meaning": "Thực hiện thao tác \"Tạo mã giảm mới\"",
@@ -4106,7 +4182,7 @@
         "note": ""
       },
       {
-        "stt": "3",
+        "stt": "5",
         "name": "Tìm kiếm theo mã code hoặc tên chương trình...",
         "type": "Text box",
         "meaning": "Nhập tìm kiếm theo mã code hoặc tên chương trình...",
@@ -4115,7 +4191,7 @@
         "note": ""
       },
       {
-        "stt": "4",
+        "stt": "6",
         "name": "Bộ lọc lựa chọn",
         "type": "Combobox",
         "meaning": "Chọn bộ lọc lựa chọn từ danh sách",
@@ -4124,28 +4200,10 @@
         "note": ""
       },
       {
-        "stt": "5",
+        "stt": "7",
         "name": "Xem đơn áp dụng",
         "type": "Button",
         "meaning": "Thực hiện thao tác \"Xem đơn áp dụng\"",
-        "domain": "Null",
-        "defaultVal": "Kích hoạt",
-        "note": ""
-      },
-      {
-        "stt": "6",
-        "name": "Sửa",
-        "type": "Button",
-        "meaning": "Thực hiện thao tác \"Sửa\"",
-        "domain": "Null",
-        "defaultVal": "Kích hoạt",
-        "note": ""
-      },
-      {
-        "stt": "7",
-        "name": "▶ Kích hoạt",
-        "type": "Button",
-        "meaning": "Thực hiện thao tác \"▶ Kích hoạt\"",
         "domain": "Null",
         "defaultVal": "Kích hoạt",
         "note": ""
@@ -4203,16 +4261,16 @@
         "type": "Combobox",
         "meaning": "Chọn loại giảm từ danh sách",
         "domain": "Danh sách chọn",
-        "defaultVal": "Phần trăm (%)",
+        "defaultVal": "Số tiền cố định (VNĐ)",
         "note": ""
       },
       {
         "stt": "4",
-        "name": "Giá trị giảm (%)",
+        "name": "Giá trị giảm (VNĐ)",
         "type": "Number box",
-        "meaning": "Nhập giá trị giá trị giảm (%)",
+        "meaning": "Nhập giá trị giá trị giảm (vnđ)",
         "domain": "Số (>= 0)",
-        "defaultVal": "15",
+        "defaultVal": "10",
         "note": ""
       },
       {
@@ -4221,7 +4279,7 @@
         "type": "Number box",
         "meaning": "Nhập giá trị mức giảm tối đa (vnđ, để trống nếu không giới hạ",
         "domain": "Số (>= 0)",
-        "defaultVal": "120000",
+        "defaultVal": "0",
         "note": ""
       },
       {
@@ -4230,7 +4288,7 @@
         "type": "Number box",
         "meaning": "Nhập giá trị tiền thuê tối thiểu (vnđ)",
         "domain": "Số (>= 0)",
-        "defaultVal": "100000",
+        "defaultVal": "0",
         "note": ""
       },
       {
@@ -4239,7 +4297,7 @@
         "type": "Date picker",
         "meaning": "Chọn thời gian bắt đầu",
         "domain": "Ngày/Tháng/Năm",
-        "defaultVal": "2026-11-23T09:00",
+        "defaultVal": "2026-11-23T20:16",
         "note": ""
       },
       {
@@ -4248,7 +4306,7 @@
         "type": "Date picker",
         "meaning": "Chọn thời gian kết thúc",
         "domain": "Ngày/Tháng/Năm",
-        "defaultVal": "2026-12-23T09:00",
+        "defaultVal": "2026-12-23T20:16",
         "note": ""
       },
       {
@@ -4257,7 +4315,7 @@
         "type": "Number box",
         "meaning": "Nhập giá trị giới hạn tổng lượt dùng (để trống = vô hạn)",
         "domain": "Số (>= 0)",
-        "defaultVal": "50",
+        "defaultVal": "0",
         "note": ""
       }
     ]
@@ -4330,7 +4388,7 @@
         "type": "Date picker",
         "meaning": "Chọn thời gian bắt đầu",
         "domain": "Ngày/Tháng/Năm",
-        "defaultVal": "2026-11-21T17:22",
+        "defaultVal": "2026-11-23T20:26",
         "note": ""
       },
       {
@@ -4339,7 +4397,7 @@
         "type": "Date picker",
         "meaning": "Chọn thời gian kết thúc",
         "domain": "Ngày/Tháng/Năm",
-        "defaultVal": "2026-12-21T17:22",
+        "defaultVal": "2026-12-23T20:26",
         "note": ""
       },
       {
@@ -4363,6 +4421,15 @@
     "components": [
       {
         "stt": "1",
+        "name": "N Nguyễn Văn Quản Trị Quản trị viên",
+        "type": "Button",
+        "meaning": "Thực hiện thao tác \"N Nguyễn Văn Quản Trị Quản trị viên\"",
+        "domain": "Null",
+        "defaultVal": "Kích hoạt",
+        "note": ""
+      },
+      {
+        "stt": "2",
         "name": "Trang khách",
         "type": "Button",
         "meaning": "Thực hiện thao tác \"Trang khách\"",
@@ -4371,7 +4438,16 @@
         "note": ""
       },
       {
-        "stt": "2",
+        "stt": "3",
+        "name": "Đăng xuất",
+        "type": "Button",
+        "meaning": "Thực hiện thao tác \"Đăng xuất\"",
+        "domain": "Null",
+        "defaultVal": "Kích hoạt",
+        "note": ""
+      },
+      {
+        "stt": "4",
         "name": "Làm mới",
         "type": "Button",
         "meaning": "Thực hiện thao tác \"Làm mới\"",
@@ -4380,7 +4456,7 @@
         "note": ""
       },
       {
-        "stt": "3",
+        "stt": "5",
         "name": "Tìm theo sản phẩm, khách hàng, nội dung...",
         "type": "Text box",
         "meaning": "Nhập tìm theo sản phẩm, khách hàng, nội dung...",
@@ -4389,7 +4465,7 @@
         "note": ""
       },
       {
-        "stt": "4",
+        "stt": "6",
         "name": "Bộ lọc lựa chọn",
         "type": "Combobox",
         "meaning": "Chọn bộ lọc lựa chọn từ danh sách",
@@ -4398,28 +4474,10 @@
         "note": ""
       },
       {
-        "stt": "5",
+        "stt": "7",
         "name": "Căn cứ đơn thuê",
         "type": "Button",
         "meaning": "Thực hiện thao tác \"Căn cứ đơn thuê\"",
-        "domain": "Null",
-        "defaultVal": "Kích hoạt",
-        "note": ""
-      },
-      {
-        "stt": "6",
-        "name": "Phản hồi",
-        "type": "Button",
-        "meaning": "Thực hiện thao tác \"Phản hồi\"",
-        "domain": "Null",
-        "defaultVal": "Kích hoạt",
-        "note": ""
-      },
-      {
-        "stt": "7",
-        "name": "Ẩn vi phạm",
-        "type": "Button",
-        "meaning": "Thực hiện thao tác \"Ẩn vi phạm\"",
         "domain": "Null",
         "defaultVal": "Kích hoạt",
         "note": ""
@@ -4436,9 +4494,9 @@
     "components": [
       {
         "stt": "1",
-        "name": "Trang khách",
+        "name": "N Nguyễn Văn Quản Trị Quản trị viên",
         "type": "Button",
-        "meaning": "Thực hiện thao tác \"Trang khách\"",
+        "meaning": "Thực hiện thao tác \"N Nguyễn Văn Quản Trị Quản trị viên\"",
         "domain": "Null",
         "defaultVal": "Kích hoạt",
         "note": ""
@@ -4518,6 +4576,15 @@
     "components": [
       {
         "stt": "1",
+        "name": "N Nguyễn Văn Quản Trị Quản trị viên",
+        "type": "Button",
+        "meaning": "Thực hiện thao tác \"N Nguyễn Văn Quản Trị Quản trị viên\"",
+        "domain": "Null",
+        "defaultVal": "Kích hoạt",
+        "note": ""
+      },
+      {
+        "stt": "2",
         "name": "Trang khách",
         "type": "Button",
         "meaning": "Thực hiện thao tác \"Trang khách\"",
@@ -4526,7 +4593,16 @@
         "note": ""
       },
       {
-        "stt": "2",
+        "stt": "3",
+        "name": "Đăng xuất",
+        "type": "Button",
+        "meaning": "Thực hiện thao tác \"Đăng xuất\"",
+        "domain": "Null",
+        "defaultVal": "Kích hoạt",
+        "note": ""
+      },
+      {
+        "stt": "4",
         "name": "Chỉ tiêu ca trực",
         "type": "Button",
         "meaning": "Thực hiện thao tác \"Chỉ tiêu ca trực\"",
@@ -4535,7 +4611,7 @@
         "note": ""
       },
       {
-        "stt": "3",
+        "stt": "5",
         "name": "Nhật ký thao tác",
         "type": "Button",
         "meaning": "Thực hiện thao tác \"Nhật ký thao tác\"",
@@ -4544,7 +4620,7 @@
         "note": ""
       },
       {
-        "stt": "4",
+        "stt": "6",
         "name": "Bảng tổng hợp báo cáo vận hành",
         "type": "Table",
         "meaning": "Hiển thị bảng tổng hợp báo cáo vận hành theo tiêu chí tìm kiếm và lọc",
@@ -4568,6 +4644,15 @@
     "components": [
       {
         "stt": "1",
+        "name": "N Nguyễn Văn Quản Trị Quản trị viên",
+        "type": "Button",
+        "meaning": "Thực hiện thao tác \"N Nguyễn Văn Quản Trị Quản trị viên\"",
+        "domain": "Null",
+        "defaultVal": "Kích hoạt",
+        "note": ""
+      },
+      {
+        "stt": "2",
         "name": "Trang khách",
         "type": "Button",
         "meaning": "Thực hiện thao tác \"Trang khách\"",
@@ -4576,16 +4661,25 @@
         "note": ""
       },
       {
-        "stt": "2",
+        "stt": "3",
+        "name": "Đăng xuất",
+        "type": "Button",
+        "meaning": "Thực hiện thao tác \"Đăng xuất\"",
+        "domain": "Null",
+        "defaultVal": "Kích hoạt",
+        "note": ""
+      },
+      {
+        "stt": "4",
         "name": "Chọn ngày",
         "type": "Date picker",
         "meaning": "Chọn chọn ngày",
         "domain": "Ngày/Tháng/Năm",
-        "defaultVal": "2026-08-23",
+        "defaultVal": "2026-08-25",
         "note": ""
       },
       {
-        "stt": "3",
+        "stt": "5",
         "name": "Xuất CSV",
         "type": "Button",
         "meaning": "Thực hiện thao tác \"Xuất CSV\"",
@@ -4594,7 +4688,7 @@
         "note": ""
       },
       {
-        "stt": "4",
+        "stt": "6",
         "name": "Vận hành kho",
         "type": "Button",
         "meaning": "Thực hiện thao tác \"Vận hành kho\"",
@@ -4603,28 +4697,10 @@
         "note": ""
       },
       {
-        "stt": "5",
+        "stt": "7",
         "name": "Doanh thu thuần",
         "type": "Button",
         "meaning": "Thực hiện thao tác \"Doanh thu thuần\"",
-        "domain": "Null",
-        "defaultVal": "Kích hoạt",
-        "note": ""
-      },
-      {
-        "stt": "6",
-        "name": "Dòng tiền thực tế",
-        "type": "Button",
-        "meaning": "Thực hiện thao tác \"Dòng tiền thực tế\"",
-        "domain": "Null",
-        "defaultVal": "Kích hoạt",
-        "note": ""
-      },
-      {
-        "stt": "7",
-        "name": "Nhập kho & Tài sản",
-        "type": "Button",
-        "meaning": "Thực hiện thao tác \"Nhập kho & Tài sản\"",
         "domain": "Null",
         "defaultVal": "Kích hoạt",
         "note": ""
@@ -4640,6 +4716,15 @@
       },
       {
         "stt": "9",
+        "name": "N Nguyễn Văn Quản Trị Quản trị viên",
+        "type": "Button",
+        "meaning": "Thực hiện thao tác \"N Nguyễn Văn Quản Trị Quản trị viên\"",
+        "domain": "Null",
+        "defaultVal": "Kích hoạt",
+        "note": ""
+      },
+      {
+        "stt": "10",
         "name": "Trang khách",
         "type": "Button",
         "meaning": "Thực hiện thao tác \"Trang khách\"",
@@ -4648,16 +4733,25 @@
         "note": ""
       },
       {
-        "stt": "10",
+        "stt": "11",
+        "name": "Đăng xuất",
+        "type": "Button",
+        "meaning": "Thực hiện thao tác \"Đăng xuất\"",
+        "domain": "Null",
+        "defaultVal": "Kích hoạt",
+        "note": ""
+      },
+      {
+        "stt": "12",
         "name": "Chọn ngày",
         "type": "Date picker",
         "meaning": "Chọn chọn ngày",
         "domain": "Ngày/Tháng/Năm",
-        "defaultVal": "2026-08-23",
+        "defaultVal": "2026-08-25",
         "note": ""
       },
       {
-        "stt": "11",
+        "stt": "13",
         "name": "Xuất CSV",
         "type": "Button",
         "meaning": "Thực hiện thao tác \"Xuất CSV\"",
@@ -4666,28 +4760,10 @@
         "note": ""
       },
       {
-        "stt": "12",
+        "stt": "14",
         "name": "Vận hành kho",
         "type": "Button",
         "meaning": "Thực hiện thao tác \"Vận hành kho\"",
-        "domain": "Null",
-        "defaultVal": "Kích hoạt",
-        "note": ""
-      },
-      {
-        "stt": "13",
-        "name": "Doanh thu thuần",
-        "type": "Button",
-        "meaning": "Thực hiện thao tác \"Doanh thu thuần\"",
-        "domain": "Null",
-        "defaultVal": "Kích hoạt",
-        "note": ""
-      },
-      {
-        "stt": "14",
-        "name": "Dòng tiền thực tế",
-        "type": "Button",
-        "meaning": "Thực hiện thao tác \"Dòng tiền thực tế\"",
         "domain": "Null",
         "defaultVal": "Kích hoạt",
         "note": ""
@@ -4713,6 +4789,15 @@
     "components": [
       {
         "stt": "1",
+        "name": "N Nguyễn Văn Quản Trị Quản trị viên",
+        "type": "Button",
+        "meaning": "Thực hiện thao tác \"N Nguyễn Văn Quản Trị Quản trị viên\"",
+        "domain": "Null",
+        "defaultVal": "Kích hoạt",
+        "note": ""
+      },
+      {
+        "stt": "2",
         "name": "Trang khách",
         "type": "Button",
         "meaning": "Thực hiện thao tác \"Trang khách\"",
@@ -4721,16 +4806,25 @@
         "note": ""
       },
       {
-        "stt": "2",
+        "stt": "3",
+        "name": "Đăng xuất",
+        "type": "Button",
+        "meaning": "Thực hiện thao tác \"Đăng xuất\"",
+        "domain": "Null",
+        "defaultVal": "Kích hoạt",
+        "note": ""
+      },
+      {
+        "stt": "4",
         "name": "Chọn ngày",
         "type": "Date picker",
         "meaning": "Chọn chọn ngày",
         "domain": "Ngày/Tháng/Năm",
-        "defaultVal": "2026-08-23",
+        "defaultVal": "2026-08-25",
         "note": ""
       },
       {
-        "stt": "3",
+        "stt": "5",
         "name": "Xuất CSV",
         "type": "Button",
         "meaning": "Thực hiện thao tác \"Xuất CSV\"",
@@ -4739,28 +4833,10 @@
         "note": ""
       },
       {
-        "stt": "4",
+        "stt": "6",
         "name": "Vận hành kho",
         "type": "Button",
         "meaning": "Thực hiện thao tác \"Vận hành kho\"",
-        "domain": "Null",
-        "defaultVal": "Kích hoạt",
-        "note": ""
-      },
-      {
-        "stt": "5",
-        "name": "Doanh thu thuần",
-        "type": "Button",
-        "meaning": "Thực hiện thao tác \"Doanh thu thuần\"",
-        "domain": "Null",
-        "defaultVal": "Kích hoạt",
-        "note": ""
-      },
-      {
-        "stt": "6",
-        "name": "Dòng tiền thực tế",
-        "type": "Button",
-        "meaning": "Thực hiện thao tác \"Dòng tiền thực tế\"",
         "domain": "Null",
         "defaultVal": "Kích hoạt",
         "note": ""
@@ -4795,6 +4871,15 @@
     "components": [
       {
         "stt": "1",
+        "name": "N Nguyễn Văn Quản Trị Quản trị viên",
+        "type": "Button",
+        "meaning": "Thực hiện thao tác \"N Nguyễn Văn Quản Trị Quản trị viên\"",
+        "domain": "Null",
+        "defaultVal": "Kích hoạt",
+        "note": ""
+      },
+      {
+        "stt": "2",
         "name": "Trang khách",
         "type": "Button",
         "meaning": "Thực hiện thao tác \"Trang khách\"",
@@ -4803,7 +4888,16 @@
         "note": ""
       },
       {
-        "stt": "2",
+        "stt": "3",
+        "name": "Đăng xuất",
+        "type": "Button",
+        "meaning": "Thực hiện thao tác \"Đăng xuất\"",
+        "domain": "Null",
+        "defaultVal": "Kích hoạt",
+        "note": ""
+      },
+      {
+        "stt": "4",
         "name": "Làm mới",
         "type": "Button",
         "meaning": "Thực hiện thao tác \"Làm mới\"",
@@ -4812,16 +4906,7 @@
         "note": ""
       },
       {
-        "stt": "3",
-        "name": "Xuất file CSV",
-        "type": "Button",
-        "meaning": "Thực hiện thao tác \"Xuất file CSV\"",
-        "domain": "Null",
-        "defaultVal": "Kích hoạt",
-        "note": ""
-      },
-      {
-        "stt": "4",
+        "stt": "5",
         "name": "Tìm theo người thực hiện, hành động, chứng từ...",
         "type": "Text box",
         "meaning": "Nhập tìm theo người thực hiện, hành động, chứng từ...",
@@ -4830,7 +4915,7 @@
         "note": ""
       },
       {
-        "stt": "5",
+        "stt": "6",
         "name": "Bộ lọc lựa chọn",
         "type": "Combobox",
         "meaning": "Chọn bộ lọc lựa chọn từ danh sách",
@@ -4839,31 +4924,22 @@
         "note": ""
       },
       {
-        "stt": "6",
+        "stt": "7",
         "name": "Chọn ngày",
         "type": "Date picker",
         "meaning": "Chọn chọn ngày",
         "domain": "Ngày/Tháng/Năm",
-        "defaultVal": "2026-08-23",
+        "defaultVal": "2026-08-25",
         "note": ""
       },
       {
-        "stt": "7",
+        "stt": "8",
         "name": "Bảng nhật ký hoạt động hệ thống",
         "type": "Table",
         "meaning": "Hiển thị bảng nhật ký hoạt động hệ thống theo tiêu chí tìm kiếm và lọc",
         "domain": "Danh sách bản ghi",
         "defaultVal": "Tải từ hệ thống",
         "note": "Hỗ trợ xem và thao tác trên từng dòng"
-      },
-      {
-        "stt": "8",
-        "name": "PhieuBaoTri: PBT-001",
-        "type": "Button",
-        "meaning": "Thực hiện thao tác \"PhieuBaoTri: PBT-001\"",
-        "domain": "Null",
-        "defaultVal": "Kích hoạt",
-        "note": ""
       }
     ]
   }

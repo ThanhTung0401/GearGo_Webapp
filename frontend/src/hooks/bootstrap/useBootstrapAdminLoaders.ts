@@ -6,9 +6,9 @@ import {
   importReceiptApi,
   inventoryApi,
   notificationApi,
-  paymentApi,
   policyApi,
   promotionApi,
+  reconciliationApi,
   reviewApi,
   staffApi,
   supplierApi,
@@ -56,9 +56,9 @@ export function useBootstrapAdminLoaders(params: UseBootstrapDataParams) {
     if (!REAL_MODE || !getAuthToken() || (role !== "staff" && role !== "admin")) return;
     try {
       const [eqRes, btRes, adjRes] = await Promise.all([
-        equipmentApi.timKiemThietBi({ soMoiTrang: 100 }).catch(() => ({ items: [] })),
-        equipmentApi.timKiemBaoTri({ soMoiTrang: 50 }).catch(() => ({ items: [] })),
-        inventoryApi.timPhieu({ soMoiTrang: 50 }).catch(() => ({ items: [] })),
+        equipmentApi.timKiemThietBi({ soMoiTrang: 200 }).catch(() => ({ items: [] })),
+        equipmentApi.timKiemBaoTri({ soMoiTrang: 200 }).catch(() => ({ items: [] })),
+        inventoryApi.timPhieu({ soMoiTrang: 200 }).catch(() => ({ items: [] })),
       ]);
       setEquipment((eqRes.items ?? []).map(mapThietBiToEquipment));
       setMaintenanceReceipts((btRes.items ?? []).map(mapBaoTriToReceipt));
@@ -184,20 +184,24 @@ export function useBootstrapAdminLoaders(params: UseBootstrapDataParams) {
       })
       .catch(() => {});
 
-    void paymentApi
-      .layDanhSachCanDoiChieu()
+    void reconciliationApi
+      .layDanhSachDieuChinh()
       .then((items) => {
         setFinancialAdjustments(
-          (items ?? []).map((g) => ({
-            id: String(g.maThanhToan),
-            orderId: String(g.maDonThue),
-            type: "Thu bù",
-            amount: Number(g.tongSoTien ?? 0),
-            reason: g.lyDoCanDoiChieu || `Mã GD ${g.maYeuCau} (${g.phuongThuc})`,
-            status: g.trangThaiDoiChieu === "DaDoiChieu" ? "Đã duyệt" : "Chờ duyệt",
-            createdBy: "Cổng thanh toán",
-            createdAt: g.thoiDiemTao,
-          }))
+          (items ?? []).map((ds) => {
+            const isRefund = Number(ds.soTienCanHoan ?? 0) > 0;
+            const amount = isRefund ? Number(ds.soTienCanHoan ?? 0) : Number(ds.soTienCanThuThem ?? 0);
+            return {
+              id: `DCDS-${ds.maDoiSoat}`,
+              orderId: ds.maDonHienThi || String(ds.maDonThue),
+              type: isRefund ? ("Hoàn trả" as const) : ("Thu bù" as const),
+              amount,
+              reason: ds.lyDoDieuChinh || `Điều chỉnh đối soát #${ds.maDoiSoat}`,
+              status: ds.trangThai === "DaChot" ? ("Đã duyệt" as const) : ("Chờ duyệt" as const),
+              createdBy: ds.nguoiLap || "Quản trị viên",
+              createdAt: ds.thoiDiemLap,
+            };
+          })
         );
       })
       .catch(() => {});

@@ -87,8 +87,12 @@ test.describe.serial("Frontend PH1: Quản lý Tài khoản & Nhân viên (UC1.1
     await expect(page.getByRole("button", { name: "Thoát" })).toBeVisible({ timeout: 15_000 });
     await pauseForViewer(page, 700);
 
-    // UC1.3: Đăng xuất kết thúc phiên
+    // UC1.3: Đăng xuất kết thúc phiên (có modal xác nhận đăng xuất)
     await page.getByRole("button", { name: "Thoát" }).click();
+    const confirmLogout1 = page.getByRole("dialog").getByRole("button", { name: "Đăng xuất" }).first();
+    if (await waitVisible(confirmLogout1, 2000)) {
+      await confirmLogout1.click();
+    }
     await expect(page.getByRole("button", { name: "Đăng nhập" }).first()).toBeVisible();
     await pauseForViewer(page, 700);
   });
@@ -193,46 +197,46 @@ test.describe.serial("Frontend PH1: Quản lý Tài khoản & Nhân viên (UC1.1
 
     // Ma trận phân quyền hệ thống
     await page.getByRole("button", { name: "Phân quyền" }).first().click();
-    await expect(page.getByText(/Phân quyền theo vai trò/i).first()).toBeVisible();
+    await expect(page.getByText(/Phân quyền hệ thống/i).first()).toBeVisible();
     await pauseForViewer(page);
   });
 
   test("RBAC v2 §5.3 - Phân quyền động theo vai trò, lưu version mới & bảo vệ quyền tối thiểu", async () => {
     const page = getPage();
     // Kiểm tra thông báo khóa đối với role Khách hàng & Quản trị viên
-    await page.locator(".internal-content").getByRole("button", { name: /Khách hàng/i }).first().click();
+    await page.locator("main").getByRole("button", { name: /^Khách hàng/i }).first().click();
     await expect(page.getByText(/không nhận quyền quản trị/i).first()).toBeVisible();
-    await page.locator(".internal-content").getByRole("button", { name: /Quản trị viên/i }).first().click();
-    await expect(page.getByText(/luôn có mọi quyền/i).first()).toBeVisible();
+    await page.locator("main").getByRole("button", { name: /^Quản trị viên/i }).first().click();
+    await expect(page.getByText(/toàn bộ quyền hệ thống/i).first()).toBeVisible();
 
     // Quay lại role Nhân viên, toggle 1 quyền (nếu chưa bật thì bật, nếu bật rồi thì tắt rồi khôi phục) để kiểm tra lưu version mới
-    await page.locator(".internal-content").getByRole("button", { name: /Nhân viên/i }).first().click();
-    const versionTextBefore = (await page.getByText(/Version hiện tại:/i).first().innerText()).trim();
-    const lastPermCheckbox = page.locator('.internal-content input[type="checkbox"]').last();
+    await page.locator("main").getByRole("button", { name: /^Nhân viên/i }).first().click();
+    const versionTextBefore = (await page.getByText(/Phiên bản vai trò:/i).first().innerText()).trim();
+    const lastPermCheckbox = page.locator('main input[type="checkbox"]').last();
     await expect(lastPermCheckbox).toBeVisible();
     const wasChecked = await lastPermCheckbox.isChecked();
 
     await lastPermCheckbox.click();
-    await page.getByRole("button", { name: "Lưu phân quyền" }).click();
+    await page.getByRole("button", { name: /Lưu phân quyền vai trò/i }).click();
 
     // Nếu quyền vừa gỡ nằm trong MIN_STAFF, ConfirmModal sẽ bật ra -> xác nhận hoặc hủy an toàn
-    const confirmModal = page.locator('[role="dialog"]').filter({ hasText: /gỡ quyền thiết yếu/i });
+    const confirmModal = page.locator('[role="dialog"]').filter({ hasText: /gỡ quyền tối thiểu/i });
     if (await waitVisible(confirmModal, 1200)) {
-      await confirmModal.getByRole("button", { name: "Tiếp tục lưu" }).click();
+      await confirmModal.getByRole("button", { name: /Thử lưu|Tiếp tục lưu/i }).click();
     }
-    await expect(page.getByText(/Đã lưu\. Version mới:/i).first()).toBeVisible({ timeout: 10_000 });
-    const versionTextAfter = (await page.getByText(/Version hiện tại:/i).first().innerText()).trim();
+    await expect(page.getByText(/Version mới:/i).first()).toBeVisible({ timeout: 10_000 });
+    const versionTextAfter = (await page.getByText(/Phiên bản vai trò:/i).first().innerText()).trim();
     expect(versionTextAfter).not.toBe(versionTextBefore);
     await pauseForViewer(page, 600);
 
     // Khôi phục lại trạng thái quyền ban đầu cho các phân hệ sau
     if ((await lastPermCheckbox.isChecked()) !== wasChecked) {
       await lastPermCheckbox.click();
-      await page.getByRole("button", { name: "Lưu phân quyền" }).click();
+      await page.getByRole("button", { name: /Lưu phân quyền vai trò/i }).click();
       if (await waitVisible(confirmModal, 1000)) {
-        await confirmModal.getByRole("button", { name: "Tiếp tục lưu" }).click();
+        await confirmModal.getByRole("button", { name: /Thử lưu|Tiếp tục lưu/i }).click();
       }
-      await expect(page.getByText(/Đã lưu\. Version mới:/i).first()).toBeVisible({ timeout: 10_000 });
+      await expect(page.getByText(/Version mới:/i).first()).toBeVisible({ timeout: 10_000 });
     }
   });
 
@@ -251,6 +255,10 @@ test.describe.serial("Frontend PH1: Quản lý Tài khoản & Nhân viên (UC1.1
     // 2. Đăng xuất về trang khách và bấm vào Đăng nhập bằng SPA
     await page.getByRole("button", { name: /Trang khách/i }).first().click();
     await page.getByRole("button", { name: "Thoát" }).first().click();
+    const confirmLogout2 = page.getByRole("dialog").getByRole("button", { name: "Đăng xuất" }).first();
+    if (await waitVisible(confirmLogout2, 2000)) {
+      await confirmLogout2.click();
+    }
     await page.getByRole("button", { name: "Đăng nhập" }).first().click();
 
     await expect(page.locator(".auth-quick-btn")).toHaveCount(2);

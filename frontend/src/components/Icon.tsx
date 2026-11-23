@@ -5,7 +5,7 @@ export type IconName =
   | "search" | "user" | "users" | "menu" | "close" | "sparkles" | "clipboard"
   | "arrow-up" | "arrow-down" | "tool" | "grid" | "tag" | "chart"
   | "truck" | "bell" | "settings" | "refresh" | "shield" | "wallet"
-  | "alert-circle" | "clock";
+  | "alert-circle" | "clock" | "logout" | "chevron-down";
 
 const paths: Record<IconName, ReactNode> = {
   tent: <><path d="M3 20 12 4l9 16"/><path d="M7 20h10l-5-9-5 9Z"/></>,
@@ -35,6 +35,8 @@ const paths: Record<IconName, ReactNode> = {
   wallet: <><path d="M3 6h16v14H3z"/><path d="M3 8V5h13M15 11h6v5h-6z"/></>,
   "alert-circle": <><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></>,
   clock: <><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></>,
+  logout: <><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></>,
+  "chevron-down": <polyline points="6 9 12 15 18 9"/>,
 };
 
 export default function Icon({ name, size = 20, ...props }: { name: IconName; size?: number } & SVGProps<SVGSVGElement>) {

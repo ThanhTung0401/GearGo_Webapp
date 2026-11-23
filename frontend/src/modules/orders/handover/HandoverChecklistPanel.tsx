@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type React from "react";
 import { useApp } from "../../../context/AppContext";
-import { fmt, Order } from "../../../store";
+import { fmt, formatDateTimeVi, Order } from "../../../store";
 
 interface HandoverChecklistPanelProps {
   app: ReturnType<typeof useApp>;
@@ -60,7 +60,7 @@ export function HandoverChecklistPanel({
               Đơn #{order.displayCode || order.id} — {order.customerName}
             </h3>
             <div className="so-order-meta">
-              📤 Hẹn nhận: <strong>{order.pickupTime}</strong> · 📥 Hẹn trả: <strong>{order.returnTime}</strong>
+              📤 Hẹn nhận: <strong>{formatDateTimeVi(order.pickupTime)}</strong> · 📥 Hẹn trả: <strong>{formatDateTimeVi(order.returnTime)}</strong>
             </div>
           </div>
           <div className="so-order-stats">

@@ -1,4 +1,6 @@
-import { type AppNotification } from "../../../store";
+import { formatDateTimeVi, type AppNotification } from "../../../store";
+import Pagination from "../../../components/ui/Pagination";
+import { usePagination } from "../../../hooks/usePagination";
 
 interface NotificationHistoryPanelProps {
   filteredHistory: AppNotification[];
@@ -9,7 +11,7 @@ interface NotificationHistoryPanelProps {
 }
 
 /**
- * Cột hiển thị lịch sử thông báo đã phát kèm bộ lọc theo vai trò và danh mục nghiệp vụ.
+ * Cột hiển thị lịch sử thông báo đã phát kèm bộ lọc theo vai trò, danh mục và phân trang.
  */
 export function NotificationHistoryPanel({
   filteredHistory,
@@ -18,6 +20,7 @@ export function NotificationHistoryPanel({
   filterCategory,
   setFilterCategory,
 }: NotificationHistoryPanelProps) {
+  const paging = usePagination(filteredHistory, 6);
   return (
     <div className="adm-card adm-card--padded flex flex-col">
       <div className="flex justify-between items-center mb-3">
@@ -48,39 +51,56 @@ export function NotificationHistoryPanel({
           <option value="rental">⛺ Đơn thuê</option>
           <option value="order">📦 Đơn hàng</option>
           <option value="finance">💰 Tài chính</option>
+          <option value="promo">🏷 Khuyến mãi</option>
           <option value="system">⚙️ Hệ thống</option>
         </select>
       </div>
 
       <div className="adm-notif-history-list">
-        {filteredHistory.map((n) => (
-          <div key={n.id} className="adm-notif-history-item">
-            <div className="flex justify-between items-start mb-1 gap-2">
-              <div className="flex items-center gap-1.5 flex-wrap">
-                <strong className="adm-cell-title">{n.title}</strong>
-                {n.category && (
-                  <span className="adm-pill is-slate adm-pill--xs">
-                    {n.category.toUpperCase()}
+        {paging.pagedItems.length === 0 ? (
+          <div className="text-center py-8 text-xs text-gray-500">
+            Không có thông báo nào phù hợp với bộ lọc.
+          </div>
+        ) : (
+          paging.pagedItems.map((n) => (
+            <div key={n.id} className="adm-notif-history-item">
+              <div className="flex justify-between items-start mb-1 gap-2">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <strong className="adm-cell-title">{n.title}</strong>
+                  {n.category && (
+                    <span className="adm-pill is-slate adm-pill--xs">
+                      {n.category.toUpperCase()}
+                    </span>
+                  )}
+                </div>
+                <span className={`adm-pill adm-pill--xs ${n.type === "alert" ? "is-danger" : n.type === "warning" ? "is-warning" : "is-info"}`}>
+                  {n.targetRole.toUpperCase()}
+                </span>
+              </div>
+              <p className="text-[0.78rem] text-[#4B5563] leading-snug my-1">{n.message}</p>
+
+              <div className="flex justify-between items-center mt-2 pt-1 border-t border-gray-200">
+                <span className="adm-muted-note text-[0.68rem]">{formatDateTimeVi(n.createdAt)}</span>
+                {n.actionLink && (
+                  <span className="text-[0.7rem] font-semibold text-[#2563EB]">
+                    🔗 {n.actionLink.label || "Liên kết"}
                   </span>
                 )}
               </div>
-              <span className={`adm-pill adm-pill--xs ${n.type === "alert" ? "is-danger" : n.type === "warning" ? "is-warning" : "is-info"}`}>
-                {n.targetRole.toUpperCase()}
-              </span>
             </div>
-            <p className="text-[0.78rem] text-[#4B5563] leading-snug my-1">{n.message}</p>
-
-            <div className="flex justify-between items-center mt-2 pt-1 border-t border-gray-200">
-              <span className="adm-muted-note text-[0.68rem]">{n.createdAt}</span>
-              {n.actionLink && (
-                <span className="text-[0.7rem] font-semibold text-[#2563EB]">
-                  🔗 {n.actionLink.label || "Liên kết"}
-                </span>
-              )}
-            </div>
-          </div>
-        ))}
+          ))
+        )}
       </div>
+
+      <Pagination
+        page={paging.page}
+        totalPages={paging.totalPages}
+        totalItems={paging.totalItems}
+        startIndex={paging.startIndex}
+        endIndex={paging.endIndex}
+        onPageChange={paging.setPage}
+        itemLabel="thông báo"
+      />
     </div>
   );
 }

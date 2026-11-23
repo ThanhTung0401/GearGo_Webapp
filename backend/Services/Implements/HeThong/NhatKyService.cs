@@ -71,7 +71,13 @@ public class NhatKyService : INhatKyService
         if (tuNgay.HasValue)
             query = query.Where(n => n.ThoiDiem >= tuNgay.Value);
         if (denNgay.HasValue)
-            query = query.Where(n => n.ThoiDiem <= denNgay.Value);
+        {
+            // Nếu chỉ truyền ngày (00:00:00), mở rộng hết ngày đó để không bỏ sót nhật ký phát sinh trong ngày
+            var denMoc = denNgay.Value.TimeOfDay == TimeSpan.Zero
+                ? denNgay.Value.Date.AddDays(1)
+                : denNgay.Value.AddTicks(1);
+            query = query.Where(n => n.ThoiDiem < denMoc);
+        }
         if (!string.IsNullOrWhiteSpace(tuKhoa))
         {
             var kw = tuKhoa.Trim();
@@ -143,8 +149,8 @@ public class NhatKyService : INhatKyService
             "PHIEU_DIEU_CHINH_KHO" => $"/api/dieu-chinh-kho/{maDoiTuong}",
             "DOI_SOAT" => $"/api/doi-soat/{maDoiTuong}",
             "THIET_BI" => $"/api/thiet-bi/{maDoiTuong}",
-            "TAI_KHOAN" => laQuanTriVien ? $"/api/admin/tai-khoan/{maDoiTuong}" : null,
-            "NHAN_VIEN" => laQuanTriVien ? $"/api/admin/nhan-vien/{maDoiTuong}" : null,
+            "TAI_KHOAN" => laQuanTriVien ? $"/api/tai-khoan/{maDoiTuong}" : null,
+            "NHAN_VIEN" => laQuanTriVien ? $"/api/nhan-vien/{maDoiTuong}" : null,
             _ => null
         };
     }

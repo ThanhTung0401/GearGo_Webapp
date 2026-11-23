@@ -1,8 +1,11 @@
+import { useState } from "react";
 import { useApp } from "../../../context/AppContext";
 import { isRealApiEnabled } from "../../../services/apiClient";
 import type { DonQuaHanBackend } from "../../../services/api";
 import { statusColors, Order } from "../../../store";
 import type { ReturnStatusFilter } from "./returnTypes";
+import Pagination from "../../../components/ui/Pagination";
+import { usePagination } from "../../../hooks/usePagination";
 
 interface ReturnQueuePanelProps {
   app: ReturnType<typeof useApp>;
@@ -16,7 +19,7 @@ interface ReturnQueuePanelProps {
   onSelectOrder: (orderId: string) => void;
 }
 
-// Cột trái tab Nhận trả: Thanh quét quá hạn, bộ lọc trạng thái và hàng đợi đơn cần xử lý
+// Cột trái tab Nhận trả: Thanh quét quá hạn, tìm kiếm, bộ lọc trạng thái và hàng đợi đơn có phân trang
 export function ReturnQueuePanel({
   app,
   selectedOrder,
@@ -28,6 +31,18 @@ export function ReturnQueuePanel({
   onScanOverdue,
   onSelectOrder,
 }: ReturnQueuePanelProps) {
+  const [search, setSearch] = useState("");
+  const q = search.trim().toLowerCase();
+  const filteredOrders = q
+    ? eligibleOrders.filter(
+        (o) =>
+          (o.displayCode || o.id).toLowerCase().includes(q) ||
+          o.customerName.toLowerCase().includes(q) ||
+          (o.customerPhone || "").includes(q)
+      )
+    : eligibleOrders;
+  const paging = usePagination(filteredOrders, 6);
+
   return (
     <div>
       <h3 className="so-queue-title-lg">Đơn nhận trả & đối soát</h3>
@@ -47,6 +62,18 @@ export function ReturnQueuePanel({
           </button>
         </div>
       )}
+
+      {/* Ô tìm kiếm đơn nhận trả */}
+      <div className="mb-2.5">
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="🔍 Tìm mã đơn, tên khách, SĐT..."
+          aria-label="Tìm đơn nhận trả"
+          className="form-input w-full text-xs py-1.5"
+        />
+      </div>
 
       {/* Bộ lọc trạng thái đơn */}
       <div className="flex gap-1 mb-3 flex-wrap">
@@ -79,10 +106,10 @@ export function ReturnQueuePanel({
       </div>
 
       <div className="flex flex-col gap-2">
-        {eligibleOrders.length === 0 ? (
+        {paging.pagedItems.length === 0 ? (
           <div className="so-queue-empty-box">Không có đơn nào trong nhóm lọc này.</div>
         ) : (
-          eligibleOrders.map((o) => {
+          paging.pagedItems.map((o) => {
             const sc = statusColors[o.status] || { bg: "#F3F4F6", text: "#374151" };
             const isOd = app.checkOrderOverdue(o).isOverdue;
             const retCnt = o.assignedEquipment.filter((ae) => ae.returnedAt).length;
@@ -114,6 +141,16 @@ export function ReturnQueuePanel({
           })
         )}
       </div>
+
+      <Pagination
+        page={paging.page}
+        totalPages={paging.totalPages}
+        totalItems={paging.totalItems}
+        startIndex={paging.startIndex}
+        endIndex={paging.endIndex}
+        onPageChange={paging.setPage}
+        itemLabel="đơn"
+      />
     </div>
   );
 }

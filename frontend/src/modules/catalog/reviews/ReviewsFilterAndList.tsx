@@ -1,5 +1,9 @@
 import Icon from "../../../components/Icon";
-import { type Review } from "../../../store";
+import { formatDateTimeVi, type Review } from "../../../store";
+import { Can } from "../../../features/permissions/PermissionsContext";
+import { Permissions } from "../../../constants/permissions";
+import Pagination from "../../../components/ui/Pagination";
+import { usePagination } from "../../../hooks/usePagination";
 
 interface ReviewsFilterAndListProps {
   realApi: boolean;
@@ -45,6 +49,7 @@ export function ReviewsFilterAndList({
   onOpenHide,
   onRestore,
 }: ReviewsFilterAndListProps) {
+  const paging = usePagination(filtered, 6);
   return (
     <>
       <div className="flex justify-between items-center mb-4 flex-wrap gap-3">
@@ -143,12 +148,14 @@ export function ReviewsFilterAndList({
             Không tìm thấy đánh giá nào phù hợp.
           </div>
         ) : (
-          filtered.map((rev) => (
+          paging.pagedItems.map((rev) => {
+            const safeRating = Math.max(0, Math.min(5, Math.round(rev.rating || 0)));
+            return (
             <div key={rev.id} className="adm-review-card">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-3 mb-1.5 flex-wrap">
                   <strong className="text-[0.95rem] text-[var(--color-bark)]">{rev.productName || rev.productId}</strong>
-                  <span className="text-[#E07A43] font-bold text-[0.85rem]">{"★".repeat(rev.rating)}{"☆".repeat(5 - rev.rating)}</span>
+                  <span className="text-[#E07A43] font-bold text-[0.85rem]">{"★".repeat(safeRating)}{"☆".repeat(5 - safeRating)}</span>
                   <span className="adm-pill is-slate">Đơn #{rev.orderId}</span>
                   <span className={`adm-pill ${rev.status === "active" ? "is-success" : "is-danger"}`}>
                     {rev.status === "active" ? "✓ Đang hiển thị" : "✕ Đã ẩn vi phạm"}
@@ -184,14 +191,14 @@ export function ReviewsFilterAndList({
                   <div className="adm-review-reply-box">
                     <div className="text-[0.74rem] font-bold text-[#166534] flex justify-between gap-2 flex-wrap">
                       <span>💬 Phản hồi từ GearGo ({rev.storeResponse?.respondedBy || "Cửa hàng"})</span>
-                      <span className="font-normal text-[#64748B]">{rev.storeResponse?.respondedAt}</span>
+                      <span className="font-normal text-[#64748B]">{formatDateTimeVi(rev.storeResponse?.respondedAt)}</span>
                     </div>
                     <p className="mt-1 mb-0 text-[0.8rem] text-[#14532D]">{rev.storeResponse?.response || rev.response}</p>
                   </div>
                 )}
 
                 <div className="adm-hint-text text-[0.75rem]">
-                  Người gửi: <strong>{rev.customerName}</strong> ({rev.customerId}) · Ngày gửi: {rev.createdAt}
+                  Người gửi: <strong>{rev.customerName}</strong> ({rev.customerId}) · Ngày gửi: {formatDateTimeVi(rev.createdAt)}
                   {rev.hiddenReason && (
                     <span className="text-[#B91C1C] ml-2">
                       · Lý do ẩn: <strong>{rev.hiddenReason}</strong> ({rev.hiddenBy || "Admin"})
@@ -210,38 +217,51 @@ export function ReviewsFilterAndList({
                   📋 Căn cứ đơn thuê
                 </button>
 
-                <button
-                  type="button"
-                  onClick={() => onOpenReply(rev)}
-                  className="adm-btn-success-outline py-1.5 px-2.5 text-center"
-                >
-                  💬 {rev.storeResponse ? "Sửa phản hồi" : "Phản hồi"}
-                </button>
+                <Can perm={Permissions.DanhGia_Duyet}>
+                  <button
+                    type="button"
+                    onClick={() => onOpenReply(rev)}
+                    className="adm-btn-success-outline py-1.5 px-2.5 text-center"
+                  >
+                    💬 {rev.storeResponse || rev.response ? "Sửa phản hồi" : "Phản hồi"}
+                  </button>
 
-                {rev.status === "active" ? (
-                  <button
-                    type="button"
-                    disabled={actionBusy}
-                    onClick={() => onOpenHide(rev)}
-                    className="adm-btn-danger-outline py-1.5 px-2.5 text-center"
-                  >
-                    ✕ Ẩn vi phạm
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    disabled={actionBusy}
-                    onClick={() => onRestore(rev)}
-                    className="adm-btn-parchment py-1.5 px-2.5 text-center text-[var(--color-forest)] font-bold"
-                  >
-                    ✓ Bỏ ẩn
-                  </button>
-                )}
+                  {rev.status === "active" ? (
+                    <button
+                      type="button"
+                      disabled={actionBusy}
+                      onClick={() => onOpenHide(rev)}
+                      className="adm-btn-danger-outline py-1.5 px-2.5 text-center"
+                    >
+                      ✕ Ẩn vi phạm
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled={actionBusy}
+                      onClick={() => onRestore(rev)}
+                      className="adm-btn-parchment py-1.5 px-2.5 text-center text-[var(--color-forest)] font-bold"
+                    >
+                      ✓ Bỏ ẩn
+                    </button>
+                  )}
+                </Can>
               </div>
             </div>
-          ))
+            );
+          })
         )}
       </div>
+
+      <Pagination
+        page={paging.page}
+        totalPages={paging.totalPages}
+        totalItems={paging.totalItems}
+        startIndex={paging.startIndex}
+        endIndex={paging.endIndex}
+        onPageChange={paging.setPage}
+        itemLabel="đánh giá"
+      />
     </>
   );
 }

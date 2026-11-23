@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useApp } from "../../context/AppContext";
 import { type StaffTab } from "./returnMapping";
 import { useOrdersTab } from "./staffOrders/useOrdersTab";
@@ -8,6 +9,8 @@ import { OrderNoShowModal } from "./staffOrders/OrderNoShowModal";
 // Tab Quản lý danh sách đơn thuê trong ca trực (UC4.5)
 export function OrdersTab({
   app,
+  selectedOrderId,
+  setSelectedOrderId,
   openOrder,
   hydrateOperationalOrder,
 }: {
@@ -18,6 +21,18 @@ export function OrdersTab({
   hydrateOperationalOrder: (id: string) => Promise<void>;
 }) {
   const state = useOrdersTab(app, hydrateOperationalOrder);
+
+  // Tự động mở modal chi tiết khi điều hướng từ Báo cáo / Nhật ký kèm selectedOrderId
+  useEffect(() => {
+    if (!selectedOrderId) return;
+    state.setViewingDetailOrderId(selectedOrderId);
+    void hydrateOperationalOrder(selectedOrderId);
+  }, [selectedOrderId]);
+
+  const handleCloseDetail = () => {
+    state.setViewingDetailOrderId(null);
+    if (selectedOrderId) setSelectedOrderId(null);
+  };
 
   return (
     <div>
@@ -42,7 +57,7 @@ export function OrdersTab({
       {state.viewingDetailOrder && (
         <OrderDetailModal
           order={state.viewingDetailOrder}
-          onClose={() => state.setViewingDetailOrderId(null)}
+          onClose={handleCloseDetail}
           openOrder={openOrder}
         />
       )}

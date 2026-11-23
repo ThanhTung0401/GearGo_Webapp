@@ -31,25 +31,13 @@ export const Permissions = {
 } as const;
 export type PermissionCode = typeof Permissions[keyof typeof Permissions];
 
-// v2 §8.5 — tập quyền NhanVien tối thiểu phải có (đồng bộ với backend DomainConstants.Permissions.DefaultStaff).
-// FE dùng để cảnh báo trước khi admin lưu bộ quyền mà loại bỏ các mã thiết yếu.
+// v2 §8.5 — tập quyền NhanVien tối thiểu phải có (đồng bộ 1-1 với backend DomainConstants.Permissions.MinStaff).
 export const MIN_STAFF: PermissionCode[] = [
-  Permissions.DonThue_Xem, Permissions.DonThue_Tao, Permissions.DonThue_CapNhat, Permissions.DonThue_Huy,
-  Permissions.SanPham_Xem, Permissions.DanhMuc_Xem,
-  Permissions.KhuyenMai_Xem, Permissions.ChinhSach_Xem, Permissions.BaoCao_Xem,
-  Permissions.PhuPhi_Xem, Permissions.PhuPhi_Tao, Permissions.PhuPhi_Duyet,
-  Permissions.DoiSoat_Xem, Permissions.DoiSoat_Chot,
-  Permissions.QuaHan_Xem, Permissions.QuaHan_XuLy,
-  Permissions.PhieuNhap_Xem, Permissions.PhieuNhap_Tao, Permissions.PhieuNhap_Duyet,
-  Permissions.ChuanBiDon_Xem, Permissions.ChuanBiDon_Thao,
-  Permissions.BanGiao_Xem, Permissions.BanGiao_Thao,
-  Permissions.BaoTri_Xem, Permissions.BaoTri_Tao,
-  Permissions.NhanTra_Xem, Permissions.NhanTra_Thao,
-  Permissions.HoanTien_Xem, Permissions.HoanTien_Duyet,
-  Permissions.NhaCungCap_Xem,
-  Permissions.Kho_Xem, Permissions.DieuChinhKho_Xem,
-  Permissions.BaoCaoKho_Xem, Permissions.BaoCaoVanHanh_Xem,
-  Permissions.ThongBao_Xem,
-  Permissions.DanhGia_Xem, Permissions.DanhGia_Duyet,
-  Permissions.NhatKy_Xem,
+  Permissions.DonThue_Xem,
 ];
+
+// Nhóm quyền chỉ dành riêng cho Quản trị viên — không hiển thị / không cho gán cho Nhân viên.
+export const ADMIN_ONLY_PERMISSIONS: ReadonlySet<string> = new Set([
+  Permissions.PhanQuyen_Xem,
+  Permissions.PhanQuyen_Quan,
+]);

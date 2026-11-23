@@ -1,4 +1,5 @@
 import Icon from "../../../components/Icon";
+import { formatDateTimeVi } from "../../../store";
 import { type AuditLogEntryWithRef } from "../../../services/mappers/reviewNotifAuditMapper";
 
 interface AuditEventDetailModalProps {
@@ -24,7 +25,7 @@ export function AuditEventDetailModal({
             <h3 className="adm-card-title">
               Chi tiết sự kiện truy vết (Audit Event #{selectedEvent.id})
             </h3>
-            <div className="adm-hint-text">Thời điểm: {selectedEvent.timestamp}</div>
+            <div className="adm-hint-text">Thời điểm: {formatDateTimeVi(selectedEvent.timestamp)}</div>
           </div>
           <button type="button" onClick={onClose} className="adm-btn-ghost">
             <Icon name="close" size={20} />

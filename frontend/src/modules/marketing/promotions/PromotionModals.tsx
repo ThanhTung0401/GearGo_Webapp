@@ -51,23 +51,23 @@ export function PromotionModals({
       )}
 
       {/* Modal tra cứu chi tiết và thống kê doanh thu / đơn hàng áp dụng (UC8.4) */}
-      {selectedPromoDetail && (
-        <PromotionDetailModal
-          promotion={selectedPromoDetail}
-          app={app}
-          onClose={() => setSelectedPromoDetail(null)}
-          onEdit={() => {
-            setAction(selectedPromoDetail);
-            setSelectedPromoDetail(null);
-          }}
-          onToggleStatus={() => {
-            onToggleStatus(selectedPromoDetail);
-            // Cập nhật lại modal detail
-            const updated = app.promotions.find((item) => item.id === selectedPromoDetail.id);
-            if (updated) setSelectedPromoDetail(updated);
-          }}
-        />
-      )}
+      {selectedPromoDetail && (() => {
+        const livePromo = app.promotions.find((item) => item.id === selectedPromoDetail.id) ?? selectedPromoDetail;
+        return (
+          <PromotionDetailModal
+            promotion={livePromo}
+            app={app}
+            onClose={() => setSelectedPromoDetail(null)}
+            onEdit={() => {
+              setAction(livePromo);
+              setSelectedPromoDetail(null);
+            }}
+            onToggleStatus={() => {
+              onToggleStatus(livePromo);
+            }}
+          />
+        );
+      })()}
 
       {/* Modal xác nhận lý do tạm dừng chương trình (UC8.5) */}
       {stoppingPromo && (

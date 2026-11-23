@@ -12,7 +12,7 @@ internal static class KichBanVanHanhSeeder
     {
         await SeedDonDaXacNhanAsync(context, actors, catalog, cs1);
         await SeedDonTraMotPhanAsync(context, actors, catalog, cs1);
-        await SeedDonQuaHanAsync(context, actors, cs1);
+        await SeedDonQuaHanAsync(context, actors, catalog, cs1);
         await SeedDonKhachHuyAsync(context, actors, cs1);
     }
 
@@ -56,7 +56,35 @@ internal static class KichBanVanHanhSeeder
     private static async Task SeedDonTraMotPhanAsync(
         ApplicationDbContext context, SeedActors actors, SeedCatalog catalog, ChinhSach cs1)
     {
-        if (await context.DonThues.AnyAsync(d => d.MaDonHienThi == "DT-20241208-015")) return;
+        var existing = await context.DonThues.FirstOrDefaultAsync(d => d.MaDonHienThi == "DT-20241208-015");
+        if (existing != null)
+        {
+            // Vá dữ liệu cũ: đảm bảo đơn trả 1 phần có đủ ChiTietBanGiao cho cả thiết bị chưa trả (pc1)
+            var pbgOld = await context.PhieuBanGiaos.FirstOrDefaultAsync(p => p.MaDonThue == existing.MaDonThue);
+            if (pbgOld != null)
+            {
+                if (pbgOld.TrangThai == "DaBanGiao") pbgOld.TrangThai = "DaGiao";
+                var pcs = await context.PhanCongThietBis
+                    .Where(pc => pc.ChiTietDon.MaDonThue == existing.MaDonThue)
+                    .ToListAsync();
+                foreach (var pc in pcs)
+                {
+                    var hasCtbg = await context.ChiTietBanGiaos.AnyAsync(c => c.MaPhieuBanGiao == pbgOld.MaPhieuBanGiao && c.MaPhanCong == pc.MaPhanCong);
+                    if (!hasCtbg)
+                    {
+                        context.ChiTietBanGiaos.Add(new ChiTietBanGiao
+                        {
+                            MaPhieuBanGiao = pbgOld.MaPhieuBanGiao,
+                            MaPhanCong = pc.MaPhanCong,
+                            TinhTrangTruocThue = "Ngoại quan tốt, đầy đủ phụ kiện",
+                            GhiChu = "Bàn giao đợt 1"
+                        });
+                    }
+                }
+                await context.SaveChangesAsync();
+            }
+            return;
+        }
 
         var don = new DonThue
         {
@@ -83,8 +111,9 @@ internal static class KichBanVanHanhSeeder
         context.PhieuBanGiaos.Add(pbg);
         await context.SaveChangesAsync();
 
+        var ctbg1 = new ChiTietBanGiao { MaPhieuBanGiao = pbg.MaPhieuBanGiao, MaPhanCong = pc1.MaPhanCong, TinhTrangTruocThue = "Lều nguyên vẹn, đủ khung cọc", GhiChu = "Túi đựng chính hãng" };
         var ctbg2 = new ChiTietBanGiao { MaPhieuBanGiao = pbg.MaPhieuBanGiao, MaPhanCong = pc2.MaPhanCong, TinhTrangTruocThue = "Đèn pin đầy", GhiChu = "Cáp Type-C" };
-        context.ChiTietBanGiaos.Add(ctbg2);
+        context.ChiTietBanGiaos.AddRange(ctbg1, ctbg2);
         await context.SaveChangesAsync();
 
         var pnt = new PhieuNhanTra { MaDonThue = don.MaDonThue, MaNhanVien = actors.NhanVien2.MaNhanVien, MaPhieuHienThi = "PNT-DT015-01", LanTra = 1, LaLanTraCuoi = false, ThoiDiemLap = DateTime.UtcNow.AddDays(-1), TenNhanVienLucNhan = actors.NhanVien2.HoTen, TrangThai = TrangThaiPhieuNhanTra.DaChot };
@@ -95,29 +124,106 @@ internal static class KichBanVanHanhSeeder
         await context.SaveChangesAsync();
     }
 
-    private static async Task SeedDonQuaHanAsync(ApplicationDbContext context, SeedActors actors, ChinhSach cs1)
+    private static async Task SeedDonQuaHanAsync(ApplicationDbContext context, SeedActors actors, SeedCatalog catalog, ChinhSach cs1)
     {
-        if (await context.DonThues.AnyAsync(d => d.MaDonHienThi == "DT-20241201-099")) return;
-
-        var don = new DonThue
+        var don = await context.DonThues.FirstOrDefaultAsync(d => d.MaDonHienThi == "DT-20241201-099");
+        if (don == null)
         {
-            MaKhachHang = actors.Khach2.MaKhachHang, MaChinhSach = cs1.MaChinhSach, MaDonHienThi = "DT-20241201-099",
-            NgayDat = DateTime.UtcNow.AddDays(-7), GioNhanDuKien = DateTime.UtcNow.AddDays(-5), GioTraDuKien = DateTime.UtcNow.AddDays(-2),
-            TenNguoiNhan = actors.Khach2.HoTen, SoDienThoaiNguoiNhan = "0918765432", EmailLienHe = actors.CustomerTk2.Email,
-            TongTienThueTruocGiam = 240000, TongTienGiam = 0, TongTienCoc = 500000,
-            TrangThai = TrangThaiDonThue.DangThue, GhiChu = "Quá hạn trả 48 giờ chưa liên hệ"
-        };
-        context.DonThues.Add(don);
-        await context.SaveChangesAsync();
+            don = new DonThue
+            {
+                MaKhachHang = actors.Khach2.MaKhachHang, MaChinhSach = cs1.MaChinhSach, MaDonHienThi = "DT-20241201-099",
+                NgayDat = DateTime.UtcNow.AddDays(-7), GioNhanDuKien = DateTime.UtcNow.AddDays(-5), GioTraDuKien = DateTime.UtcNow.AddDays(-2),
+                TenNguoiNhan = actors.Khach2.HoTen, SoDienThoaiNguoiNhan = "0918765432", EmailLienHe = actors.CustomerTk2.Email,
+                TongTienThueTruocGiam = 240000, TongTienGiam = 0, TongTienCoc = 500000,
+                TrangThai = TrangThaiDonThue.DangThue, GhiChu = "Quá hạn trả 48 giờ chưa liên hệ"
+            };
+            context.DonThues.Add(don);
+            await context.SaveChangesAsync();
 
-        context.ThongBaos.Add(new ThongBao
+            context.ThongBaos.Add(new ThongBao
+            {
+                MaTaiKhoan = actors.CustomerTk2.MaTaiKhoan, MaDonThue = don.MaDonThue, MaSuKien = "EVT_DT099_OVERDUE",
+                LoaiSuKien = "CanhBaoQuaHan", TieuDe = "Cảnh báo: Đơn thuê DT-20241201-099 đã quá hạn",
+                NoiDung = "Đơn thuê của bạn đã quá hạn trả 48 giờ. Vui lòng mang thiết bị hoàn trả ngay để tránh phụ phí trễ 150%.",
+                KenhGui = "InApp", TrangThaiGui = "DaGui", ThoiDiemTao = DateTime.UtcNow.AddDays(-2), ThoiDiemGui = DateTime.UtcNow.AddDays(-2)
+            });
+            await context.SaveChangesAsync();
+        }
+
+        // Đảm bảo đơn quá hạn luôn có đủ ChiTietDonThue + PhanCongThietBi + PhieuBanGiao (DaGiao) để tính đúng nợ & phạt trễ
+        var ctd = await context.ChiTietDonThues.FirstOrDefaultAsync(c => c.MaDonThue == don.MaDonThue);
+        if (ctd == null)
         {
-            MaTaiKhoan = actors.CustomerTk2.MaTaiKhoan, MaDonThue = don.MaDonThue, MaSuKien = "EVT_DT099_OVERDUE",
-            LoaiSuKien = "CanhBaoQuaHan", TieuDe = "Cảnh báo: Đơn thuê DT-20241201-099 đã quá hạn",
-            NoiDung = "Đơn thuê của bạn đã quá hạn trả 48 giờ. Vui lòng mang thiết bị hoàn trả ngay để tránh phụ phí trễ 150%.",
-            KenhGui = "InApp", TrangThaiGui = "DaGui", ThoiDiemTao = DateTime.UtcNow.AddDays(-2), ThoiDiemGui = DateTime.UtcNow.AddDays(-2)
-        });
-        await context.SaveChangesAsync();
+            ctd = new ChiTietDonThue
+            {
+                MaDonThue = don.MaDonThue,
+                MaSanPham = catalog.SpLeu4.MaSanPham,
+                TenSanPhamLucDat = catalog.SpLeu4.TenSanPham,
+                SoLuong = 1,
+                SoNgayTinhTien = 3,
+                DonGiaThueMoiNgay = 80000,
+                MucCocMoiThietBi = 500000,
+                GiaTriBoiThuongMoiThietBi = 2500000
+            };
+            context.ChiTietDonThues.Add(ctd);
+            await context.SaveChangesAsync();
+        }
+
+        var pc = await context.PhanCongThietBis.FirstOrDefaultAsync(p => p.MaChiTietDon == ctd.MaChiTietDon);
+        if (pc == null)
+        {
+            var tb = await context.ThietBis
+                .Where(t => t.MaSanPhamHienTai == ctd.MaSanPham)
+                .OrderByDescending(t => t.MaThietBi)
+                .FirstOrDefaultAsync()
+                ?? await context.ThietBis.OrderBy(t => t.MaThietBi).FirstAsync();
+
+            pc = new PhanCongThietBi
+            {
+                MaChiTietDon = ctd.MaChiTietDon,
+                MaThietBi = tb.MaThietBi,
+                MaNguoiPhanCong = actors.NhanVien2.MaNhanVien,
+                ThoiDiemPhanCong = don.GioNhanDuKien,
+                TrangThai = "DaBanGiao"
+            };
+            context.PhanCongThietBis.Add(pc);
+            await context.SaveChangesAsync();
+        }
+
+        var pbg = await context.PhieuBanGiaos.FirstOrDefaultAsync(p => p.MaDonThue == don.MaDonThue);
+        if (pbg == null)
+        {
+            pbg = new PhieuBanGiao
+            {
+                MaDonThue = don.MaDonThue,
+                MaNhanVien = actors.NhanVien2.MaNhanVien,
+                ThoiDiemLap = don.GioNhanDuKien,
+                ThoiDiemGiaoThucTe = don.GioNhanDuKien,
+                TenNhanVienLucGiao = actors.NhanVien2.HoTen,
+                TenNguoiNhanThucTe = don.TenNguoiNhan ?? actors.Khach2.HoTen,
+                ThoiDiemKhachXacNhan = don.GioNhanDuKien,
+                TrangThai = "DaGiao"
+            };
+            context.PhieuBanGiaos.Add(pbg);
+            await context.SaveChangesAsync();
+        }
+        else if (pbg.TrangThai != "DaGiao")
+        {
+            pbg.TrangThai = "DaGiao";
+            await context.SaveChangesAsync();
+        }
+
+        if (!await context.ChiTietBanGiaos.AnyAsync(c => c.MaPhieuBanGiao == pbg.MaPhieuBanGiao && c.MaPhanCong == pc.MaPhanCong))
+        {
+            context.ChiTietBanGiaos.Add(new ChiTietBanGiao
+            {
+                MaPhieuBanGiao = pbg.MaPhieuBanGiao,
+                MaPhanCong = pc.MaPhanCong,
+                TinhTrangTruocThue = "Ngoại quan tốt, đầy đủ phụ kiện",
+                GhiChu = "Bàn giao đầy đủ trước khi quá hạn"
+            });
+            await context.SaveChangesAsync();
+        }
     }
 
     private static async Task SeedDonKhachHuyAsync(ApplicationDbContext context, SeedActors actors, ChinhSach cs1)

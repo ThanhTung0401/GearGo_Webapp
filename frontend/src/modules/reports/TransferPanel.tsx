@@ -49,7 +49,7 @@ export function TransferPanel({ app }: { app: ReturnType<typeof useApp> }) {
     const isDowngrade = (targetProduct?.pricePerDay ?? 0) < (currentProduct?.pricePerDay ?? 0);
     equipmentApi
       .xemAnhHuongThayDoi(idNum, {
-        loaiThayDoi: "GiangCap",
+        loaiThayDoi: isDowngrade ? "GiangCap" : "ChuyenSanPham",
         maSanPhamDich: targetNum,
       })
       .then((res) => {
@@ -84,8 +84,12 @@ export function TransferPanel({ app }: { app: ReturnType<typeof useApp> }) {
           : await equipmentApi.deNghiDieuChuyenSanPham(idNum, { maSanPhamDich: targetNum, lyDo: reason.trim() })) as Record<string, any>;
         const maPhieu = res?.maPhieuDieuChinh ?? res?.duLieu?.maPhieuDieuChinh;
         if (typeof maPhieu === "number") {
-          await equipmentApi.duyetDeNghiVongDoi(maPhieu);
-          setResultNote("Đề nghị đã được duyệt và áp dụng ngay lập tức.");
+          try {
+            await equipmentApi.duyetDeNghiVongDoi(maPhieu);
+            setResultNote("Đề nghị đã được duyệt và áp dụng ngay lập tức.");
+          } catch {
+            setResultNote(`Đề nghị #${maPhieu} đã được lập và gửi Quản trị viên phê duyệt.`);
+          }
         } else {
           setResultNote("Đề nghị chuyển loại đã được ghi nhận vào hệ thống.");
         }

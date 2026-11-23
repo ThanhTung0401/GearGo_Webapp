@@ -1,5 +1,6 @@
+import { useEffect, useState } from "react";
 import { useApp } from "../../../context/AppContext";
-import { Order } from "../../../store";
+import { formatDateTimeVi, Order } from "../../../store";
 
 interface HandoverPrepPanelProps {
   app: ReturnType<typeof useApp>;
@@ -41,6 +42,22 @@ export function HandoverPrepPanel({
   handleCompletePreparation,
   handleReportShortage,
 }: HandoverPrepPanelProps) {
+  const [swapTargetId, setSwapTargetId] = useState("");
+
+  const swapCandidates = changingEquip
+    ? app.equipment.filter(
+        (e) =>
+          e.productId === changingEquip.productId &&
+          e.equipmentStatus === "Sẵn sàng" &&
+          e.id !== changingEquip.oldId &&
+          !(assignments[changingEquip.productId] || []).includes(e.id)
+      )
+    : [];
+
+  useEffect(() => {
+    setSwapTargetId(swapCandidates[0]?.id ?? "");
+  }, [changingEquip?.oldId, changingEquip?.productId]);
+
   return (
     <div>
       <div className="so-order-header">
@@ -51,7 +68,7 @@ export function HandoverPrepPanel({
               {order.customerName} · {order.customerPhone}
             </div>
             <div className="so-order-meta">
-              📤 Hẹn nhận: <strong>{order.pickupTime}</strong> → 📥 Hẹn trả: <strong>{order.returnTime}</strong>
+              📤 Hẹn nhận: <strong>{formatDateTimeVi(order.pickupTime)}</strong> → 📥 Hẹn trả: <strong>{formatDateTimeVi(order.returnTime)}</strong>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -103,6 +120,10 @@ export function HandoverPrepPanel({
 
             {Array.from({ length: item.qty }).map((_, idx) => {
               const currentChosen = assignments[item.productId]?.[idx];
+              // Loại trừ serial đã chọn ở các slot khác của cùng dòng sản phẩm
+              const slotOptions = avail.filter(
+                (e) => e.id === currentChosen || !chosenForItem.some((chosenId, i) => i !== idx && chosenId === e.id)
+              );
               return (
                 <div key={idx} className="flex items-center gap-3 mb-2 flex-wrap">
                   <span className="so-slot-label">Món {idx + 1}:</span>
@@ -112,7 +133,7 @@ export function HandoverPrepPanel({
                     className="so-slot-select"
                   >
                     <option value="">-- Chọn mã thiết bị sẵn sàng --</option>
-                    {avail.map((e) => (
+                    {slotOptions.map((e) => (
                       <option key={e.id} value={e.id}>
                         {e.displayCode || e.id} ({e.condition} · đã thuê {e.rentCount} lần)
                       </option>
@@ -157,35 +178,40 @@ export function HandoverPrepPanel({
             Đổi serial thiết bị{" "}
             {app.equipment.find((x) => x.id === changingEquip.oldId)?.displayCode || changingEquip.oldId} trước khi giao:
           </strong>
-          <div className="flex gap-2 mt-2 flex-wrap">
-            <select id="swapSelect" className="so-swap-select">
-              {app.equipment
-                .filter(
-                  (e) =>
-                    e.productId === changingEquip.productId &&
-                    e.equipmentStatus === "Sẵn sàng" &&
-                    e.id !== changingEquip.oldId
-                )
-                .map((e) => (
+          {swapCandidates.length === 0 ? (
+            <div className="text-xs text-rose-700 mt-2">
+              Không còn thiết bị sẵn sàng nào khác để đổi thay thế.
+              <button onClick={() => setChangingEquip(null)} className="so-btn-cancel ml-2">
+                Đóng
+              </button>
+            </div>
+          ) : (
+            <div className="flex gap-2 mt-2 flex-wrap">
+              <select
+                value={swapTargetId}
+                onChange={(e) => setSwapTargetId(e.target.value)}
+                className="so-swap-select"
+              >
+                {swapCandidates.map((e) => (
                   <option key={e.id} value={e.id}>
                     {e.displayCode || e.id} ({e.condition})
                   </option>
                 ))}
-            </select>
-            <button
-              disabled={handoverBusy}
-              onClick={() => {
-                const sel = (document.getElementById("swapSelect") as HTMLSelectElement)?.value;
-                if (sel) void handleSwapEquipment(changingEquip.productId, changingEquip.oldId, sel);
-              }}
-              className="so-btn-primary-confirm"
-            >
-              {handoverBusy ? "Đang đổi..." : "Xác nhận đổi"}
-            </button>
-            <button onClick={() => setChangingEquip(null)} className="so-btn-cancel">
-              Hủy
-            </button>
-          </div>
+              </select>
+              <button
+                disabled={handoverBusy || !swapTargetId}
+                onClick={() => {
+                  if (swapTargetId) void handleSwapEquipment(changingEquip.productId, changingEquip.oldId, swapTargetId);
+                }}
+                className="so-btn-primary-confirm"
+              >
+                {handoverBusy ? "Đang đổi..." : "Xác nhận đổi"}
+              </button>
+              <button onClick={() => setChangingEquip(null)} className="so-btn-cancel">
+                Hủy
+              </button>
+            </div>
+          )}
         </div>
       )}
 

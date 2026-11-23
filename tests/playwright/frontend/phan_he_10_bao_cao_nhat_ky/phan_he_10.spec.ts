@@ -61,6 +61,10 @@ test.describe.serial("Frontend PH10: Báo cáo, Nhật ký & Kiểm tra Responsi
     const page = getPage();
     await page.getByRole("button", { name: /Trang khách/i }).first().click();
     await page.getByRole("button", { name: "Thoát" }).first().click();
+    const confirmLogout = page.getByRole("dialog").getByRole("button", { name: "Đăng xuất" }).first();
+    if (await waitVisible(confirmLogout, 2000)) {
+      await confirmLogout.click();
+    }
     await expect(page.getByRole("button", { name: "Đăng nhập" }).first()).toBeVisible();
 
     await page.setViewportSize({ width: 390, height: 844 });

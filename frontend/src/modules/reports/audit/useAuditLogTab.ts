@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useApp } from "../../../context/AppContext";
 import { isRealApiEnabled } from "../../../services/apiClient";
 import { auditApi } from "../../../services/api/auditApi";
@@ -68,6 +68,10 @@ export function useAuditLogTab(app: ReturnType<typeof useApp>) {
   const loadAuditLogs = useCallback(
     async (targetPage = page) => {
       if (!realApi) return;
+      if (fromDate && toDate && fromDate > toDate) {
+        setLogsError("Từ ngày không được lớn hơn đến ngày.");
+        return;
+      }
       setLogsLoading(true);
       setLogsError("");
       try {
@@ -76,7 +80,7 @@ export function useAuditLogTab(app: ReturnType<typeof useApp>) {
           tuNgay: fromDate || undefined,
           denNgay: toDate || undefined,
           trang: targetPage,
-          soMoiTrang: 50,
+          soMoiTrang: 20,
         });
         setApiLogs((res.items ?? []).map(mapNhatKyToAuditLog));
         setTotalLogs(Number(res.totalItems ?? (res.items ?? []).length));
@@ -162,8 +166,14 @@ export function useAuditLogTab(app: ReturnType<typeof useApp>) {
       return;
     }
 
-    // 3. Kiểm tra nếu là Thiết bị
-    const equip = app.equipment.find((e) => e.id === targetId || e.displayCode === targetId);
+    // 3. Kiểm tra nếu là Thiết bị (chỉ khớp khi targetEntity đúng loại thiết bị để tránh mở nhầm TAI_KHOAN/DON_THUE trùng ID số)
+    const entityLower = (targetEntity || "").toLowerCase();
+    const isEquipEntity =
+      entityLower.includes("thietbi") ||
+      entityLower.includes("thiet_bi") ||
+      entityLower.includes("equipment") ||
+      targetId.startsWith("TB-");
+    const equip = isEquipEntity ? app.equipment.find((e) => e.id === targetId || e.displayCode === targetId) : undefined;
     if (equip) {
       setInspectDoc({
         type: "equipment",

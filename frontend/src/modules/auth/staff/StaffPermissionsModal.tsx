@@ -1,5 +1,6 @@
 import type { StaffAccount } from "../../../store";
 import type { QuyenCatalogResponse } from "../../../features/permissions";
+import { ADMIN_ONLY_PERMISSIONS } from "../../../constants/permissions";
 
 const MOCK_PERMISSION_DESCRIPTIONS = [
   { key: "Quản lý kho thiết bị", desc: "Xem danh sách thiết bị, quét barcode, kiểm kê và lập phiếu bảo trì" },
@@ -13,6 +14,7 @@ interface StaffPermissionsModalProps {
   isRealApi: boolean;
   permStaff: StaffAccount;
   permRoleName: "NhanVien" | "QuanTriVien";
+  permHasOverride?: boolean;
   permCatalog: QuyenCatalogResponse[];
   permLoading: boolean;
   submitting: boolean;
@@ -20,16 +22,18 @@ interface StaffPermissionsModalProps {
   onSwitchRole: (role: "NhanVien" | "QuanTriVien") => void;
   onChangeStaff: (next: StaffAccount) => void;
   onSave: (perms: string[]) => void;
+  onResetOverride?: () => void;
   onClose: () => void;
 }
 
 /**
- * Modal cấu hình vai trò và quyền hạn chi tiết cho tài khoản nhân viên (UC1.10).
+ * Modal cấu hình vai trò và quyền hạn riêng cho từng tài khoản nhân viên (UC1.10).
  */
 export function StaffPermissionsModal({
   isRealApi,
   permStaff,
   permRoleName,
+  permHasOverride = false,
   permCatalog,
   permLoading,
   submitting,
@@ -37,8 +41,15 @@ export function StaffPermissionsModal({
   onSwitchRole,
   onChangeStaff,
   onSave,
+  onResetOverride,
   onClose,
 }: StaffPermissionsModalProps) {
+  const safeCatalog = permCatalog
+    .map((group) => ({
+      ...group,
+      quyen: group.quyen.filter((q) => !ADMIN_ONLY_PERMISSIONS.has(q.ma)),
+    }))
+    .filter((group) => group.quyen.length > 0);
   // Bật/tắt một mã quyền trong danh sách quyền hiện tại của nhân viên
   const togglePermKey = (key: string, checked: boolean) => {
     const currentPerms = permStaff.permissions || [];
@@ -77,9 +88,24 @@ export function StaffPermissionsModal({
             <div className="adm-alert is-info adm-alert--block mb-3.5">
               <strong>Quản trị viên (QuanTriVien)</strong> mặc định có toàn bộ quyền hạn trong hệ thống.
             </div>
-          ) : isRealApi && permCatalog.length > 0 ? (
+          ) : isRealApi && safeCatalog.length > 0 ? (
             <div className="flex flex-col gap-3 mb-5">
-              {permCatalog.map((group) => (
+              <div className="flex items-center justify-between gap-2 flex-wrap bg-[var(--color-parchment)] px-3 py-2 rounded-lg border border-[var(--color-bone)]">
+                <span className="text-xs font-semibold text-[var(--color-bark)]">
+                  {permHasOverride ? "Đang dùng quyền riêng (ghi đè vai trò)" : "Đang kế thừa quyền vai trò Nhân viên"}
+                </span>
+                {permHasOverride && onResetOverride && (
+                  <button
+                    type="button"
+                    disabled={submitting}
+                    onClick={onResetOverride}
+                    className="text-xs font-bold text-[var(--color-forest)] hover:underline cursor-pointer"
+                  >
+                    Đưa về theo vai trò
+                  </button>
+                )}
+              </div>
+              {safeCatalog.map((group) => (
                 <div key={group.nhom} className="adm-card--soft p-2.5">
                   <div className="adm-label--sub mb-1.5">{group.nhom}</div>
                   <div className="flex flex-col gap-1.5">
@@ -128,10 +154,10 @@ export function StaffPermissionsModal({
             <button disabled={submitting} onClick={onClose} className="btn btn-secondary btn-md adm-btn-flex">Hủy</button>
             <button
               disabled={submitting || permLoading}
-              onClick={() => onSave(permStaff.permissions || [])}
+              onClick={() => onSave((permStaff.permissions || []).filter((p) => !ADMIN_ONLY_PERMISSIONS.has(p)))}
               className="btn btn-primary btn-md adm-btn-flex"
             >
-              {submitting ? "Đang lưu..." : "Lưu quyền hạn"}
+              {submitting ? "Đang lưu..." : "Lưu quyền riêng"}
             </button>
           </div>
         </div>

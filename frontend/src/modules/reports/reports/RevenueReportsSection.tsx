@@ -1,5 +1,7 @@
 import type { useApp } from "../../../context/AppContext";
-import { fmt, type Order, type Surcharge } from "../../../store";
+import { fmt, formatDateVi, type Order, type Surcharge } from "../../../store";
+import Pagination from "../../../components/ui/Pagination";
+import { usePagination } from "../../../hooks/usePagination";
 import type { DrilldownData } from "../ReportsDrilldownModals";
 
 interface RevenueReportsSectionProps {
@@ -50,6 +52,9 @@ export function RevenueReportsSection({
   currentHeldDeposit,
   onDrilldown,
 }: RevenueReportsSectionProps) {
+  const revItems = (revReport?.items ?? []) as any[];
+  const revPaging = usePagination(revItems, 8);
+  const surchargeAndDelta = surchargeRevenue + deltaAdjustmentRevenue;
   return (
     <div>
       <div className="adm-alert is-info adm-alert--block mb-5 text-[0.85rem]">
@@ -78,7 +83,7 @@ export function RevenueReportsSection({
         <div className="adm-card adm-card--padded-sm">
           <div className="adm-hint-text text-[0.78rem] font-semibold">Phụ phí & Điều chỉnh đối soát</div>
           <div className="adm-cell-mono text-[1.6rem] font-extrabold text-[#D97706] mt-1">
-            +{fmt(surchargeRevenue + deltaAdjustmentRevenue)}
+            {surchargeAndDelta >= 0 ? `+${fmt(surchargeAndDelta)}` : fmt(surchargeAndDelta)}
           </div>
           <div className="adm-muted-note mt-1">
             Ban đầu {fmt(surchargeRevenue)}
@@ -117,19 +122,36 @@ export function RevenueReportsSection({
                   </tr>
                 </thead>
                 <tbody>
-                  {(revReport.items as any[]).map((it) => (
-                    <tr key={it.maDonThue}>
-                      <td className="adm-cell-code">{it.maDonHienThi || it.maDonThue}</td>
-                      <td className="adm-hint-text">
-                        {it.thoiDiemHoanTat ? new Date(it.thoiDiemHoanTat).toLocaleDateString("vi-VN") : "—"}
+                  {revPaging.pagedItems.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="text-center py-6 text-xs text-gray-500">
+                        Chưa có đơn hoàn tất nào trong kỳ đã chọn.
                       </td>
-                      <td className="adm-cell-right adm-cell-mono">{fmt(Number(it.tienThueSauGiam ?? 0))}</td>
-                      <td className="adm-cell-right adm-cell-mono text-[#D97706]">{fmt(Number(it.phuPhiDoiSoatBanDau ?? 0))}</td>
-                      <td className="adm-cell-right adm-cell-mono font-bold">{fmt(Number(it.tongDoanhThu ?? 0))}</td>
                     </tr>
-                  ))}
+                  ) : (
+                    revPaging.pagedItems.map((it) => (
+                      <tr key={it.maDonThue}>
+                        <td className="adm-cell-code">{it.maDonHienThi || it.maDonThue}</td>
+                        <td className="adm-hint-text whitespace-nowrap">
+                          {formatDateVi(it.thoiDiemHoanTat)}
+                        </td>
+                        <td className="adm-cell-right adm-cell-mono">{fmt(Number(it.tienThueSauGiam ?? 0))}</td>
+                        <td className="adm-cell-right adm-cell-mono text-[#D97706]">{fmt(Number(it.phuPhiDoiSoatBanDau ?? 0))}</td>
+                        <td className="adm-cell-right adm-cell-mono font-bold">{fmt(Number(it.tongDoanhThu ?? 0))}</td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
+              <Pagination
+                page={revPaging.page}
+                totalPages={revPaging.totalPages}
+                totalItems={revPaging.totalItems}
+                startIndex={revPaging.startIndex}
+                endIndex={revPaging.endIndex}
+                onPageChange={revPaging.setPage}
+                itemLabel="đơn hoàn tất"
+              />
             </div>
           ) : (
             // Tính tỷ trọng doanh thu theo từng danh mục sản phẩm ở chế độ mock

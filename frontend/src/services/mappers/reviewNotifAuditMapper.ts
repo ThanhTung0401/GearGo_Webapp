@@ -44,6 +44,15 @@ function inferNotifType(loaiSuKien?: string | null): AppNotification["type"] {
   return "info";
 }
 
+function inferNotifCategory(loaiSuKien?: string | null): AppNotification["category"] {
+  const s = (loaiSuKien || "").toLowerCase();
+  if (s.includes("khuyenmai") || s.includes("promo") || s.includes("uudai")) return "promo";
+  if (s.includes("thanhtoan") || s.includes("hoantien") || s.includes("doisoat") || s.includes("phuphi")) return "finance";
+  if (s.includes("nhac") || s.includes("quahan") || s.includes("bangiao") || s.includes("nhantra")) return "rental";
+  if (s.includes("don")) return "order";
+  return "system";
+}
+
 export function mapThongBaoToNotification(
   tb: ThongBaoBackend,
   targetRole: AppNotification["targetRole"] = "all"
@@ -53,6 +62,7 @@ export function mapThongBaoToNotification(
     title: tb.tieuDe,
     message: tb.noiDung,
     type: inferNotifType(tb.loaiSuKien),
+    category: inferNotifCategory(tb.loaiSuKien),
     targetRole,
     createdAt: tb.thoiDiemTao,
     isRead: tb.daDoc ?? Boolean(tb.thoiDiemDoc),

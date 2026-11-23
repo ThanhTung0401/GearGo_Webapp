@@ -1,7 +1,11 @@
 import { useEffect, useState } from "react";
 import { type useApp } from "../App";
 import { promotionApi, type SuDungKhuyenMaiBackend } from "../services/api";
-import { fmt, type Promotion } from "../store";
+import { fmt, formatBackendEnum, formatDateTimeVi, type Promotion } from "../store";
+import { Can } from "../features/permissions/PermissionsContext";
+import { Permissions } from "../constants/permissions";
+import Pagination from "./ui/Pagination";
+import { usePagination } from "../hooks/usePagination";
 
 interface Props {
   promotion: Promotion;
@@ -83,9 +87,11 @@ export default function PromotionDetailModal({ promotion, app, onClose, onEdit, 
   const usagePercent = promotion.totalUsageLimit
     ? Math.min(100, Math.round((usedCountDisplay / promotion.totalUsageLimit) * 100))
     : null;
+  const rowsPaging = usePagination(appliedRows, 6);
 
   return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 9999, display: "grid", placeItems: "center", padding: 20 }}>
+    /* zIndex: 250 (< .modal-overlay 300) để modal xác nhận tạm dừng (UC8.5) hiện nổi lên trên */
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 250, display: "grid", placeItems: "center", padding: 20 }}>
       <div style={{ background: "white", borderRadius: 16, maxWidth: 680, width: "100%", maxHeight: "90vh", display: "flex", flexDirection: "column", overflow: "hidden", boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)" }}>
         {/* Header */}
         <div style={{ background: "var(--color-parchment)", padding: "18px 24px", borderBottom: "1px solid var(--color-bone)", display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
@@ -203,7 +209,7 @@ export default function PromotionDetailModal({ promotion, app, onClose, onEdit, 
             </div>
 
             {appliedRows.length > 0 ? (
-              <div style={{ border: "1px solid var(--color-bone)", borderRadius: 10, overflow: "hidden" }}>
+              <div style={{ border: "1px solid var(--color-bone)", borderRadius: 10, overflowX: "auto" }}>
                 <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.78rem" }}>
                   <thead>
                     <tr style={{ background: "var(--color-parchment)", color: "#4B5563", textAlign: "left" }}>
@@ -213,13 +219,13 @@ export default function PromotionDetailModal({ promotion, app, onClose, onEdit, 
                     </tr>
                   </thead>
                   <tbody>
-                    {appliedRows.map((row, idx) => (
+                    {rowsPaging.pagedItems.map((row, idx) => (
                       <tr key={row.key} style={{ borderTop: "1px solid var(--color-bone)", background: idx % 2 === 0 ? "white" : "var(--color-cream)" }}>
                         <td style={{ padding: "8px 10px", fontFamily: "var(--font-mono)", fontWeight: 700, color: "var(--color-forest)" }}>
                           {row.displayId}
                         </td>
                         <td style={{ padding: "8px 10px", fontWeight: 600 }}>{row.customerName}</td>
-                        <td style={{ padding: "8px 10px", color: "#6B7280", fontSize: "0.72rem" }}>{row.date}</td>
+                        <td style={{ padding: "8px 10px", color: "#6B7280", fontSize: "0.72rem", whiteSpace: "nowrap" }}>{formatDateTimeVi(row.date)}</td>
                         <td style={{ padding: "8px 10px", fontFamily: "var(--font-mono)" }}>
                           {row.rental > 0 ? fmt(row.rental) : "—"}
                         </td>
@@ -228,13 +234,24 @@ export default function PromotionDetailModal({ promotion, app, onClose, onEdit, 
                         </td>
                         <td style={{ padding: "8px 10px" }}>
                           <span style={{ padding: "2px 6px", borderRadius: 4, fontSize: "0.68rem", fontWeight: 600, background: "#F3F4F6", color: "#4B5563" }}>
-                            {row.status}
+                            {formatBackendEnum(row.status)}
                           </span>
                         </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
+                <div className="px-3 pb-2">
+                  <Pagination
+                    page={rowsPaging.page}
+                    totalPages={rowsPaging.totalPages}
+                    totalItems={rowsPaging.totalItems}
+                    startIndex={rowsPaging.startIndex}
+                    endIndex={rowsPaging.endIndex}
+                    onPageChange={rowsPaging.setPage}
+                    itemLabel="đơn áp dụng"
+                  />
+                </div>
               </div>
             ) : (
               <div style={{ background: "var(--color-cream)", borderRadius: 8, padding: 18, textAlign: "center", color: "#9CA3AF", fontSize: "0.8rem", border: "1px dashed var(--color-bone)" }}>
@@ -248,33 +265,37 @@ export default function PromotionDetailModal({ promotion, app, onClose, onEdit, 
         <div style={{ padding: "14px 24px", borderTop: "1px solid var(--color-bone)", background: "white", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div>
             {onToggleStatus && !isExpired && (
-              <button
-                type="button"
-                onClick={onToggleStatus}
-                style={{
-                  background: promotion.status === "active" ? "#FEF3C7" : "#DCFCE7",
-                  color: promotion.status === "active" ? "#B45309" : "#15803D",
-                  border: "none",
-                  borderRadius: 8,
-                  padding: "8px 14px",
-                  fontSize: "0.8rem",
-                  fontWeight: 700,
-                  cursor: "pointer",
-                }}
-              >
-                {promotion.status === "active" ? "⏸ Tạm dừng chương trình (UC8.5)" : "▶ Kích hoạt lại"}
-              </button>
+              <Can perm={Permissions.KhuyenMai_Quan}>
+                <button
+                  type="button"
+                  onClick={onToggleStatus}
+                  style={{
+                    background: promotion.status === "active" ? "#FEF3C7" : "#DCFCE7",
+                    color: promotion.status === "active" ? "#B45309" : "#15803D",
+                    border: "none",
+                    borderRadius: 8,
+                    padding: "8px 14px",
+                    fontSize: "0.8rem",
+                    fontWeight: 700,
+                    cursor: "pointer",
+                  }}
+                >
+                  {promotion.status === "active" ? "⏸ Tạm dừng chương trình (UC8.5)" : "▶ Kích hoạt lại"}
+                </button>
+              </Can>
             )}
           </div>
           <div className="flex gap-2">
             {onEdit && (
-              <button
-                type="button"
-                onClick={onEdit}
-                style={{ background: "white", color: "var(--color-forest)", border: "1px solid var(--color-forest)", borderRadius: 8, padding: "8px 16px", cursor: "pointer", fontWeight: 700, fontSize: "0.82rem" }}
-              >
-                ✏️ Chỉnh sửa (UC8.3)
-              </button>
+              <Can perm={Permissions.KhuyenMai_Quan}>
+                <button
+                  type="button"
+                  onClick={onEdit}
+                  style={{ background: "white", color: "var(--color-forest)", border: "1px solid var(--color-forest)", borderRadius: 8, padding: "8px 16px", cursor: "pointer", fontWeight: 700, fontSize: "0.82rem" }}
+                >
+                  ✏️ Chỉnh sửa (UC8.3)
+                </button>
+              </Can>
             )}
             <button
               type="button"

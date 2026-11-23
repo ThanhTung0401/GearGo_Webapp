@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useApp } from "../../../context/AppContext";
 import { isRealApiEnabled } from "../../../services/apiClient";
 import { notificationApi, type ThongBaoGuiLoiBackend } from "../../../services/api/notificationApi";
@@ -50,8 +50,17 @@ export function useNotificationsTab(app: ReturnType<typeof useApp>) {
       setFailedError("");
       try {
         const res = await notificationApi.adminLayGuiLoi({ trang: page, soMoiTrang: 10 });
+        const total = Number(res.totalItems ?? (res.items ?? []).length);
+        // Nếu xóa/thử lại hết bản ghi ở trang cuối khiến trang hiện tại rỗng -> lùi về trang trước
+        if ((res.items ?? []).length === 0 && page > 1 && total > 0) {
+          const prevRes = await notificationApi.adminLayGuiLoi({ trang: page - 1, soMoiTrang: 10 });
+          setFailedItems(prevRes.items ?? []);
+          setFailedTotal(Number(prevRes.totalItems ?? (prevRes.items ?? []).length));
+          setFailedPage(prevRes.currentPage || page - 1);
+          return;
+        }
         setFailedItems(res.items ?? []);
-        setFailedTotal(Number(res.totalItems ?? (res.items ?? []).length));
+        setFailedTotal(total);
         setFailedPage(res.currentPage || page);
       } catch (err) {
         setFailedError(err instanceof Error ? err.message : "Không thể tải danh sách thông báo gửi lỗi.");
@@ -106,12 +115,20 @@ export function useNotificationsTab(app: ReturnType<typeof useApp>) {
         system: type === "warning" || type === "alert" ? "CanhBaoHeThong" : "HeThong",
       };
 
+      const vaiTroNhanMap: Record<AppNotification["targetRole"], string | null> = {
+        all: null,
+        customer: "KhachHang",
+        staff: "NhanVien",
+        admin: "QuanTriVien",
+      };
+
       setSendLoading(true);
       try {
         await notificationApi.adminGuiThuCong({
           tieuDe: title.trim(),
           noiDung: message.trim(),
           maTaiKhoanNhan,
+          vaiTroNhan: maTaiKhoanNhan ? null : vaiTroNhanMap[targetRole],
           maDonThue,
           loaiSuKien: loaiSuKienMap[category],
         });

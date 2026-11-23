@@ -1,4 +1,4 @@
-import { fmt, type MaintenanceReceipt, type Order } from "../../../store";
+import { fmt, formatBackendEnum, formatDateTimeVi, formatDateVi, type MaintenanceReceipt, type Order } from "../../../store";
 import type { HoSoVongDoiResponse } from "../../../services/api/equipmentApi";
 
 interface Props {
@@ -41,13 +41,13 @@ export default function LifecycleTimelineSections({
               <tbody>
                 {orderHistory.map((o) => (
                   <tr key={o.id} className="border-t border-[var(--color-bone,#E5E7EB)]">
-                    <td className="p-2 font-mono font-bold text-[var(--color-forest,#15803D)]">{o.id}</td>
+                    <td className="p-2 font-mono font-bold text-[var(--color-forest,#15803D)]">{o.displayCode || o.id}</td>
                     <td className="p-2">
                       <div className="font-semibold">{o.customerName}</div>
                       <div className="text-[0.72rem] text-gray-500">{o.customerPhone}</div>
                     </td>
                     <td className="p-2">
-                      {o.rentalStartDate} → {o.rentalEndDate}
+                      {formatDateVi(o.rentalStartDate)} → {formatDateVi(o.rentalEndDate)}
                     </td>
                     <td className="p-2">
                       <span
@@ -105,7 +105,7 @@ export default function LifecycleTimelineSections({
                 {maintenanceHistory.map((m) => (
                   <tr key={m.id} className="border-t border-[var(--color-bone,#E5E7EB)]">
                     <td className="p-2 font-mono font-bold text-[var(--color-forest,#15803D)]">{m.id}</td>
-                    <td className="p-2 text-gray-500">{m.createdAt}</td>
+                    <td className="p-2 text-gray-500">{formatDateTimeVi(m.createdAt)}</td>
                     <td className="p-2 max-w-[200px]">{m.issueDescription}</td>
                     <td className="p-2 text-right font-semibold">{fmt(m.actualCost ?? m.estimatedCost)}</td>
                     <td className="p-2 text-center">
@@ -149,22 +149,22 @@ export default function LifecycleTimelineSections({
               </thead>
               <tbody>
                 {hoSoApi.lichSuDieuChinh.map((dc) => {
-                  const approved = dc.trangThai === "DaDuyet" || dc.trangThai === "ApDung";
+                  const approved = dc.trangThai === "DaApDung" || dc.trangThai === "DaDuyet" || dc.trangThai === "ApDung";
                   return (
                     <tr key={dc.maPhieuDieuChinh} className="border-t border-[var(--color-bone)]">
                       <td className="p-2 font-mono font-bold text-[var(--color-forest)]">
                         PDCK-{dc.maPhieuDieuChinh}
                       </td>
-                      <td className="p-2 font-semibold">{dc.loaiDieuChinh}</td>
+                      <td className="p-2 font-semibold">{formatBackendEnum(dc.loaiDieuChinh)}</td>
                       <td className="p-2 text-gray-600">{dc.lyDo || "—"}</td>
-                      <td className="p-2 text-gray-500">{dc.thoiDiemLap}</td>
+                      <td className="p-2 text-gray-500">{formatDateTimeVi(dc.thoiDiemLap)}</td>
                       <td className="p-2 text-center">
                         <span
                           className={`px-2 py-0.5 rounded-lg text-[0.72rem] font-bold ${
                             approved ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-800"
                           }`}
                         >
-                          {dc.trangThai}
+                          {formatBackendEnum(dc.trangThai)}
                         </span>
                       </td>
                     </tr>

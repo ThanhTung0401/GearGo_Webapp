@@ -1,4 +1,6 @@
 import type { BaoCaoVanHanhBackend } from "../../../services/api";
+import Pagination from "../../../components/ui/Pagination";
+import { usePagination } from "../../../hooks/usePagination";
 
 interface ShiftMetricsSectionProps {
   reportLoading: boolean;
@@ -32,6 +34,7 @@ export function ShiftMetricsSection({
   maintReport,
   opsReport,
 }: ShiftMetricsSectionProps) {
+  const productMetricsPaging = usePagination(opsReport?.chiSoTheoSanPham ?? [], 8);
   return (
     <div>
       {reportLoading && (
@@ -159,7 +162,7 @@ export function ShiftMetricsSection({
               </tr>
             </thead>
             <tbody>
-              {opsReport.chiSoTheoSanPham.slice(0, 10).map((sp) => (
+              {productMetricsPaging.pagedItems.map((sp) => (
                 <tr key={sp.maSanPham}>
                   <td className="so-td-semibold">{sp.tenSanPham}</td>
                   <td className="so-td-muted">{sp.tenDanhMuc}</td>
@@ -171,6 +174,17 @@ export function ShiftMetricsSection({
               ))}
             </tbody>
           </table>
+          <div className="px-4 pb-3">
+            <Pagination
+              page={productMetricsPaging.page}
+              totalPages={productMetricsPaging.totalPages}
+              totalItems={productMetricsPaging.totalItems}
+              startIndex={productMetricsPaging.startIndex}
+              endIndex={productMetricsPaging.endIndex}
+              onPageChange={productMetricsPaging.setPage}
+              itemLabel="sản phẩm"
+            />
+          </div>
         </div>
       )}
     </div>

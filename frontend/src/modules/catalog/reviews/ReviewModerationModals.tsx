@@ -1,5 +1,5 @@
 import Icon from "../../../components/Icon";
-import { fmt, type Order, type Review } from "../../../store";
+import { fmt, formatDateTimeVi, type Order, type Review } from "../../../store";
 
 interface ReviewModerationModalsProps {
   orderBasisReview: Review | null;
@@ -62,7 +62,7 @@ export function ReviewModerationModals({
                   <div>Khách thuê: <strong>{orderBasisReview.customerName}</strong></div>
                   <div>Mã khách hàng: <strong>{orderBasisReview.customerId}</strong></div>
                   <div>Sản phẩm đánh giá: <strong>{orderBasisReview.productName}</strong></div>
-                  <div>Ngày đặt: <strong>{orderBasisDetail?.createdAt || "Chuyến đi gần nhất"}</strong></div>
+                  <div>Ngày đặt: <strong>{orderBasisDetail?.createdAt ? formatDateTimeVi(orderBasisDetail.createdAt) : "Chuyến đi gần nhất"}</strong></div>
                 </div>
               </div>
 
@@ -70,16 +70,24 @@ export function ReviewModerationModals({
                 <div className="mb-3">
                   <div className="adm-label--sub mb-1.5">Danh sách thiết bị trong đơn:</div>
                   <div className="adm-table-wrap rounded-lg">
-                    {orderBasisDetail.items.map((it, idx) => (
-                      <div key={idx} className={`flex justify-between py-2 px-3 text-[0.78rem] ${idx < orderBasisDetail.items.length - 1 ? "border-b border-[#E2E8F0]" : ""}`}>
-                        <span>{it.productName} (x{it.qty})</span>
-                        <span className="text-[#64748B]">{it.days} ngày · {fmt((it.price ?? it.pricePerDay) * it.qty * it.days)}</span>
-                      </div>
-                    ))}
+                    {orderBasisDetail.items.map((it, idx) => {
+                      const lineAmount =
+                        it.price !== undefined && it.price !== null
+                          ? it.price
+                          : (it.pricePerDay || 0) * (it.qty || 1) * (it.days || 1);
+                      return (
+                        <div key={idx} className={`flex justify-between py-2 px-3 text-[0.78rem] ${idx < orderBasisDetail.items.length - 1 ? "border-b border-[#E2E8F0]" : ""}`}>
+                          <span>{it.productName} (x{it.qty})</span>
+                          <span className="text-[#64748B]">{it.days || 1} ngày · {fmt(lineAmount)}</span>
+                        </div>
+                      );
+                    })}
                   </div>
                   <div className="flex justify-between mt-2 text-[0.8rem] font-bold">
                     <span>Tổng tiền thanh toán đơn:</span>
-                    <span className="text-[var(--color-forest)]">{fmt(orderBasisDetail.total)}</span>
+                    <span className="text-[var(--color-forest)]">
+                      {fmt(orderBasisDetail.total ?? (Math.max(0, (orderBasisDetail.rental || 0) - (orderBasisDetail.discount || 0)) + (orderBasisDetail.depositTotal || 0)))}
+                    </span>
                   </div>
                 </div>
               )}

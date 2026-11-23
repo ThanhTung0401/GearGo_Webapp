@@ -1,5 +1,5 @@
 import Icon from "../../../components/Icon";
-import { fmt, type FinancialAdjustment, type ImportReceipt, type Order } from "../../../store";
+import { fmt, formatBackendEnum, type FinancialAdjustment, type ImportReceipt, type Order } from "../../../store";
 import { type GiaoDichCanDoiChieuBackend } from "../../../services/api/paymentApi";
 import { type DoiSoatBackend } from "../../../services/api/reconciliationApi";
 import { type ReconcileOutcome } from "./useAdjustmentsTab";
@@ -207,7 +207,7 @@ export function AdjustmentsModals(props: AdjustmentsModalsProps) {
                   >
                     <option value="">Không có</option>
                     {importReceipts.map((r) => (
-                      <option key={r.id} value={r.id}>{r.id} ({r.supplierName})</option>
+                      <option key={r.id} value={r.id}>{r.displayCode || r.id} ({r.supplierName})</option>
                     ))}
                   </select>
                 </div>
@@ -220,7 +220,7 @@ export function AdjustmentsModals(props: AdjustmentsModalsProps) {
                   ) : orderDoiSoat ? (
                     <div className="flex flex-col gap-2">
                       <div>
-                        Biên bản đối soát gốc: <strong className="text-[#1B3F2F]">#{orderDoiSoat.maDoiSoat}</strong> ({orderDoiSoat.trangThai})
+                        Biên bản đối soát gốc: <strong className="text-[#1B3F2F]">#{orderDoiSoat.maDoiSoat}</strong> ({formatBackendEnum(orderDoiSoat.trangThai)})
                       </div>
                       {orderSurchargeIds.length > 0 && (
                         <div>
@@ -252,7 +252,7 @@ export function AdjustmentsModals(props: AdjustmentsModalsProps) {
                   required
                   type="number"
                   min="1000"
-                  step="5000"
+                  step="1000"
                   value={amount}
                   onChange={(e) => setAmount(Number(e.target.value))}
                   className="adm-field"

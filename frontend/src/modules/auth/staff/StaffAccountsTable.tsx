@@ -2,8 +2,11 @@ import type { StaffAccount } from "../../../store";
 import Icon from "../../../components/Icon";
 import { Can } from "../../../features/permissions/PermissionsContext";
 import { Permissions } from "../../../constants/permissions";
+import Pagination from "../../../components/ui/Pagination";
+import { usePagination } from "../../../hooks/usePagination";
 
 interface StaffAccountsTableProps {
+  isAdmin?: boolean;
   search: string;
   onSearchChange: (value: string) => void;
   roleFilter: string;
@@ -22,6 +25,7 @@ interface StaffAccountsTableProps {
  * Thanh tìm kiếm/lọc (UC1.9) và bảng danh sách tài khoản nhân viên kèm các nút thao tác.
  */
 export function StaffAccountsTable({
+  isAdmin = false,
   search,
   onSearchChange,
   roleFilter,
@@ -35,6 +39,7 @@ export function StaffAccountsTable({
   onUnlockClick,
   onResignClick,
 }: StaffAccountsTableProps) {
+  const paging = usePagination(staffList, 8);
   return (
     <>
       {/* Bộ lọc & Tìm kiếm (UC1.9) */}
@@ -80,7 +85,14 @@ export function StaffAccountsTable({
               </tr>
             </thead>
             <tbody>
-              {staffList.map((s) => (
+              {paging.pagedItems.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="text-center py-8 text-sm text-gray-500">
+                    Không tìm thấy nhân viên nào phù hợp với bộ lọc.
+                  </td>
+                </tr>
+              ) : (
+                paging.pagedItems.map((s) => (
                 <tr key={s.id}>
                   <td className="adm-cell-code">
                     {s.id}
@@ -116,18 +128,22 @@ export function StaffAccountsTable({
                   </td>
                   <td>
                     <div className="flex items-center gap-1.5 flex-wrap">
-                      <button
-                        onClick={() => onEdit(s)}
-                        className="adm-btn-outline"
-                      >
-                        Sửa
-                      </button>
-                      <button
-                        onClick={() => onOpenPermissions(s)}
-                        className="adm-btn-parchment adm-btn-xs"
-                      >
-                        Phân quyền
-                      </button>
+                      <Can perm={Permissions.NhanVien_Quan}>
+                        <button
+                          onClick={() => onEdit(s)}
+                          className="adm-btn-outline"
+                        >
+                          Sửa
+                        </button>
+                      </Can>
+                      {isAdmin && (
+                        <button
+                          onClick={() => onOpenPermissions(s)}
+                          className="adm-btn-parchment adm-btn-xs"
+                        >
+                          Phân quyền
+                        </button>
+                      )}
                       {/* Chặn khóa / nghỉ việc trên tài khoản Quản trị viên */}
                       {/* v2 §P3 — nút Khoá/Mở/Nghỉ việc bọc theo NhanVien_Quan */}
                       {s.role !== "Quản trị viên" && (
@@ -157,11 +173,22 @@ export function StaffAccountsTable({
                     </div>
                   </td>
                 </tr>
-              ))}
+              ))
+              )}
             </tbody>
           </table>
         </div>
       </div>
+
+      <Pagination
+        page={paging.page}
+        totalPages={paging.totalPages}
+        totalItems={paging.totalItems}
+        startIndex={paging.startIndex}
+        endIndex={paging.endIndex}
+        onPageChange={paging.setPage}
+        itemLabel="nhân viên"
+      />
     </>
   );
 }

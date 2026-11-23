@@ -102,7 +102,8 @@ public partial class TruyVanDonThueService : ITruyVanDonThueService
                 d.TenNguoiNhan, d.SoDienThoaiNguoiNhan, d.NgayDat, d.GioNhanDuKien, d.GioTraDuKien,
                 d.TrangThai.ToString(), d.ChiTietDonThues.Count,
                 d.ChiTietDonThues.Sum(c => (int?)c.SoLuong) ?? 0,
-                _context.PhanCongThietBis.Count(pc => pc.ChiTietDon.MaDonThue == d.MaDonThue && pc.TrangThai == PhanCongDaPhanCong)))
+                _context.PhanCongThietBis.Count(pc => pc.ChiTietDon.MaDonThue == d.MaDonThue && (pc.TrangThai == PhanCongDaPhanCong || pc.TrangThai == "DaBanGiao")),
+                d.TongTienThueTruocGiam, d.TongTienGiam, d.TongTienCoc))
             .ToListAsync();
 
         return new PagedResult<DonVanHanhTomTatResponse> { Items = items, TotalItems = total, CurrentPage = trang, PageSize = soMoi };

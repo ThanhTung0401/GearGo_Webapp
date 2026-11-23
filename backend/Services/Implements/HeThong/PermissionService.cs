@@ -110,6 +110,11 @@ public partial class PermissionService : IPermissionService
 
         if (roleName == DomainConstants.Roles.Staff)
         {
+            var quyenCam = moi.Intersect(DomainConstants.Permissions.AdminOnly, StringComparer.Ordinal).ToList();
+            if (quyenCam.Count > 0)
+                return Result<QuyenCuaVaiTroResponse>.Loi("QUYEN_CHI_DANH_CHO_QUAN_TRI",
+                    $"Nhóm quyền phân quyền chỉ dành cho Quản trị viên: {string.Join(", ", quyenCam)}", new { quyenCam });
+
             var thieu = DomainConstants.Permissions.MinStaff.Except(moi).ToList();
             if (thieu.Count > 0)
                 return Result<QuyenCuaVaiTroResponse>.Loi("THIEU_QUYEN_TOI_THIEU",
@@ -176,6 +181,10 @@ public partial class PermissionService : IPermissionService
         if (coQuyenRieng)
             quyen = quyenRieng.OrderBy(p => p).ToList();
 
+        // Lớp phòng thủ: vai trò không phải QuanTriVien không bao giờ nhận nhóm quyền AdminOnly
+        if (tk.VaiTro != DomainConstants.Roles.Admin)
+            quyen = quyen.Where(p => !DomainConstants.Permissions.AdminOnly.Contains(p)).ToList();
+
         return Result<QuyenCuaToiResponse>.Ok(new QuyenCuaToiResponse
         {
             MaTaiKhoan = maTaiKhoan, RoleName = tk.VaiTro, Version = version, Quyen = quyen
@@ -185,6 +194,8 @@ public partial class PermissionService : IPermissionService
     public async Task<bool> KiemTraCoQuyenAsync(string roleName, string permissionMa, CancellationToken ct = default)
     {
         if (string.IsNullOrEmpty(roleName) || string.IsNullOrEmpty(permissionMa)) return false;
+        if (roleName != DomainConstants.Roles.Admin && DomainConstants.Permissions.AdminOnly.Contains(permissionMa))
+            return false;
         var tap = await LoadCachedAsync(roleName, ct);
         return tap.Contains(permissionMa);
     }
@@ -193,6 +204,8 @@ public partial class PermissionService : IPermissionService
         long maTaiKhoan, string roleName, string permissionMa, CancellationToken ct = default)
     {
         if (string.IsNullOrEmpty(roleName) || string.IsNullOrEmpty(permissionMa)) return false;
+        if (roleName != DomainConstants.Roles.Admin && DomainConstants.Permissions.AdminOnly.Contains(permissionMa))
+            return false;
 
         // v2 §8.3 — version-check theo TaiKhoan.PermissionVersion: admin bump column → mọi pod reload ở request kế.
         var version = await LayAccountVersionAsync(maTaiKhoan, ct);

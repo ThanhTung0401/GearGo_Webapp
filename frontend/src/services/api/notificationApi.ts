@@ -63,6 +63,7 @@ export const notificationApi = {
     tieuDe: string;
     noiDung: string;
     maTaiKhoanNhan?: number | null;
+    vaiTroNhan?: string | null;
     maDonThue?: number | null;
     loaiSuKien?: string;
   }): Promise<unknown> {

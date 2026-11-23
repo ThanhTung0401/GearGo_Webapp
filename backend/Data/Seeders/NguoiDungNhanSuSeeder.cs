@@ -66,20 +66,35 @@ internal static class NguoiDungNhanSuSeeder
         await context.SaveChangesAsync();
 
         var staffRole = await context.Roles.FirstAsync(r => r.Name == DomainConstants.Roles.Staff);
-        var staffExisting = await context.RoleClaims
-            .Where(c => c.RoleId == staffRole.Id && c.ClaimType == DomainConstants.Permissions.Type)
-            .Select(c => c.ClaimValue!)
-            .ToListAsync();
+        var staffHasVersion = await context.RolePermissionVersions.AnyAsync(v => v.RoleName == DomainConstants.Roles.Staff);
 
-        var missing = DomainConstants.Permissions.DefaultStaff.Except(staffExisting).ToList();
-        foreach (var ma in missing)
+        // Luôn dọn các quyền AdminOnly (PhanQuyen.*) nếu từng bị gán nhầm trên vai trò NhanVien hoặc override của NhanVien
+        var dirtyStaffAdminClaims = await context.RoleClaims
+            .Where(c => c.RoleId == staffRole.Id
+                && (c.ClaimType == DomainConstants.Permissions.Type || c.ClaimType!.StartsWith("user_perm:"))
+                && DomainConstants.Permissions.AdminOnly.Contains(c.ClaimValue!))
+            .ToListAsync();
+        if (dirtyStaffAdminClaims.Count > 0)
+            context.RoleClaims.RemoveRange(dirtyStaffAdminClaims);
+
+        // Chỉ seed DefaultStaff trong lần khởi tạo đầu tiên để tránh ghi đè lại các quyền Admin đã chủ động gỡ
+        var missing = new List<string>();
+        if (!staffHasVersion)
         {
-            context.RoleClaims.Add(new IdentityRoleClaim<long>
+            var staffExisting = await context.RoleClaims
+                .Where(c => c.RoleId == staffRole.Id && c.ClaimType == DomainConstants.Permissions.Type)
+                .Select(c => c.ClaimValue!)
+                .ToListAsync();
+            missing = DomainConstants.Permissions.DefaultStaff.Except(staffExisting).ToList();
+            foreach (var ma in missing)
             {
-                RoleId = staffRole.Id,
-                ClaimType = DomainConstants.Permissions.Type,
-                ClaimValue = ma
-            });
+                context.RoleClaims.Add(new IdentityRoleClaim<long>
+                {
+                    RoleId = staffRole.Id,
+                    ClaimType = DomainConstants.Permissions.Type,
+                    ClaimValue = ma
+                });
+            }
         }
 
         // Đồng bộ đầy đủ Permissions.All cho QuanTriVien trong Real DB (hỗ trợ 100% DB-Driven RBAC)
@@ -99,7 +114,8 @@ internal static class NguoiDungNhanSuSeeder
                 ClaimValue = ma
             });
         }
-        if (missing.Count > 0 || adminMissing.Count > 0) await context.SaveChangesAsync();
+        if (dirtyStaffAdminClaims.Count > 0 || missing.Count > 0 || adminMissing.Count > 0)
+            await context.SaveChangesAsync();
 
         foreach (var roleName in DomainConstants.Roles.All)
         {

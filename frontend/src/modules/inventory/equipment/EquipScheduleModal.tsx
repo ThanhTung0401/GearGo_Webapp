@@ -1,3 +1,4 @@
+import { formatBackendEnum, formatDateVi } from "../../../store";
 import type { ViewingEquipDetailState } from "./useEquipmentTab";
 
 interface EquipScheduleModalProps {
@@ -28,7 +29,7 @@ export function EquipScheduleModal({ viewingEquipDetail, onClose }: EquipSchedul
             <div className="so-info-box-sm">
               <div>
                 Trạng thái:{" "}
-                <strong>{viewingEquipDetail.detail?.trangThaiSuDung || viewingEquipDetail.equip.equipmentStatus}</strong>
+                <strong>{formatBackendEnum(viewingEquipDetail.detail?.trangThaiSuDung, viewingEquipDetail.equip.equipmentStatus)}</strong>
               </div>
               <div>
                 Tình trạng:{" "}
@@ -36,7 +37,7 @@ export function EquipScheduleModal({ viewingEquipDetail, onClose }: EquipSchedul
               </div>
               {viewingEquipDetail.detail?.ngayNhap && (
                 <div>
-                  Ngày nhập: <strong>{new Date(viewingEquipDetail.detail.ngayNhap).toLocaleDateString("vi-VN")}</strong>
+                  Ngày nhập: <strong>{formatDateVi(viewingEquipDetail.detail.ngayNhap)}</strong>
                 </div>
               )}
             </div>
@@ -51,10 +52,10 @@ export function EquipScheduleModal({ viewingEquipDetail, onClose }: EquipSchedul
                   <div key={sch.maPhanCong} className="so-schedule-item">
                     <span>
                       Đơn <strong>#{sch.maDonThue}</strong> ·{" "}
-                      {new Date(sch.tuNgay).toLocaleDateString("vi-VN")} →{" "}
-                      {new Date(sch.denNgay).toLocaleDateString("vi-VN")}
+                      {formatDateVi(sch.tuNgay)} →{" "}
+                      {formatDateVi(sch.denNgay)}
                     </span>
-                    <span className="so-schedule-status">{sch.trangThai}</span>
+                    <span className="so-schedule-status">{formatBackendEnum(sch.trangThai)}</span>
                   </div>
                 ))}
               </div>

@@ -1,5 +1,7 @@
 import type React from "react";
-import { statusColors, Order } from "../../../store";
+import { formatDateTimeVi, statusColors, Order } from "../../../store";
+import Pagination from "../../../components/ui/Pagination";
+import { usePagination } from "../../../hooks/usePagination";
 
 interface HandoverQueueListProps {
   subTab: "prep" | "handover";
@@ -24,34 +26,35 @@ export function HandoverQueueList({
   onSelectOrder,
 }: HandoverQueueListProps) {
   const activeList = subTab === "prep" ? eligiblePrep : eligibleHandover;
+  const paging = usePagination(activeList, 6);
 
   return (
     <div>
-      {subTab === "handover" && (
-        <form onSubmit={handleQrSearch} className="mb-3">
-          <label className="so-qr-label">
-            📷 Quét QR / Tra nhanh mã đơn tại quầy:
-          </label>
-          <div className="flex gap-1">
-            <input
-              placeholder="Quét mã QR hoặc nhập #ORD..."
-              value={qrCodeSearch}
-              onChange={(e) => setQrCodeSearch(e.target.value)}
-              className="so-qr-input"
-            />
-            <button type="submit" className="so-qr-btn">
-              Tìm
-            </button>
-          </div>
-        </form>
-      )}
+      <form onSubmit={handleQrSearch} className="mb-3">
+        <label className="so-qr-label">
+          {subTab === "prep"
+            ? "🔍 Tra nhanh mã đơn / tên khách cần chuẩn bị:"
+            : "📷 Quét QR / Tra nhanh mã đơn tại quầy:"}
+        </label>
+        <div className="flex gap-1">
+          <input
+            placeholder="Nhập mã đơn (#ORD/#DT), tên hoặc SĐT..."
+            value={qrCodeSearch}
+            onChange={(e) => setQrCodeSearch(e.target.value)}
+            className="so-qr-input"
+          />
+          <button type="submit" className="so-qr-btn">
+            Tìm
+          </button>
+        </div>
+      </form>
 
       <h3 className="so-queue-title">
         {subTab === "prep" ? "Danh sách đơn cần chuẩn bị" : "Đơn sẵn sàng chờ giao khách"}
       </h3>
 
       <div className="flex flex-col gap-2">
-        {activeList.map((o) => {
+        {paging.pagedItems.map((o) => {
           const sc = statusColors[o.status] || { bg: "#F3F4F6", text: "#374151" };
           const isSelected = selectedOrder?.id === o.id;
           return (
@@ -72,7 +75,7 @@ export function HandoverQueueList({
                 </span>
               </div>
               <div className="so-queue-name">{o.customerName}</div>
-              <div className="so-queue-time">Hẹn nhận: {o.pickupTime}</div>
+              <div className="so-queue-time">Hẹn nhận: {formatDateTimeVi(o.pickupTime)}</div>
               {o.shortageReported && (
                 <div className="so-queue-shortage">⚠️ Đã báo thiếu: {o.shortageReported.note}</div>
               )}
@@ -87,6 +90,16 @@ export function HandoverQueueList({
           </p>
         )}
       </div>
+
+      <Pagination
+        page={paging.page}
+        totalPages={paging.totalPages}
+        totalItems={paging.totalItems}
+        startIndex={paging.startIndex}
+        endIndex={paging.endIndex}
+        onPageChange={paging.setPage}
+        itemLabel="đơn"
+      />
     </div>
   );
 }

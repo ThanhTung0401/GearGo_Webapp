@@ -1,4 +1,6 @@
-import { fmt, type ImportReceipt } from "../../../store";
+import { fmt, formatDateTimeVi, formatDateVi, type ImportReceipt } from "../../../store";
+import Pagination from "../../../components/ui/Pagination";
+import { usePagination } from "../../../hooks/usePagination";
 import type { ImportedProductSummary } from "./useSupplierProfile";
 
 interface Props {
@@ -18,6 +20,9 @@ export default function SupplierTabsSection({
   onOpenReceipt,
   onClose,
 }: Props) {
+  const productsPaging = usePagination(importedProducts, 6);
+  const receiptsPaging = usePagination(supplierReceipts, 6);
+
   return (
     <div>
       <div className="flex gap-2 border-b border-[var(--color-bone,#E5E7EB)] pb-2 mb-3">
@@ -59,7 +64,7 @@ export default function SupplierTabsSection({
                 </tr>
               </thead>
               <tbody>
-                {importedProducts.map((p) => (
+                {productsPaging.pagedItems.map((p) => (
                   <tr key={p.productId} className="border-t border-[var(--color-bone,#E5E7EB)]">
                     <td className="px-3 py-2 font-mono font-bold">{p.productId}</td>
                     <td className="px-3 py-2 font-semibold">{p.name}</td>
@@ -67,11 +72,22 @@ export default function SupplierTabsSection({
                       {p.totalQty} chiếc
                     </td>
                     <td className="px-3 py-2 text-right">{fmt(p.lastUnitPrice)}</td>
-                    <td className="px-3 py-2 text-right text-gray-500">{p.lastDate}</td>
+                    <td className="px-3 py-2 text-right text-gray-500">{formatDateVi(p.lastDate)}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
+            <div className="px-3 pb-2">
+              <Pagination
+                page={productsPaging.page}
+                totalPages={productsPaging.totalPages}
+                totalItems={productsPaging.totalItems}
+                startIndex={productsPaging.startIndex}
+                endIndex={productsPaging.endIndex}
+                onPageChange={productsPaging.setPage}
+                itemLabel="sản phẩm"
+              />
+            </div>
           </div>
         )
       ) : supplierReceipts.length === 0 ? (
@@ -92,14 +108,14 @@ export default function SupplierTabsSection({
               </tr>
             </thead>
             <tbody>
-              {supplierReceipts.map((r) => {
+              {receiptsPaging.pagedItems.map((r) => {
                 const total = r.lines.reduce((s, l) => s + l.quantity * l.unitPrice, 0);
                 return (
                   <tr key={r.id} className="border-t border-[var(--color-bone,#E5E7EB)]">
                     <td className="px-3 py-2 font-mono font-bold text-[var(--color-forest,#15803D)]">
                       {r.displayCode || r.id}
                     </td>
-                    <td className="px-3 py-2 text-gray-500">{r.createdAt}</td>
+                    <td className="px-3 py-2 text-gray-500 whitespace-nowrap">{formatDateTimeVi(r.createdAt)}</td>
                     <td className="px-3 py-2">{r.createdBy}</td>
                     <td className="px-3 py-2 text-center">
                       <span
@@ -134,6 +150,17 @@ export default function SupplierTabsSection({
               })}
             </tbody>
           </table>
+          <div className="px-3 pb-2">
+            <Pagination
+              page={receiptsPaging.page}
+              totalPages={receiptsPaging.totalPages}
+              totalItems={receiptsPaging.totalItems}
+              startIndex={receiptsPaging.startIndex}
+              endIndex={receiptsPaging.endIndex}
+              onPageChange={receiptsPaging.setPage}
+              itemLabel="phiếu nhập"
+            />
+          </div>
         </div>
       )}
     </div>

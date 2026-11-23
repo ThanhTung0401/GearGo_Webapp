@@ -2,6 +2,8 @@ import { fmt, type Promotion } from "../../../store";
 import { type PromoStatusFilter, type PromoTypeFilter } from "./usePromotionsTab";
 import { Can } from "../../../features/permissions/PermissionsContext";
 import { Permissions } from "../../../constants/permissions";
+import Pagination from "../../../components/ui/Pagination";
+import { usePagination } from "../../../hooks/usePagination";
 
 interface PromotionsListProps {
   totalPromotions: number;
@@ -41,6 +43,7 @@ export function PromotionsList({
   onEdit,
   onToggleStatus,
 }: PromotionsListProps) {
+  const paging = usePagination(filteredPromotions, 6);
   return (
     <>
       <div className="flex flex-wrap justify-between items-center gap-3 mb-4">
@@ -111,7 +114,7 @@ export function PromotionsList({
         </div>
       ) : (
         <div className="flex flex-col gap-3">
-          {filteredPromotions.map((p) => {
+          {paging.pagedItems.map((p) => {
             const isExpired = new Date(p.endsAt) < now;
             const usagePercent = p.totalUsageLimit ? Math.min(100, (p.usedCount / p.totalUsageLimit) * 100) : 0;
             const isFull = p.totalUsageLimit !== null && p.usedCount >= p.totalUsageLimit;
@@ -212,6 +215,15 @@ export function PromotionsList({
               </div>
             );
           })}
+          <Pagination
+            page={paging.page}
+            totalPages={paging.totalPages}
+            totalItems={paging.totalItems}
+            startIndex={paging.startIndex}
+            endIndex={paging.endIndex}
+            onPageChange={paging.setPage}
+            itemLabel="khuyến mãi"
+          />
         </div>
       )}
     </>

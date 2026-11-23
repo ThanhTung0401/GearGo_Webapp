@@ -41,7 +41,7 @@ export function useStockAdjustTab(app: ReturnType<typeof useApp>) {
   const loadRealAdjustments = async () => {
     if (!isRealApi) return;
     try {
-      const res = await inventoryApi.timPhieu({ trang: 1, soMoiTrang: 50 });
+      const res = await inventoryApi.timPhieu({ trang: 1, soMoiTrang: 200 });
       const rawMap: Record<string, string> = {};
       const equipIdMap: Record<string, number> = {};
       const mapped = (res.items ?? []).map((dc) => {

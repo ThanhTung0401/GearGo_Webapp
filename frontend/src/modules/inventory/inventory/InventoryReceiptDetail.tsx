@@ -1,4 +1,6 @@
-import { fmt, type ImportReceipt, type Product } from "../../../store";
+import { fmt, formatBackendEnum, formatDateTimeVi, type ImportReceipt, type ImportReceiptAdjustment, type Product } from "../../../store";
+import Pagination from "../../../components/ui/Pagination";
+import { usePagination } from "../../../hooks/usePagination";
 import { calculateReceiptTotal, type ServerReceiptAdjustment } from "./useInventoryTab";
 
 interface InventoryReceiptDetailProps {
@@ -32,7 +34,10 @@ export function InventoryReceiptDetail({
   onApproveAdjustment,
   onRejectAdjustment,
 }: InventoryReceiptDetailProps) {
-  const adjustmentsList = isRealApi ? serverAdjustments : (selected.adjustments ?? []);
+  const adjustmentsList: ReadonlyArray<ImportReceiptAdjustment | ServerReceiptAdjustment> = isRealApi
+    ? serverAdjustments
+    : (selected.adjustments ?? []);
+  const adjPaging = usePagination(adjustmentsList, 5);
 
   return (
     <div className="adm-card self-start">
@@ -40,7 +45,7 @@ export function InventoryReceiptDetail({
         <div>
           <div className="adm-cell-code text-sm">{selected.displayCode ?? selected.id}</div>
           <div className="font-bold">{selected.supplierName}</div>
-          <div className="adm-hint-text font-normal">Lập lúc {selected.createdAt} · {selected.createdBy}</div>
+          <div className="adm-hint-text font-normal">Lập lúc {formatDateTimeVi(selected.createdAt)} · {selected.createdBy}</div>
           {selected.supplierDocumentNumber && (
             <div className="text-[0.72rem] text-[#4B5563] font-normal">Số chứng từ NCC: <strong>{selected.supplierDocumentNumber}</strong></div>
           )}
@@ -56,7 +61,7 @@ export function InventoryReceiptDetail({
               <th key={heading} className={heading === "Sản phẩm" || heading === "Kiểm nhận / Phân loại" ? "" : "adm-cell-right"}>{heading}</th>
             ))}
           </tr></thead>
-          <tbody>{selected.lines.map((line) => {
+          <tbody>{selected.lines.map((line, lineIdx) => {
             const product = products.find((item) => item.id === line.productId);
             const isZeroPrice = line.unitPrice === 0;
             const hasInspection = line.acceptedQty !== undefined || line.damagedQty !== undefined || line.rejectedQty !== undefined;
@@ -66,7 +71,7 @@ export function InventoryReceiptDetail({
             const billedCount = (line.acceptedQty !== undefined || line.damagedQty !== undefined) ? (acceptedCount + damagedCount) : line.quantity;
 
             return (
-              <tr key={line.productId}>
+              <tr key={line.id || `${line.productId}-${lineIdx}`}>
                 <td>
                   <div className="font-semibold">{product?.name}</div>
                   {isZeroPrice && (
@@ -123,12 +128,12 @@ export function InventoryReceiptDetail({
           </div>
         ) : selected.status === "Đã hủy" ? (
           <div className="adm-pill is-neutral w-full justify-center py-2.5 text-[0.8rem] whitespace-normal text-center">
-            Phiếu đã hủy lúc {selected.cancelledAt ?? "trước đó"}. Lý do: {selected.cancelReason ?? "Không có"}. Tồn kho không thay đổi.
+            Phiếu đã hủy lúc {selected.cancelledAt ? formatDateTimeVi(selected.cancelledAt) : "trước đó"}. Lý do: {selected.cancelReason ?? "Không có"}. Tồn kho không thay đổi.
           </div>
         ) : (
           <div>
             <div className="adm-alert is-success mb-3 font-semibold">
-              ✓ Đã nhập kho lúc {selected.confirmedAt}. Người kiểm: {selected.inspectedBy ?? selected.createdBy}. Phiếu gốc đã được khóa chỉnh sửa.
+              ✓ Đã nhập kho lúc {formatDateTimeVi(selected.confirmedAt)}. Người kiểm: {selected.inspectedBy ?? selected.createdBy}. Phiếu gốc đã được khóa chỉnh sửa.
             </div>
 
             {/* UC7.10: Xử lý sai lệch sau chốt */}
@@ -149,10 +154,10 @@ export function InventoryReceiptDetail({
               <div className="adm-adj-box">
                 <div className="text-[0.75rem] font-bold mb-1.5 text-[#374151]">Lịch sử đề nghị điều chỉnh ({adjustmentsList.length}):</div>
                 <div className="flex flex-col gap-2">
-                  {adjustmentsList.map((adj) => (
+                  {adjPaging.pagedItems.map((adj) => (
                     <div key={adj.id} className="adm-adj-item">
                       <div className="flex justify-between items-center mb-1">
-                        <span className="font-bold text-[var(--color-forest)]">{adj.type}</span>
+                        <span className="font-bold text-[var(--color-forest)]">{formatBackendEnum(adj.type)}</span>
                         <span className={`adm-pill adm-pill--xs ${adj.status === "Đã duyệt" ? "is-success" : adj.status === "Từ chối" ? "is-danger" : "is-warning"}`}>
                           {adj.status}
                         </span>
@@ -198,6 +203,15 @@ export function InventoryReceiptDetail({
                     </div>
                   ))}
                 </div>
+                <Pagination
+                  page={adjPaging.page}
+                  totalPages={adjPaging.totalPages}
+                  totalItems={adjPaging.totalItems}
+                  startIndex={adjPaging.startIndex}
+                  endIndex={adjPaging.endIndex}
+                  onPageChange={adjPaging.setPage}
+                  itemLabel="đề nghị"
+                />
               </div>
             )}
           </div>

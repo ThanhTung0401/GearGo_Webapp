@@ -26,6 +26,7 @@ export interface Product {
   image: string;
   images?: string[];
   status: "active" | "inactive";
+  rawStatus?: string;
   rating: number;
   reviews: number;
   availableCount?: number;

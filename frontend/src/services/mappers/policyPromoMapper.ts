@@ -16,21 +16,34 @@ export function mapChinhSachToRentalConfig(
   const pickupReminder = nd.mocNhac?.find((m) => m.loai === "TruocNhan")?.soGioTruoc ?? 4;
   const returnReminder = nd.mocNhac?.find((m) => m.loai === "TruocTra")?.soGioTruoc ?? 2;
 
+  // Parse biểu phí phụ kiện từ JSON backend (tránh bị reset về mảng rỗng khi tải lại)
+  let parsedAccessoryFees = base?.accessoryLossFeeSchedule ?? [];
+  if (typeof nd.bieuPhiPhuKien === "string" && nd.bieuPhiPhuKien.trim()) {
+    try {
+      const arr = JSON.parse(nd.bieuPhiPhuKien);
+      if (Array.isArray(arr)) parsedAccessoryFees = arr;
+    } catch {
+      // Giữ nguyên fallback nếu chuỗi không phải JSON hợp lệ
+    }
+  } else if (Array.isArray(nd.bieuPhiPhuKien)) {
+    parsedAccessoryFees = nd.bieuPhiPhuKien;
+  }
+
   return {
     version: `v${cs.phienBan}.0`,
     effectiveDate: cs.thoiDiemApDung.slice(0, 10),
     changeReason: cs.tenChinhSach ?? undefined,
     holdMinutes: Number(nd.thoiGianGiuChoPhut ?? base?.holdMinutes ?? 15),
-    standardPickupTime: base?.standardPickupTime ?? "08:00",
-    standardReturnTime: base?.standardReturnTime ?? "20:00",
+    standardPickupTime: nd.gioNhanChuan || base?.standardPickupTime || "08:00",
+    standardReturnTime: nd.gioTraChuan || base?.standardReturnTime || "20:00",
     cancellationFreeHours: 48,
     cancellationTier1Hours: 24,
     cancellationTier1FeePercent: t24_48,
     cancellationTier2FeePercent: under24,
     overdueMultiplier: Number(nd.heSoTre ?? base?.overdueMultiplier ?? 1.5),
     minDepositPercentage: Number(nd.tyLeCocPhanTram ?? base?.minDepositPercentage ?? 100),
-    damageCompensationPercent: base?.damageCompensationPercent ?? 50,
-    accessoryLossFeeSchedule: base?.accessoryLossFeeSchedule ?? [],
+    damageCompensationPercent: Number(nd.tyLeBoiThuongHuHong ?? base?.damageCompensationPercent ?? 50),
+    accessoryLossFeeSchedule: parsedAccessoryFees,
     adminApprovalFeeThreshold: Number(nd.hanMucNhanVien ?? base?.adminApprovalFeeThreshold ?? 1000000),
     reminderPickupHoursBefore: Number(pickupReminder),
     reminderReturnHoursBefore: Number(returnReminder),

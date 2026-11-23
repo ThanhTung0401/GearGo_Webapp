@@ -1,5 +1,5 @@
 import Icon from "../../../components/Icon";
-import { fmt } from "../../../store";
+import { fmt, formatDateTimeVi, formatDateVi } from "../../../store";
 import { type InspectDocState } from "./useAuditLogTab";
 
 interface AuditRelatedDocModalProps {
@@ -46,11 +46,13 @@ export function AuditRelatedDocModal({
                 <div className="adm-card--parchment p-2.5">
                   <div className="adm-hint-text">Trạng thái</div>
                   <span className="text-[0.75rem] font-bold text-[var(--color-forest)]">{inspectDoc.data.status}</span>
-                  <div className="text-[#6B7280]">Tạo lúc: {inspectDoc.data.createdAt}</div>
+                  <div className="text-[#6B7280]">Tạo lúc: {formatDateTimeVi(inspectDoc.data.createdAt)}</div>
                 </div>
                 <div className="adm-card--parchment p-2.5">
                   <div className="adm-hint-text">Tổng tiền thanh toán</div>
-                  <strong className="adm-cell-mono text-[var(--color-forest)] text-[1.1rem]">{fmt(inspectDoc.data.rental - inspectDoc.data.discount + inspectDoc.data.depositTotal)}</strong>
+                  <strong className="adm-cell-mono text-[var(--color-forest)] text-[1.1rem]">
+                    {fmt((Number(inspectDoc.data.rental) || 0) - (Number(inspectDoc.data.discount) || 0) + (Number(inspectDoc.data.depositTotal) || 0))}
+                  </strong>
                   <div className="text-[#6B7280]">Cọc: {fmt(inspectDoc.data.depositTotal)}</div>
                 </div>
               </div>
@@ -92,7 +94,7 @@ export function AuditRelatedDocModal({
                 </div>
                 <div className="adm-card--parchment p-2.5">
                   <div className="adm-hint-text">Trạng thái & Ngày xác nhận</div>
-                  <strong className="text-[var(--color-forest)]">{inspectDoc.data.status}</strong> — {inspectDoc.data.confirmedAt || inspectDoc.data.createdAt}
+                  <strong className="text-[var(--color-forest)]">{inspectDoc.data.status}</strong> — {formatDateTimeVi(inspectDoc.data.confirmedAt || inspectDoc.data.createdAt)}
                 </div>
               </div>
 
@@ -129,7 +131,7 @@ export function AuditRelatedDocModal({
               <div className="adm-hint-text text-[0.75rem]">Mã định danh thiết bị:</div>
               <strong className="adm-cell-mono text-[1.2rem] text-[var(--color-forest)]">{inspectDoc.data.id}</strong>
               <div className="mt-2">Tình trạng hiện tại: <strong>{inspectDoc.data.condition}</strong> · Trạng thái kho: <strong>{inspectDoc.data.equipmentStatus}</strong></div>
-              <div className="mt-1">Số lượt cho thuê lũy kế: <strong>{inspectDoc.data.rentCount} lượt</strong> · Ngày nhập kho: {inspectDoc.data.importDate}</div>
+              <div className="mt-1">Số lượt cho thuê lũy kế: <strong>{inspectDoc.data.rentCount} lượt</strong> · Ngày nhập kho: {formatDateVi(inspectDoc.data.importDate)}</div>
             </div>
           )}
 

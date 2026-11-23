@@ -1,4 +1,6 @@
-import { fmt, type MoneyTransaction } from "../../../store";
+import { fmt, formatBackendEnum, formatDateTimeVi, type MoneyTransaction } from "../../../store";
+import Pagination from "../../../components/ui/Pagination";
+import { usePagination } from "../../../hooks/usePagination";
 
 interface CashflowReportsSectionProps {
   isRealApi: boolean;
@@ -41,22 +43,25 @@ export function CashflowReportsSection({
             note: t.maYeuCau || "Thanh toán đơn thuê",
             amount: Number(t.tongSoTien ?? 0),
             isIn: true,
-            status: t.trangThaiDoiChieu || "Thành công",
-            at: t.thoiDiemThanhCong ? new Date(t.thoiDiemThanhCong).toLocaleString("vi-VN") : "—",
+            status: formatBackendEnum(t.trangThaiDoiChieu, "Thành công"),
+            at: formatDateTimeVi(t.thoiDiemThanhCong),
           })),
           ...(cashReport.khoanHoans ?? []).map((h: any) => ({
             key: `out-${h.maHoanTien}`,
             code: `HT#${h.maHoanTien}`,
-            type: h.loaiHoan || "Hoàn tiền",
+            type: formatBackendEnum(h.loaiHoan, "Hoàn tiền"),
             orderCode: h.maDonHienThi || String(h.maDonThue),
             note: h.lyDo || "Hoàn trả khách hàng",
             amount: Number(h.soTien ?? 0),
             isIn: false,
             status: "Thành công",
-            at: h.thoiDiemThanhCong ? new Date(h.thoiDiemThanhCong).toLocaleString("vi-VN") : "—",
+            at: formatDateTimeVi(h.thoiDiemThanhCong),
           })),
         ]
       : null;
+
+  const realPaging = usePagination(realCashflowRows ?? [], 8);
+  const mockPaging = usePagination(inRangeTransactions, 8);
 
   return (
     <div>
@@ -140,23 +145,37 @@ export function CashflowReportsSection({
             </thead>
             <tbody>
               {realCashflowRows ? (
-                realCashflowRows.map((row) => (
-                  <tr key={row.key}>
-                    <td className="adm-cell-code">{row.code}</td>
-                    <td className="font-semibold">{row.type}</td>
-                    <td className="adm-cell-mono">{row.orderCode}</td>
-                    <td>{row.note}</td>
-                    <td className={`adm-cell-mono font-bold ${row.isIn ? "text-[#15803D]" : "text-[#DC2626]"}`}>
-                      {row.isIn ? "+" : "−"}{fmt(row.amount)}
+                realPaging.pagedItems.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="text-center py-6 text-xs text-gray-500">
+                      Không có giao dịch dòng tiền nào trong kỳ.
                     </td>
-                    <td>
-                      <span className="adm-pill is-success">{row.status}</span>
-                    </td>
-                    <td className="adm-hint-text">{row.at}</td>
                   </tr>
-                ))
+                ) : (
+                  realPaging.pagedItems.map((row) => (
+                    <tr key={row.key}>
+                      <td className="adm-cell-code">{row.code}</td>
+                      <td className="font-semibold">{row.type}</td>
+                      <td className="adm-cell-mono">{row.orderCode}</td>
+                      <td>{row.note}</td>
+                      <td className={`adm-cell-mono font-bold ${row.isIn ? "text-[#15803D]" : "text-[#DC2626]"}`}>
+                        {row.isIn ? "+" : "−"}{fmt(row.amount)}
+                      </td>
+                      <td>
+                        <span className="adm-pill is-success">{row.status}</span>
+                      </td>
+                      <td className="adm-hint-text whitespace-nowrap">{row.at}</td>
+                    </tr>
+                  ))
+                )
+              ) : mockPaging.pagedItems.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="text-center py-6 text-xs text-gray-500">
+                    Không có giao dịch dòng tiền nào trong kỳ.
+                  </td>
+                </tr>
               ) : (
-                inRangeTransactions.map((t, idx) => {
+                mockPaging.pagedItems.map((t, idx) => {
                   const isInflow = t.type === "Thanh toán ban đầu" || t.type === "Thu thêm";
                   return (
                     <tr key={`${t.id}-${idx}`}>
@@ -172,7 +191,7 @@ export function CashflowReportsSection({
                           {t.status}
                         </span>
                       </td>
-                      <td className="adm-hint-text">{t.completedAt || t.createdAt}</td>
+                      <td className="adm-hint-text whitespace-nowrap">{formatDateTimeVi(t.completedAt || t.createdAt)}</td>
                     </tr>
                   );
                 })
@@ -180,6 +199,15 @@ export function CashflowReportsSection({
             </tbody>
           </table>
         </div>
+        <Pagination
+          page={realCashflowRows ? realPaging.page : mockPaging.page}
+          totalPages={realCashflowRows ? realPaging.totalPages : mockPaging.totalPages}
+          totalItems={realCashflowRows ? realPaging.totalItems : mockPaging.totalItems}
+          startIndex={realCashflowRows ? realPaging.startIndex : mockPaging.startIndex}
+          endIndex={realCashflowRows ? realPaging.endIndex : mockPaging.endIndex}
+          onPageChange={realCashflowRows ? realPaging.setPage : mockPaging.setPage}
+          itemLabel="giao dịch"
+        />
       </div>
     </div>
   );

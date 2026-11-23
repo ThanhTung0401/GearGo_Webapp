@@ -4,12 +4,15 @@ import { calculateReceiptTotal, useInventoryTab } from "./inventory/useInventory
 import { InventoryToolbar } from "./inventory/InventoryToolbar";
 import { InventoryReceiptDetail } from "./inventory/InventoryReceiptDetail";
 import { InventoryActionModals } from "./inventory/InventoryActionModals";
+import Pagination from "../../components/ui/Pagination";
+import { usePagination } from "../../hooks/usePagination";
 
 /**
  * Tab quản lý Phiếu nhập hàng (UC7.6 - UC7.10).
  */
 export function InventoryTab({ app }: { app: ReturnType<typeof useApp> }) {
   const vm = useInventoryTab(app);
+  const paging = usePagination(vm.filteredReceipts, 6);
 
   return (
     <div>
@@ -33,7 +36,7 @@ export function InventoryTab({ app }: { app: ReturnType<typeof useApp> }) {
 
       <div className="responsive-two-column adm-inventory-grid">
         <div className="flex flex-col gap-3">
-          {vm.filteredReceipts.map((receipt) => {
+          {paging.pagedItems.map((receipt) => {
             const quantity = receipt.lines.reduce((sum, line) => sum + line.quantity, 0);
             const pillClass = receipt.status === "Đã nhập kho" ? "is-success" : receipt.status === "Đã hủy" ? "is-neutral" : "is-warning";
             return (
@@ -64,6 +67,15 @@ export function InventoryTab({ app }: { app: ReturnType<typeof useApp> }) {
               Không tìm thấy phiếu nhập nào phù hợp tiêu chí lọc.
             </div>
           )}
+          <Pagination
+            page={paging.page}
+            totalPages={paging.totalPages}
+            totalItems={paging.totalItems}
+            startIndex={paging.startIndex}
+            endIndex={paging.endIndex}
+            onPageChange={paging.setPage}
+            itemLabel="phiếu nhập"
+          />
         </div>
 
         {vm.selected && (

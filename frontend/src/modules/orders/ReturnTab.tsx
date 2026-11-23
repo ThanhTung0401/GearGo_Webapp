@@ -38,7 +38,7 @@ export function ReturnTab({
         onScanOverdue={state.handleScanOverdueReminders}
         onSelectOrder={(orderId) => {
           setSelectedOrderId(orderId);
-          state.setSelectedItemsToReturn({});
+          state.resetSelectionState();
           void hydrateOperationalOrder(orderId);
         }}
       />
@@ -74,6 +74,7 @@ export function ReturnTab({
               overdueInfo={state.overdueInfo}
               overdueConflicts={state.overdueConflicts}
               affectedOrdersBackend={state.affectedOrdersBackend}
+              contactLogCount={app.realApi ? state.contactLogsBackend.length : (state.order.contactLogs?.length || 0)}
               debtCount={state.debtRows.length}
               returnedCount={state.returnedEquipment.length}
               returnLoading={state.returnLoading}

@@ -1,4 +1,4 @@
-import { fmt, type MoneyTransaction, type Order, type ReturnReceipt, type Surcharge } from "../../../store";
+import { fmt, formatDateTimeVi, type MoneyTransaction, type Order, type ReturnReceipt, type Surcharge } from "../../../store";
 
 interface Props {
   order: Order;
@@ -50,7 +50,7 @@ export function ReconciliationTraceModals(props: Props) {
 
             <div className="recon-trace-card">
               <div className="flex justify-between gap-2 flex-wrap"><span className="recon-trace-label">Loại giao dịch:</span><strong>{viewingTx.type}</strong></div>
-              <div className="flex justify-between gap-2 flex-wrap"><span className="recon-trace-label">Thời gian thực hiện:</span><strong>{viewingTx.createdAt}</strong></div>
+              <div className="flex justify-between gap-2 flex-wrap"><span className="recon-trace-label">Thời gian thực hiện:</span><strong>{formatDateTimeVi(viewingTx.createdAt)}</strong></div>
               <div className="flex justify-between gap-2 flex-wrap"><span className="recon-trace-label">Số tiền giao dịch:</span><strong className="recon-mono-forest">{fmt(viewingTx.amount)}</strong></div>
               <div className="flex justify-between gap-2 flex-wrap"><span className="recon-trace-label">Trạng thái:</span><span className="recon-trace-status-pill">{viewingTx.status}</span></div>
               <div className="flex justify-between gap-2 flex-wrap"><span className="recon-trace-label">Nội dung / Ghi chú:</span><span>{viewingTx.note || "Thanh toán thành công"}</span></div>
@@ -82,7 +82,7 @@ export function ReconciliationTraceModals(props: Props) {
             </div>
 
             <div className="recon-pnt-meta">
-              <div><strong>Đơn hàng:</strong> {viewingReturnReceipt.orderId} · <strong>Ngày nhận:</strong> {viewingReturnReceipt.returnedAt}</div>
+              <div><strong>Đơn hàng:</strong> {viewingReturnReceipt.orderId} · <strong>Ngày nhận:</strong> {formatDateTimeVi(viewingReturnReceipt.returnedAt)}</div>
               <div><strong>Nhân viên nghiệm thu:</strong> {viewingReturnReceipt.staffName} · <strong>Ghi chú:</strong> {viewingReturnReceipt.note || "Không có"}</div>
             </div>
 
@@ -164,18 +164,18 @@ export function ReconciliationTraceModals(props: Props) {
               </div>
               <div className="recon-print-doc-meta">
                 <div className="recon-print-doc-title">BIÊN BẢN ĐỐI SOÁT CỌC</div>
-                <div className="recon-print-doc-code">BBDS-{order.id}</div>
-                <div className="recon-print-doc-date">Ngày lập: {order.reconciledAt || new Date().toLocaleString("vi-VN")}</div>
+                <div className="recon-print-doc-code">BBDS-{order.displayCode || order.id}</div>
+                <div className="recon-print-doc-date">Ngày lập: {order.reconciledAt ? formatDateTimeVi(order.reconciledAt) : new Date().toLocaleString("vi-VN")}</div>
               </div>
             </div>
 
             {/* Thông tin đơn và khách hàng */}
             <div className="recon-print-info-box">
               <div className="grid grid-cols-2 gap-2 recon-print-info-grid">
-                <div><strong>Mã đơn thuê:</strong> {order.id}</div>
+                <div><strong>Mã đơn thuê:</strong> {order.displayCode || order.id}</div>
                 <div><strong>Khách hàng:</strong> {order.customerName}</div>
                 <div><strong>Số điện thoại:</strong> {order.customerPhone}</div>
-                <div><strong>Kỳ thuê:</strong> {order.pickupTime} → {order.returnTime}</div>
+                <div><strong>Kỳ thuê:</strong> {formatDateTimeVi(order.pickupTime)} → {formatDateTimeVi(order.returnTime)}</div>
               </div>
             </div>
 

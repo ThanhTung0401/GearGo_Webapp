@@ -1,7 +1,9 @@
 import { useApp } from "../../../context/AppContext";
-import { fmt, statusColors, Order } from "../../../store";
+import { fmt, formatDateTimeVi, statusColors, Order } from "../../../store";
 import { type StaffTab } from "../returnMapping";
 import { ORDER_STATUS_FILTERS, type OrdersQuickFilter } from "./useOrdersTab";
+import Pagination from "../../../components/ui/Pagination";
+import { usePagination } from "../../../hooks/usePagination";
 
 interface OrdersTableProps {
   app: ReturnType<typeof useApp>;
@@ -39,6 +41,7 @@ export function OrdersTable({
   handleOpenDetail,
   handleOpenNoShow,
 }: OrdersTableProps) {
+  const paging = usePagination(filtered, 8);
   return (
     <>
       {/* UC4.5: Thanh lọc nhanh vận hành trong ca */}
@@ -100,12 +103,21 @@ export function OrdersTable({
               </tr>
             </thead>
             <tbody>
-              {filtered.map((o) => {
+              {paging.pagedItems.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="text-center py-8 text-sm text-gray-500">
+                    Không tìm thấy đơn thuê nào phù hợp với bộ lọc hiện tại.
+                  </td>
+                </tr>
+              ) : (
+                paging.pagedItems.map((o) => {
                 const sc = statusColors[o.status] || { bg: "#F3F4F6", text: "#374151" };
                 const isOverdue = app.checkOrderOverdue(o).isOverdue;
                 const returnedCnt = o.assignedEquipment.filter((ae) => ae.returnedAt).length;
                 const isPartial = o.status === "Đang thuê" && returnedCnt > 0 && returnedCnt < o.assignedEquipment.length;
                 const canReportNoShow = ["Sẵn sàng nhận", "Đang chuẩn bị", "Đã xác nhận"].includes(o.status);
+                const isReturnFlow = ["Đang thuê", "Quá hạn", "Đã nhận trả", "Chờ đối soát", "Hoàn tất"].includes(o.status);
+                const isHandoverFlow = ["Đã xác nhận", "Đang chuẩn bị", "Sẵn sàng nhận"].includes(o.status);
 
                 return (
                   <tr key={o.id}>
@@ -126,9 +138,9 @@ export function OrdersTable({
                         : `${o.assignedEquipment.length} thiết bị đã gán`}
                     </td>
                     <td className="so-td-schedule">
-                      <div>📤 {o.pickupTime ? o.pickupTime.replace("T", " ").slice(0, 16) : "—"}</div>
+                      <div>📤 {formatDateTimeVi(o.pickupTime)}</div>
                       <div className={`so-schedule-return ${isOverdue ? "is-overdue" : ""}`}>
-                        📥 {o.returnTime ? o.returnTime.replace("T", " ").slice(0, 16) : "—"}
+                        📥 {formatDateTimeVi(o.returnTime)}
                       </div>
                     </td>
                     <td className="so-td-amount">{fmt(o.rental - o.discount + o.depositTotal)}</td>
@@ -148,20 +160,20 @@ export function OrdersTable({
                     </td>
                     <td>
                       <div className="flex items-center gap-1 flex-wrap">
-                        <button
-                          onClick={() =>
-                            openOrder(o.id, o.status === "Đang thuê" || o.status === "Chờ đối soát" ? "return" : "handover")
-                          }
-                          className="btn btn-primary btn-sm"
-                        >
-                          {o.status === "Đang thuê"
-                            ? "Nhận trả"
-                            : o.status === "Chờ đối soát"
-                            ? "Đối soát"
-                            : o.status === "Sẵn sàng nhận"
-                            ? "Bàn giao"
-                            : "Chuẩn bị"}
-                        </button>
+                        {(isHandoverFlow || isReturnFlow) && (
+                          <button
+                            onClick={() => openOrder(o.id, isReturnFlow ? "return" : "handover")}
+                            className="btn btn-primary btn-sm"
+                          >
+                            {o.status === "Đang thuê" || isOverdue
+                              ? "Nhận trả"
+                              : o.status === "Chờ đối soát" || o.status === "Đã nhận trả" || o.status === "Hoàn tất"
+                              ? "Đối soát"
+                              : o.status === "Sẵn sàng nhận"
+                              ? "Bàn giao"
+                              : "Chuẩn bị"}
+                          </button>
+                        )}
 
                         <button type="button" onClick={() => handleOpenDetail(o)} className="so-btn-soft">
                           Hồ sơ
@@ -181,11 +193,22 @@ export function OrdersTable({
                     </td>
                   </tr>
                 );
-              })}
+              })
+              )}
             </tbody>
           </table>
         </div>
       </div>
+
+      <Pagination
+        page={paging.page}
+        totalPages={paging.totalPages}
+        totalItems={paging.totalItems}
+        startIndex={paging.startIndex}
+        endIndex={paging.endIndex}
+        onPageChange={paging.setPage}
+        itemLabel="đơn thuê"
+      />
     </>
   );
 }

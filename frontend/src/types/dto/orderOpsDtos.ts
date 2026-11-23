@@ -72,6 +72,9 @@ export interface DonVanHanhTomTatBackend {
   soDongSanPham: number;
   tongThietBiCanGan: number;
   tongThietBiDaGan: number;
+  tongTienThueTruocGiam?: number;
+  tongTienGiam?: number;
+  tongTienCoc?: number;
 }
 
 export interface DonVanHanhChiTietBackend {

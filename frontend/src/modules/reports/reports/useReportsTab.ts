@@ -47,8 +47,9 @@ export function useReportsTab(app: ReturnType<typeof useApp>) {
   useEffect(() => {
     if (!isRealApi || isDateInvalid) return;
     let active = true;
-    const tuNgay = fromDate ? new Date(`${fromDate}T00:00:00`).toISOString() : undefined;
-    const denNgay = toDate ? new Date(`${toDate}T23:59:59`).toISOString() : undefined;
+    // Gửi thẳng chuỗi ngày YYYY-MM-DD (không đổi sang UTC ISO gây lùi 1 ngày ở múi giờ VN UTC+7)
+    const tuNgay = fromDate || undefined;
+    const denNgay = toDate || undefined;
     const maNhaCungCap =
       supplierFilter !== "all" && !Number.isNaN(Number(supplierFilter)) ? Number(supplierFilter) : undefined;
 
@@ -58,14 +59,14 @@ export function useReportsTab(app: ReturnType<typeof useApp>) {
       reportApi.layBaoCaoVanHanh({ tuNgay, denNgay }),
       reportApi.layHienTrangKho(),
       reportApi.layThongKeBaoTri({ tuNgay, denNgay }),
-      reportApi.layDoanhThuHoanTat({ tuNgay, denNgay, soMoiTrang: 50 }),
-      reportApi.layPhiHuy({ tuNgay, denNgay, soMoiTrang: 50 }),
-      reportApi.layDieuChinhDoanhThu({ tuNgay, denNgay, soMoiTrang: 50 }),
-      reportApi.layThuHoan({ tuNgay, denNgay, soMoiTrang: 50 }),
-      reportApi.layCocChuaTatToan({ soMoiTrang: 50 }),
+      reportApi.layDoanhThuHoanTat({ tuNgay, denNgay, soMoiTrang: 200 }),
+      reportApi.layPhiHuy({ tuNgay, denNgay, soMoiTrang: 200 }),
+      reportApi.layDieuChinhDoanhThu({ tuNgay, denNgay, soMoiTrang: 200 }),
+      reportApi.layThuHoan({ tuNgay, denNgay, soMoiTrang: 200 }),
+      reportApi.layCocChuaTatToan({ soMoiTrang: 200 }),
       reportApi.layKhoanCanXuLy(),
-      reportApi.layNhapHang({ tuNgay, denNgay, maNhaCungCap, soMoiTrang: 50 }),
-      reportApi.layDieuChinhNhap({ tuNgay, denNgay, maNhaCungCap, soMoiTrang: 50 }),
+      reportApi.layNhapHang({ tuNgay, denNgay, maNhaCungCap, soMoiTrang: 200 }),
+      reportApi.layDieuChinhNhap({ tuNgay, denNgay, maNhaCungCap, soMoiTrang: 200 }),
       reportApi.layLichSuDonGia({ tuNgay, denNgay, maNhaCungCap }),
     ])
       .then((results) => {
@@ -108,8 +109,8 @@ export function useReportsTab(app: ReturnType<typeof useApp>) {
     }
     setExporting(true);
     try {
-      const tuNgay = fromDate ? new Date(`${fromDate}T00:00:00`).toISOString() : undefined;
-      const denNgay = toDate ? new Date(`${toDate}T23:59:59`).toISOString() : undefined;
+      const tuNgay = fromDate || undefined;
+      const denNgay = toDate || undefined;
       const maNhaCungCap =
         supplierFilter !== "all" && !Number.isNaN(Number(supplierFilter)) ? Number(supplierFilter) : undefined;
       if (reportSubTab === "operational") {

@@ -1,4 +1,4 @@
-import type { StaffAccount } from "../../../store";
+import { formatDateVi, type StaffAccount } from "../../../store";
 
 interface BackendStaffItem {
   maNhanVien: number;
@@ -37,15 +37,12 @@ export function mapBackendStaffItems(items: BackendStaffItem[]) {
       status: isLocked ? "locked" : "active",
       lockedReason:
         nv.trangThaiLamViec === "DaNghiViec"
-          ? `Nghỉ việc từ ${nv.ngayNghiViec || "đã nghỉ"}`
+          ? `Nghỉ việc từ ${nv.ngayNghiViec ? formatDateVi(nv.ngayNghiViec) : "đã nghỉ"}`
           : nv.trangThaiTaiKhoan === "BiKhoa"
           ? "Tài khoản bị khóa"
           : undefined,
-      permissions:
-        nv.vaiTro === "QuanTriVien"
-          ? ["Quản lý kho thiết bị", "Bàn giao & Nhận trả", "Lập phụ phí & Đối soát", "Xem báo cáo doanh thu", "Quản lý khuyến mãi"]
-          : ["Quản lý kho thiết bị", "Bàn giao & Nhận trả"],
-      createdAt: nv.ngayVaoLam || "01/01/2026",
+      permissions: nv.vaiTro === "QuanTriVien" ? ["Toàn quyền quản trị hệ thống"] : [],
+      createdAt: nv.ngayVaoLam ? formatDateVi(nv.ngayVaoLam) : "01/01/2026",
     };
   });
 

@@ -1,7 +1,10 @@
+import { useState } from "react";
 import { useApp } from "../../../context/AppContext";
-import { fmt, Equipment } from "../../../store";
+import { fmt, formatDateVi, Equipment } from "../../../store";
 import EquipmentLifecycleModal from "../../../components/EquipmentLifecycleModal";
 import InventoryAuditModal from "../../../components/InventoryAuditModal";
+import Pagination from "../../../components/ui/Pagination";
+import { usePagination } from "../../../hooks/usePagination";
 import { EQUIPMENT_STATUS_OPTIONS, EQUIPMENT_STATUS_STYLE } from "./useEquipmentTab";
 
 interface InventorySubTabProps {
@@ -44,9 +47,31 @@ export function InventorySubTab({
   handleOpenEquipSchedule,
   handleTransfer,
 }: InventorySubTabProps) {
+  const [searchTerm, setSearchTerm] = useState("");
+  const q = searchTerm.trim().toLowerCase();
+  const searchedList = q
+    ? filtered.filter((e) => {
+        const p = app.products.find((pr) => pr.id === e.productId);
+        return (
+          (e.displayCode || e.id).toLowerCase().includes(q) ||
+          (p?.name || "").toLowerCase().includes(q) ||
+          (e.condition || "").toLowerCase().includes(q)
+        );
+      })
+    : filtered;
+  const paging = usePagination(searchedList, 10);
+
   return (
     <div>
       <div className="flex gap-3 mb-4 flex-wrap items-center">
+        <input
+          type="text"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          placeholder="🔍 Tìm mã serial, tên sản phẩm..."
+          aria-label="Tìm thiết bị trong kho"
+          className="form-input min-w-[200px] flex-1"
+        />
         <select
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
@@ -94,59 +119,77 @@ export function InventorySubTab({
             </tr>
           </thead>
           <tbody>
-            {filtered.map((e) => {
-              const p = app.products.find((pr) => pr.id === e.productId);
-              const origP = app.products.find((pr) => pr.id === e.originalProductId);
-              const moved = e.productId !== e.originalProductId;
-              const st = EQUIPMENT_STATUS_STYLE[e.equipmentStatus] || { bg: "#F3F4F6", text: "#374151" };
-              return (
-                <tr key={e.id}>
-                  <td className="so-td-mono-md">{e.displayCode || e.id}</td>
-                  <td>
-                    <div className="so-td-semibold">{p?.name}</div>
-                    {moved && <div className="so-equip-moved">↳ Giáng cấp/chuyển từ {origP?.name}</div>}
-                  </td>
-                  <td className="so-td-mono-muted">{e.importReceiptId}</td>
-                  <td className="so-td-muted-sm">{e.importDate}</td>
-                  <td className="so-td-muted">{e.condition}</td>
-                  <td>
-                    {/* Màu trạng thái thiết bị lấy động từ EQUIPMENT_STATUS_STYLE */}
-                    <span className="so-status-pill-md" style={{ background: st.bg, color: st.text }}>
-                      {e.equipmentStatus}
-                    </span>
-                  </td>
-                  <td className="so-td-mono-center">{e.rentCount}</td>
-                  <td>
-                    <div className="flex gap-1">
-                      <button onClick={() => setViewingLifecycle(e)} className="so-btn-outline-forest">
-                        🔍 Sổ đời
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => void handleOpenEquipSchedule(e)}
-                        className="so-btn-info-sm"
-                      >
-                        📅 Lịch bận
-                      </button>
-                      {e.equipmentStatus === "Sẵn sàng" && (
-                        <button
-                          onClick={() => {
-                            setTransferModal(e);
-                            setTargetProductId("");
-                          }}
-                          className="so-btn-outline-sm"
-                        >
-                          Chuyển loại
+            {paging.pagedItems.length === 0 ? (
+              <tr>
+                <td colSpan={8} className="text-center py-8 text-sm text-gray-500">
+                  Không tìm thấy thiết bị nào phù hợp.
+                </td>
+              </tr>
+            ) : (
+              paging.pagedItems.map((e) => {
+                const p = app.products.find((pr) => pr.id === e.productId);
+                const origP = app.products.find((pr) => pr.id === e.originalProductId);
+                const moved = e.productId !== e.originalProductId;
+                const st = EQUIPMENT_STATUS_STYLE[e.equipmentStatus] || { bg: "#F3F4F6", text: "#374151" };
+                return (
+                  <tr key={e.id}>
+                    <td className="so-td-mono-md">{e.displayCode || e.id}</td>
+                    <td>
+                      <div className="so-td-semibold">{p?.name}</div>
+                      {moved && <div className="so-equip-moved">↳ Giáng cấp/chuyển từ {origP?.name}</div>}
+                    </td>
+                    <td className="so-td-mono-muted">{e.importReceiptId || "—"}</td>
+                    <td className="so-td-muted-sm">{formatDateVi(e.importDate)}</td>
+                    <td className="so-td-muted">{e.condition}</td>
+                    <td>
+                      {/* Màu trạng thái thiết bị lấy động từ EQUIPMENT_STATUS_STYLE */}
+                      <span className="so-status-pill-md" style={{ background: st.bg, color: st.text }}>
+                        {e.equipmentStatus}
+                      </span>
+                    </td>
+                    <td className="so-td-mono-center">{e.rentCount}</td>
+                    <td>
+                      <div className="flex gap-1">
+                        <button onClick={() => setViewingLifecycle(e)} className="so-btn-outline-forest">
+                          🔍 Sổ đời
                         </button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
+                        <button
+                          type="button"
+                          onClick={() => void handleOpenEquipSchedule(e)}
+                          className="so-btn-info-sm"
+                        >
+                          📅 Lịch bận
+                        </button>
+                        {e.equipmentStatus === "Sẵn sàng" && (
+                          <button
+                            onClick={() => {
+                              setTransferModal(e);
+                              setTargetProductId("");
+                            }}
+                            className="so-btn-outline-sm"
+                          >
+                            Chuyển loại
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })
+            )}
           </tbody>
         </table>
       </div>
+
+      <Pagination
+        page={paging.page}
+        totalPages={paging.totalPages}
+        totalItems={paging.totalItems}
+        startIndex={paging.startIndex}
+        endIndex={paging.endIndex}
+        onPageChange={paging.setPage}
+        itemLabel="thiết bị"
+      />
 
       {/* Modal chuyển loại thiết bị (giáng cấp cũ sang tiết kiệm) */}
       {transferModal && (

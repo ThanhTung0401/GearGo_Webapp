@@ -1,5 +1,7 @@
-import { fmt, type ImportReceipt, type Order } from "../../store";
+import { fmt, formatDateTimeVi, type ImportReceipt, type Order } from "../../store";
 import Icon from "../../components/Icon";
+import Pagination from "../../components/ui/Pagination";
+import { usePagination } from "../../hooks/usePagination";
 
 export interface DrilldownData {
   title: string;
@@ -21,6 +23,7 @@ export function ReportsDrilldownModals({
   viewingReceipt,
   setViewingReceipt,
 }: ReportsDrilldownModalsProps) {
+  const drillPaging = usePagination(drilldownData?.items ?? [], 8);
   return (
     <>
       {drilldownData && (
@@ -57,20 +60,29 @@ export function ReportsDrilldownModals({
                       </tr>
                     </thead>
                     <tbody>
-                      {drilldownData.items.map((o: Order) => (
+                      {drillPaging.pagedItems.map((o: Order) => (
                         <tr key={o.id}>
                           <td className="adm-cell-code">{o.displayCode ?? o.id}</td>
                           <td>{o.customerName} ({o.customerPhone})</td>
                           <td>
                             <span className="adm-pill is-neutral">{o.status}</span>
                           </td>
-                          <td className="adm-hint-text">{o.pickupTime}</td>
-                          <td className="adm-hint-text">{o.returnTime}</td>
-                          <td className="adm-cell-mono font-bold">{fmt(o.rental - o.discount)}</td>
+                          <td className="adm-hint-text whitespace-nowrap">{formatDateTimeVi(o.pickupTime)}</td>
+                          <td className="adm-hint-text whitespace-nowrap">{formatDateTimeVi(o.returnTime)}</td>
+                          <td className="adm-cell-mono font-bold">{fmt(Math.max(0, o.rental - o.discount))}</td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
+                  <Pagination
+                    page={drillPaging.page}
+                    totalPages={drillPaging.totalPages}
+                    totalItems={drillPaging.totalItems}
+                    startIndex={drillPaging.startIndex}
+                    endIndex={drillPaging.endIndex}
+                    onPageChange={drillPaging.setPage}
+                    itemLabel="đơn thuê"
+                  />
                 </div>
               ) : (
                 <div className="adm-table-scroll">
@@ -86,7 +98,7 @@ export function ReportsDrilldownModals({
                       </tr>
                     </thead>
                     <tbody>
-                      {drilldownData.items.map((dm: any, i: number) => (
+                      {drillPaging.pagedItems.map((dm: any, i: number) => (
                         <tr key={i}>
                           <td className="adm-cell-code">{dm.orderId}</td>
                           <td className="adm-cell-mono font-bold">{dm.equipmentId}</td>
@@ -98,6 +110,15 @@ export function ReportsDrilldownModals({
                       ))}
                     </tbody>
                   </table>
+                  <Pagination
+                    page={drillPaging.page}
+                    totalPages={drillPaging.totalPages}
+                    totalItems={drillPaging.totalItems}
+                    startIndex={drillPaging.startIndex}
+                    endIndex={drillPaging.endIndex}
+                    onPageChange={drillPaging.setPage}
+                    itemLabel="bản ghi"
+                  />
                 </div>
               )}
             </div>
@@ -117,7 +138,7 @@ export function ReportsDrilldownModals({
                 <h3 className="adm-card-title">
                   Chứng từ phiếu nhập kho — {viewingReceipt.displayCode ?? viewingReceipt.id}
                 </h3>
-                <div className="adm-hint-text text-[0.75rem]">Nhà cung cấp: {viewingReceipt.supplierName} · Xác nhận: {viewingReceipt.confirmedAt || viewingReceipt.createdAt}</div>
+                <div className="adm-hint-text text-[0.75rem]">Nhà cung cấp: {viewingReceipt.supplierName} · Xác nhận: {formatDateTimeVi(viewingReceipt.confirmedAt || viewingReceipt.createdAt)}</div>
               </div>
               <button onClick={() => setViewingReceipt(null)} className="adm-btn-ghost">
                 <Icon name="close" size={20} />

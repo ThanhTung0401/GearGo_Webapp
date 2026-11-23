@@ -1,5 +1,7 @@
 import { useApp } from "../../../context/AppContext";
-import { ImportReceipt, Supplier } from "../../../store";
+import { formatDateTimeVi, ImportReceipt, Supplier } from "../../../store";
+import Pagination from "../../../components/ui/Pagination";
+import { usePagination } from "../../../hooks/usePagination";
 
 interface ImportSubTabProps {
   app: ReturnType<typeof useApp>;
@@ -35,6 +37,7 @@ export function ImportSubTab({
         r.createdBy.toLowerCase().includes(q);
       return matchStatus && matchQ;
     });
+  const paging = usePagination(visibleReceipts, 8);
 
   return (
     <div>
@@ -94,62 +97,80 @@ export function ImportSubTab({
             </tr>
           </thead>
           <tbody>
-            {visibleReceipts.map((r) => {
-              const totalQty = r.lines.reduce((s, l) => s + l.quantity, 0);
-              const supplier = app.suppliers.find((s) => s.id === r.supplierId || s.displayCode === r.supplierId);
-              /* Ánh xạ trạng thái phiếu nhập sang modifier CSS hữu hạn */
-              const importStatusMod =
-                r.status === "Đã nhập kho"
-                  ? "is-done"
-                  : r.status === "Đã hủy"
-                  ? "is-cancelled"
-                  : "is-progress";
-              return (
-                <tr key={r.id}>
-                  <td className="so-td-mono-lg">{r.displayCode ?? r.id}</td>
-                  <td>
-                    <div className="so-supplier-name">{r.supplierName}</div>
-                    {supplier && (
-                      <button
-                        type="button"
-                        onClick={() => setViewingSupplierProfile(supplier)}
-                        className="so-link-btn-sm"
-                      >
-                        👁 Xem hồ sơ NCC (UC7.3)
-                      </button>
-                    )}
-                  </td>
-                  <td className="so-td-muted-sm">
-                    <div>{r.createdAt}</div>
-                    <div className="so-import-by">Bởi {r.createdBy}</div>
-                  </td>
-                  <td>
-                    <strong>{r.lines.length}</strong> dòng · <strong>{totalQty}</strong> thiết bị
-                  </td>
-                  <td>
-                    <span className={`so-status-badge is-wide ${importStatusMod}`}>{r.status}</span>
-                  </td>
-                  <td>
-                    {r.status === "Nháp" ? (
-                      <button
-                        type="button"
-                        onClick={() => setInspectingImportReceipt(r)}
-                        className="so-btn-receive"
-                      >
-                        📦 Kiểm nhận thực tế (UC7.7) →
-                      </button>
-                    ) : (
-                      <span className="so-import-done">
-                        {r.status === "Đã nhập kho" ? `✓ Đã nhập kho lúc ${r.confirmedAt}` : "Phiếu đã hủy"}
-                      </span>
-                    )}
-                  </td>
-                </tr>
-              );
-            })}
+            {paging.pagedItems.length === 0 ? (
+              <tr>
+                <td colSpan={6} className="text-center py-8 text-sm text-gray-500">
+                  Không có phiếu nhập kho nào phù hợp.
+                </td>
+              </tr>
+            ) : (
+              paging.pagedItems.map((r) => {
+                const totalQty = r.lines.reduce((s, l) => s + l.quantity, 0);
+                const supplier = app.suppliers.find((s) => s.id === r.supplierId || s.displayCode === r.supplierId);
+                /* Ánh xạ trạng thái phiếu nhập sang modifier CSS hữu hạn */
+                const importStatusMod =
+                  r.status === "Đã nhập kho"
+                    ? "is-done"
+                    : r.status === "Đã hủy"
+                    ? "is-cancelled"
+                    : "is-progress";
+                return (
+                  <tr key={r.id}>
+                    <td className="so-td-mono-lg">{r.displayCode ?? r.id}</td>
+                    <td>
+                      <div className="so-supplier-name">{r.supplierName}</div>
+                      {supplier && (
+                        <button
+                          type="button"
+                          onClick={() => setViewingSupplierProfile(supplier)}
+                          className="so-link-btn-sm"
+                        >
+                          👁 Xem hồ sơ NCC (UC7.3)
+                        </button>
+                      )}
+                    </td>
+                    <td className="so-td-muted-sm">
+                      <div>{formatDateTimeVi(r.createdAt)}</div>
+                      <div className="so-import-by">Bởi {r.createdBy}</div>
+                    </td>
+                    <td>
+                      <strong>{r.lines.length}</strong> dòng · <strong>{totalQty}</strong> thiết bị
+                    </td>
+                    <td>
+                      <span className={`so-status-badge is-wide ${importStatusMod}`}>{r.status}</span>
+                    </td>
+                    <td>
+                      {r.status === "Nháp" ? (
+                        <button
+                          type="button"
+                          onClick={() => setInspectingImportReceipt(r)}
+                          className="so-btn-receive"
+                        >
+                          📦 Kiểm nhận thực tế (UC7.7) →
+                        </button>
+                      ) : (
+                        <span className="so-import-done">
+                          {r.status === "Đã nhập kho" ? `✓ Đã nhập kho lúc ${formatDateTimeVi(r.confirmedAt)}` : "Phiếu đã hủy"}
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })
+            )}
           </tbody>
         </table>
       </div>
+
+      <Pagination
+        page={paging.page}
+        totalPages={paging.totalPages}
+        totalItems={paging.totalItems}
+        startIndex={paging.startIndex}
+        endIndex={paging.endIndex}
+        onPageChange={paging.setPage}
+        itemLabel="phiếu nhập"
+      />
     </div>
   );
 }

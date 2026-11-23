@@ -92,8 +92,11 @@ export function useSupplierProfile(supplier: Supplier, app: ReturnType<typeof us
           const dateStr = pn.ngayXacNhan || pn.ngayNhapThucTe || pn.ngayLap;
           if (existing) {
             existing.totalQty += Number(ct.soLuong ?? 0);
-            existing.lastUnitPrice = Number(ct.donGiaNhap ?? 0);
-            existing.lastDate = dateStr;
+            // Chỉ cập nhật đơn giá & ngày gần nhất nếu phiếu hiện tại mới hơn (backend trả DESC)
+            if (dateStr && (!existing.lastDate || dateStr > existing.lastDate)) {
+              existing.lastUnitPrice = Number(ct.donGiaNhap ?? 0);
+              existing.lastDate = dateStr;
+            }
           } else {
             map.set(key, {
               productId: key,

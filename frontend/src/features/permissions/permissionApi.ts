@@ -23,6 +23,17 @@ export interface QuyenCuaVaiTroResponse {
   quyenCoDuoc: string[];
 }
 
+export interface QuyenCuaNhanVienResponse {
+  maTaiKhoan: number;
+  maNhanVien?: number | null;
+  hoTen: string;
+  email: string;
+  roleName: string;
+  coPhanQuyenRieng: boolean;
+  quyenCoDuoc: string[];
+  quyenTheoVaiTro: string[];
+}
+
 export interface QuyenCuaToiResponse {
   maTaiKhoan: number;
   roleName: string;
@@ -38,35 +49,36 @@ function authHeaders(): Record<string, string> {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
-async function apiGet<T>(path: string): Promise<T | null> {
-  if (!isRealApiEnabled()) return null;
+// Đọc thông điệp lỗi chuẩn hóa từ Backend để báo lỗi thật thay vì rơi im lặng về mock
+async function extractApiError(res: Response): Promise<string> {
   try {
-    const res = await fetch(`${API_BASE}${path}`, { headers: authHeaders(), credentials: "include" });
-    if (!res.ok) return null;
-    return (await res.json()) as T;
+    const data = (await res.json()) as { thongDiep?: string; ThongDiep?: string; message?: string; maLoi?: string };
+    return data.thongDiep ?? data.ThongDiep ?? data.message ?? `Lỗi HTTP ${res.status}`;
   } catch {
-    return null;
+    return `Lỗi HTTP ${res.status}`;
   }
 }
 
-async function apiPut<T>(path: string, body: unknown): Promise<T | null> {
+async function apiRequest<T>(path: string, method: "GET" | "PUT" | "DELETE", body?: unknown): Promise<T | null> {
   if (!isRealApiEnabled()) return null;
-  try {
-    const res = await fetch(`${API_BASE}${path}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json", ...authHeaders() },
-      credentials: "include",
-      body: JSON.stringify(body),
-    });
-    if (!res.ok) return null;
-    return (await res.json()) as T;
-  } catch {
-    return null;
+  const res = await fetch(`${API_BASE}${path}`, {
+    method,
+    headers: {
+      ...(body !== undefined ? { "Content-Type": "application/json" } : {}),
+      ...authHeaders(),
+    },
+    credentials: "include",
+    ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
+  });
+  if (!res.ok) {
+    throw new Error(await extractApiError(res));
   }
+  return (await res.json()) as T;
 }
 
 interface MockShape {
   roles: Record<string, { version: number; permissions: string[] }>;
+  staffOverrides?: Record<string, string[]>;
   currentRole: string;
 }
 
@@ -131,6 +143,7 @@ function loadMock(): MockShape {
       NhanVien: { version: 1, permissions: ["DonThue.Xem", "DonThue.CapNhat", "SanPham.Xem", "DanhMuc.Xem", "KhuyenMai.Xem", "ChinhSach.Xem", "BaoCao.Xem"] },
       KhachHang: { version: 1, permissions: [] },
     },
+    staffOverrides: {},
     currentRole: "QuanTriVien",
   };
   saveMock(seeded);
@@ -138,19 +151,21 @@ function loadMock(): MockShape {
 }
 
 export async function fetchQuyenCuaToi(): Promise<QuyenCuaToiResponse | null> {
-  const real = await apiGet<QuyenCuaToiResponse>("/api/auth/quyen-cua-toi");
-  if (real) return real;
-  if (!isRealApiEnabled()) {
-    const m = loadMock();
-    const roleData = m.roles[m.currentRole] ?? { version: 1, permissions: [] };
-    return { maTaiKhoan: 1, roleName: m.currentRole, version: roleData.version, quyen: roleData.permissions };
+  if (isRealApiEnabled()) {
+    try {
+      return await apiRequest<QuyenCuaToiResponse>("/api/auth/quyen-cua-toi", "GET");
+    } catch {
+      return null;
+    }
   }
-  return null;
+  const m = loadMock();
+  const roleData = m.roles[m.currentRole] ?? { version: 1, permissions: [] };
+  return { maTaiKhoan: 1, roleName: m.currentRole, version: roleData.version, quyen: roleData.permissions };
 }
 
 export const permissionApi = {
   async listRoles(): Promise<VaiTroResponse[]> {
-    const real = await apiGet<VaiTroResponse[]>("/api/phan-quyen/vai-tro");
+    const real = await apiRequest<VaiTroResponse[]>("/api/phan-quyen/vai-tro", "GET");
     if (real) return real;
     const m = loadMock();
     return Object.entries(m.roles).map(([roleName, v]) => ({
@@ -162,12 +177,12 @@ export const permissionApi = {
   },
 
   async catalog(): Promise<QuyenCatalogResponse[]> {
-    const real = await apiGet<QuyenCatalogResponse[]>("/api/phan-quyen/quyen");
+    const real = await apiRequest<QuyenCatalogResponse[]>("/api/phan-quyen/quyen", "GET");
     return real ?? CATALOG_SEED;
   },
 
   async getRolePermissions(roleName: string): Promise<QuyenCuaVaiTroResponse> {
-    const real = await apiGet<QuyenCuaVaiTroResponse>(`/api/phan-quyen/vai-tro/${encodeURIComponent(roleName)}`);
+    const real = await apiRequest<QuyenCuaVaiTroResponse>(`/api/phan-quyen/vai-tro/${encodeURIComponent(roleName)}`, "GET");
     if (real) return real;
     const m = loadMock();
     const r = m.roles[roleName] ?? { version: 0, permissions: [] };
@@ -175,7 +190,7 @@ export const permissionApi = {
   },
 
   async setRolePermissions(roleName: string, quyen: string[]): Promise<QuyenCuaVaiTroResponse> {
-    const real = await apiPut<QuyenCuaVaiTroResponse>(`/api/phan-quyen/vai-tro/${encodeURIComponent(roleName)}`, { quyen });
+    const real = await apiRequest<QuyenCuaVaiTroResponse>(`/api/phan-quyen/vai-tro/${encodeURIComponent(roleName)}`, "PUT", { quyen });
     if (real) return real;
     const m = loadMock();
     const prev = m.roles[roleName] ?? { version: 0, permissions: [] };
@@ -184,8 +199,43 @@ export const permissionApi = {
     return { roleName, version: m.roles[roleName].version, quyenCoDuoc: m.roles[roleName].permissions };
   },
 
+  async getStaffPermissions(id: number): Promise<QuyenCuaNhanVienResponse> {
+    const real = await apiRequest<QuyenCuaNhanVienResponse>(`/api/phan-quyen/nhan-vien/${id}`, "GET");
+    if (real) return real;
+    const m = loadMock();
+    const rolePerms = m.roles.NhanVien?.permissions ?? [];
+    const ov = m.staffOverrides?.[String(id)];
+    return {
+      maTaiKhoan: id,
+      hoTen: `Nhân viên #${id}`,
+      email: "",
+      roleName: "NhanVien",
+      coPhanQuyenRieng: Boolean(ov),
+      quyenCoDuoc: ov ? [...ov].sort() : [...rolePerms].sort(),
+      quyenTheoVaiTro: [...rolePerms].sort(),
+    };
+  },
+
+  async setStaffPermissions(id: number, quyen: string[]): Promise<QuyenCuaNhanVienResponse> {
+    const real = await apiRequest<QuyenCuaNhanVienResponse>(`/api/phan-quyen/nhan-vien/${id}`, "PUT", { quyen });
+    if (real) return real;
+    const m = loadMock();
+    m.staffOverrides = { ...(m.staffOverrides ?? {}), [String(id)]: [...new Set(quyen)].sort() };
+    saveMock(m);
+    return this.getStaffPermissions(id);
+  },
+
+  async resetStaffPermissions(id: number): Promise<QuyenCuaNhanVienResponse> {
+    const real = await apiRequest<QuyenCuaNhanVienResponse>(`/api/phan-quyen/nhan-vien/${id}`, "DELETE");
+    if (real) return real;
+    const m = loadMock();
+    if (m.staffOverrides) delete m.staffOverrides[String(id)];
+    saveMock(m);
+    return this.getStaffPermissions(id);
+  },
+
   async myPermissions(): Promise<QuyenCuaToiResponse> {
-    const real = await apiGet<QuyenCuaToiResponse>("/api/auth/quyen-cua-toi");
+    const real = await apiRequest<QuyenCuaToiResponse>("/api/auth/quyen-cua-toi", "GET");
     if (real) return real;
     const m = loadMock();
     const r = m.roles[m.currentRole] ?? { version: 0, permissions: [] };

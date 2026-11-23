@@ -58,7 +58,7 @@ export function useDashboardTab(app: ReturnType<typeof useApp>) {
     return () => {
       active = false;
     };
-  }, [isRealApi, app.orders.length, app.equipment.length]);
+  }, [isRealApi]);
 
   const { has, data: myPerm } = usePermissions();
 

@@ -1,5 +1,9 @@
 import Icon from "../../../components/Icon";
 import { fmt, type CustomerAccount } from "../../../store";
+import { Can } from "../../../features/permissions/PermissionsContext";
+import { Permissions } from "../../../constants/permissions";
+import Pagination from "../../../components/ui/Pagination";
+import { usePagination } from "../../../hooks/usePagination";
 
 interface CustomersTableProps {
   totalCount: number;
@@ -31,6 +35,7 @@ export function CustomersTable({
   onRequestLock,
   onUnlock,
 }: CustomersTableProps) {
+  const paging = usePagination(filtered, 8);
   return (
     <>
       <div className="flex justify-between items-center mb-4 flex-wrap gap-3">
@@ -104,7 +109,7 @@ export function CustomersTable({
                   </td>
                 </tr>
               ) : (
-                filtered.map((c) => (
+                paging.pagedItems.map((c) => (
                   <tr key={c.id}>
                     <td className="adm-cell-code text-[0.82rem]">
                       {c.id}
@@ -145,18 +150,20 @@ export function CustomersTable({
                         >
                           Đơn thuê
                         </button>
-                        <button
-                          onClick={() => {
-                            if (c.status === "active") {
-                              onRequestLock(c);
-                            } else {
-                              onUnlock(c);
-                            }
-                          }}
-                          className={c.status === "active" ? "adm-btn-danger-outline" : "adm-btn-forest-solid"}
-                        >
-                          {c.status === "active" ? "Khóa" : "Mở"}
-                        </button>
+                        <Can perm={Permissions.TaiKhoan_Quan}>
+                          <button
+                            onClick={() => {
+                              if (c.status === "active") {
+                                onRequestLock(c);
+                              } else {
+                                onUnlock(c);
+                              }
+                            }}
+                            className={c.status === "active" ? "adm-btn-danger-outline" : "adm-btn-forest-solid"}
+                          >
+                            {c.status === "active" ? "Khóa" : "Mở"}
+                          </button>
+                        </Can>
                       </div>
                     </td>
                   </tr>
@@ -166,6 +173,16 @@ export function CustomersTable({
           </table>
         </div>
       </div>
+
+      <Pagination
+        page={paging.page}
+        totalPages={paging.totalPages}
+        totalItems={paging.totalItems}
+        startIndex={paging.startIndex}
+        endIndex={paging.endIndex}
+        onPageChange={paging.setPage}
+        itemLabel="khách hàng"
+      />
     </>
   );
 }

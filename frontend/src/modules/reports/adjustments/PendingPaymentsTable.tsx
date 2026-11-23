@@ -1,5 +1,7 @@
-﻿import { fmt } from "../../../store";
+import { fmt, formatBackendEnum, formatDateTimeVi } from "../../../store";
 import { type GiaoDichCanDoiChieuBackend } from "../../../services/api/paymentApi";
+import Pagination from "../../../components/ui/Pagination";
+import { usePagination } from "../../../hooks/usePagination";
 
 interface PendingPaymentsTableProps {
   pendingPayments: GiaoDichCanDoiChieuBackend[];
@@ -8,13 +10,14 @@ interface PendingPaymentsTableProps {
 }
 
 /**
- * Bảng danh sách giao dịch thanh toán ngoại lệ đang chờ đối chiếu (/api/thanh-toan/can-doi-chieu).
+ * Bảng danh sách giao dịch thanh toán ngoại lệ đang chờ đối chiếu có phân trang (/api/thanh-toan/can-doi-chieu).
  */
 export function PendingPaymentsTable({
   pendingPayments,
   payLoading,
   onSelectReconcile,
 }: PendingPaymentsTableProps) {
+  const paging = usePagination(pendingPayments, 8);
   return (
     <div className="adm-table-wrap bg-[#F8F6F0]">
       <div className="px-4.5 py-3.5 border-b border-[var(--color-bone)] flex justify-between items-center">
@@ -43,14 +46,14 @@ export function PendingPaymentsTable({
                   Đang tải danh sách giao dịch cần đối chiếu...
                 </td>
               </tr>
-            ) : pendingPayments.length === 0 ? (
+            ) : paging.pagedItems.length === 0 ? (
               <tr>
                 <td colSpan={8} className="adm-table-empty text-[#1B3F2F]">
                   Không có giao dịch thanh toán ngoại lệ nào đang chờ đối chiếu.
                 </td>
               </tr>
             ) : (
-              pendingPayments.map((g) => (
+              paging.pagedItems.map((g) => (
                 <tr key={g.maThanhToan}>
                   <td className="adm-cell-code">
                     {g.maYeuCau}
@@ -63,11 +66,11 @@ export function PendingPaymentsTable({
                   <td className="text-[#374151]">{g.lyDoCanDoiChieu || "Chênh lệch đối soát cổng thanh toán"}</td>
                   <td>
                     <span className="adm-pill is-warning">
-                      {g.trangThaiDoiChieu || g.trangThai}
+                      {formatBackendEnum(g.trangThaiDoiChieu || g.trangThai)}
                     </span>
                   </td>
-                  <td className="adm-hint-text text-[0.74rem]">
-                    {new Date(g.thoiDiemTao).toLocaleString("vi-VN")}
+                  <td className="adm-hint-text text-[0.74rem] whitespace-nowrap">
+                    {formatDateTimeVi(g.thoiDiemTao)}
                   </td>
                   <td>
                     <button
@@ -83,6 +86,17 @@ export function PendingPaymentsTable({
             )}
           </tbody>
         </table>
+      </div>
+      <div className="px-4 pb-3 bg-white">
+        <Pagination
+          page={paging.page}
+          totalPages={paging.totalPages}
+          totalItems={paging.totalItems}
+          startIndex={paging.startIndex}
+          endIndex={paging.endIndex}
+          onPageChange={paging.setPage}
+          itemLabel="giao dịch"
+        />
       </div>
     </div>
   );

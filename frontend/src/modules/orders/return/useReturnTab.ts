@@ -205,6 +205,16 @@ export function useReturnTab(
     setReturnBusy, setReturnError, setReturnSuccess, loadReturnData, hydrateOperationalOrder,
   });
 
+  const resetSelectionState = () => {
+    setSelectedItemsToReturn({});
+    setItemConditions({});
+    setItemNotes({});
+    setItemSurcharges({});
+    setReturnStaffNote("");
+    setRejectingSurchargeId(null);
+    setRejectReason("");
+  };
+
   return {
     selectedItemsToReturn, setSelectedItemsToReturn, itemConditions, itemNotes, setItemNotes,
     itemSurcharges, setItemSurcharges, returnStaffNote, setReturnStaffNote,
@@ -218,7 +228,7 @@ export function useReturnTab(
     contactNote, setContactNote, newExpectedTime, setNewExpectedTime,
     contactNotice, setContactNotice, overdueOrdersBackend, scanningOverdue, contactLogsBackend,
     eligibleOrders, order, overdueInfo, overdueConflicts, returnedEquipment, debtRows,
-    currentReturnRound, displaySurcharges, loadReturnData,
+    currentReturnRound, displaySurcharges, loadReturnData, resetSelectionState,
     handleToggleSelect, handleConditionChange, ...mutations,
   };
 }

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useApp } from "../../../context/AppContext";
 import { isRealApiEnabled } from "../../../services/apiClient";
 import { equipmentApi } from "../../../services/api";
@@ -38,20 +39,36 @@ export function CreateMaintenanceModal({
   setEquipSuccess,
   onClose,
 }: CreateMaintenanceModalProps) {
+  const [submitting, setSubmitting] = useState(false);
+
   // Gửi tạo phiếu bảo trì lên máy chủ hoặc lưu vào mock store
   const handleCreate = async () => {
+    if (submitting) return;
     const selectedEquip = app.equipment.find((eq) => eq.id === createMaintEquipId);
     const now = new Date().toLocaleString("vi-VN");
     setEquipError(null);
     setEquipSuccess(null);
 
     if (app.realApi || isRealApiEnabled()) {
+      setSubmitting(true);
       setEquipBusy(true);
       try {
         const equipIdNum =
           Number(selectedEquip?.id ?? createMaintEquipId) || parseInt(createMaintEquipId.replace(/\D/g, ""), 10);
-        const orderIdNum =
-          createMaintOrderId && !isNaN(Number(createMaintOrderId)) ? Number(createMaintOrderId) : undefined;
+        // Hỗ trợ tìm mã đơn hiển thị (ORD-..., DT-...) hoặc ID số trực tiếp
+        const trimmedOrder = createMaintOrderId.trim();
+        const matchedOrder = trimmedOrder
+          ? app.orders.find(
+              (o) =>
+                o.id === trimmedOrder ||
+                (o.displayCode || "").toLowerCase() === trimmedOrder.toLowerCase()
+            )
+          : undefined;
+        const orderIdNum = matchedOrder
+          ? Number(matchedOrder.backendId ?? matchedOrder.id)
+          : trimmedOrder && !isNaN(Number(trimmedOrder))
+            ? Number(trimmedOrder)
+            : undefined;
         if (!equipIdNum) {
           throw new Error("Không xác định được mã thiết bị hợp lệ.");
         }
@@ -75,6 +92,7 @@ export function CreateMaintenanceModal({
       } catch (err) {
         setEquipError(err instanceof Error ? err.message : "Lỗi lập phiếu bảo trì trên máy chủ.");
       } finally {
+        setSubmitting(false);
         setEquipBusy(false);
       }
       return;
@@ -143,8 +161,10 @@ export function CreateMaintenanceModal({
             <label className="so-field-label">Chi phí dự tính (đ):</label>
             <input
               type="number"
+              min={0}
+              step={1000}
               value={createMaintCost}
-              onChange={(e) => setCreateMaintCost(Number(e.target.value))}
+              onChange={(e) => setCreateMaintCost(Math.max(0, Number(e.target.value) || 0))}
               className="so-input-mono"
             />
           </div>
@@ -173,11 +193,11 @@ export function CreateMaintenanceModal({
           <button type="button" onClick={onClose} className="so-btn-cancel-md">Hủy</button>
           <button
             type="button"
-            disabled={!createMaintEquipId || !createMaintIssue.trim()}
+            disabled={submitting || !createMaintEquipId || !createMaintIssue.trim()}
             onClick={() => void handleCreate()}
             className="so-btn-primary-md"
           >
-            ✓ Tạo phiếu bảo trì
+            {submitting ? "Đang tạo..." : "✓ Tạo phiếu bảo trì"}
           </button>
         </div>
       </div>

@@ -597,17 +597,21 @@ async function main() {
     const page = await ctx.newPage();
     await loginForm(page, 'customer@geargo.vn', 'GearGo@2026', false);
 
-    // UC1.3: Đăng xuất
+    // UC1.3: Đăng xuất (chụp thanh điều hướng & hộp thoại xác nhận đăng xuất)
+    await page.getByRole('button', { name: 'Thoát' }).first().click().catch(() => {});
+    await page.waitForTimeout(350);
     await annotateCurated(
       page,
       'UC1.3',
       'UC1_3',
-      'Giao diện Đăng xuất (SCR-1.3)',
+      'Giao diện Đăng xuất kèm hộp thoại xác nhận (SCR-1.3)',
       [
-        { loc: (p) => p.getByRole('button', { name: 'Thoát' }).first(), name: 'Thoát', type: 'Button', meaning: 'Thoát khỏi tài khoản hiện tại và kết thúc phiên đăng nhập', domain: 'Null', defaultVal: 'Hiển thị khi đã đăng nhập', note: 'Nằm trên thanh điều hướng góc trên bên phải' },
+        { loc: (p) => p.getByRole('button', { name: 'Thoát' }).first(), name: 'Thoát', type: 'Button', meaning: 'Mở hộp thoại xác nhận thoát khỏi tài khoản hiện tại', domain: 'Null', defaultVal: 'Hiển thị khi đã đăng nhập', note: 'Nằm trên thanh điều hướng góc trên bên phải' },
+        { loc: (p) => p.getByRole('dialog').getByRole('button', { name: 'Đăng xuất' }).first(), name: 'Xác nhận đăng xuất', type: 'Button', meaning: 'Xác nhận kết thúc phiên đăng nhập hiện tại', domain: 'Null', defaultVal: 'Kích hoạt', note: 'Trong hộp thoại xác nhận' },
       ],
       1
     );
+    await page.getByRole('dialog').getByRole('button', { name: /Ở lại|Hủy bỏ/i }).first().click().catch(() => {});
 
     // UC1.5: Xem thông tin cá nhân
     await page.getByRole('button', { name: 'Tài khoản' }).first().click();
@@ -858,7 +862,12 @@ async function main() {
     await clickTab('Đơn thuê');
     await annotateAuto(page, 'UC4.5', 'UC4_5', 'Giao diện Tra cứu đơn thuê cho vận hành (SCR-4.5)', ['.internal-content'], { maxItems: 8, tableName: 'Bảng danh sách đơn thuê' });
 
-    // UC5.4: Đối soát cọc và hoàn tất đơn (2 hình: Hình a nút Đối soát trên bảng, Hình b màn hình chi tiết đối soát)
+    // UC5.4: Đối soát cọc và hoàn tất đơn (tìm đúng mã đơn trước để không phụ thuộc trang phân trang)
+    const orderSearchInput = content.getByPlaceholder(/Tìm mã đơn/i).first();
+    if (await orderSearchInput.isVisible().catch(() => false)) {
+      await orderSearchInput.fill('ORD-202611-109');
+      await page.waitForTimeout(350);
+    }
     const row109 = content.locator('tr:has-text("ORD-202611-109")').first();
     const reconBtnLoc = (await row109.isVisible().catch(() => false))
       ? row109.getByRole('button', { name: 'Đối soát', exact: true })
@@ -876,6 +885,10 @@ async function main() {
     await reconBtnLoc.click().catch(() => {});
     await page.waitForTimeout(700);
     await annotateAuto(page, 'UC5.4', 'UC5_4_b', 'Giao diện Đối soát cọc và hoàn tất đơn – Chi tiết đối soát và chốt đơn (SCR-5.4)', [...MODAL_SCOPES, '.internal-content'], { startIndex: next54, maxItems: 8 });
+    if (await orderSearchInput.isVisible().catch(() => false)) {
+      await orderSearchInput.fill('');
+      await page.waitForTimeout(300);
+    }
 
     // UC5.6: Thực hiện hoàn tiền
     const refundOpenBtn = page.getByRole('button', { name: /Lập & xử lý hoàn tiền cọc|Hoàn tiền|Hoàn cọc/i }).first();
@@ -886,7 +899,11 @@ async function main() {
     await annotateAuto(page, 'UC5.6', 'UC5_6', 'Giao diện Thực hiện hoàn tiền (SCR-5.6)', MODAL_SCOPES, { maxItems: 8 });
     await closeModal();
 
-    // UC5.5: Thu tiền bổ sung
+    // UC5.5: Thu tiền bổ sung (tìm đúng mã đơn trước để không phụ thuộc phân trang)
+    if (await orderSearchInput.isVisible().catch(() => false)) {
+      await orderSearchInput.fill('ORD-202611-108');
+      await page.waitForTimeout(350);
+    }
     const btn108 = content.locator('button:has-text("ORD-202611-108")').first();
     if (await btn108.isVisible().catch(() => false)) {
       await btn108.click().catch(() => {});

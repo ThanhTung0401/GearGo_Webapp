@@ -1,6 +1,6 @@
 import { useApp } from "../../../context/AppContext";
 import type { NhanTraBackend, ChiTietNhanTraBackend } from "../../../services/api";
-import type { Order } from "../../../store";
+import { formatBackendEnum, formatDateTimeVi, type Order } from "../../../store";
 
 interface ReturnReceiptBackendModalProps {
   app: ReturnType<typeof useApp>;
@@ -39,9 +39,9 @@ export function ReturnReceiptBackendModal({
 
         <div className="so-info-box">
           <div><strong>Đơn thuê:</strong> {order?.displayCode || receipt.maDonThue}</div>
-          <div><strong>Thời điểm lập / chốt:</strong> {receipt.thoiDiemChot || receipt.thoiDiemLap}</div>
+          <div><strong>Thời điểm lập / chốt:</strong> {formatDateTimeVi(receipt.thoiDiemChot || receipt.thoiDiemLap)}</div>
           <div><strong>Nhân viên nhận:</strong> {receipt.tenNhanVienLucNhan || "Nhân viên kho"}</div>
-          <div><strong>Trạng thái:</strong> {receipt.trangThai} · Còn nợ sau phiếu: {receipt.soThietBiConNo} chiếc</div>
+          <div><strong>Trạng thái:</strong> {formatBackendEnum(receipt.trangThai)} · Còn nợ sau phiếu: {receipt.soThietBiConNo} chiếc</div>
           <div><strong>Ghi chú:</strong> {receipt.ghiChu || "Không có"}</div>
         </div>
 

@@ -78,12 +78,21 @@ export function useInventoryTab(app: ReturnType<typeof useApp>) {
         receipt.supplierName.toLowerCase().includes(searchQuery.toLowerCase()) ||
         receipt.createdBy.toLowerCase().includes(searchQuery.toLowerCase());
 
+      // Chuẩn hóa phần ngày YYYY-MM-DD để tránh so sánh sai giữa ISO "T" và dấu cách
       let matchDate = true;
-      if (fromDate && receipt.createdAt < fromDate) matchDate = false;
-      if (toDate && receipt.createdAt > toDate + " 23:59:59") matchDate = false;
+      const createdDateOnly = (receipt.createdAt || "").slice(0, 10);
+      if (fromDate && createdDateOnly && createdDateOnly < fromDate) matchDate = false;
+      if (toDate && createdDateOnly && createdDateOnly > toDate) matchDate = false;
 
       return matchSupplier && matchStatus && matchSearch && matchDate;
     });
+
+  // Tự động chọn phiếu đầu tiên sau khi dữ liệu async tải xong
+  useEffect(() => {
+    if (!selectedId && app.importReceipts.length > 0) {
+      setSelectedId(app.importReceipts[app.importReceipts.length - 1].id);
+    }
+  }, [selectedId, app.importReceipts]);
 
   const selected = app.importReceipts.find((receipt) => receipt.id === selectedId);
 
@@ -99,7 +108,7 @@ export function useInventoryTab(app: ReturnType<typeof useApp>) {
       return;
     }
     try {
-      const res = await inventoryApi.timPhieu({ trang: 1, soMoiTrang: 50 });
+      const res = await inventoryApi.timPhieu({ trang: 1, soMoiTrang: 200 });
       const matching = (res.items ?? []).filter((dc) => dc.maPhieuNhapLienQuan === receiptIdNum);
       setServerAdjustments(
         matching.map((dc) => {

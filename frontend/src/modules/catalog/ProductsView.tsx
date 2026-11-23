@@ -1,4 +1,6 @@
 import Icon from "../../components/Icon";
+import Pagination from "../../components/ui/Pagination";
+import { usePagination } from "../../hooks/usePagination";
 import { ProductDetailView } from "./products/ProductDetailView";
 import { useProductsCatalog } from "./products/useProductsCatalog";
 import { ProductFiltersBar } from "./products/ProductFiltersBar";
@@ -10,6 +12,7 @@ import { ProductCard } from "./products/ProductCard";
 export default function ProductsView() {
   const vm = useProductsCatalog();
   const { app } = vm;
+  const paging = usePagination(vm.filtered, 6);
 
   if (app.page === "product-detail" && app.selectedProductId) {
     const p = app.products.find((prod) => prod.id === app.selectedProductId);
@@ -86,7 +89,7 @@ export default function ProductsView() {
       )}
 
       <div className="grid gap-6 lp-catalog-grid">
-        {vm.filtered.map((p) => (
+        {paging.pagedItems.map((p) => (
           <ProductCard
             key={p.id}
             product={p}
@@ -99,6 +102,19 @@ export default function ProductsView() {
           />
         ))}
       </div>
+
+      <Pagination
+        page={paging.page}
+        totalPages={paging.totalPages}
+        totalItems={paging.totalItems}
+        startIndex={paging.startIndex}
+        endIndex={paging.endIndex}
+        onPageChange={(next) => {
+          paging.setPage(next);
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        }}
+        itemLabel="sản phẩm"
+      />
     </div>
   );
 }

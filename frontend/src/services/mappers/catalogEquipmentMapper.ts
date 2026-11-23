@@ -130,6 +130,7 @@ export function mapSanPhamToProduct(sp: SanPhamBackend, categories: Category[] =
     // Endpoint public /api/san-pham chỉ trả sản phẩm đang kinh doanh và có thể lược bỏ trangThaiKinhDoanh;
     // chỉ đánh dấu inactive khi backend trả rõ trạng thái khác "DangKinhDoanh".
     status: !sp.trangThaiKinhDoanh || sp.trangThaiKinhDoanh === "DangKinhDoanh" ? "active" : "inactive",
+    rawStatus: sp.trangThaiKinhDoanh ?? "DangKinhDoanh",
     rating: Number(sp.diemTrungBinh ?? 0),
     reviews: Number(sp.soLuongDanhGia ?? 0),
     availableCount: sp.soLuongKhaDung,
@@ -153,17 +154,21 @@ export function mapThietBiToEquipment(tb: ThietBiBackend): Equipment {
 }
 
 function mapMaintenanceStatus(trangThai?: string | null, ketQua?: string | null): MaintenanceReceipt["status"] {
-  if (ketQua === "KhongTheSua") return "Không thể sửa";
+  if (ketQua === "KhongTheSua" || ketQua === "KhongDat") return "Không thể sửa";
   switch (trangThai) {
     case "ChoXuLy":
     case "Mo":
       return "Chờ xử lý";
+    case "DangXuLy":
+    case "ChoKiemTra":
     case "DangThucHien":
     case "DangBaoTri":
       return "Đang sửa chữa";
+    case "HoanThanh":
     case "HoanTat":
     case "DaHoanThanh":
       return "Đã nghiệm thu";
+    case "KhongDat":
     case "KhongTheSua":
       return "Không thể sửa";
     default:
@@ -172,23 +177,50 @@ function mapMaintenanceStatus(trangThai?: string | null, ketQua?: string | null)
 }
 
 export function mapBaoTriToReceipt(bt: BaoTriResponseBackend): MaintenanceReceipt {
+  const status = mapMaintenanceStatus(bt.trangThai, bt.ketQua);
+  const isDone = status === "Đã nghiệm thu" || status === "Không thể sửa";
   return {
     id: String(bt.maPhieuBaoTri),
     equipmentId: String(bt.maThietBi),
     orderId: bt.maDonThue != null ? String(bt.maDonThue) : undefined,
     issueDescription: bt.moTaLoi ?? bt.loaiXuLy ?? "Bảo trì thiết bị",
-    status: mapMaintenanceStatus(bt.trangThai, bt.ketQua),
+    status,
     createdAt: bt.ngayBatDau ?? new Date().toISOString(),
     estimatedCost: Number(bt.chiPhi ?? 0),
-    actualCost: Number(bt.chiPhi ?? 0),
+    actualCost: isDone ? Number(bt.chiPhi ?? 0) : undefined,
     completedAt: bt.ngayHoanThanhThucTe ?? undefined,
     note: bt.loaiXuLy ?? undefined,
     outcomeNote: bt.ketQua ?? undefined,
   };
 }
 
+/**
+ * Trích xuất trạng thái thiết bị từ chuỗi JSON hoặc enum thô trong giaTriTruoc / giaTriSau của phiếu điều chỉnh kho.
+ */
+function parseAdjustmentEquipmentStatus(raw?: string | null, fallback: EquipmentStatus = "Sẵn sàng"): EquipmentStatus {
+  if (!raw) return fallback;
+  const trimmed = raw.trim();
+  // Nếu backend lưu JSON object (vd {"TrangThaiSuDung":"ThatLac",...})
+  if (trimmed.startsWith("{")) {
+    try {
+      const obj = JSON.parse(trimmed) as Record<string, unknown>;
+      const st = (obj.trangThaiSuDung ?? obj.TrangThaiSuDung ?? obj.trangThai ?? obj.TrangThai) as string | undefined;
+      if (st) return mapEquipmentStatusFromBackend(st);
+    } catch {
+      // fallback kiểm tra chuỗi bên dưới
+    }
+  }
+  if (/ThatLac|Thất lạc/i.test(trimmed)) return "Thất lạc";
+  if (/NgungSuDung|Ngừng sử dụng/i.test(trimmed)) return "Ngừng sử dụng";
+  if (/DangBaoTri|Đang bảo trì/i.test(trimmed)) return "Đang bảo trì";
+  if (/DangThue|Đang thuê/i.test(trimmed)) return "Đang thuê";
+  if (/SanSang|Sẵn sàng/i.test(trimmed)) return "Sẵn sàng";
+  return fallback;
+}
+
 export function mapDieuChinhKhoToReceipt(dc: DieuChinhKhoResponseBackend): StockAdjustmentReceipt {
   const statusMap: Record<string, StockAdjustmentReceipt["status"]> = {
+    DaApDung: "Đã duyệt",
     DaDuyet: "Đã duyệt",
     TuChoi: "Từ chối",
     ChoDuyet: "Chờ duyệt",
@@ -201,12 +233,15 @@ export function mapDieuChinhKhoToReceipt(dc: DieuChinhKhoResponseBackend): Stock
     reason: dc.lyDo ?? dc.loaiDieuChinh ?? "",
     status: statusMap[dc.trangThai] ?? "Chờ duyệt",
     approvedBy: dc.tenNguoiDuyetLucDuyet ?? undefined,
-    approvedAt: dc.thoiDiemDuyet ?? undefined,
+    approvedAt: dc.thoiDiemApDung ?? dc.thoiDiemDuyet ?? undefined,
     note: dc.loaiDieuChinh ?? undefined,
     lines: (dc.chiTiet ?? []).map((ct) => ({
       equipmentId: ct.maThietBiHienThi ?? (ct.maThietBi != null ? String(ct.maThietBi) : "-"),
-      previousStatus: "Sẵn sàng",
-      newStatus: "Ngừng sử dụng",
+      previousStatus: parseAdjustmentEquipmentStatus(ct.giaTriTruoc, "Sẵn sàng"),
+      newStatus: parseAdjustmentEquipmentStatus(
+        ct.giaTriSau,
+        dc.loaiDieuChinh === "KiemKeSaiLech" ? "Thất lạc" : "Ngừng sử dụng"
+      ),
       reason: ct.ghiChu ?? dc.lyDo ?? "",
     })),
   };

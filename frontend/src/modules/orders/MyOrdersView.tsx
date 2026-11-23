@@ -1,3 +1,5 @@
+import Pagination from "../../components/ui/Pagination";
+import { usePagination } from "../../hooks/usePagination";
 import { MyOrdersModals } from "./MyOrdersModals";
 import { ORDER_STATUS_OPTIONS, useMyOrders } from "./orders/useMyOrders";
 import { OrderCardItem } from "./orders/OrderCardItem";
@@ -9,6 +11,7 @@ import { OrderDetailPanel } from "./orders/OrderDetailPanel";
 export function MyOrdersView() {
   const vm = useMyOrders();
   const { app, detail } = vm;
+  const paging = usePagination(vm.myOrders, 5);
 
   return (
     <div className="customer-container cp-container cp-container--1100">
@@ -48,18 +51,29 @@ export function MyOrdersView() {
               Không có đơn thuê nào ở trạng thái "{vm.statusTab}".
             </div>
           ) : (
-            vm.myOrders.map((o) => (
-              <OrderCardItem
-                key={o.id}
-                order={o}
-                isSelected={vm.selected === o.id}
-                onSelect={(id) => void vm.handleSelectOrder(id)}
-                onContinuePayment={(id) => {
-                  app.setNewOrderId(id);
-                  app.setPage("order-confirmed");
-                }}
+            <>
+              {paging.pagedItems.map((o) => (
+                <OrderCardItem
+                  key={o.id}
+                  order={o}
+                  isSelected={vm.selected === o.id}
+                  onSelect={(id) => void vm.handleSelectOrder(id)}
+                  onContinuePayment={(id) => {
+                    app.setNewOrderId(id);
+                    app.setPage("order-confirmed");
+                  }}
+                />
+              ))}
+              <Pagination
+                page={paging.page}
+                totalPages={paging.totalPages}
+                totalItems={paging.totalItems}
+                startIndex={paging.startIndex}
+                endIndex={paging.endIndex}
+                onPageChange={paging.setPage}
+                itemLabel="đơn thuê"
               />
-            ))
+            </>
           )}
         </div>
 

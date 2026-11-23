@@ -24,6 +24,7 @@ export function useStaffAccounts(app: ReturnType<typeof useApp>) {
   const [permCatalog, setPermCatalog] = useState<QuyenCatalogResponse[]>([]);
   const [permRoleName, setPermRoleName] = useState<"NhanVien" | "QuanTriVien">("NhanVien");
   const [permOriginalRole, setPermOriginalRole] = useState<"NhanVien" | "QuanTriVien">("NhanVien");
+  const [permHasOverride, setPermHasOverride] = useState(false);
   const [permLoading, setPermLoading] = useState(false);
 
   const [lockModalStaff, setLockModalStaff] = useState<StaffAccount | null>(null);
@@ -50,6 +51,7 @@ export function useStaffAccounts(app: ReturnType<typeof useApp>) {
         tuKhoa: search.trim() || undefined,
         vaiTro: roleFilter === "all" ? undefined : roleFilter === "Quản trị viên" ? "QuanTriVien" : "NhanVien",
         trangThaiTaiKhoan: statusFilter === "all" ? undefined : statusFilter === "active" ? "HoatDong" : "BiKhoa",
+        soMoiTrang: 200,
       });
       const { mapped, tkMap, nvMap } = mapBackendStaffItems(res.items);
       setStaffAccountToTaiKhoanId(tkMap);
@@ -63,10 +65,13 @@ export function useStaffAccounts(app: ReturnType<typeof useApp>) {
   };
 
   useEffect(() => {
-    void loadStaffList();
+    const timer = window.setTimeout(() => {
+      void loadStaffList();
+    }, 250);
+    return () => window.clearTimeout(timer);
   }, [search, roleFilter, statusFilter]);
 
-  const filtered = isRealApiEnabled()
+  const filtered = isRealApi
     ? apiStaff
     : filterMockStaffAccounts(app.staffAccounts, search, roleFilter, statusFilter);
 
@@ -164,13 +169,19 @@ export function useStaffAccounts(app: ReturnType<typeof useApp>) {
     const role: "NhanVien" | "QuanTriVien" = s.role === "Quản trị viên" ? "QuanTriVien" : "NhanVien";
     setPermRoleName(role);
     setPermOriginalRole(role);
+    setPermHasOverride(false);
     setPermStaff({ ...s });
     if (isRealApi) {
       setPermLoading(true);
       try {
-        const [catalog, rolePerms] = await Promise.all([permissionApi.catalog(), permissionApi.getRolePermissions(role)]);
+        const tkId = resolveTkId(s.id);
+        const [catalog, staffPerms] = await Promise.all([
+          permissionApi.catalog(),
+          permissionApi.getStaffPermissions(tkId),
+        ]);
         setPermCatalog(catalog);
-        setPermStaff((prev) => (prev ? { ...prev, permissions: rolePerms.quyenCoDuoc } : prev));
+        setPermHasOverride(staffPerms.coPhanQuyenRieng);
+        setPermStaff((prev) => (prev ? { ...prev, permissions: staffPerms.quyenCoDuoc } : prev));
       } catch (error) {
         setModalError(error instanceof Error ? error.message : "Không thể tải danh sách quyền hạn từ máy chủ.");
       } finally {
@@ -196,6 +207,7 @@ export function useStaffAccounts(app: ReturnType<typeof useApp>) {
       await runModalMutation(
         async () => {
           const nvId = resolveNvId(permStaff.id);
+          const tkId = resolveTkId(permStaff.id);
           if (permRoleName !== permOriginalRole) {
             await staffApi.doiVaiTro(nvId, {
               vaiTroMoi: permRoleName,
@@ -203,7 +215,8 @@ export function useStaffAccounts(app: ReturnType<typeof useApp>) {
             });
           }
           if (permRoleName !== "QuanTriVien") {
-            await permissionApi.setRolePermissions(permRoleName, perms);
+            // Lưu phân quyền riêng cho đúng tài khoản nhân viên này (không ghi đè cả role)
+            await permissionApi.setStaffPermissions(tkId, perms);
             window.dispatchEvent(new CustomEvent("geargo-permissions-changed"));
           }
         },
@@ -214,6 +227,23 @@ export function useStaffAccounts(app: ReturnType<typeof useApp>) {
     }
     app.saveStaffAccount({ ...permStaff, permissions: perms });
     setPermStaff(null);
+  };
+
+  const handleResetStaffPermissions = async () => {
+    if (!permStaff || !isRealApi) return;
+    setModalError("");
+    setSubmitting(true);
+    try {
+      const tkId = resolveTkId(permStaff.id);
+      const res = await permissionApi.resetStaffPermissions(tkId);
+      setPermHasOverride(false);
+      setPermStaff((prev) => (prev ? { ...prev, permissions: res.quyenCoDuoc } : prev));
+      window.dispatchEvent(new CustomEvent("geargo-permissions-changed"));
+    } catch (error) {
+      setModalError(error instanceof Error ? error.message : "Không thể khôi phục quyền theo vai trò.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleConfirmLock = async () => {
@@ -277,8 +307,8 @@ export function useStaffAccounts(app: ReturnType<typeof useApp>) {
     isRealApi, search, setSearch, roleFilter, setRoleFilter, statusFilter, setStatusFilter,
     filtered, isLoading, apiError, modalError, setModalError, submitting,
     editingStaff, setEditingStaff, isNew, handleOpenAdd, handleOpenEdit, handleSaveStaff,
-    permStaff, setPermStaff, permCatalog, permRoleName, permLoading,
-    openPermissionsModal, handleSwitchPermRole, handleSavePermissions,
+    permStaff, setPermStaff, permCatalog, permRoleName, permHasOverride, permLoading,
+    openPermissionsModal, handleSwitchPermRole, handleSavePermissions, handleResetStaffPermissions,
     lockModalStaff, setLockModalStaff, lockReason, setLockReason, handleConfirmLock,
     resigningStaff, setResigningStaff, resignDate, setResignDate, resignReason, setResignReason,
     handleConfirmResign, handleUnlockStaff,
