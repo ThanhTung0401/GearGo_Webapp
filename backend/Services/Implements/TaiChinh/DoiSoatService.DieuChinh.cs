@@ -70,20 +70,26 @@ public partial class DoiSoatService
         }
     }
 
-    public async Task<Result<DoiSoatResponse>> LayTheoDonAsync(long donId, long actorId)
+    public async Task<Result<DoiSoatResponse?>> LayTheoDonAsync(long donId, long actorId)
     {
         var tk = await ActorGuard.LayTaiKhoanHoatDongAsync(_context, actorId);
         var don = await _context.DonThues.FirstOrDefaultAsync(d => d.MaDonThue == donId);
-        if (don == null) return Result<DoiSoatResponse>.Loi("DON_KHONG_TIM_THAY", "Không tìm thấy đơn thuê.");
+        if (don == null) return Result<DoiSoatResponse?>.Loi("DON_KHONG_TIM_THAY", "Không tìm thấy đơn thuê.");
 
         if (tk.VaiTro == "KhachHang" && don.MaKhachHang != await ActorGuard.LayMaKhachHangAsync(_context, actorId))
-            return Result<DoiSoatResponse>.Loi("KHONG_CO_QUYEN", "Khách hàng chỉ được xem đối soát của đơn mình.");
+            return Result<DoiSoatResponse?>.Loi("KHONG_CO_QUYEN", "Khách hàng chỉ được xem đối soát của đơn mình.");
 
-        var doiSoat = await TaiDoiSoatDayDuQuery().Where(d => d.MaDonThue == donId)
-            .OrderByDescending(d => d.ThoiDiemLap).FirstOrDefaultAsync();
+        // FN5-12/13: nếu có phiếu BanDau còn mở thì ưu tiên trả phiếu gốc, nếu không thì trả phiếu mới nhất
+        var doiSoat = await TaiDoiSoatDayDuQuery()
+            .Where(d => d.MaDonThue == donId && d.LoaiDoiSoat == "BanDau")
+            .OrderByDescending(d => d.ThoiDiemLap)
+            .FirstOrDefaultAsync()
+            ?? await TaiDoiSoatDayDuQuery().Where(d => d.MaDonThue == donId)
+                .OrderByDescending(d => d.ThoiDiemLap).FirstOrDefaultAsync();
+        // FN5-08: không có đối soát → trả Result.Ok(null) (HTTP 200) thay vì 404
         return doiSoat == null
-            ? Result<DoiSoatResponse>.Loi("CHUA_CO_DOI_SOAT", "Đơn thuê chưa có phiếu đối soát nào.")
-            : Result<DoiSoatResponse>.Ok(await ChuyenSangResponseAsync(doiSoat));
+            ? Result<DoiSoatResponse?>.Ok(null)
+            : Result<DoiSoatResponse?>.Ok(await ChuyenSangResponseAsync(doiSoat));
     }
 
     public async Task<Result<DoiSoatResponse>> LayTheoIdAsync(long id, long actorId)

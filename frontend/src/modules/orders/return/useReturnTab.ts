@@ -82,13 +82,17 @@ export function useReturnTab(
     if (!Number.isFinite(donId)) return;
     setReturnLoading(true);
     setReturnError(null);
+    // FN5-06: đơn đã "Hoàn tất" không cần kéo lại danh sách con-nợ, quá hạn, đơn bị ảnh hưởng
+    const isCompleted = order.status === "Hoàn tất";
     try {
       const [debt, receipts, surcharges, overdue, affected, contactLogs] = await Promise.all([
-        returnApi.layThietBiConNo(donId).catch(() => [] as ThietBiConNoBackend[]),
+        isCompleted
+          ? Promise.resolve([] as ThietBiConNoBackend[])
+          : returnApi.layThietBiConNo(donId).catch(() => [] as ThietBiConNoBackend[]),
         returnApi.layDanhSachTheoDon(donId).catch(() => [] as NhanTraBackend[]),
         surchargeApi.layTheoDon(donId).catch(() => []),
-        returnApi.layChiTietQuaHan(donId).catch(() => null),
-        returnApi.layDonBiAnhHuong(donId).catch(() => []),
+        isCompleted ? Promise.resolve(null) : returnApi.layChiTietQuaHan(donId).catch(() => null),
+        isCompleted ? Promise.resolve([]) : returnApi.layDonBiAnhHuong(donId).catch(() => []),
         returnApi.layNhatKyLienHe(donId).catch(() => [] as NhatKyLienHeQuaHanBackend[]),
       ]);
       setDebtItemsBackend(debt);
@@ -102,7 +106,7 @@ export function useReturnTab(
     } finally {
       setReturnLoading(false);
     }
-  }, [app.realApi, order?.id, order?.backendId]);
+  }, [app.realApi, order?.id, order?.backendId, order?.status]);
 
   useEffect(() => {
     setReturnSuccess(null);
