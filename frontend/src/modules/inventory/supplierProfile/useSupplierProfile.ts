@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import type { useApp } from "../../../App";
 import { supplierApi, type LichSuNhapBackend } from "../../../services/api";
-import type { Supplier } from "../../../store";
+import type { ImportReceipt, Supplier } from "../../../store";
 
 export interface ImportedProductSummary {
   productId: string;
@@ -50,13 +50,46 @@ export function useSupplierProfile(supplier: Supplier, app: ReturnType<typeof us
     };
   }, [app.realApi, supplier.id]);
 
-  const supplierReceipts = useMemo(
-    () =>
-      app.importReceipts.filter(
-        (r) => r.supplierId === supplier.id || r.supplierId === supplier.displayCode
-      ),
-    [app.importReceipts, supplier.id, supplier.displayCode]
-  );
+  const supplierReceipts = useMemo<ImportReceipt[]>(() => {
+    const fromApp = app.importReceipts.filter(
+      (r) => r.supplierId === supplier.id || r.supplierId === supplier.displayCode
+    );
+    // [SUP-04] Fallback: neu app.importReceipts chua nap du phieu cua NCC nhung
+    // historyBackend.phieuNhaps.items co du lieu, map sang ImportReceipt de thong ke/tab lich su khong trong.
+    if (fromApp.length === 0 && historyBackend?.phieuNhaps?.items?.length) {
+      return historyBackend.phieuNhaps.items.map((pn) => {
+        const confirmedAt = pn.ngayXacNhan || pn.ngayNhapThucTe || "";
+        const lines = (pn.chiTietSanPham ?? []).map((ct) => ({
+          id: String(ct.maChiTietPhieuNhap),
+          productId: String(ct.maSanPham),
+          productNameSnapshot: ct.tenSanPham,
+          quantity: Number(ct.soLuong ?? 0),
+          unitPrice: Number(ct.donGiaNhap ?? 0),
+          equipmentCodes: [] as string[],
+          receivingCondition: ct.tinhTrangKhiNhap || "Mới",
+          note: "",
+        }));
+        return {
+          id: String(pn.maPhieuNhap),
+          displayCode: pn.maPhieuHienThi,
+          supplierId: supplier.id,
+          supplierSnapshot: {
+            displayCode: supplier.displayCode,
+            name: supplier.name,
+            contactPerson: supplier.contactPerson,
+            phone: supplier.phone,
+          },
+          createdAt: pn.ngayLap,
+          createdBy: pn.tenNguoiLap || "Nhân viên kho",
+          confirmedAt: confirmedAt || undefined,
+          confirmedBy: pn.tenNguoiXacNhan || undefined,
+          status: confirmedAt ? "Đã nhập kho" : "Nháp",
+          lines,
+        } as unknown as ImportReceipt;
+      });
+    }
+    return fromApp;
+  }, [app.importReceipts, supplier.id, supplier.displayCode, supplier.name, supplier.contactPerson, supplier.phone, supplier.displayCode, historyBackend]);
 
   const confirmedReceipts = useMemo(
     () => supplierReceipts.filter((r) => r.status === "Đã nhập kho"),

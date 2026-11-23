@@ -16,8 +16,21 @@ export function toDatetimeLocalInput(val?: string): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
+// [SUP-02] Tao ma NCC goi y dang NCC + chu so dua tren so NCC hien co.
+function suggestSupplierCode(suppliers: Supplier[]): string {
+  const next = suppliers.length + 1;
+  return `NCC${String(next).padStart(3, "0")}`;
+}
+
 export function SupplierForm({ app, supplier, onClose }: { app: ReturnType<typeof useApp>; supplier?: Supplier; onClose: () => void }) {
-  const [form, setForm] = useState<Supplier>(supplier ?? { id: "", displayCode: "", name: "", contactPerson: "", phone: "", email: "", address: "", taxCode: "", note: "", cooperationStatus: "active" });
+  const [form, setForm] = useState<Supplier>(
+    supplier ?? {
+      id: "",
+      // [SUP-02] Tu sinh ma NCC goi y khi them moi de nguoi dung khong phai tu nghi.
+      displayCode: suggestSupplierCode(app.suppliers),
+      name: "", contactPerson: "", phone: "", email: "", address: "", taxCode: "", note: "", cooperationStatus: "active",
+    }
+  );
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const set = <K extends keyof Supplier>(key: K, value: Supplier[K]) => setForm((current) => ({ ...current, [key]: value }));
@@ -26,6 +39,19 @@ export function SupplierForm({ app, supplier, onClose }: { app: ReturnType<typeo
     event.preventDefault();
     setError("");
     if (!form.name.trim()) return setError("Tên nhà cung cấp không được để trống.");
+
+    // [SUP-02] Validate client-side: bat buoc co SDT hoac Email, kiem tra regex neu co nhap.
+    const phoneTrim = form.phone.trim();
+    const emailTrim = form.email.trim();
+    if (!phoneTrim && !emailTrim) {
+      return setError("Vui lòng nhập ít nhất một trong hai: Số điện thoại hoặc Email để liên hệ nhà cung cấp.");
+    }
+    if (phoneTrim && !/^(\+84|0)\d{9,10}$/.test(phoneTrim)) {
+      return setError("Số điện thoại không hợp lệ (10-11 chữ số, bắt đầu bằng 0 hoặc +84).");
+    }
+    if (emailTrim && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailTrim)) {
+      return setError("Định dạng Email nhà cung cấp không hợp lệ.");
+    }
 
     if (app.realApi || isRealApiEnabled()) {
       setLoading(true);

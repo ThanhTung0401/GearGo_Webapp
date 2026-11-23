@@ -148,19 +148,26 @@ export function StaffAccountsTable({
                       {/* v2 §P3 — nút Khoá/Mở/Nghỉ việc bọc theo NhanVien_Quan */}
                       {s.role !== "Quản trị viên" && (
                         <Can perm={Permissions.NhanVien_Quan}>
-                          <button
-                            onClick={() => {
-                              if (s.status === "active") {
-                                onLockClick(s);
-                              } else {
-                                onUnlockClick(s);
-                              }
-                            }}
-                            className={s.status === "active" ? "adm-btn-danger-outline" : "adm-btn-forest-solid"}
-                          >
-                            {s.status === "active" ? "Khóa" : "Mở"}
-                          </button>
-                          {s.status === "active" && (
+                          {/* [STF-05] An nut "Mo" khoa voi nhan vien da nghi viec vi backend
+                              QuanTriTaiKhoanService.KiemTraMoKhoa (dong 125-126) tra 409
+                              "Nhan vien da nghi viec; khong the mo khoa tai khoan." */}
+                          {s.workStatus === "resigned" ? (
+                            <span className="adm-pill is-danger adm-pill--xs">Đã nghỉ việc</span>
+                          ) : (
+                            <button
+                              onClick={() => {
+                                if (s.status === "active") {
+                                  onLockClick(s);
+                                } else {
+                                  onUnlockClick(s);
+                                }
+                              }}
+                              className={s.status === "active" ? "adm-btn-danger-outline" : "adm-btn-forest-solid"}
+                            >
+                              {s.status === "active" ? "Khóa" : "Mở"}
+                            </button>
+                          )}
+                          {s.status === "active" && s.workStatus !== "resigned" && (
                             <button
                               onClick={() => onResignClick(s)}
                               className="adm-btn-danger-soft"

@@ -74,16 +74,19 @@ export function StockAdjustModals({
           <form onSubmit={onSubmitManual} className="grid gap-4 mt-4">
             <label className="adm-label">
               Thiết bị cần điều chỉnh:
+              {/* [SA-02] Loc bo thiet bi "Dang thue" - khong duoc lap phieu dieu chinh khi dang o tay khach. */}
               <select value={selectedEquipId} onChange={(e) => setSelectedEquipId(e.target.value)} className="adm-field">
                 <option value="">-- Chọn thiết bị trong kho --</option>
-                {app.equipment.map((e) => {
-                  const p = app.products.find((pr) => pr.id === e.productId);
-                  return (
-                    <option key={e.id} value={e.id}>
-                      {e.displayCode ?? e.id} — {p?.name} (Hiện tại: {e.equipmentStatus})
-                    </option>
-                  );
-                })}
+                {app.equipment
+                  .filter((e) => e.equipmentStatus !== "Đang thuê")
+                  .map((e) => {
+                    const p = app.products.find((pr) => pr.id === e.productId);
+                    return (
+                      <option key={e.id} value={e.id}>
+                        {e.displayCode ?? e.id} — {p?.name} (Hiện tại: {e.equipmentStatus})
+                      </option>
+                    );
+                  })}
               </select>
             </label>
 

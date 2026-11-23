@@ -90,6 +90,10 @@ public class AdminSanPhamService : IAdminSanPhamService
         };
         _context.Add(sp);
         await _context.SaveChangesAsync();
+
+        // [SP-04] Lưu danh sách URL hình ảnh nếu người dùng cung cấp (dòng đầu là ảnh chính).
+        await LuuDanhSachHinhAnhAsync(sp.MaSanPham, req.HinhAnhs);
+
         return sp;
     }
 
@@ -107,7 +111,50 @@ public class AdminSanPhamService : IAdminSanPhamService
         sp.TrangThaiKinhDoanh = Enum.Parse<TrangThaiKinhDoanh>(req.TrangThaiKinhDoanh);
 
         await _context.SaveChangesAsync();
+
+        // [SP-04] Hợp nhất danh sách URL hình ảnh mới mà người dùng nhập ở textarea Url hình ảnh.
+        await LuuDanhSachHinhAnhAsync(sp.MaSanPham, req.HinhAnhs);
+
         return sp;
+    }
+
+    // [SP-04] Hợp nhất danh sách URL hình ảnh: thêm những URL chưa có trong DB, giữ nguyên các ảnh cũ.
+    // Đảm bảo luôn có đúng một ảnh chính (LaAnhChinh = true) sau khi lưu.
+    private async Task LuuDanhSachHinhAnhAsync(long maSanPham, List<string>? hinhAnhs)
+    {
+        if (hinhAnhs == null || hinhAnhs.Count == 0) return;
+
+        var existing = await _context.Set<HinhAnhSanPham>()
+            .Where(h => h.MaSanPham == maSanPham).ToListAsync();
+        var existingUrls = existing.Select(h => h.DuongDan).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var nextThuTu = existing.Any() ? existing.Max(h => h.ThuTu) + 1 : 1;
+
+        foreach (var url in hinhAnhs)
+        {
+            var clean = url?.Trim();
+            if (string.IsNullOrWhiteSpace(clean)) continue;
+            if (existingUrls.Contains(clean)) continue;
+
+            _context.Add(new HinhAnhSanPham
+            {
+                MaSanPham = maSanPham,
+                DuongDan = clean,
+                LaAnhChinh = !existing.Any() && nextThuTu == 1 && !existingUrls.Any(),
+                ThuTu = nextThuTu++
+            });
+            existingUrls.Add(clean);
+        }
+
+        await _context.SaveChangesAsync();
+
+        // Bảo đảm có đúng 1 ảnh chính
+        var all = await _context.Set<HinhAnhSanPham>()
+            .Where(h => h.MaSanPham == maSanPham).OrderBy(h => h.ThuTu).ToListAsync();
+        if (all.Any() && !all.Any(h => h.LaAnhChinh))
+        {
+            all.First().LaAnhChinh = true;
+            await _context.SaveChangesAsync();
+        }
     }
 
     public async Task DoiTrangThaiAsync(long id, string trangThaiMoi)
@@ -168,7 +215,24 @@ public class AdminSanPhamService : IAdminSanPhamService
         var fullPath = Path.Combine(rootPath, hinhAnh.DuongDan.TrimStart('/'));
         if (File.Exists(fullPath)) File.Delete(fullPath);
 
+        var wasPrimary = hinhAnh.LaAnhChinh;
+        var maSanPham = hinhAnh.MaSanPham;
+
         _context.Remove(hinhAnh);
         await _context.SaveChangesAsync();
+
+        // [SP-05] Nếu vừa xóa ảnh chính, đôn ảnh có ThuTu nhỏ nhất còn lại lên làm ảnh chính.
+        if (wasPrimary)
+        {
+            var next = await _context.Set<HinhAnhSanPham>()
+                .Where(h => h.MaSanPham == maSanPham)
+                .OrderBy(h => h.ThuTu)
+                .FirstOrDefaultAsync();
+            if (next != null)
+            {
+                next.LaAnhChinh = true;
+                await _context.SaveChangesAsync();
+            }
+        }
     }
 }

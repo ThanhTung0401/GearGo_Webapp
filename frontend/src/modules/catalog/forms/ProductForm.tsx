@@ -12,6 +12,13 @@ export function ProductForm({ app, product, onClose }: { app: ReturnType<typeof 
   const [form, setForm] = useState<Product>(product ?? {
     id: "", displayCode: "", categoryId: app.categories.find((item) => item.status === "active")?.id, category: "", name: "", brand: "", description: "", capacity: "", dimensions: "", specifications: {}, pricePerDay: 0, deposit: 0, compensation: 0, image: "", images: [], status: "active", rating: 0, reviews: 0,
   });
+  // [SP-01] Giữ nguyên trạng thái kinh doanh gốc (DangKinhDoanh | TamNgung | NgungKinhDoanh).
+  // Dropdown 2 option cũ ("active"/"inactive") ép sản phẩm NgungKinhDoanh về TamNgung khi lưu.
+  // Nguồn ưu tiên: form.rawStatus (backend trả) → suy ra từ form.status ban đầu.
+  const [rawStatus, setRawStatus] = useState<string>(
+    (product?.rawStatus as string | undefined) ??
+    (product?.status === "inactive" ? "TamNgung" : "DangKinhDoanh")
+  );
   const [specText, setSpecText] = useState(Object.entries(form.specifications ?? {}).map(([key, value]) => `${key}: ${value}`).join("\n"));
   const [imageText, setImageText] = useState((form.images?.length ? form.images : [form.image]).filter(Boolean).join("\n"));
   const [uploadFile, setUploadFile] = useState<File | null>(null);
@@ -85,7 +92,10 @@ export function ProductForm({ app, product, onClose }: { app: ReturnType<typeof 
             giaThueMoiNgay: form.pricePerDay,
             mucCocMoiThietBi: form.deposit,
             giaTriBoiThuong: form.compensation,
-            trangThaiKinhDoanh: form.status === "active" ? "DangKinhDoanh" : "TamNgung",
+            // [SP-01] Giữ nguyên trạng thái NgungKinhDoanh thay vì ép về TamNgung.
+            trangThaiKinhDoanh: rawStatus,
+            // [SP-04] Gửi danh sách URL người dùng nhập ở textarea để backend lưu vào bảng HinhAnh.
+            hinhAnhs: images,
           });
         } else {
           // UC49 / UC6.5: Thêm mới sản phẩm cho thuê
@@ -101,7 +111,10 @@ export function ProductForm({ app, product, onClose }: { app: ReturnType<typeof 
             giaThueMoiNgay: form.pricePerDay,
             mucCocMoiThietBi: form.deposit,
             giaTriBoiThuong: form.compensation,
-            trangThaiKinhDoanh: form.status === "active" ? "DangKinhDoanh" : "TamNgung",
+            // [SP-01] Dùng rawStatus (3 trạng thái) thay vì ép form.status về 2 trạng thái.
+            trangThaiKinhDoanh: rawStatus,
+            // [SP-04] Danh sách URL hình ảnh người dùng dán vào textarea.
+            hinhAnhs: images,
           });
           savedSpId = created.maSanPham;
           form.id = String(created.maSanPham);
@@ -141,7 +154,20 @@ export function ProductForm({ app, product, onClose }: { app: ReturnType<typeof 
         <label className="adm-label">Giá thuê/ngày (đ)<input type="number" min="0" value={form.pricePerDay} onChange={(e) => set("pricePerDay", Number(e.target.value))} className="adm-field" /></label>
         <label className="adm-label">Mức cọc/thiết bị (đ)<input type="number" min="0" value={form.deposit} onChange={(e) => set("deposit", Number(e.target.value))} className="adm-field" /></label>
         <label className="adm-label">Giá trị bồi thường (đ)<input type="number" min="0" value={form.compensation} onChange={(e) => set("compensation", Number(e.target.value))} className="adm-field" /></label>
-        <label className="adm-label">Trạng thái<select value={form.status} onChange={(e) => set("status", e.target.value as Product["status"])} className="adm-field"><option value="active">Đang kinh doanh</option><option value="inactive">Tạm dừng</option></select></label>
+        {/* [SP-01] 3 trạng thái kinh doanh khớp backend enum TrangThaiKinhDoanh. */}
+        <label className="adm-label">Trạng thái<select
+          value={rawStatus}
+          onChange={(e) => {
+            const v = e.target.value;
+            setRawStatus(v);
+            set("status", v === "DangKinhDoanh" ? "active" : "inactive");
+          }}
+          className="adm-field"
+        >
+          <option value="DangKinhDoanh">Đang kinh doanh</option>
+          <option value="TamNgung">Tạm ngưng</option>
+          <option value="NgungKinhDoanh">Ngừng kinh doanh</option>
+        </select></label>
       </div>
       <label className="adm-label">Mô tả<textarea rows={3} value={form.description} onChange={(e) => set("description", e.target.value)} className="adm-field" /></label>
       <label className="adm-label">Thông số kỹ thuật <span className="adm-label-note">Mỗi dòng theo mẫu: Chống nước: IPX4</span><textarea rows={3} value={specText} onChange={(e) => setSpecText(e.target.value)} className="adm-field" /></label>

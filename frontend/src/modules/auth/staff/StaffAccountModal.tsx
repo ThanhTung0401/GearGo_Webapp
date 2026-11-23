@@ -52,11 +52,14 @@ export function StaffAccountModal({
             </div>
             <div>
               <label className="adm-label--block">Tên đăng nhập</label>
+              {/* [STF-02] Ten dang nhap readOnly khi edit vi backend luu theo email prefix,
+                   moi thay doi se bi ghi de khi reload (xem staffAccountsUtils.ts:25). */}
               <input
                 required
+                disabled={!isNew}
                 value={editingStaff.username}
                 onChange={(e) => onChange({ ...editingStaff, username: e.target.value })}
-                className="adm-field adm-field--compact"
+                className={`adm-field adm-field--compact ${isNew ? "" : "adm-field--readonly-muted"}`}
               />
             </div>
           </div>
@@ -95,6 +98,17 @@ export function StaffAccountModal({
                 className="adm-field adm-field--compact"
               />
             </div>
+          </div>
+
+          {/* [STF-03] Dia chi lien he de khong ghi de thanh "Van phong GearGo" khi cap nhat */}
+          <div>
+            <label className="adm-label--block">Địa chỉ liên hệ</label>
+            <input
+              placeholder="VD: 123 Trần Hưng Đạo, Q1, TP.HCM"
+              value={editingStaff.address ?? ""}
+              onChange={(e) => onChange({ ...editingStaff, address: e.target.value })}
+              className="adm-field adm-field--compact"
+            />
           </div>
 
           <div>

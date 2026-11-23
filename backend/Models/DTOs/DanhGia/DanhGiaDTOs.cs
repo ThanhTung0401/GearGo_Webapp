@@ -90,6 +90,11 @@ public class DanhGiaResponse
     public string TenSanPham { get; set; } = null!;
 
     /// <summary>
+    /// [REV-04] Mã khách hàng chủ đánh giá (để UI hiển thị "Người gửi: Tên (KH#123)").
+    /// </summary>
+    public long? MaKhachHang { get; set; }
+
+    /// <summary>
     /// Tên tác giả hiển thị đã được che bớt bảo mật (vd: "Nguyễn V***")
     /// </summary>
     public string TenNguoiDung { get; set; } = null!;

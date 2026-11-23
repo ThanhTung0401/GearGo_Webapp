@@ -151,7 +151,10 @@ export function SuppliersTab({ app }: { app: ReturnType<typeof useApp> }) {
         })}
         {filteredSuppliers.length === 0 && (
           <div className="adm-empty-box">
-            Không tìm thấy nhà cung cấp nào phù hợp.
+            {/* [SUP-02] Phan biet empty state: do bo loc hay chua co du lieu NCC trong he thong. */}
+            {supplierSearch || statusFilter !== "all"
+              ? `Không tìm thấy nhà cung cấp nào khớp "${supplierSearch || "bộ lọc trạng thái"}". Thử xóa bộ lọc hoặc tìm với từ khóa khác.`
+              : "Chưa có nhà cung cấp nào. Bấm \"+ Thêm NCC mới\" để tạo nhà cung cấp đầu tiên."}
           </div>
         )}
       </div>

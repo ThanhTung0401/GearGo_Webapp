@@ -124,6 +124,25 @@ export function useStaffAccounts(app: ReturnType<typeof useApp>) {
     if (!editingStaff) return;
     setModalError("");
 
+    // [STF-03] Validate client-side truoc khi goi API/Mock: ten, email, SDT, mat khau khoi tao.
+    if (!editingStaff.name.trim()) {
+      return setModalError("Họ và tên nhân viên không được để trống.");
+    }
+    const emailTrim = editingStaff.email.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailTrim)) {
+      return setModalError("Định dạng email không hợp lệ.");
+    }
+    const phoneTrim = editingStaff.phone.trim();
+    if (!/^(\+84|0)\d{9,10}$/.test(phoneTrim)) {
+      return setModalError("Số điện thoại không hợp lệ (10-11 chữ số, bắt đầu bằng 0 hoặc +84).");
+    }
+    if (isNew) {
+      const pw = editingStaff.password ?? "";
+      if (pw.length < 8 || pw.length > 100) {
+        return setModalError("Mật khẩu khởi tạo phải từ 8 đến 100 ký tự.");
+      }
+    }
+
     if (isRealApi) {
       await runModalMutation(
         async () => {
@@ -134,7 +153,8 @@ export function useStaffAccounts(app: ReturnType<typeof useApp>) {
               soDienThoai: editingStaff.phone.trim(),
               vaiTro: editingStaff.role === "Quản trị viên" ? "QuanTriVien" : "NhanVien",
               matKhauKhoiTao: editingStaff.password || "GearGo@2026",
-              diaChi: "Văn phòng GearGo",
+              // [STF-03] Dung dia chi nguoi dung nhap, chi fallback khi that su rong.
+              diaChi: editingStaff.address?.trim() || "Văn phòng GearGo",
             });
           } else {
             const nvId = resolveNvId(editingStaff.id);
@@ -142,7 +162,8 @@ export function useStaffAccounts(app: ReturnType<typeof useApp>) {
               hoTen: editingStaff.name.trim(),
               email: editingStaff.email.trim(),
               soDienThoai: editingStaff.phone.trim(),
-              diaChi: "Văn phòng GearGo",
+              // [STF-03] Giu nguyen dia chi that trong DB thay vi ghi de cung "Van phong GearGo".
+              diaChi: editingStaff.address?.trim() || "Văn phòng GearGo",
             });
             const prevIsAdmin = originalEditRole === "Quản trị viên";
             const nextIsAdmin = editingStaff.role === "Quản trị viên";

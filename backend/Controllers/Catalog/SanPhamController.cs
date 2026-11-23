@@ -84,9 +84,12 @@ public class SanPhamController : BaseApiController
     public async Task<IActionResult> ThemHinhAnh([FromRoute] long id, IFormFile file)
         => StatusCode(201, await _adminSanPhamService.ThemHinhAnhAsync(id, file));
 
+    // [SP-05] Thao tác xóa ảnh thuộc nghiệp vụ cập nhật gallery sản phẩm (UC6.6) nên
+    // ánh xạ về quyền SanPham.CapNhat thay vì SanPham.Xoa để nhân viên có quyền cập nhật
+    // sản phẩm vẫn có thể xóa ảnh mà không bị 403.
     [HttpDelete("hinh-anh/{maHinhAnh:long}")]
     [Authorize]
-    [RequirePermission(DomainConstants.Permissions.SanPham_Xoa)]
+    [RequirePermission(DomainConstants.Permissions.SanPham_CapNhat)]
     public async Task<IActionResult> XoaHinhAnh([FromRoute] long maHinhAnh)
     {
         await _adminSanPhamService.XoaHinhAnhAsync(maHinhAnh);
