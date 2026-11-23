@@ -64,7 +64,7 @@ export function useCustomersTab(app: ReturnType<typeof useApp>) {
           name: tk.hoTen || (tk.email ? tk.email.split("@")[0] : "Khách hàng"),
           phone: tk.soDienThoai || "Chưa cập nhật",
           email: tk.email || "",
-          address: "Khách hàng GearGo",
+          address: tk.diaChi || "Chưa cập nhật",
           status: tk.trangThai === "HoatDong" ? "active" : "locked",
           lockedReason: tk.lyDoKhoa || undefined,
           createdAt: tk.ngayTao ? new Date(tk.ngayTao).toLocaleDateString("vi-VN") : "01/01/2026",
@@ -105,6 +105,11 @@ export function useCustomersTab(app: ReturnType<typeof useApp>) {
   // Xác nhận khóa tài khoản khách hàng kèm lý do vi phạm
   const handleConfirmLock = async () => {
     if (!lockModalCustomer) return;
+    // CUS-03: Bat buoc nhap ly do, khong tu bia "Khach hang vi pham quy che" khi de trong
+    if (!lockReason.trim()) {
+      setLockError("Vui lòng nhập lý do khóa tài khoản khách hàng.");
+      return;
+    }
     if (realApi) {
       const maTaiKhoan = customerIdToTaiKhoanId[lockModalCustomer.id] || parseInt(lockModalCustomer.id.replace(/\D/g, ""), 10);
       if (!Number.isFinite(maTaiKhoan) || maTaiKhoan <= 0) {
@@ -114,7 +119,7 @@ export function useCustomersTab(app: ReturnType<typeof useApp>) {
       setActionLoading(true);
       setLockError("");
       try {
-        await staffApi.khoaTaiKhoan(maTaiKhoan, lockReason.trim() || "Khóa tài khoản khách hàng vi phạm quy chế");
+        await staffApi.khoaTaiKhoan(maTaiKhoan, lockReason.trim());
         await loadCustomerList();
         setLockModalCustomer(null);
         setLockReason("");

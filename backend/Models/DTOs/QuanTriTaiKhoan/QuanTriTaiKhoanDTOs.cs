@@ -86,7 +86,9 @@ public record TaiKhoanResponse(
     long? MaNhanVien,
     long? MaKhachHang,
     DateTime NgayTao,
-    DateTime NgayCapNhat);
+    DateTime NgayCapNhat,
+    // CUS-01: Dia chi that cua khach hang/nhan vien (tranh gan cung "Khach hang GearGo" o Frontend)
+    string? DiaChi = null);
 
 public record CongViecCanBanGiaoResponse(
     long MaPhieuBaoTri,

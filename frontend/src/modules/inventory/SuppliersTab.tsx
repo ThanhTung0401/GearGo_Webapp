@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useApp } from "../../context/AppContext";
+import { isRealApiEnabled } from "../../services/apiClient";
 
 import { fmt, type Supplier } from "../../store";
 import Icon from "../../components/Icon";
@@ -22,6 +23,15 @@ export function SuppliersTab({ app }: { app: ReturnType<typeof useApp> }) {
   const selectedSupplierProfile = selectedSupplierId
     ? app.suppliers.find((s) => s.id === selectedSupplierId) ?? null
     : null;
+
+  // SUP-01: Self-heal khi F5 truc tiep vao /admin/suppliers va bootstrap chua kip nap
+  useEffect(() => {
+    const isRealApi = app.realApi || isRealApiEnabled();
+    if (!isRealApi) return;
+    if (app.suppliers.length === 0) void app.refreshSuppliers?.();
+    if (app.importReceipts.length === 0) void app.refreshImportReceipts?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const filteredSuppliers = app.suppliers.filter((s) => {
     const matchStatus = statusFilter === "all" || s.cooperationStatus === statusFilter;

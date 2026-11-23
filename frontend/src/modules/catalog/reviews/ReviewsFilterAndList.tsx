@@ -198,8 +198,9 @@ export function ReviewsFilterAndList({
                 )}
 
                 <div className="adm-hint-text text-[0.75rem]">
-                  Người gửi: <strong>{rev.customerName}</strong> ({rev.customerId}) · Ngày gửi: {formatDateTimeVi(rev.createdAt)}
-                  {rev.hiddenReason && (
+                  Người gửi: <strong>{rev.customerName}</strong>
+                  {rev.customerId ? ` (KH#${rev.customerId})` : ""} · Ngày gửi: {formatDateTimeVi(rev.createdAt)}
+                  {rev.status === "hidden" && rev.hiddenReason && (
                     <span className="text-[#B91C1C] ml-2">
                       · Lý do ẩn: <strong>{rev.hiddenReason}</strong> ({rev.hiddenBy || "Admin"})
                     </span>

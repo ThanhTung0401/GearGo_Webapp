@@ -52,7 +52,8 @@ public class QuanTriTaiKhoanService : IQuanTriTaiKhoanService
                 t.NhanVien != null ? t.NhanVien.HoTen : t.KhachHang != null ? t.KhachHang.HoTen : null,
                 t.NhanVien != null ? t.NhanVien.MaNhanVien : (long?)null,
                 t.KhachHang != null ? t.KhachHang.MaKhachHang : (long?)null,
-                t.NgayTao, t.NgayCapNhat))
+                t.NgayTao, t.NgayCapNhat,
+                t.NhanVien != null ? t.NhanVien.DiaChi : t.KhachHang != null ? t.KhachHang.DiaChi : null))
             .ToListAsync(ct);
 
         return Result<PhanTrangResponse<TaiKhoanResponse>>.Ok(new(rows, tongSo, trang, soMoiTrang));
@@ -143,5 +144,6 @@ public class QuanTriTaiKhoanService : IQuanTriTaiKhoanService
     internal static TaiKhoanResponse Map(TaiKhoan t) => new(
         t.MaTaiKhoan, t.Email, t.SoDienThoai, t.VaiTro, t.TrangThai, t.LyDoKhoa,
         t.NhanVien?.HoTen ?? t.KhachHang?.HoTen, t.NhanVien?.MaNhanVien, t.KhachHang?.MaKhachHang,
-        t.NgayTao, t.NgayCapNhat);
+        t.NgayTao, t.NgayCapNhat,
+        t.NhanVien?.DiaChi ?? t.KhachHang?.DiaChi);
 }
