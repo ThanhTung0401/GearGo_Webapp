@@ -7,6 +7,7 @@ import { inventoryApi } from "../../../services/api/inventoryApi";
 
 import { mapEquipmentStatusToBackend } from "../../../services/mappers/catalogEquipmentMapper";
 import { fmt } from "../../../store";
+import { usePermissionsContext } from "../../../features/permissions/PermissionsContext";
 
 import { FormModal, FormActions } from "./FormModal";
 
@@ -17,6 +18,9 @@ export function EquipmentForm({ app, equipment, onClose }: { app: ReturnType<typ
   const [loading, setLoading] = useState(false);
   const product = app.products.find((item) => item.id === form.productId);
   const sourceReceipt = app.importReceipts.find((item) => item.id === form.importReceiptId);
+  // FN6-05: Admin auto-duyệt đề nghị vòng đời (ngừng sử dụng) ngay sau khi lập
+  const permCtx = usePermissionsContext();
+  const isAdmin = permCtx?.roleName === "QuanTriVien";
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -41,10 +45,21 @@ export function EquipmentForm({ app, equipment, onClose }: { app: ReturnType<typ
             moTaLoi: form.note?.trim() || form.condition?.trim() || "Chuyển bảo trì từ quản lý thiết bị",
           });
         } else if (form.equipmentStatus === "Ngừng sử dụng" && equipment.equipmentStatus !== "Ngừng sử dụng") {
-          await equipmentApi.deNghiNgungSuDung(equipId, {
+          const deNghi = (await equipmentApi.deNghiNgungSuDung(equipId, {
             lyDo: form.note?.trim() || form.condition?.trim() || "Ngừng sử dụng thiết bị từ quản lý thiết bị",
             tinhTrangMoi: form.condition?.trim() || undefined,
-          });
+          })) as Record<string, any>;
+          // FN6-05: nếu actor là Quản trị viên, duyệt vòng đời ngay để áp dụng tức thì
+          if (isAdmin) {
+            const maPhieu = deNghi?.maPhieuDieuChinh ?? deNghi?.duLieu?.maPhieuDieuChinh;
+            if (typeof maPhieu === "number") {
+              try {
+                await equipmentApi.duyetDeNghiVongDoi(maPhieu);
+              } catch {
+                // Bỏ qua lỗi duyệt — đề nghị đã lập vẫn ghi nhận
+              }
+            }
+          }
         } else {
           const created = await inventoryApi.lapPhieu({
             loaiDieuChinh: "KiemKeSaiLech",

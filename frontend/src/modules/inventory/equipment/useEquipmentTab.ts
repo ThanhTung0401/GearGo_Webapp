@@ -3,6 +3,7 @@ import { useApp } from "../../../context/AppContext";
 import { isRealApiEnabled } from "../../../services/apiClient";
 import { equipmentApi, type ThietBiBackend, type PhanCongLichThietBiBackend } from "../../../services/api";
 import { MaintenanceReceipt, Equipment, ImportReceipt, Supplier } from "../../../store";
+import { usePermissionsContext } from "../../../features/permissions/PermissionsContext";
 
 export interface ViewingEquipDetailState {
   equip: Equipment;
@@ -30,6 +31,9 @@ export const EQUIPMENT_STATUS_OPTIONS = [
 
 // Hook quản lý trạng thái kho thiết bị, bảo trì (UC6.9-UC6.13) và nhập hàng kiểm nhận (UC7.3-UC7.8)
 export function useEquipmentTab(app: ReturnType<typeof useApp>) {
+  // FN6-05: xác định actor có phải Quản trị viên để auto-approve đề nghị vòng đời ngay sau tạo
+  const permCtx = usePermissionsContext();
+  const isAdmin = permCtx?.roleName === "QuanTriVien";
   const [subTab, setSubTab] = useState<"inventory" | "maintenance" | "import">("inventory");
   const [filter, setFilter] = useState("Tất cả");
   const [productFilter, setProductFilter] = useState("Tất cả");
@@ -127,12 +131,29 @@ export function useEquipmentTab(app: ReturnType<typeof useApp>) {
           );
           return;
         }
-        await equipmentApi.deNghiDieuChuyenSanPham(equipIdNum, {
+        const deNghiRes = (await equipmentApi.deNghiDieuChuyenSanPham(equipIdNum, {
           maSanPhamDich: targetSpIdNum,
           lyDo: "Giáng cấp / điều chuyển thiết bị sang phân khúc sản phẩm đích",
-        });
+        })) as Record<string, any>;
+        // FN6-05: nếu actor là Quản trị viên, auto-duyệt đề nghị vòng đời ngay để áp dụng tức thì
+        let autoApproved = false;
+        if (isAdmin) {
+          const maPhieu = deNghiRes?.maPhieuDieuChinh ?? deNghiRes?.duLieu?.maPhieuDieuChinh;
+          if (typeof maPhieu === "number") {
+            try {
+              await equipmentApi.duyetDeNghiVongDoi(maPhieu);
+              autoApproved = true;
+            } catch {
+              // Bỏ qua lỗi duyệt — vẫn ghi nhận đã tạo đề nghị
+            }
+          }
+        }
         await Promise.all([app.refreshEquipment?.(), app.refreshCatalog?.()]);
-        setEquipSuccess(`Đã chuyển thiết bị ${transferModal.displayCode || transferModal.id} sang sản phẩm đích.`);
+        setEquipSuccess(
+          autoApproved
+            ? `Đã chuyển thiết bị ${transferModal.displayCode || transferModal.id} sang sản phẩm đích và duyệt tức thì.`
+            : `Đã gửi đề nghị điều chuyển thiết bị ${transferModal.displayCode || transferModal.id} chờ Quản trị viên duyệt.`
+        );
         setTransferModal(null);
       } catch (err) {
         setEquipError(err instanceof Error ? err.message : "Lỗi gửi đề nghị điều chuyển thiết bị.");
