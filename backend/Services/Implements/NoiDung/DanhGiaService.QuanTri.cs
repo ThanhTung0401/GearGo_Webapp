@@ -156,6 +156,8 @@ public partial class DanhGiaService
             MaDonThue = d.ChiTietDonThue?.MaDonThue ?? 0,
             MaDonHienThi = d.ChiTietDonThue?.DonThue?.MaDonHienThi,
             MaSanPham = maSanPham,
+            // [REV-04] Gán mã khách hàng chủ đánh giá để UI không hiển thị dấu "()" trống.
+            MaKhachHang = d.ChiTietDonThue?.DonThue?.MaKhachHang,
             TenSanPham = tenSanPham, TenNguoiDung = tenNguoiDung, SoSao = d.SoSao, NoiDung = d.NoiDung,
             DanhSachAnh = danhSachAnh, NgayTao = d.NgayTao, TrangThaiHienThi = d.TrangThaiHienThi,
             LyDoAn = d.LyDoAn, PhanHoiCuaHang = d.PhanHoiCuaHang, ThoiDiemPhanHoi = d.ThoiDiemPhanHoi,

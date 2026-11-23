@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 
 namespace GearGo.Models.DTOs.Admin
@@ -38,6 +39,10 @@ namespace GearGo.Models.DTOs.Admin
         public decimal GiaTriBoiThuong { get; set; }
 
         public string TrangThaiKinhDoanh { get; set; } = "DangKinhDoanh";
+
+        // [SP-04] Danh sách URL hình ảnh sản phẩm (ảnh đầu tiên sẽ là ảnh chính nếu chưa có).
+        // Cho phép người dùng dán danh sách URL ảnh thay vì chỉ upload file trực tiếp.
+        public List<string>? HinhAnhs { get; set; }
     }
 
     public class CapNhatSanPhamRequest : TaoSanPhamRequest { }
