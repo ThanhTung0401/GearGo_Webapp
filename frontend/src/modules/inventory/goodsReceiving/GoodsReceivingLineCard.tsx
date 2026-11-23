@@ -67,7 +67,8 @@ export default function GoodsReceivingLineCard({
             <div>
               <span className="text-[0.72rem] text-gray-600">Mã serial ({st.acceptedCodes.length} mã):</span>
               <div className="flex flex-wrap gap-1 mt-1">
-                {st.acceptedCodes.map((code, cIdx) => (
+                {/* [PN-08] Khi lô > 8 mã, chỉ hiển thị 4 ô đầu + nút gộp dải để dán bulk; còn lại ẩn trong placeholder. */}
+                {(st.acceptedCodes.length > 8 ? st.acceptedCodes.slice(0, 4) : st.acceptedCodes).map((code, cIdx) => (
                   <input
                     key={cIdx}
                     placeholder={`Mã ${cIdx + 1}`}
@@ -80,6 +81,22 @@ export default function GoodsReceivingLineCard({
                     className="w-[90px] px-1.5 py-0.5 text-[0.72rem] font-mono rounded border border-gray-300 bg-white"
                   />
                 ))}
+                {st.acceptedCodes.length > 8 && (
+                  <>
+                    <span className="text-[0.68rem] text-gray-500 self-center">… {st.acceptedCodes.length - 4} mã khác</span>
+                    <textarea
+                      placeholder="Dán nhanh danh sách serial (mỗi dòng/dấu phẩy một mã)"
+                      className="w-full mt-1 px-2 py-1 text-[0.7rem] font-mono rounded border border-gray-300 bg-white"
+                      rows={2}
+                      onChange={(e) => {
+                        const bulk = e.target.value.split(/[,\n]/).map((v) => v.trim()).filter(Boolean);
+                        if (bulk.length === 0) return;
+                        const next = Array.from({ length: st.acceptedCodes.length }, (_, i) => bulk[i] ?? st.acceptedCodes[i] ?? "");
+                        onUpdate(index, { acceptedCodes: next });
+                      }}
+                    />
+                  </>
+                )}
               </div>
             </div>
           )}
@@ -107,9 +124,17 @@ export default function GoodsReceivingLineCard({
               max={line.quantity}
               value={st.damagedQty}
               onChange={(e) => {
-                const val = Math.max(0, Number(e.target.value));
+                const val = Math.max(0, Math.min(line.quantity, Number(e.target.value)));
                 const newCodes = Array.from({ length: val }, (_, i) => st.damagedCodes[i] || "");
-                onUpdate(index, { damagedQty: val, damagedCodes: newCodes });
+                // [PN-08] Tự cân bằng acceptedQty = total - damaged - rejected.
+                const newAccepted = Math.max(0, line.quantity - val - st.rejectedQty);
+                const newAcceptedCodes = Array.from({ length: newAccepted }, (_, i) => st.acceptedCodes[i] || "");
+                onUpdate(index, {
+                  damagedQty: val,
+                  damagedCodes: newCodes,
+                  acceptedQty: newAccepted,
+                  acceptedCodes: newAcceptedCodes,
+                });
               }}
               className="w-full px-2 py-1 rounded border border-gray-300 mt-0.5 bg-white"
             />
@@ -151,7 +176,17 @@ export default function GoodsReceivingLineCard({
               min="0"
               max={line.quantity}
               value={st.rejectedQty}
-              onChange={(e) => onUpdate(index, { rejectedQty: Math.max(0, Number(e.target.value)) })}
+              onChange={(e) => {
+                const val = Math.max(0, Math.min(line.quantity, Number(e.target.value)));
+                // [PN-08] Tự cân bằng acceptedQty = total - damaged - rejected khi thay đổi số lượng từ chối.
+                const newAccepted = Math.max(0, line.quantity - st.damagedQty - val);
+                const newAcceptedCodes = Array.from({ length: newAccepted }, (_, i) => st.acceptedCodes[i] || "");
+                onUpdate(index, {
+                  rejectedQty: val,
+                  acceptedQty: newAccepted,
+                  acceptedCodes: newAcceptedCodes,
+                });
+              }}
               className="w-full px-2 py-1 rounded border border-gray-300 mt-0.5 bg-white"
             />
           </label>

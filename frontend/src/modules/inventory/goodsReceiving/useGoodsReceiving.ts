@@ -61,10 +61,15 @@ export function useGoodsReceiving(
     const st = lineStates[index];
     const targetQty = type === "accepted" ? st.acceptedQty : st.damagedQty;
 
-    const currentAllCodes = new Set([
-      ...app.equipment.map((e) => e.id),
-      ...Object.values(lineStates)
-        .flatMap((ls) => [...ls.acceptedCodes, ...ls.damagedCodes])
+    // [PN-07] Real API: e.id là ID số, mã serial thật nằm ở e.displayCode. Phải nạp cả hai để tránh trùng DB.
+    const currentAllCodes = new Set<string>([
+      ...app.equipment.flatMap((e) => [e.id.toUpperCase(), (e.displayCode ?? "").toUpperCase()]).filter(Boolean),
+      ...Object.entries(lineStates)
+        .flatMap(([idx, ls]) => [
+          ...(Number(idx) === index && type === "accepted" ? [] : ls.acceptedCodes),
+          ...(Number(idx) === index && type === "damaged" ? [] : ls.damagedCodes),
+        ])
+        .map((c) => c.trim().toUpperCase())
         .filter(Boolean),
     ]);
 
@@ -72,9 +77,9 @@ export function useGoodsReceiving(
     let counter = 1;
     while (generated.length < targetQty) {
       const code = `EQ-${prefix}${counter.toString().padStart(3, "0")}`;
-      if (!currentAllCodes.has(code)) {
+      if (!currentAllCodes.has(code.toUpperCase())) {
         generated.push(code);
-        currentAllCodes.add(code);
+        currentAllCodes.add(code.toUpperCase());
       }
       counter++;
     }

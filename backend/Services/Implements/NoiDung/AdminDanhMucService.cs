@@ -18,12 +18,18 @@ public class AdminDanhMucService : IAdminDanhMucService
 
     public async Task<object> TaoMoiAsync(TaoDanhMucRequest req)
     {
+        // [DM-04] Validate tên và kiểm tra trùng tên trong cùng cấp cha.
+        var tenTrim = (req.TenDanhMuc ?? string.Empty).Trim();
+        if (string.IsNullOrEmpty(tenTrim))
+            throw new DuLieuKhongHopLeException("TEN_DANH_MUC_RONG", "Tên danh mục không được để trống.");
         if (req.MaDanhMucCha.HasValue && await _context.Set<DanhMucSanPham>().FindAsync(req.MaDanhMucCha.Value) == null)
-            throw new Exception("Danh mục cha không tồn tại.");
+            throw new KhongTimThayException("Danh mục cha không tồn tại.");
+        if (await _context.Set<DanhMucSanPham>().AnyAsync(d => d.MaDanhMucCha == req.MaDanhMucCha && d.TenDanhMuc == tenTrim))
+            throw new XungDotDuLieuException("DANH_MUC_TRUNG_TEN", "Đã tồn tại danh mục cùng tên trong cấp cha này.");
 
         var danhMuc = new DanhMucSanPham
         {
-            TenDanhMuc = req.TenDanhMuc, MaDanhMucCha = req.MaDanhMucCha,
+            TenDanhMuc = tenTrim, MaDanhMucCha = req.MaDanhMucCha,
             MoTa = req.MoTa, ThuTuHienThi = req.ThuTuHienThi, TrangThai = req.TrangThai
         };
         _context.Add(danhMuc);
@@ -34,12 +40,18 @@ public class AdminDanhMucService : IAdminDanhMucService
     public async Task<object> CapNhatAsync(long id, CapNhatDanhMucRequest req)
     {
         var danhMuc = await _context.Set<DanhMucSanPham>().FindAsync(id)
-            ?? throw new Exception("Không tìm thấy danh mục.");
+            ?? throw new KhongTimThayException("Không tìm thấy danh mục.");
 
+        // [DM-04] Validate tên và kiểm tra trùng tên trong cùng cấp cha (khác chính nó).
+        var tenTrim = (req.TenDanhMuc ?? string.Empty).Trim();
+        if (string.IsNullOrEmpty(tenTrim))
+            throw new DuLieuKhongHopLeException("TEN_DANH_MUC_RONG", "Tên danh mục không được để trống.");
         if (req.MaDanhMucCha.HasValue)
             await KiemTraDanhMucChaHopLeAsync(id, req.MaDanhMucCha.Value);
+        if (await _context.Set<DanhMucSanPham>().AnyAsync(d => d.MaDanhMucCha == req.MaDanhMucCha && d.TenDanhMuc == tenTrim && d.MaDanhMuc != id))
+            throw new XungDotDuLieuException("DANH_MUC_TRUNG_TEN", "Đã tồn tại danh mục cùng tên trong cấp cha này.");
 
-        danhMuc.TenDanhMuc = req.TenDanhMuc;
+        danhMuc.TenDanhMuc = tenTrim;
         danhMuc.MaDanhMucCha = req.MaDanhMucCha;
         danhMuc.MoTa = req.MoTa;
         danhMuc.ThuTuHienThi = req.ThuTuHienThi;
@@ -53,16 +65,16 @@ public class AdminDanhMucService : IAdminDanhMucService
     private async Task KiemTraDanhMucChaHopLeAsync(long id, long maDanhMucCha)
     {
         if (maDanhMucCha == id)
-            throw new Exception("Danh mục cha không được là chính nó.");
+            throw new DuLieuKhongHopLeException("DANH_MUC_CHA_SAI", "Danh mục cha không được là chính nó.");
         if (await _context.Set<DanhMucSanPham>().FindAsync(maDanhMucCha) == null)
-            throw new Exception("Danh mục cha không tồn tại.");
+            throw new KhongTimThayException("Danh mục cha không tồn tại.");
 
         long? currentAncestorId = maDanhMucCha;
         var visited = new HashSet<long>();
         while (currentAncestorId.HasValue)
         {
             if (currentAncestorId.Value == id)
-                throw new Exception("Không thể chọn danh mục con hoặc cháu làm danh mục cha (phát hiện vòng lặp phân cấp).");
+                throw new XungDotDuLieuException("DANH_MUC_VONG_LAP", "Không thể chọn danh mục con hoặc cháu làm danh mục cha (phát hiện vòng lặp phân cấp).");
             if (!visited.Add(currentAncestorId.Value)) break;
 
             var ancestor = await _context.Set<DanhMucSanPham>().AsNoTracking()
@@ -74,7 +86,20 @@ public class AdminDanhMucService : IAdminDanhMucService
     public async Task DoiTrangThaiAsync(long id, string trangThaiMoi)
     {
         var danhMuc = await _context.Set<DanhMucSanPham>().FindAsync(id)
-            ?? throw new Exception("Không tìm thấy danh mục.");
+            ?? throw new KhongTimThayException("Không tìm thấy danh mục.");
+
+        // [DM-03] Validate trạng thái hợp lệ và chặn ẩn danh mục đang chứa sản phẩm DangKinhDoanh.
+        var valid = new[] { "HienThi", "TamAn" };
+        if (!valid.Contains(trangThaiMoi))
+            throw new DuLieuKhongHopLeException("TRANG_THAI_KHONG_HOP_LE", "Trạng thái danh mục không hợp lệ (chỉ chấp nhận HienThi hoặc TamAn).");
+        if (trangThaiMoi == "TamAn")
+        {
+            var coSanPhamActive = await _context.Set<SanPham>()
+                .AnyAsync(s => s.MaDanhMuc == id && s.TrangThaiKinhDoanh == Models.Enums.TrangThaiKinhDoanh.DangKinhDoanh);
+            if (coSanPhamActive)
+                throw new XungDotDuLieuException("DANH_MUC_DANG_CO_SAN_PHAM_KD", "Không thể ẩn danh mục đang chứa sản phẩm đang kinh doanh.");
+        }
+
         danhMuc.TrangThai = trangThaiMoi;
         await _context.SaveChangesAsync();
     }

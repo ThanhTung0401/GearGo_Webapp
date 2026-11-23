@@ -14,9 +14,31 @@ export function CategoryForm({ app, category, onClose }: { app: ReturnType<typeo
   const [loading, setLoading] = useState(false);
 
   // Đấu nối API Quản trị danh mục (UC44, UC45, UC46 / UC6.1, UC6.2)
+  // [DM-05] Lọc bỏ toàn bộ cây con/cháu của danh mục đang sửa khỏi dropdown chọn danh mục cha.
+  const descendantIds = (() => {
+    if (!form.id) return new Set<string>();
+    const ids = new Set<string>([form.id]);
+    let changed = true;
+    while (changed) {
+      changed = false;
+      for (const c of app.categories) {
+        if (c.parentId && ids.has(c.parentId) && !ids.has(c.id)) {
+          ids.add(c.id);
+          changed = true;
+        }
+      }
+    }
+    return ids;
+  })();
+
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
     setError("");
+
+    // [DM-05] Validate tên danh mục trước khi gọi API.
+    if (!form.name.trim()) {
+      return setError("Vui lòng nhập tên danh mục.");
+    }
 
     if (isRealApiEnabled()) {
       setLoading(true);
@@ -61,7 +83,7 @@ export function CategoryForm({ app, category, onClose }: { app: ReturnType<typeo
     <form onSubmit={submit} className="grid gap-4 mt-5">
       <div className="responsive-two-column adm-grid-2">
         <label className="adm-label">Tên danh mục<input autoFocus value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="adm-field" /></label>
-        <label className="adm-label">Danh mục cha<select value={form.parentId ?? ""} onChange={(e) => setForm({ ...form, parentId: e.target.value || null })} className="adm-field"><option value="">Không có</option>{app.categories.filter((item) => item.id !== form.id).map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
+        <label className="adm-label">Danh mục cha<select value={form.parentId ?? ""} onChange={(e) => setForm({ ...form, parentId: e.target.value || null })} className="adm-field"><option value="">Không có</option>{app.categories.filter((item) => !descendantIds.has(item.id)).map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
         <label className="adm-label">Thứ tự hiển thị<input type="number" min="0" value={form.displayOrder} onChange={(e) => setForm({ ...form, displayOrder: Number(e.target.value) })} className="adm-field" /></label>
         <label className="adm-label">Trạng thái<select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value as Category["status"] })} className="adm-field"><option value="active">Hoạt động</option><option value="inactive">Tạm ẩn</option></select></label>
       </div>

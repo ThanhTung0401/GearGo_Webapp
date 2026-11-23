@@ -25,8 +25,10 @@ export function mapNhaCungCapToSupplier(ncc: NhaCungCapBackend): Supplier {
  * Chuẩn hóa trạng thái phiếu nhập khi backend có thể serialize enum số (0/1/2) hoặc chuỗi.
  */
 function mapImportStatus(trangThai: string | number): ImportReceipt["status"] {
-  if (trangThai === 1 || trangThai === "DaNhapKho") return "Đã nhập kho";
-  if (trangThai === 2 || trangThai === "DaHuy") return "Đã hủy";
+  // Backend enum: Nhap = 1, DaNhapKho = 2, DaHuy = 3 (xem Models/Enums/TrangThaiPhieuNhap.cs)
+  // Chấp nhận cả giá trị số (nếu chưa đăng ký JsonStringEnumConverter) lẫn chuỗi.
+  if (trangThai === 2 || trangThai === "DaNhapKho") return "Đã nhập kho";
+  if (trangThai === 3 || trangThai === "DaHuy") return "Đã hủy";
   return "Nháp";
 }
 

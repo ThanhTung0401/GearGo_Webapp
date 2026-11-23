@@ -14,7 +14,8 @@ export default function LifecycleHeader({ equipment, statusStyle, onClose }: Pro
         <div>
           <div className="flex items-center gap-2 flex-wrap">
             <h3 className="m-0 text-xl font-bold text-[var(--color-bark,#1F2937)] font-[family-name:var(--font-display)]">
-              Sổ đời thiết bị: {equipment.id}
+              {/* [VD-05] Ưu tiên mã serial hiển thị thay vì ID số nội bộ. */}
+              Sổ đời thiết bị: {equipment.displayCode || equipment.id}
             </h3>
             <span
               style={{

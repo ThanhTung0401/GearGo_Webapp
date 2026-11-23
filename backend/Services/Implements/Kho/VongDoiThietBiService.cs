@@ -87,10 +87,11 @@ public partial class VongDoiThietBiService : IVongDoiThietBiService
         if (thietBi == null)
             return Result<AnhHuongThayDoiResponse>.Loi(DomainConstants.Errors.EquipmentNotFound, "Không tìm thấy thiết bị.");
 
-        if (request.LoaiThayDoi == DomainConstants.Lifecycle.Downgrade)
+        // [VD-04] Kiểm tra cho cả Downgrade lẫn ChuyenSanPham: FE có thể gửi "ChuyenSanPham" khi giá đích ≥ giá hiện tại.
+        if (request.LoaiThayDoi == DomainConstants.Lifecycle.Downgrade || request.LoaiThayDoi == "ChuyenSanPham")
         {
             if (!request.MaSanPhamDich.HasValue)
-                return Result<AnhHuongThayDoiResponse>.Loi(DomainConstants.Errors.TargetProductMismatch, "Phải chọn sản phẩm đích khi giáng cấp.");
+                return Result<AnhHuongThayDoiResponse>.Loi(DomainConstants.Errors.TargetProductMismatch, "Phải chọn sản phẩm đích khi chuyển loại.");
 
             var spDich = await _context.SanPhams.FirstOrDefaultAsync(s => s.MaSanPham == request.MaSanPhamDich.Value);
             if (spDich == null || spDich.TrangThaiKinhDoanh != TrangThaiKinhDoanh.DangKinhDoanh || spDich.MaSanPham == thietBi.MaSanPhamHienTai)

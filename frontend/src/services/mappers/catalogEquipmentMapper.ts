@@ -70,9 +70,14 @@ export function mapDanhMucToCategory(dm: DanhMucBackend): Category {
  * Trải phẳng cây danh mục (cha -> con đệ quy) thành danh sách phẳng để dùng cho selector và bộ lọc.
  */
 export function flattenDanhMucTree(tree: DanhMucBackend[]): Category[] {
+  // [DM-01] Khử trùng lặp theo maDanhMuc: EF Core Relationship Fix-up có thể lồng con vào cha
+  // và cũng xuất hiện ở mảng ngoài cùng, khiến mỗi danh mục con/cháu bị đẩy nhiều lần.
+  const seen = new Set<number>();
   const result: Category[] = [];
   const visit = (nodes: DanhMucBackend[]) => {
     for (const node of nodes) {
+      if (seen.has(node.maDanhMuc)) continue;
+      seen.add(node.maDanhMuc);
       result.push(mapDanhMucToCategory(node));
       if (Array.isArray(node.danhMucCon) && node.danhMucCon.length > 0) {
         visit(node.danhMucCon);
@@ -103,13 +108,51 @@ function parseSpecifications(thongSo?: string | null): Record<string, string> | 
   return { "Thông số": thongSo };
 }
 
+// [SP-02] Chuẩn hóa trangThaiKinhDoanh chấp nhận cả số (0 DangKinhDoanh, 1 TamNgung, 2 NgungKinhDoanh) lẫn chuỗi.
+function normalizeTrangThaiKinhDoanh(raw: unknown): "DangKinhDoanh" | "TamNgung" | "NgungKinhDoanh" {
+  if (typeof raw === "number") {
+    if (raw === 1) return "TamNgung";
+    if (raw === 2) return "NgungKinhDoanh";
+    return "DangKinhDoanh";
+  }
+  if (typeof raw === "string") {
+    if (raw === "TamNgung" || raw === "NgungKinhDoanh" || raw === "DangKinhDoanh") return raw;
+    // Backend đôi lúc serialize số dưới dạng string ("1", "2").
+    if (raw === "1") return "TamNgung";
+    if (raw === "2") return "NgungKinhDoanh";
+    if (raw === "0") return "DangKinhDoanh";
+  }
+  return "DangKinhDoanh";
+}
+
+// [SP-03] Ghép API_BASE cho ảnh /uploads/... để tránh Vite dev server trả 404.
+function resolveAssetUrl(url: string | undefined | null): string {
+  if (!url) return "";
+  if (url.startsWith("/uploads/")) {
+    // Lazy import để tránh circular import khi mapper chạy ở tầng dưới apiClient.
+    try {
+      const base = (globalThis as unknown as { __GEARGO_API_BASE__?: string }).__GEARGO_API_BASE__;
+      if (base) return `${base}${url}`;
+    } catch {
+      // ignore
+    }
+    // Fallback: dùng biến môi trường trực tiếp nếu globalThis chưa gắn.
+    const envBase = (import.meta as unknown as { env?: Record<string, string | undefined> }).env?.VITE_API_URL ?? "";
+    const normalized = envBase.replace(/\/+$/, "");
+    if (normalized) return `${normalized}${url}`;
+  }
+  return url;
+}
+
 export function mapSanPhamToProduct(sp: SanPhamBackend, categories: Category[] = []): Product & { availableCount?: number } {
   const cat = categories.find((c) => c.id === String(sp.maDanhMuc));
-  const images = Array.isArray(sp.hinhAnhs) && sp.hinhAnhs.length > 0
+  const rawImages = Array.isArray(sp.hinhAnhs) && sp.hinhAnhs.length > 0
     ? sp.hinhAnhs
     : sp.hinhAnhChinh
       ? [sp.hinhAnhChinh]
       : [FALLBACK_PRODUCT_IMAGE];
+  const images = rawImages.map((u) => resolveAssetUrl(u) || u);
+  const normalizedStatus = normalizeTrangThaiKinhDoanh(sp.trangThaiKinhDoanh);
 
   return {
     id: String(sp.maSanPham),
@@ -125,12 +168,10 @@ export function mapSanPhamToProduct(sp: SanPhamBackend, categories: Category[] =
     pricePerDay: Number(sp.giaThueMoiNgay ?? 0),
     deposit: Number(sp.mucCocMoiThietBi ?? 0),
     compensation: Number(sp.giaTriBoiThuong ?? 0),
-    image: sp.hinhAnhChinh || images[0] || FALLBACK_PRODUCT_IMAGE,
+    image: resolveAssetUrl(sp.hinhAnhChinh) || images[0] || FALLBACK_PRODUCT_IMAGE,
     images,
-    // Endpoint public /api/san-pham chỉ trả sản phẩm đang kinh doanh và có thể lược bỏ trangThaiKinhDoanh;
-    // chỉ đánh dấu inactive khi backend trả rõ trạng thái khác "DangKinhDoanh".
-    status: !sp.trangThaiKinhDoanh || sp.trangThaiKinhDoanh === "DangKinhDoanh" ? "active" : "inactive",
-    rawStatus: sp.trangThaiKinhDoanh ?? "DangKinhDoanh",
+    status: normalizedStatus === "DangKinhDoanh" ? "active" : "inactive",
+    rawStatus: normalizedStatus,
     rating: Number(sp.diemTrungBinh ?? 0),
     reviews: Number(sp.soLuongDanhGia ?? 0),
     availableCount: sp.soLuongKhaDung,
@@ -141,10 +182,13 @@ export function mapThietBiToEquipment(tb: ThietBiBackend): Equipment {
   return {
     id: String(tb.maThietBi),
     displayCode: tb.maThietBiHienThi,
+    // [VD-01] Backend chỉ trả maChiTietPhieuNhap (ID dòng chi tiết), không trả maPhieuNhap.
+    // Lưu đúng vào importReceiptLineId để useEquipmentLifecycle tra ngược qua ImportReceipt.lines.
+    // importReceiptId để rỗng — chỉ gán khi thực sự biết maPhieuNhap hiển thị (hiện backend chưa expose).
     importReceiptLineId: tb.maChiTietPhieuNhap != null ? String(tb.maChiTietPhieuNhap) : undefined,
     productId: String(tb.maSanPhamHienTai),
     originalProductId: String(tb.maSanPhamNguon ?? tb.maSanPhamHienTai),
-    importReceiptId: tb.maChiTietPhieuNhap != null ? String(tb.maChiTietPhieuNhap) : "",
+    importReceiptId: "",
     importDate: tb.ngayNhap ? tb.ngayNhap.slice(0, 10) : "",
     importPrice: Number(tb.giaNhap ?? 0),
     condition: tb.tinhTrang || "Tốt",

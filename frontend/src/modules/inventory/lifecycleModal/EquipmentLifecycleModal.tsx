@@ -25,6 +25,12 @@ export default function EquipmentLifecycleModal({ equipment, app, onClose }: Pro
     maintenanceHistory,
     statusStyle,
   } = useEquipmentLifecycle(equipment, app);
+  // [VD-01] Truyền importReceipt thực xuống LifecycleOriginCard để hiển thị đúng phiếu nhập gốc + NCC.
+  const importReceipt = app.importReceipts.find((r) => {
+    if (equipment.importReceiptId && r.id === equipment.importReceiptId) return true;
+    if (equipment.importReceiptLineId && r.lines.some((l) => l.id === equipment.importReceiptLineId)) return true;
+    return false;
+  });
 
   return (
     <div
@@ -41,6 +47,7 @@ export default function EquipmentLifecycleModal({ equipment, app, onClose }: Pro
             currentProduct={currentProduct}
             originalProduct={originalProduct}
             supplier={supplier}
+            importReceipt={importReceipt}
           />
           <LifecycleTimelineSections
             orderHistory={orderHistory}

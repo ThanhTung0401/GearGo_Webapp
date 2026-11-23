@@ -29,9 +29,11 @@ public partial class VongDoiThietBiService
             if (spDich == null || spDich.TrangThaiKinhDoanh != TrangThaiKinhDoanh.DangKinhDoanh || spDich.MaSanPham == thietBi.MaSanPhamHienTai)
                 return Result<DeNghiVongDoiResponse>.Loi(DomainConstants.Errors.TargetProductMismatch, "Sản phẩm đích không hợp lệ hoặc trùng sản phẩm hiện tại.");
 
+            // [VD-03] TinhTrang request có thể rỗng/null — giữ nguyên tình trạng cũ, tránh ghi đè thành "".
+            var tinhTrangMoi = !string.IsNullOrWhiteSpace(request.TinhTrang) ? request.TinhTrang : thietBi.TinhTrang;
             return await TaoDeNghiDieuChinhVongDoiInternalAsync(
                 thietBiId, actorId, DomainConstants.Lifecycle.Downgrade, request.LyDo, request.BangChung,
-                new { MaSanPhamHienTai = request.MaSanPhamDich, TinhTrang = request.TinhTrang, TrangThaiSuDung = thietBi.TrangThaiSuDung.ToString(), thietBi.MaChiTietPhieuNhap },
+                new { MaSanPhamHienTai = request.MaSanPhamDich, TinhTrang = tinhTrangMoi, TrangThaiSuDung = thietBi.TrangThaiSuDung.ToString(), thietBi.MaChiTietPhieuNhap },
                 $"Đề nghị giáng cấp từ SP #{thietBi.MaSanPhamHienTai} sang SP #{request.MaSanPhamDich}");
         }, _logger, IsolationLevel.Serializable);
     }
@@ -105,12 +107,22 @@ public partial class VongDoiThietBiService
             using var doc = JsonDocument.Parse(chiTiet.GiaTriSau);
             if (doc.RootElement.TryGetProperty("MaSanPhamHienTai", out var spProp))
                 thietBi.MaSanPhamHienTai = spProp.GetInt64();
-            if (doc.RootElement.TryGetProperty("TinhTrang", out var ttProp) && ttProp.ValueKind == JsonValueKind.String)
+            // [VD-03] Chỉ cập nhật TinhTrang khi có giá trị thực; tránh ghi đè thành chuỗi rỗng.
+            if (doc.RootElement.TryGetProperty("TinhTrang", out var ttProp) && ttProp.ValueKind == JsonValueKind.String
+                && !string.IsNullOrWhiteSpace(ttProp.GetString()))
                 thietBi.TinhTrang = ttProp.GetString();
         }
         else if (phieu.LoaiDieuChinh == DomainConstants.Lifecycle.Decommission)
         {
             thietBi.TrangThaiSuDung = TrangThaiThietBi.NgungSuDung;
+            // [VD-03] Nhánh Decommission cũng phải cập nhật TinhTrang từ GiaTriSau nếu có (ket luan kiem tra).
+            if (!string.IsNullOrWhiteSpace(chiTiet.GiaTriSau))
+            {
+                using var doc = JsonDocument.Parse(chiTiet.GiaTriSau);
+                if (doc.RootElement.TryGetProperty("TinhTrang", out var ttProp) && ttProp.ValueKind == JsonValueKind.String
+                    && !string.IsNullOrWhiteSpace(ttProp.GetString()))
+                    thietBi.TinhTrang = ttProp.GetString();
+            }
         }
 
         phieu.MaNguoiDuyet = nhanVien.MaNhanVien;
