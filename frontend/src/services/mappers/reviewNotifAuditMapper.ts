@@ -6,6 +6,7 @@ import type { AppNotification, AuditLogEntry, Review } from "../../types";
 import type { NhatKyThaoTacBackend } from "../api/auditApi";
 import type { ThongBaoBackend } from "../api/notificationApi";
 import type { DanhGiaBackend } from "../api/reviewApi";
+import { formatBackendEnum } from "../../utils/formatters";
 
 export function mapDanhGiaToReview(dg: DanhGiaBackend): Review {
   const hasReply = Boolean(dg.phanHoiCuaHang);
@@ -103,15 +104,23 @@ export function mapNhatKyToAuditLog(nk: NhatKyThaoTacBackend): AuditLogEntryWith
         ].filter(Boolean).join(" | "),
   ].filter(Boolean);
 
+  // FN6-09: map enum thô (vai trò / loại đối tượng / hành động) sang nhãn tiếng Việt qua BACKEND_ENUM_LABELS
+  const actionLabel = formatBackendEnum(nk.hanhDong, nk.hanhDong);
+  const roleLabel = formatBackendEnum(
+    nk.vaiTroNguoiThucHien ?? nk.vaiTro ?? "Hệ thống",
+    nk.vaiTroNguoiThucHien ?? nk.vaiTro ?? "Hệ thống"
+  );
+  const entityLabel = formatBackendEnum(nk.loaiDoiTuong, nk.loaiDoiTuong);
+
   return {
     id: String(nk.maNhatKy),
     timestamp: nk.thoiDiem,
     actor: nk.emailNguoiThucHien ?? nk.nguoiThucHien ?? (nk.maTaiKhoan ? `TK#${nk.maTaiKhoan}` : "Hệ thống"),
-    role: nk.vaiTroNguoiThucHien ?? nk.vaiTro ?? "Hệ thống",
-    action: nk.hanhDong,
-    targetEntity: nk.loaiDoiTuong,
+    role: roleLabel,
+    action: actionLabel,
+    targetEntity: entityLabel,
     targetId: nk.maDoiTuong ?? "-",
-    detail: summaryParts.join(" | ") || nk.hanhDong,
+    detail: summaryParts.join(" | ") || actionLabel,
     thamChieuUrl: nk.thamChieuUrl,
     duLieuTruoc: nk.duLieuTruoc,
     duLieuSau: nk.duLieuSau,
