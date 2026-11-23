@@ -18,14 +18,20 @@ public static class ChinhSachValidator
         if (dto.ThoiGianGiuChoPhut is int tgc && tgc <= 0)
             loi.Add(new LoiDuongDan { DuongDan = "thoiGianGiuChoPhut", ThongDiep = "Phải lớn hơn 0." });
 
-        if (dto.HeSoTre is decimal heSo && heSo < 0)
-            loi.Add(new LoiDuongDan { DuongDan = "heSoTre", ThongDiep = "Không được âm." });
+        // [POLICY-03] Hệ số phạt trễ phải lớn hơn 0 (FE giới hạn 1.0..5.0, chặn <= 0).
+        // Backend từng cho phép == 0 nên lệch ngưỡng với FE; đồng bộ chặt chẽ ở đây.
+        if (dto.HeSoTre is decimal heSo && heSo <= 0)
+            loi.Add(new LoiDuongDan { DuongDan = "heSoTre", ThongDiep = "Phải lớn hơn 0." });
 
         if (dto.TyLeCocPhanTram is decimal tlc && (tlc < 0 || tlc > 100))
             loi.Add(new LoiDuongDan { DuongDan = "tyLeCocPhanTram", ThongDiep = "Phải trong khoảng 0..100." });
 
         if (dto.HanMucNhanVien is decimal hmnv && hmnv < 0)
             loi.Add(new LoiDuongDan { DuongDan = "hanMucNhanVien", ThongDiep = "Không được âm." });
+
+        // [POLICY-03] Tỷ lệ bồi thường hư hỏng phải trong khoảng 0..100 (% giá trị thiết bị).
+        if (dto.TyLeBoiThuongHuHong is decimal tlbt && (tlbt < 0 || tlbt > 100))
+            loi.Add(new LoiDuongDan { DuongDan = "tyLeBoiThuongHuHong", ThongDiep = "Phải trong khoảng 0..100." });
 
         if (dto.HuyDon is null)
         {

@@ -217,7 +217,7 @@ public partial class DieuChinhKhoService : IDieuChinhKhoService
     }
 
     public async Task<Result<PagedResult<DieuChinhKhoResponse>>> TimPhieuAsync(
-        int trang, int soMoiTrang, string? loaiDieuChinh, string? trangThai, long actorId)
+        int trang, int soMoiTrang, string? loaiDieuChinh, string? trangThai, long actorId, long? maPhieuNhapLienQuan = null)
     {
         var nvCheck = await _context.LayNhanVienDangHoatDongAsync(actorId);
         if (!nvCheck.ThanhCong) return Result<PagedResult<DieuChinhKhoResponse>>.Loi(nvCheck.MaLoi!, nvCheck.ThongDiep!);
@@ -226,6 +226,9 @@ public partial class DieuChinhKhoService : IDieuChinhKhoService
             .Include(p => p.ChiTietDieuChinhKhos).ThenInclude(ct => ct.ThietBi).AsQueryable();
         if (!string.IsNullOrWhiteSpace(loaiDieuChinh)) query = query.Where(p => p.LoaiDieuChinh == loaiDieuChinh);
         if (!string.IsNullOrWhiteSpace(trangThai)) query = query.Where(p => p.TrangThai == trangThai);
+        // [PN-11] Lọc theo phiếu nhập liên quan để FE lấy đủ đề nghị điều chỉnh của 1 phiếu nhập,
+        // tránh client-side filter bị clamp bởi MaxPageSize = 100 và miss các phiếu điều chỉnh cũ.
+        if (maPhieuNhapLienQuan.HasValue) query = query.Where(p => p.MaPhieuNhapLienQuan == maPhieuNhapLienQuan.Value);
 
         int tongSo = await query.CountAsync();
         int page = Math.Max(1, trang);

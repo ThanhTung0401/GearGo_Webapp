@@ -118,6 +118,23 @@ export function usePoliciesTab(app: ReturnType<typeof useApp>) {
     }
     if (form.holdMinutes <= 0) return setMessage({ type: "error", text: "Thời gian giữ chỗ phải lớn hơn 0 phút." });
     if (form.overdueMultiplier <= 0) return setMessage({ type: "error", text: "Hệ số phạt trễ phải lớn hơn 0." });
+    // [POLICY-03] Đồng bộ ngưỡng validate với ChinhSachValidator.cs: cọc & phần trăm phạt
+    // phải trong khoảng 0..100 để tránh FE gửi dữ liệu không hợp lệ rồi bị BE 400.
+    if (form.minDepositPercentage !== undefined && (form.minDepositPercentage < 0 || form.minDepositPercentage > 100)) {
+      return setMessage({ type: "error", text: "Tỷ lệ cọc tối thiểu phải trong khoảng 0..100%." });
+    }
+    if (form.cancellationTier1FeePercent < 0 || form.cancellationTier1FeePercent > 100) {
+      return setMessage({ type: "error", text: "Phí phạt hủy 24-48h phải trong khoảng 0..100%." });
+    }
+    if (form.cancellationTier2FeePercent < 0 || form.cancellationTier2FeePercent > 100) {
+      return setMessage({ type: "error", text: "Phí phạt hủy <24h phải trong khoảng 0..100%." });
+    }
+    if (form.damageCompensationPercent !== undefined && (form.damageCompensationPercent < 0 || form.damageCompensationPercent > 100)) {
+      return setMessage({ type: "error", text: "Tỷ lệ bồi thường hư hỏng phải trong khoảng 0..100%." });
+    }
+    if (form.adminApprovalFeeThreshold !== undefined && form.adminApprovalFeeThreshold < 0) {
+      return setMessage({ type: "error", text: "Ngưỡng duyệt phụ phí không được âm." });
+    }
     if (form.cancellationTier1FeePercent > form.cancellationTier2FeePercent) {
       return setMessage({ type: "error", text: "Mâu thuẫn mốc hủy: Phạt hủy 24-48h không được cao hơn phạt hủy sát giờ (<24h)." });
     }

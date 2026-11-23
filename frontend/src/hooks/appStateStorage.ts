@@ -40,7 +40,17 @@ export const NEUTRAL_POLICY_CONFIG: RentalPolicyConfig = {
   overdueMultiplier: 1.5,
   minDepositPercentage: 100,
   damageCompensationPercent: 50,
-  accessoryLossFeeSchedule: [],
+  // [POLICY-02] Khởi tạo danh sách phụ kiện chuẩn thay vì mảng rỗng.
+  // Khi Real API chưa trả về bieuPhiPhuKien (seed cũ), FE fallback về danh sách này
+  // để Admin vẫn thấy khung biểu phí và có thể chỉnh sửa/ban hành ngay.
+  accessoryLossFeeSchedule: [
+    { accessoryName: "Pin dự phòng chính hãng", defaultFee: 450000 },
+    { accessoryName: "Củ sạc nhanh & Cáp USB-C", defaultFee: 300000 },
+    { accessoryName: "Nắp ống kính (Lens Cap)", defaultFee: 150000 },
+    { accessoryName: "Thẻ nhớ tốc độ cao 128GB", defaultFee: 600000 },
+    { accessoryName: "Dây đeo cổ thao tác nhanh", defaultFee: 250000 },
+    { accessoryName: "Túi chống sốc cao cấp", defaultFee: 500000 },
+  ],
   adminApprovalFeeThreshold: 1000000,
   reminderPickupHoursBefore: 4,
   reminderReturnHoursBefore: 2,
