@@ -21,6 +21,8 @@ interface HandoverChecklistPanelProps {
   checklist: Record<string, boolean>;
   setChecklist: React.Dispatch<React.SetStateAction<Record<string, boolean>>>;
   evidencePhotos: string[];
+  // [HO-08] Setter để nút 📷+ thực sự thêm ảnh vào state.
+  setEvidencePhotos?: React.Dispatch<React.SetStateAction<string[]>>;
   handoverNote: string;
   setHandoverNote: (v: string) => void;
   handleCompleteHandover: () => Promise<void>;
@@ -45,6 +47,7 @@ export function HandoverChecklistPanel({
   checklist,
   setChecklist,
   evidencePhotos,
+  setEvidencePhotos,
   handoverNote,
   setHandoverNote,
   handleCompleteHandover,
@@ -164,7 +167,25 @@ export function HandoverChecklistPanel({
             ))}
             <button
               type="button"
-              onClick={() => setPhotoNotice("Đã chụp thêm 1 ảnh bằng chứng thiết bị tại quầy.")}
+              /* [HO-08] Nút 📷+ phải thực sự thêm URL ảnh vào mảng evidencePhotos, không chỉ set notice. */
+              onClick={() => {
+                const seeds = [
+                  "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?w=200&auto=format&fit=crop&q=60",
+                  "https://images.unsplash.com/photo-1476231682828-37e571bc172f?w=200&auto=format&fit=crop&q=60",
+                  "https://images.unsplash.com/photo-1526178613658-3f1622045557?w=200&auto=format&fit=crop&q=60",
+                ];
+                if (setEvidencePhotos) {
+                  setEvidencePhotos((prev) => {
+                    const idx = Math.max(0, prev.length - 2);
+                    const next = seeds[idx % seeds.length];
+                    const updated = [...prev, next];
+                    setPhotoNotice(`Đã thêm 1 ảnh bằng chứng (hiện có ${updated.length} ảnh).`);
+                    return updated;
+                  });
+                } else {
+                  setPhotoNotice("Đã chụp thêm 1 ảnh bằng chứng thiết bị tại quầy.");
+                }
+              }}
               className="so-photo-add-btn"
               aria-label="Chụp thêm ảnh bằng chứng thiết bị"
             >

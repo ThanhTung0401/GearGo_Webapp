@@ -214,7 +214,7 @@ export function useReturnOverdueActions({ orders, setOrders, equipment, setEquip
     // [OV-03] Chỉ tính quá hạn trả cho đơn thực sự đang thuê hoặc đã quá hạn.
     // Các trạng thái trước bàn giao (Chờ thanh toán, Đã xác nhận, Đang chuẩn bị, Sẵn sàng nhận)
     // không được tính là "Quá hạn hẹn trả" dù returnTime đã qua thời điểm hiện tại.
-    if (order.status !== "Đang thuê" && order.status !== "Quá hạn") {
+    if (order.status !== "Đang thuê" && (order.status as string) !== "Quá hạn") {
       return { isOverdue: false, overdueHours: 0, overdueDays: 0, surcharge: 0 };
     }
     if (!order.returnTime) {
