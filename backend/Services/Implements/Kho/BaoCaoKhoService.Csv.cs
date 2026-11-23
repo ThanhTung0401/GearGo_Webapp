@@ -11,7 +11,12 @@ public partial class BaoCaoKhoService
 {
     public async Task<Result<TepCsvKetQua>> XuatCsvAsync(XuatCsvKhoRequest request, long actorId)
     {
-        var chan = await ChanQuyenAsync<TepCsvKetQua>(actorId, canAdmin: true);
+        // [REP-02]: chỉ yêu cầu QuanTriVien đối với báo cáo có cột giá vốn.
+        // HienTrangKho và BaoTri KHÔNG chứa giá nhập → cho phép Staff xuất.
+        var canAdmin = request.LoaiBaoCao == LoaiBaoCaoKhoXuat.NhapHang
+            || request.LoaiBaoCao == LoaiBaoCaoKhoXuat.DieuChinhNhap
+            || request.LoaiBaoCao == LoaiBaoCaoKhoXuat.LichSuDonGia;
+        var chan = await ChanQuyenAsync<TepCsvKetQua>(actorId, canAdmin: canAdmin);
         if (chan != null) return chan;
 
         if (!LoaiBaoCaoKhoXuat.TatCa.Contains(request.LoaiBaoCao))

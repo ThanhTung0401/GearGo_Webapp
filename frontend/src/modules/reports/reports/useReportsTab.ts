@@ -55,35 +55,44 @@ export function useReportsTab(app: ReturnType<typeof useApp>) {
 
     setLoadingReports(true);
     setReportError("");
-    Promise.allSettled([
+    // [REP-02]: chỉ Admin được xem báo cáo tài chính & 3 API giá vốn nhập hàng; Staff gọi chỉ 3 API
+    // vận hành/kho/bảo trì để tránh bão 403 (Backend giữ nguyên VaiTro != "QuanTriVien" cho giá vốn).
+    const laAdmin = app.role === "admin";
+    const promiseList: Array<Promise<any>> = [
       reportApi.layBaoCaoVanHanh({ tuNgay, denNgay }),
       reportApi.layHienTrangKho(),
       reportApi.layThongKeBaoTri({ tuNgay, denNgay }),
-      reportApi.layDoanhThuHoanTat({ tuNgay, denNgay, soMoiTrang: 200 }),
-      reportApi.layPhiHuy({ tuNgay, denNgay, soMoiTrang: 200 }),
-      reportApi.layDieuChinhDoanhThu({ tuNgay, denNgay, soMoiTrang: 200 }),
-      reportApi.layThuHoan({ tuNgay, denNgay, soMoiTrang: 200 }),
-      reportApi.layCocChuaTatToan({ soMoiTrang: 200 }),
-      reportApi.layKhoanCanXuLy(),
-      reportApi.layNhapHang({ tuNgay, denNgay, maNhaCungCap, soMoiTrang: 200 }),
-      reportApi.layDieuChinhNhap({ tuNgay, denNgay, maNhaCungCap, soMoiTrang: 200 }),
-      reportApi.layLichSuDonGia({ tuNgay, denNgay, maNhaCungCap }),
-    ])
+    ];
+    if (laAdmin) {
+      promiseList.push(
+        reportApi.layDoanhThuHoanTat({ tuNgay, denNgay, soMoiTrang: 200 }),
+        reportApi.layPhiHuy({ tuNgay, denNgay, soMoiTrang: 200 }),
+        reportApi.layDieuChinhDoanhThu({ tuNgay, denNgay, soMoiTrang: 200 }),
+        reportApi.layThuHoan({ tuNgay, denNgay, soMoiTrang: 200 }),
+        reportApi.layCocChuaTatToan({ soMoiTrang: 200 }),
+        reportApi.layKhoanCanXuLy(),
+        reportApi.layNhapHang({ tuNgay, denNgay, maNhaCungCap, soMoiTrang: 200 }),
+        reportApi.layDieuChinhNhap({ tuNgay, denNgay, maNhaCungCap, soMoiTrang: 200 }),
+        reportApi.layLichSuDonGia({ tuNgay, denNgay, maNhaCungCap }),
+      );
+    }
+    Promise.allSettled(promiseList)
       .then((results) => {
         if (!active) return;
-        const [ops, stk, mnt, rev, cxl, adj, csh, dep, pnd, imp, impAdj, priceHist] = results;
-        if (ops.status === "fulfilled") setOpsReport(ops.value);
-        if (stk.status === "fulfilled") setStockReport(stk.value);
-        if (mnt.status === "fulfilled") setMaintReport(mnt.value);
-        if (rev.status === "fulfilled") setRevReport(rev.value);
-        if (cxl.status === "fulfilled") setCancelFeeReport(cxl.value);
-        if (adj.status === "fulfilled") setRevAdjReport(adj.value);
-        if (csh.status === "fulfilled") setCashReport(csh.value);
-        if (dep.status === "fulfilled") setDepositReport(dep.value);
-        if (pnd.status === "fulfilled") setPendingItemsReport(pnd.value);
-        if (imp.status === "fulfilled") setImportReport(imp.value);
-        if (impAdj.status === "fulfilled") setImportAdjReport(impAdj.value);
-        if (priceHist.status === "fulfilled") setPriceHistoryReport(priceHist.value);
+        // [REP-02]: Staff chỉ nhận 3 API đầu; Admin nhận đủ 12 API.
+        const [ops, stk, mnt, rev, cxl, adj, csh, dep, pnd, imp, impAdj, priceHist] = results as any[];
+        if (ops?.status === "fulfilled") setOpsReport(ops.value);
+        if (stk?.status === "fulfilled") setStockReport(stk.value);
+        if (mnt?.status === "fulfilled") setMaintReport(mnt.value);
+        if (rev?.status === "fulfilled") setRevReport(rev.value);
+        if (cxl?.status === "fulfilled") setCancelFeeReport(cxl.value);
+        if (adj?.status === "fulfilled") setRevAdjReport(adj.value);
+        if (csh?.status === "fulfilled") setCashReport(csh.value);
+        if (dep?.status === "fulfilled") setDepositReport(dep.value);
+        if (pnd?.status === "fulfilled") setPendingItemsReport(pnd.value);
+        if (imp?.status === "fulfilled") setImportReport(imp.value);
+        if (impAdj?.status === "fulfilled") setImportAdjReport(impAdj.value);
+        if (priceHist?.status === "fulfilled") setPriceHistoryReport(priceHist.value);
         const rejectedCount = results.filter((r) => r.status === "rejected").length;
         if (rejectedCount === results.length) {
           setReportError("Không thể tải dữ liệu báo cáo từ máy chủ.");

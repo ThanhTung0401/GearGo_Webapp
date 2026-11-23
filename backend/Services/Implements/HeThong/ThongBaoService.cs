@@ -165,6 +165,21 @@ public class ThongBaoService : IThongBaoService
             KenhGui = KenhTrongUngDung, TrangThaiGui = "DaGui", ThoiDiemTao = now
         }).ToList();
 
+        // [NOTIF-01]: lưu thêm 1 bản lưu trữ gắn với người gửi (actor) nếu actor không nằm trong
+        // danh sách người nhận; eventKey riêng để không đụng ràng buộc idempotent của broadcast.
+        if (!danhSachNguoiNhan.Contains(actorId))
+        {
+            taoMoi.Add(new ThongBao
+            {
+                MaTaiKhoan = actorId, MaDonThue = request.MaDonThue,
+                MaSuKien = eventKey + ":ACTOR",
+                LoaiSuKien = loaiSuKien + ":LuuTruActor",
+                TieuDe = request.TieuDe.Trim(),
+                NoiDung = $"[Bản phát hành: nhóm {request.VaiTroNhan ?? (request.MaTaiKhoanNhan?.ToString() ?? "All")}] " + request.NoiDung.Trim(),
+                KenhGui = KenhTrongUngDung, TrangThaiGui = "DaGui", ThoiDiemTao = now
+            });
+        }
+
         _context.ThongBaos.AddRange(taoMoi);
         _context.NhatKyThaoTacs.Add(new NhatKyThaoTac
         {

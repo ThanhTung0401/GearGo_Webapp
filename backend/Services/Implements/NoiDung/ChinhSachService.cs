@@ -66,7 +66,9 @@ public class ChinhSachService : IChinhSachService
 
     public async Task<Result<KiemTraChinhSachResponse>> KiemTraNoiDungAsync(TaoChinhSachRequest request, long actor, CancellationToken ct = default)
     {
-        await ActorGuard.EnsureQuanTriVienAsync(_context, actor, ct);
+        // [POLICY-04]: Controller đã khóa bằng [RequirePermission(ChinhSach_Quan)] → không cần
+        // chặn cứng VaiTro == "QuanTriVien" nữa; cho phép NhanVien có quyền ChinhSach_Quan thao tác.
+        await ActorGuard.EnsureVanHanhAsync(_context, actor, ct);
 
         var loi = ChinhSachValidator.KiemTra(request.NoiDung);
         var res = new KiemTraChinhSachResponse { LoiTheoDuongDan = loi, HopLe = loi.Count == 0 };
@@ -90,14 +92,17 @@ public class ChinhSachService : IChinhSachService
 
     public async Task<Result<ChinhSachResponse>> TaoPhienBanAsync(TaoChinhSachRequest request, long actor, CancellationToken ct = default)
     {
-        await ActorGuard.EnsureQuanTriVienAsync(_context, actor, ct);
+        // [POLICY-04]: xem ghi chú ở KiemTraNoiDungAsync.
+        await ActorGuard.EnsureVanHanhAsync(_context, actor, ct);
 
         var loi = ChinhSachValidator.KiemTra(request.NoiDung);
         if (loi.Count > 0)
             return Result<ChinhSachResponse>.Loi("NOI_DUNG_CHINH_SACH_KHONG_HOP_LE", "Nội dung chính sách không hợp lệ.", loi);
 
         var now = DateTime.UtcNow;
-        if (request.ThoiDiemApDung < now)
+        // [POLICY-01]: cho phép dung sai 5 phút để FE có thể "ban hành có hiệu lực ngay lập tức"
+        // (không bị chặn do lệch mili-giây giữa clock FE và BE).
+        if (request.ThoiDiemApDung < now.AddMinutes(-5))
             return Result<ChinhSachResponse>.Loi("THOI_DIEM_AP_DUNG_HOI_TO", "Thời điểm áp dụng không được lùi về quá khứ.");
 
         var maNhanVien = await ActorGuard.LayMaNhanVienAsync(_context, actor, ct);
@@ -115,9 +120,13 @@ public class ChinhSachService : IChinhSachService
                 NoiDungChinhSach = json, NgayTao = now
             };
             _context.ChinhSachs.Add(cs);
+            // [AUDIT-02]: save trước để sinh cs.MaChinhSach, rồi gán MaDoiTuong vào NhatKyThaoTac.
+            // Trước đây MaDoiTuong rỗng khiến bảng Audit Log hiển thị "CHINH_SACH: -".
+            await _context.SaveChangesAsync(ct);
             _context.NhatKyThaoTacs.Add(new NhatKyThaoTac
             {
                 MaTaiKhoan = actor, HanhDong = "TaoChinhSach", LoaiDoiTuong = "CHINH_SACH",
+                MaDoiTuong = cs.MaChinhSach.ToString(),
                 DuLieuSau = json, ThoiDiem = now,
                 LyDo = $"Tạo phiên bản {cs.PhienBan} có hiệu lực từ {request.ThoiDiemApDung:O}"
             });

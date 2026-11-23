@@ -124,6 +124,11 @@ public class DieuChinhDoiSoatRequest
 {
     public List<long> DanhSachMaPhuPhiDieuChinh { get; set; } = new();
     public string LyDo { get; set; } = string.Empty;
+    // [ADJ-02]: cho phép lập điều chỉnh "chỉ ghi nhận biên bản" khi không có PhuPhi điều chỉnh gốc.
+    // FE gửi SoTienDieuChinhCoDau (dương = thu bù, âm = hoàn trả) → BE dựng DoiSoatTienCoc điều chỉnh
+    // không cần quét PhuPhi, tránh lỗi 409 KHONG_CO_PHI_DIEU_CHINH khi người dùng để trống.
+    public decimal? SoTienDieuChinhCoDau { get; set; }
+    public string? GhiChu { get; set; }
 }
 
 /// <summary>

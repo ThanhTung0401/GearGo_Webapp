@@ -27,13 +27,27 @@ public partial class DoiSoatService
             if (doiSoatGoc.TrangThai != "DaChot")
                 return Result<DoiSoatResponse>.Loi("DOI_SOAT_CHUA_CHOT", "Chỉ có thể lập điều chỉnh cho phiếu đối soát đã chốt hoàn tất.");
 
-            var phuPhis = await _context.PhuPhis
-                .Where(p => dto.DanhSachMaPhuPhiDieuChinh.Contains(p.MaPhuPhi) && p.MaDonThue == doiSoatGoc.MaDonThue
-                         && p.MaPhuPhiGoc != null && p.TrangThaiDuyet == "DaDuyet").ToListAsync();
-            if (!phuPhis.Any())
-                return Result<DoiSoatResponse>.Loi("KHONG_CO_PHI_DIEU_CHINH", "Không tìm thấy khoản phụ phí điều chỉnh hợp lệ đã được phê duyệt.");
+            var phuPhis = (dto.DanhSachMaPhuPhiDieuChinh != null && dto.DanhSachMaPhuPhiDieuChinh.Count > 0)
+                ? await _context.PhuPhis
+                    .Where(p => dto.DanhSachMaPhuPhiDieuChinh.Contains(p.MaPhuPhi) && p.MaDonThue == doiSoatGoc.MaDonThue
+                             && p.MaPhuPhiGoc != null && p.TrangThaiDuyet == "DaDuyet").ToListAsync()
+                : new List<PhuPhi>();
 
-            decimal chenhLech = phuPhis.Sum(p => p.SoTien);
+            decimal chenhLech;
+            if (phuPhis.Any())
+            {
+                chenhLech = phuPhis.Sum(p => p.SoTien);
+            }
+            else if (dto.SoTienDieuChinhCoDau.HasValue && dto.SoTienDieuChinhCoDau.Value != 0)
+            {
+                // [ADJ-02]: không có PhuPhi điều chỉnh gốc → lập trực tiếp DoiSoatTienCoc điều chỉnh
+                // dựa trên số tiền có dấu do nhân viên nhập (dương=thu bù, âm=hoàn trả).
+                chenhLech = dto.SoTienDieuChinhCoDau.Value;
+            }
+            else
+            {
+                return Result<DoiSoatResponse>.Loi("KHONG_CO_PHI_DIEU_CHINH", "Không tìm thấy khoản phụ phí điều chỉnh hợp lệ đã được phê duyệt.");
+            }
             var dieuChinh = new DoiSoatTienCoc
             {
                 MaDonThue = doiSoatGoc.MaDonThue, MaDoiSoatGoc = doiSoatGoc.MaDoiSoat, LoaiDoiSoat = "DieuChinh",

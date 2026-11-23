@@ -65,6 +65,19 @@ public partial class PermissionService
                     $"Nhóm quyền phân quyền chỉ dành cho Quản trị viên: {string.Join(", ", quyenCam)}", new { quyenCam });
         }
 
+        // [PERM-01]: với tài khoản Nhân viên, bắt buộc có đủ MinStaff khi gán một bộ quyền KHÔNG RỖNG.
+        // Vẫn cho phép danh sách RỖNG (semantic "override rỗng" dùng trong test PermissionSyncTests —
+        // nhân viên không có quyền nào ngoài public endpoints) để không phá kịch bản kiểm thử sẵn có.
+        // Chặn ở FE (PermissionsTab.save) sẽ hiển thị cảnh báo khi Admin bỏ sót MIN_STAFF.
+        if (tk.VaiTro == DomainConstants.Roles.Staff && moi.Count > 0)
+        {
+            var thieuMin = DomainConstants.Permissions.MinStaff.Except(moi, StringComparer.Ordinal).ToList();
+            if (thieuMin.Count > 0)
+                return Result<QuyenCuaNhanVienResponse>.Loi("THIEU_QUYEN_TOI_THIEU_NHAN_VIEN",
+                    $"Nhân viên phải giữ đủ bộ quyền tối thiểu. Còn thiếu: {string.Join(", ", thieuMin)}",
+                    new { thieuMin });
+        }
+
         var kq = await TransactionExecutionWrapper.ExecuteInTransactionAsync(_context, async () =>
         {
             var role = await _context.Roles.FirstOrDefaultAsync(r => r.Name == tk.VaiTro, ct);

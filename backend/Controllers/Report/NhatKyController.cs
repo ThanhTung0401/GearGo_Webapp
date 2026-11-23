@@ -30,8 +30,10 @@ public class NhatKyController : BaseApiController
         [FromQuery] string? tuKhoa,
         [FromQuery] int trang = 1,
         [FromQuery] int soMoiTrang = 20,
+        // [AUDIT-03]: lọc theo vai trò thực hiện ngay trên Backend để Pagination chính xác.
+        [FromQuery] string? vaiTro = null,
         CancellationToken ct = default)
         => Ok(await _nhatKyService.TraCuuAsync(
             MaTaiKhoanHienTai, maTaiKhoan, hanhDong, loaiDoiTuong, maDoiTuong,
-            tuNgay, denNgay, tuKhoa, trang, soMoiTrang, ct));
+            tuNgay, denNgay, tuKhoa, trang, soMoiTrang, vaiTro, ct));
 }

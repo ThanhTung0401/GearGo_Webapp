@@ -53,13 +53,20 @@ public partial class ThanhToanService
             case "HopLe_HoanTienThua":
                 decimal soTienHoan = request.SoTienHoan ?? tt.TongSoTien;
                 if (soTienHoan <= 0) return Result<string>.Loi("SO_TIEN_HOAN_KHONG_HOP_LE", "Số tiền hoàn phải lớn hơn 0.");
+                // [ADJ-04]: chặn hoàn vượt tổng tiền giao dịch gốc.
+                if (soTienHoan > tt.TongSoTien)
+                    return Result<string>.Loi("SO_TIEN_HOAN_VUOT_QUA", "Số tiền hoàn không được vượt quá tổng số tiền giao dịch.");
                 if (_hoanTienService == null) return Result<string>.Loi("SYS_ERROR", "Dịch vụ hoàn tiền chưa được cấu hình.");
 
                 tt.TrangThai = TrangThaiThanhToan.ThanhCong;
                 await _context.SaveChangesAsync();
+                // [ADJ-04]: giao dịch gốc có thể gồm 2 ChiTietThanhToan (TienThue + TienCoc); truyền toàn bộ
+                // mã chi tiết để HoanTienService không báo vượt số tiền của dòng chi tiết đầu tiên.
+                var tatCaMaChiTiet = tt.ChiTietThanhToans.Select(c => c.MaChiTietThanhToan).ToArray();
+                if (tatCaMaChiTiet.Length == 0) tatCaMaChiTiet = new[] { chiTiet.MaChiTietThanhToan };
                 yeuCauHoanCanGui.AddRange(await _hoanTienService.LapYeuCauHoanAsync(new LapHoanCommand(
                     tt.MaDonThue, LoaiHoanTien.HoanThuThua, $"TT:{chiTiet.MaChiTietThanhToan}",
-                    soTienHoan, new[] { chiTiet.MaChiTietThanhToan }, null,
+                    soTienHoan, tatCaMaChiTiet, null,
                     $"Đối chiếu xử lý hoàn tiền thừa giao dịch #{tt.MaThanhToan}: {request.GhiChu}"), actorId));
 
                 tt.TrangThaiDoiChieu = "DaDoiChieu";

@@ -18,5 +18,8 @@ public interface INhatKyService
         string? tuKhoa,
         int trang = 1,
         int soMoiTrang = 20,
+        // [AUDIT-03]: cho phép lọc theo vai trò người thực hiện ngay trên Backend để Pagination server
+        // không bị hỏng (trước đây FE lọc client-side trên 20 dòng của trang hiện tại).
+        string? vaiTro = null,
         CancellationToken ct = default);
 }
