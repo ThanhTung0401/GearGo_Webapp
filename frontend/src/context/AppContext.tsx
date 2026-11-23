@@ -142,6 +142,8 @@ export interface AppState {
   transferEquipment: (equipmentId: string, newProductId: string) => ActionResult<Equipment>;
   addReview: (input: { orderId: string; productId: string; rating: number; comment: string; images?: string[] }) => ActionResult<Review>;
   hideReview: (reviewId: string, reason: string) => ActionResult;
+  // [REV-01] Mock mode khôi phục đánh giá đã bị ẩn (khớp Real API /api/danh-gia/{id}/khoi-phuc).
+  restoreReview: (reviewId: string, note?: string) => ActionResult;
   resetDemo: () => void;
   getAvailable: (productId: string) => number;
   getDays: () => number;

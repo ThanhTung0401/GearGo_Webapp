@@ -142,14 +142,14 @@ export function useReviewsTab(app: ReturnType<typeof useApp>) {
       }
       return;
     }
-    app.addAuditLog({
-      actor: "Admin",
-      role: "Quản trị viên",
-      action: "Bỏ ẩn đánh giá",
-      targetEntity: "Review",
-      targetId: rev.id,
-      detail: "Mở hiển thị lại đánh giá đã kiểm duyệt",
-    });
+    // [REV-01] Mock mode: gọi app.restoreReview để thực sự đổi status và tính lại
+    // điểm sao sản phẩm thay vì chỉ ghi Audit Log (bug cũ).
+    const res = app.restoreReview(rev.id, "Mở hiển thị lại đánh giá đã kiểm duyệt");
+    if (!res.ok) {
+      setReviewError(res.message);
+    } else {
+      setReviewSuccess(`Đã khôi phục hiển thị đánh giá #${rev.id}.`);
+    }
   };
 
   // Tìm đơn thuê gốc làm căn cứ xác thực đánh giá (UC9.2.1)

@@ -154,5 +154,43 @@ export function useCancelAndReviewActions({
     return { ok: true, data: undefined };
   };
 
-  return { getCancellationQuote, cancelOrder, addReview, hideReview, replyReview };
+  // [REV-01] Khôi phục đánh giá đã bị ẩn ở Mock mode (khớp Real API /api/danh-gia/{id}/khoi-phuc).
+  // Cập nhật status về "active", xóa hiddenReason/hiddenBy, tính lại rating/reviews của sản phẩm
+  // và ghi Audit Log để thao tác có bằng chứng.
+  const restoreReview = (reviewId: string, note?: string): ActionResult => {
+    const rev = reviews.find((r) => r.id === reviewId);
+    if (!rev) return { ok: false, message: "Không tìm thấy đánh giá cần khôi phục." };
+    if (rev.status !== "hidden") return { ok: true, data: undefined };
+
+    setReviews((prev) =>
+      prev.map((r) =>
+        r.id === reviewId
+          ? { ...r, status: "active", hiddenReason: undefined, hiddenBy: undefined }
+          : r
+      )
+    );
+
+    // Tính lại điểm sao và số lượng đánh giá hiển thị của sản phẩm
+    const nextActive = reviews
+      .filter((r) => r.productId === rev.productId && r.id !== reviewId && r.status === "active")
+      .concat([{ ...rev, status: "active", hiddenReason: undefined, hiddenBy: undefined }]);
+    const avg = nextActive.length
+      ? Number((nextActive.reduce((sum, r) => sum + r.rating, 0) / nextActive.length).toFixed(1))
+      : 5.0;
+    setProducts((prev) =>
+      prev.map((p) => (p.id === rev.productId ? { ...p, rating: avg, reviews: nextActive.length } : p))
+    );
+
+    addAuditLog({
+      actor: "Quản trị viên",
+      role: "Quản trị viên",
+      action: "Khôi phục đánh giá (UC9.2)",
+      targetEntity: "Review",
+      targetId: reviewId,
+      detail: note?.trim() || "Mở hiển thị lại đánh giá đã kiểm duyệt",
+    });
+    return { ok: true, data: undefined };
+  };
+
+  return { getCancellationQuote, cancelOrder, addReview, hideReview, replyReview, restoreReview };
 }
