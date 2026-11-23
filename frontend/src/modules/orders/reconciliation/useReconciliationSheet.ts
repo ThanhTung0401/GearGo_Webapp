@@ -58,9 +58,13 @@ export function useReconciliationSheet({ order, app, onAfterMutation }: UseRecon
   const [refundNote, setRefundNote] = useState("");
 
   // Đồng bộ lại tên chủ tài khoản nhận hoàn cọc mỗi khi đổi đơn
+  // FN5-15: reset đầy đủ state hoàn cọc (kênh, ngân hàng, ghi chú) để không lẫn dữ liệu đơn cũ
   useEffect(() => {
     setBankHolder((order.customerName || "").toUpperCase());
     setBankAccount("");
+    setBankName("Vietcombank");
+    setRefundMethod("bank");
+    setRefundNote("");
   }, [order.id, order.customerName]);
 
   // FN5-14: Reset toàn bộ state backend và các modal con khi đổi đơn để tránh hiển thị dữ liệu đơn cũ.

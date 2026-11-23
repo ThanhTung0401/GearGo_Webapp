@@ -47,7 +47,8 @@ export function RefundDepositModal(props: Props) {
                   EP5.4-HOAN → GỌI UC5.6
                 </span>
                 <h3 className="recon-modal-title">
-                  Lập Lệnh Hoàn Tiền Cọc: Đơn {order.id}
+                  {/* FN5-15: ưu tiên mã đơn hiển thị */}
+                  Lập Lệnh Hoàn Tiền Cọc: Đơn {order.displayCode || order.id}
                 </h3>
               </div>
               <button type="button" onClick={() => setShowRefundModal(false)} className="recon-modal-close-icon">✕</button>
@@ -99,16 +100,18 @@ export function RefundDepositModal(props: Props) {
                 </div>
                 <div className="grid grid-cols-2 gap-2 recon-bank-grid">
                   <div>
-                    <label className="recon-field-label-xs-mb">Số tài khoản:</label>
+                    <label className="recon-field-label-xs-mb">Số tài khoản <span className="text-red-600">*</span>:</label>
                     <input
+                      required
                       value={bankAccount}
                       onChange={(e) => setBankAccount(e.target.value)}
                       className="recon-input-bank-acc"
                     />
                   </div>
                   <div>
-                    <label className="recon-field-label-xs-mb">Tên chủ tài khoản:</label>
+                    <label className="recon-field-label-xs-mb">Tên chủ tài khoản <span className="text-red-600">*</span>:</label>
                     <input
+                      required
                       value={bankHolder}
                       onChange={(e) => setBankHolder(e.target.value)}
                       className="recon-input-bank-holder"
@@ -142,7 +145,18 @@ export function RefundDepositModal(props: Props) {
                 type="button"
                 disabled={reconBusy}
                 onClick={async () => {
-                  const methodStr = refundMethod === "bank" ? `Chuyển khoản ${bankName} (${bankAccount} - ${bankHolder})` : "Tiền mặt tại quầy";
+                  // FN5-15: validate bắt buộc số TK + chủ TK khi hoàn qua ngân hàng
+                  if (refundMethod === "bank") {
+                    if (!bankAccount.trim()) {
+                      setReconError("Vui lòng nhập số tài khoản ngân hàng thụ hưởng trước khi hoàn cọc.");
+                      return;
+                    }
+                    if (!bankHolder.trim()) {
+                      setReconError("Vui lòng nhập tên chủ tài khoản ngân hàng thụ hưởng.");
+                      return;
+                    }
+                  }
+                  const methodStr = refundMethod === "bank" ? `Chuyển khoản ${bankName} (${bankAccount.trim()} - ${bankHolder.trim()})` : "Tiền mặt tại quầy";
                   if (app.realApi) {
                     setReconBusy(true);
                     setReconError(null);
