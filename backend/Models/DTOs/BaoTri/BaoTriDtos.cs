@@ -21,6 +21,8 @@ public class LapBaoTriRequest
     public string MucDo { get; set; } = "Nhe";
     public DateTime? NgayDuKienHoanThanh { get; set; }
     public string? BangChung { get; set; }
+    // FN6-07: chi phí dự tính khi lập phiếu (ghi thẳng vào BaoTri.ChiPhi nếu > 0)
+    public decimal? ChiPhiUocTinh { get; set; }
 }
 
 public class PhanCongBaoTriRequest

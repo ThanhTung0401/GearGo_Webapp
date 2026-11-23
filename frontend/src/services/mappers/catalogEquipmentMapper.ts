@@ -13,6 +13,7 @@ import type {
 import type { DanhMucBackend, SanPhamBackend } from "../api/catalogApi";
 import type { BaoTriResponseBackend, ThietBiBackend } from "../api/equipmentApi";
 import type { DieuChinhKhoResponseBackend } from "../api/inventoryApi";
+import { formatBackendEnum } from "../../utils/formatters";
 
 const FALLBACK_PRODUCT_IMAGE =
   "https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?auto=format&fit=crop&w=900&q=80";
@@ -223,17 +224,19 @@ function mapMaintenanceStatus(trangThai?: string | null, ketQua?: string | null)
 export function mapBaoTriToReceipt(bt: BaoTriResponseBackend): MaintenanceReceipt {
   const status = mapMaintenanceStatus(bt.trangThai, bt.ketQua);
   const isDone = status === "Đã nghiệm thu" || status === "Không thể sửa";
+  // FN6-06: map enum thô ("SuaChua", "VeSinh"...) → nhãn tiếng Việt qua BACKEND_ENUM_LABELS
+  const loaiXuLyLabel = bt.loaiXuLy ? formatBackendEnum(bt.loaiXuLy, bt.loaiXuLy) : undefined;
   return {
     id: String(bt.maPhieuBaoTri),
     equipmentId: String(bt.maThietBi),
     orderId: bt.maDonThue != null ? String(bt.maDonThue) : undefined,
-    issueDescription: bt.moTaLoi ?? bt.loaiXuLy ?? "Bảo trì thiết bị",
+    issueDescription: bt.moTaLoi ?? loaiXuLyLabel ?? "Bảo trì thiết bị",
     status,
     createdAt: bt.ngayBatDau ?? new Date().toISOString(),
     estimatedCost: Number(bt.chiPhi ?? 0),
     actualCost: isDone ? Number(bt.chiPhi ?? 0) : undefined,
     completedAt: bt.ngayHoanThanhThucTe ?? undefined,
-    note: bt.loaiXuLy ?? undefined,
+    note: loaiXuLyLabel,
     outcomeNote: bt.ketQua ?? undefined,
   };
 }

@@ -151,6 +151,8 @@ export const equipmentApi = {
     mucDo?: string;
     ngayDuKienHoanThanh?: string;
     bangChung?: string;
+    // FN6-07: chi phí dự tính truyền sang backend lưu vào BaoTri.ChiPhi
+    chiPhiUocTinh?: number;
   }): Promise<BaoTriResponseBackend> {
     const res = await apiClient.post<{ duLieu?: BaoTriResponseBackend } | BaoTriResponseBackend>("/api/bao-tri", req);
     if (res.data && "duLieu" in res.data && res.data.duLieu) {

@@ -125,7 +125,11 @@ public partial class BaoTriService : IBaoTriService
                 MoTaLoi = request.MoTaLoi,
                 MucDo = string.IsNullOrWhiteSpace(request.MucDo) ? DomainConstants.Maintenance.LevelMinor : request.MucDo,
                 NgayBatDau = DateTime.UtcNow, NgayDuKienHoanThanh = request.NgayDuKienHoanThanh,
-                BangChung = request.BangChung, TrangThai = DomainConstants.Status.PendingProcessing
+                BangChung = request.BangChung, TrangThai = DomainConstants.Status.PendingProcessing,
+                // FN6-07: lưu chi phí dự tính ngay khi lập phiếu
+                ChiPhi = request.ChiPhiUocTinh.HasValue && request.ChiPhiUocTinh.Value > 0
+                    ? request.ChiPhiUocTinh
+                    : null
             };
             _context.PhieuBaoTris.Add(phieuMoi);
 
