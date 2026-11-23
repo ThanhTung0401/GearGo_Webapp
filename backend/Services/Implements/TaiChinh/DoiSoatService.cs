@@ -169,11 +169,23 @@ public partial class DoiSoatService : IDoiSoatService
             .Where(ct => ct.ThanhToan.MaDonThue == donId && ct.MucDich == "TienCoc" && ct.ThanhToan.TrangThai == "ThanhCong")
             .ToListAsync();
 
+        // FN5-10: Lấy phiếu đối soát BanDau đang hoạt động của đơn để KHÔNG loại trừ khoản cọc
+        // đã gắn GiaoDichDoiSoat của chính phiếu đó (tránh làm tiền cọc tụt về 0đ sau Bước 4).
+        var doiSoatBanDauId = await _context.DoiSoatTienCocs
+            .Where(d => d.MaDonThue == donId && d.LoaiDoiSoat == "BanDau" && d.TrangThai != "DaHuy")
+            .OrderByDescending(d => d.ThoiDiemLap)
+            .Select(d => (long?)d.MaDoiSoat)
+            .FirstOrDefaultAsync();
+
         var list = new List<NguonCocDto>();
         decimal tong = 0;
         foreach (var ct in chiTietCoc)
         {
-            if (ct.GiaoDichDoiSoat != null && ct.GiaoDichDoiSoat.MaDoiSoat != 0) continue;
+            // Chỉ bỏ qua nếu đã gắn vào phiếu đối soát KHÁC (không phải phiếu BanDau hiện tại của đơn).
+            if (ct.GiaoDichDoiSoat != null
+                && ct.GiaoDichDoiSoat.MaDoiSoat != 0
+                && (doiSoatBanDauId == null || ct.GiaoDichDoiSoat.MaDoiSoat != doiSoatBanDauId.Value))
+                continue;
             var conLai = ct.SoTien - ct.HoanTiens.Where(h => h.TrangThai == "ThanhCong").Sum(h => h.SoTien);
             if (conLai <= 0) continue;
             tong += conLai;
@@ -200,6 +212,9 @@ public partial class DoiSoatService : IDoiSoatService
         doiSoat.TongPhuPhiDuocDuyet = xemTruoc.TongPhuPhiDuocDuyet;
         doiSoat.SoTienCanHoan = xemTruoc.SoTienCanHoan;
         doiSoat.SoTienCanThuThem = xemTruoc.SoTienCanThuThem;
+        // FN5-10: Khi cố định bảng tính (Bước 4), chuyển trạng thái sang "DaXacNhan"
+        // để UI ẩn nút xác nhận và các hành động hoàn/thu/khóa đi tiếp mà không gọi lại XacNhanBangTinh.
+        if (doiSoat.TrangThai == "ChoChot") doiSoat.TrangThai = "DaXacNhan";
 
         var phuPhiIds = xemTruoc.PhuPhi.Select(p => p.MaPhuPhi).ToList();
         foreach (var p in await _context.PhuPhis.Where(p => phuPhiIds.Contains(p.MaPhuPhi)).ToListAsync())

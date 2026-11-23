@@ -3,7 +3,32 @@ import Icon from "../../../components/Icon";
 import Pagination from "../../../components/ui/Pagination";
 import { usePagination } from "../../../hooks/usePagination";
 import { formatDateTimeVi } from "../../../store";
+import { formatBackendEnum } from "../../../utils/formatters";
 import { type StaffTab } from "../../orders/returnMapping";
+
+// FN7-03: Tóm tắt chi tiết nội dung thô (chuỗi JSON Trước/Sau) thành key: value dễ đọc.
+function summarizeAuditDetail(raw: string | null | undefined): string {
+  if (!raw) return "";
+  const text = String(raw);
+  // Cố gắng phát hiện các đoạn Trước: {...} | Sau: {...} và rút ngắn
+  const jsonRe = /\{[\s\S]*?\}/g;
+  const matches = text.match(jsonRe);
+  if (!matches || matches.length === 0) return text;
+  let summary = text;
+  for (const m of matches) {
+    try {
+      const parsed = JSON.parse(m);
+      const pairs = Object.entries(parsed)
+        .slice(0, 3)
+        .map(([k, v]) => `${k}=${typeof v === "string" ? v : JSON.stringify(v)}`)
+        .join(", ");
+      summary = summary.replace(m, pairs || "{…}");
+    } catch {
+      // Bỏ qua nếu không phải JSON hợp lệ
+    }
+  }
+  return summary;
+}
 
 interface StaffAuditLogSectionProps {
   searchAudit: string;
@@ -71,12 +96,13 @@ export function StaffAuditLogSection({
                       {formatDateTimeVi(log.timestamp)}
                     </td>
                     <td className="so-td-bold">{log.actor}</td>
-                    <td className="so-td-action">{log.action}</td>
+                    <td className="so-td-action">{formatBackendEnum(log.action, log.action)}</td>
                     <td className="so-td-mono-plain">
-                      <span className="so-td-muted">{log.targetEntity}:</span> <strong>{log.targetId}</strong>
+                      <span className="so-td-muted">{formatBackendEnum(log.targetEntity, log.targetEntity)}:</span>{" "}
+                      <strong>{log.targetId}</strong>
                     </td>
                     <td className="so-td-detail max-w-[320px] truncate" title={log.detail}>
-                      {log.detail}
+                      {summarizeAuditDetail(log.detail)}
                     </td>
                     <td>
                       {orderMatch && orderIdToOpen && (

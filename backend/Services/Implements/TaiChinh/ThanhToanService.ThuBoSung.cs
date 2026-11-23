@@ -27,29 +27,58 @@ public partial class ThanhToanService
             if (doiSoat.SoTienCanThuThem <= 0)
                 return Result<YeuCauThuResponse>.Loi(DomainConstants.Errors.NoSupplementaryDuty, "Bảng tính không thiếu hoặc chưa được xác nhận.");
 
+            // FN5-11: Thu bổ sung tại quầy (TienMat/POS/VietQR) do nhân viên vận hành thực hiện
+            // sẽ được tự động xác nhận THÀNH CÔNG và liên kết GiaoDichDoiSoat ngay, không cần callback gateway.
+            var phuongThuc = string.IsNullOrEmpty(request.PhuongThucDuocHoTro) ? "VNPAY" : request.PhuongThucDuocHoTro;
+            var isCounterCollect = phuongThuc == "TienMat" || phuongThuc == "POS" || phuongThuc == "VietQR";
+
             var existing = await _context.ThanhToans.Include(t => t.ChiTietThanhToans)
                 .FirstOrDefaultAsync(t => t.MaDonThue == doiSoat.MaDonThue
                     && (t.TrangThai == DomainConstants.Status.PendingPayment || t.TrangThai == DomainConstants.Status.Success)
                     && t.GhiChu != null && t.GhiChu.Contains($"DoiSoat_{request.MaDoiSoat}"));
             if (existing != null)
-                return Result<YeuCauThuResponse>.Ok(MapYeuCauThuResponse(existing, existing.ChiTietThanhToans.FirstOrDefault()?.MucDich));
+            {
+                var ctExisting = existing.ChiTietThanhToans.FirstOrDefault();
+                // Nếu đã có giao dịch "ChoThanhToan" nhưng nhân viên xác nhận thu tại quầy, nâng cấp thẳng sang ThanhCong.
+                if (isCounterCollect && existing.TrangThai == DomainConstants.Status.PendingPayment)
+                {
+                    existing.TrangThai = DomainConstants.Status.Success;
+                    existing.PhuongThuc = phuongThuc;
+                    existing.ThoiDiemThanhCong = DateTime.UtcNow;
+                    existing.MaGiaoDichCong = $"COUNTER_{phuongThuc}_{DateTime.UtcNow.Ticks}";
+                    if (ctExisting != null)
+                        await LienKetDoiSoatTuGhiChuAsync(existing, ctExisting);
+                    await _context.SaveChangesAsync();
+                }
+                return Result<YeuCauThuResponse>.Ok(MapYeuCauThuResponse(existing, ctExisting?.MucDich));
+            }
 
             var now = DateTime.UtcNow;
             var maYeuCau = DisplayCodeHelper.SinhMaYeuCauThanhToan(now);
             var thanhToanMoi = new ThanhToan
             {
                 MaDonThue = doiSoat.MaDonThue, MaYeuCau = maYeuCau,
-                PhuongThuc = string.IsNullOrEmpty(request.PhuongThucDuocHoTro) ? "VNPAY" : request.PhuongThucDuocHoTro,
-                TongSoTien = doiSoat.SoTienCanThuThem, TrangThai = DomainConstants.Status.PendingPayment,
-                TrangThaiDoiChieu = "ChuaDoiChieu", ThoiDiemTao = now, GhiChu = $"ThuBoSung_DoiSoat_{request.MaDoiSoat}"
+                PhuongThuc = phuongThuc,
+                TongSoTien = doiSoat.SoTienCanThuThem,
+                TrangThai = isCounterCollect ? DomainConstants.Status.Success : DomainConstants.Status.PendingPayment,
+                TrangThaiDoiChieu = "ChuaDoiChieu", ThoiDiemTao = now, GhiChu = $"ThuBoSung_DoiSoat_{request.MaDoiSoat}",
+                ThoiDiemThanhCong = isCounterCollect ? (DateTime?)now : null,
+                MaGiaoDichCong = isCounterCollect ? $"COUNTER_{phuongThuc}_{now.Ticks}" : null
             };
-            thanhToanMoi.ChiTietThanhToans.Add(new ChiTietThanhToan
+            var ctMoi = new ChiTietThanhToan
             {
                 MucDich = DomainConstants.TransactionPurposes.SupplementaryFee,
                 SoTien = doiSoat.SoTienCanThuThem, ThanhToan = thanhToanMoi
-            });
+            };
+            thanhToanMoi.ChiTietThanhToans.Add(ctMoi);
             _context.ThanhToans.Add(thanhToanMoi);
             await _context.SaveChangesAsync();
+
+            if (isCounterCollect)
+            {
+                await LienKetDoiSoatTuGhiChuAsync(thanhToanMoi, ctMoi);
+                await _context.SaveChangesAsync();
+            }
 
             return Result<YeuCauThuResponse>.Ok(MapYeuCauThuResponse(thanhToanMoi, DomainConstants.TransactionPurposes.SupplementaryFee, false));
         }, _logger);

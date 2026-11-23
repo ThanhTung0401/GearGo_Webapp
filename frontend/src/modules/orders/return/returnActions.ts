@@ -81,20 +81,23 @@ export async function createReturnReceiptAction(params: {
       noteText
     );
 
-    // Lập phụ phí phát sinh kèm theo nếu có số tiền > 0 hoặc báo mất
+    // Lập phụ phí phát sinh kèm theo nếu có số tiền > 0 hoặc báo mất.
+    // FN5-03: Không tự map cond "Bình thường" thành "HuHong" (fallback của mapReturnCondToSurchargeType)
+    // để tránh ghi phụ phí hư hỏng sai với lý do "Phụ phí Bình thường" khi chỉ muốn cộng phí trễ qua banner.
     for (const row of selectedRows) {
       const cond = itemConditions[row.key] || "Bình thường";
       const fee = itemSurcharges[row.key] || 0;
-      if (fee > 0 || cond === "Mất thiết bị") {
-        await surchargeApi.lapPhi({
-          maDonThue: donId,
-          maChiTietBanGiao: row.maChiTietBanGiao,
-          loaiPhi: mapReturnCondToSurchargeType(cond),
-          soTienDeNghi: fee > 0 ? fee : row.compensation,
-          lyDo: itemNotes[row.key]?.trim() || `Phụ phí ${cond} (${row.displayCode})`,
-          danhSachAnh: cond === "Bình thường" ? undefined : damagePhotos,
-        });
-      }
+      const shouldCreate = cond === "Mất thiết bị" || (fee > 0 && cond !== "Bình thường");
+      if (!shouldCreate) continue;
+      // Sau guard, cond chắc chắn khác "Bình thường" nên damagePhotos luôn được gửi kèm.
+      await surchargeApi.lapPhi({
+        maDonThue: donId,
+        maChiTietBanGiao: row.maChiTietBanGiao,
+        loaiPhi: mapReturnCondToSurchargeType(cond),
+        soTienDeNghi: fee > 0 ? fee : row.compensation,
+        lyDo: itemNotes[row.key]?.trim() || `Phụ phí ${cond} (${row.displayCode})`,
+        danhSachAnh: damagePhotos,
+      });
     }
 
     const hasLostItem = selectedRows.some(
@@ -166,7 +169,10 @@ export async function confirmApproveLostAction(params: {
   const { phieuId, chiTiet } = approveLostTarget;
 
   const matchedSurcharge = surchargesBackend.find(
-    (s) => s.handoverItemId === chiTiet.maChiTietBanGiao && s.type === "Mất đồ" && s.backendId
+    (s) =>
+      s.handoverItemId === chiTiet.maChiTietBanGiao &&
+      (s.type === "Mất thiết bị" || s.type === "Mất đồ") &&
+      s.backendId
   );
   let surchargeId = matchedSurcharge?.backendId;
   let needApproveSurcharge = matchedSurcharge ? matchedSurcharge.status !== "Đã duyệt" : true;
