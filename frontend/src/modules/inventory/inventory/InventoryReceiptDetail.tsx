@@ -1,6 +1,8 @@
 import { fmt, formatBackendEnum, formatDateTimeVi, type ImportReceipt, type ImportReceiptAdjustment, type Product } from "../../../store";
 import Pagination from "../../../components/ui/Pagination";
 import { usePagination } from "../../../hooks/usePagination";
+import { Can } from "../../../features/permissions/PermissionsContext";
+import { Permissions } from "../../../constants/permissions";
 import { calculateReceiptTotal, type ServerReceiptAdjustment } from "./useInventoryTab";
 
 interface InventoryReceiptDetailProps {
@@ -115,16 +117,25 @@ export function InventoryReceiptDetail({
         </div>
 
         {selected.status === "Nháp" ? (
+          // [PN-09] Bọc nút Sửa nháp / Hủy nháp / Kiểm nhận theo đúng RBAC để khớp với
+          // KiemTraQuyenSuaPhieuAsync ở BE (chỉ người lập hoặc quyền tương ứng mới được thao tác),
+          // tránh hiển thị nút rồi bị 403 khi bấm.
           <div className="flex gap-2 flex-wrap">
-            <button onClick={() => onEditDraft(selected)} className="adm-btn-forest-outline flex-1 min-w-[100px] py-2.5">
-              ✏️ Sửa nháp (UC7.6)
-            </button>
-            <button onClick={() => onCancelDraft(selected)} className="adm-btn-danger-outline px-4 py-2.5 font-bold">
-              ✕ Hủy nháp (UC7.9)
-            </button>
-            <button onClick={() => onInspectReceipt(selected)} className="adm-btn-primary flex-[1.6] min-w-[200px] py-2.5 font-bold shadow-sm">
-              📦 Kiểm nhận & Chốt kho (UC7.7)
-            </button>
+            <Can perm={Permissions.PhieuNhap_Tao}>
+              <button onClick={() => onEditDraft(selected)} className="adm-btn-forest-outline flex-1 min-w-[100px] py-2.5">
+                ✏️ Sửa nháp (UC7.6)
+              </button>
+            </Can>
+            <Can perm={Permissions.PhieuNhap_Huy}>
+              <button onClick={() => onCancelDraft(selected)} className="adm-btn-danger-outline px-4 py-2.5 font-bold">
+                ✕ Hủy nháp (UC7.9)
+              </button>
+            </Can>
+            <Can perm={Permissions.PhieuNhap_Duyet}>
+              <button onClick={() => onInspectReceipt(selected)} className="adm-btn-primary flex-[1.6] min-w-[200px] py-2.5 font-bold shadow-sm">
+                📦 Kiểm nhận & Chốt kho (UC7.7)
+              </button>
+            </Can>
           </div>
         ) : selected.status === "Đã hủy" ? (
           <div className="adm-pill is-neutral w-full justify-center py-2.5 text-[0.8rem] whitespace-normal text-center">
@@ -142,12 +153,15 @@ export function InventoryReceiptDetail({
                 <span className="text-[0.82rem] font-bold text-[var(--color-bark)]">Xử lý sai lệch phiếu nhập sau chốt (UC7.10)</span>
                 <p className="adm-hint-text m-0">Ghi nhận sai sót số lượng, mã thiết bị hoặc giá vốn. Quản trị viên duyệt an toàn lịch thuê.</p>
               </div>
-              <button
-                onClick={() => onOpenAdjustmentModal(selected)}
-                className="adm-btn-amber-sm px-3.5 py-2"
-              >
-                ⚡ Đề nghị điều chỉnh
-              </button>
+              {/* [PN-09] Chỉ hiển thị cho tài khoản có quyền DieuChinhKho.Xem (lập đề nghị điều chỉnh). */}
+              <Can perm={Permissions.DieuChinhKho_Xem}>
+                <button
+                  onClick={() => onOpenAdjustmentModal(selected)}
+                  className="adm-btn-amber-sm px-3.5 py-2"
+                >
+                  ⚡ Đề nghị điều chỉnh
+                </button>
+              </Can>
             </div>
 
             {adjustmentsList.length > 0 && (
@@ -173,22 +187,25 @@ export function InventoryReceiptDetail({
                       )}
 
                       {adj.status === "Chờ duyệt" && (
-                        <div className="flex gap-2 mt-2 pt-2 border-t border-dashed border-[var(--color-bone)]">
-                          <button
-                            disabled={adjLoadingId === adj.id}
-                            onClick={() => onApproveAdjustment(selected.id, adj as { id: string; rawStatus?: string })}
-                            className="adm-btn-forest-solid adm-btn-xs"
-                          >
-                            {adjLoadingId === adj.id ? "Đang duyệt..." : "✓ Duyệt (UC7.10)"}
-                          </button>
-                          <button
-                            disabled={adjLoadingId === adj.id}
-                            onClick={() => onRejectAdjustment(selected.id, adj.id)}
-                            className="adm-btn-danger-outline adm-btn-xs"
-                          >
-                            ✕ Từ chối
-                          </button>
-                        </div>
+                        // [PN-09] Chỉ hiện nút Duyệt/Từ chối cho tài khoản có DieuChinhKho.Duyet.
+                        <Can perm={Permissions.DieuChinhKho_Duyet}>
+                          <div className="flex gap-2 mt-2 pt-2 border-t border-dashed border-[var(--color-bone)]">
+                            <button
+                              disabled={adjLoadingId === adj.id}
+                              onClick={() => onApproveAdjustment(selected.id, adj as { id: string; rawStatus?: string })}
+                              className="adm-btn-forest-solid adm-btn-xs"
+                            >
+                              {adjLoadingId === adj.id ? "Đang duyệt..." : "✓ Duyệt (UC7.10)"}
+                            </button>
+                            <button
+                              disabled={adjLoadingId === adj.id}
+                              onClick={() => onRejectAdjustment(selected.id, adj.id)}
+                              className="adm-btn-danger-outline adm-btn-xs"
+                            >
+                              ✕ Từ chối
+                            </button>
+                          </div>
+                        </Can>
                       )}
                       {adj.status === "Đã duyệt" && (
                         <div className="text-[0.7rem] text-[#15803D] mt-1 font-semibold">
