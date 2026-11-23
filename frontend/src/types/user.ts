@@ -14,6 +14,10 @@ export interface StaffAccount {
   lockedReason?: string;
   permissions?: string[];
   createdAt: string;
+  // [STF-05] Trang thai cong viec thuc te ("resigned" khi da nghi viec) de UI an nut "Mo" khoa.
+  workStatus?: "working" | "resigned";
+  // [STF-03] Dia chi that - de tranh ghi de thanh "Van phong GearGo" khi cap nhat ho so.
+  address?: string;
 }
 
 export interface CustomerAccount {

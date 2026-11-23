@@ -6,6 +6,7 @@ interface BackendStaffItem {
   hoTen?: string | null;
   email?: string | null;
   soDienThoai?: string | null;
+  diaChi?: string | null;
   vaiTro?: string | null;
   trangThaiTaiKhoan?: string | null;
   trangThaiLamViec?: string | null;
@@ -34,7 +35,11 @@ export function mapBackendStaffItems(items: BackendStaffItem[]) {
       role: nv.vaiTro === "QuanTriVien" ? "Quản trị viên" : "Nhân viên",
       phone: nv.soDienThoai || "",
       email: nv.email || "",
+      // [STF-03] Luu dia chi that de UI/update khong ghi de thanh "Van phong GearGo".
+      address: nv.diaChi || "",
       status: isLocked ? "locked" : "active",
+      // [STF-05] Workstatus: resigned khi da nghi viec de bang an nut "Mo" khoa.
+      workStatus: nv.trangThaiLamViec === "DaNghiViec" ? "resigned" : "working",
       lockedReason:
         nv.trangThaiLamViec === "DaNghiViec"
           ? `Nghỉ việc từ ${nv.ngayNghiViec ? formatDateVi(nv.ngayNghiViec) : "đã nghỉ"}`
