@@ -59,6 +59,8 @@ export interface TaoSanPhamDto {
   mucCocMoiThietBi: number;
   giaTriBoiThuong: number;
   trangThaiKinhDoanh?: string;
+  // [SP-04] Danh sách URL hình ảnh người dùng dán (tùy chọn); backend ghi vào bảng HinhAnhSanPham.
+  hinhAnhs?: string[];
 }
 
 export interface CapNhatSanPhamDto extends TaoSanPhamDto {}
