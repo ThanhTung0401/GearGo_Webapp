@@ -1,6 +1,7 @@
 import type React from "react";
 import { useApp } from "../../../context/AppContext";
 import { fmt, ReturnReceipt } from "../../../store";
+import { usePermissionsContext } from "../../../features/permissions/PermissionsContext";
 
 interface ReturnReceiptMockModalProps {
   app: ReturnType<typeof useApp>;
@@ -16,6 +17,9 @@ export function ReturnReceiptMockModal({
   setViewingReceipt,
   setReturnSuccess,
 }: ReturnReceiptMockModalProps) {
+  // FN5-07: chỉ Quản trị viên được phép duyệt mất thiết bị (bồi thường tài chính)
+  const permCtx = usePermissionsContext();
+  const isAdmin = permCtx?.roleName === "QuanTriVien";
   return (
     <div className="so-modal-overlay">
       <div className="so-modal-card-580">
@@ -47,7 +51,7 @@ export function ReturnReceiptMockModal({
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                {it.condition === "Mất thiết bị" && !it.lostApproved && (
+                {it.condition === "Mất thiết bị" && !it.lostApproved && isAdmin && (
                   <button
                     onClick={() => {
                       const res = app.approveLostEquipment(viewingReceipt.orderId, it.equipmentId, "Quản trị viên");
