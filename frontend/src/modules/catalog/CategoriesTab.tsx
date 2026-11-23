@@ -19,6 +19,8 @@ export function CategoriesTab({ app }: { app: ReturnType<typeof useApp> }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
   const [togglingId, setTogglingId] = useState<string | null>(null);
+  // [DM-02] Hỗ trợ nút Xóa danh mục (UC48 / UC6.4)
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const catData = [...app.categories]
     .sort((a, b) => a.displayOrder - b.displayOrder)
     .filter((category) => {
@@ -83,6 +85,12 @@ export function CategoriesTab({ app }: { app: ReturnType<typeof useApp> }) {
                 <div>
                   <div className="adm-cat-name">{c.category.name}</div>
                   <div className="adm-cat-meta">{c.products.length} sản phẩm · {c.equipment.length} thiết bị</div>
+                  {/* [DM-02] Hiển thị tên danh mục cha nếu có để phân biệt phân cấp. */}
+                  {c.category.parentId && (
+                    <div className="adm-cat-meta text-xs text-gray-500">
+                      Danh mục cha: <strong>{app.categories.find((p) => p.id === c.category.parentId)?.name ?? `#${c.category.parentId}`}</strong>
+                    </div>
+                  )}
                 </div>
               </div>
               <div className="adm-cat-body">
@@ -134,6 +142,33 @@ export function CategoriesTab({ app }: { app: ReturnType<typeof useApp> }) {
                     className="adm-btn-parchment adm-btn-flex"
                   >
                     {togglingId === c.category.id ? "Đang lưu..." : c.category.status === "active" ? "Ẩn" : "Hiện"}
+                  </button>
+                  {/* [DM-02] Nút Xóa danh mục (UC48 / UC6.4): Backend đã có ràng buộc DANH_MUC_DANG_CO_SAN_PHAM / DANH_MUC_DANG_CO_CON. */}
+                  <button
+                    disabled={deletingId === c.category.id}
+                    onClick={async () => {
+                      if (!(app.realApi || isRealApiEnabled())) {
+                        return setMessage("Chỉ hỗ trợ xóa danh mục ở chế độ Real API.");
+                      }
+                      const catId = Number(c.category.id);
+                      if (Number.isNaN(catId)) {
+                        return setMessage("ID danh mục không hợp lệ.");
+                      }
+                      if (!window.confirm(`Xác nhận xóa danh mục "${c.category.name}"? Thao tác không thể hoàn tác.`)) return;
+                      setDeletingId(c.category.id);
+                      try {
+                        await catalogApi.adminXoaDanhMuc(catId);
+                        await app.refreshCatalog?.();
+                        setMessage("");
+                      } catch (err) {
+                        setMessage(err instanceof Error ? err.message : "Lỗi xóa danh mục.");
+                      } finally {
+                        setDeletingId(null);
+                      }
+                    }}
+                    className="adm-btn-parchment adm-btn-flex"
+                  >
+                    {deletingId === c.category.id ? "Đang xóa..." : "Xóa"}
                   </button>
                 </Can>
               </div>

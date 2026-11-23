@@ -28,10 +28,18 @@ public class DanhMucService : IDanhMucService
         var roots = new List<DanhMucResponse>();
         foreach (var item in dict.Values)
         {
-            if (item.MaDanhMucCha.HasValue && dict.TryGetValue(item.MaDanhMucCha.Value, out var parent))
-                parent.DanhMucCon.Add(item);
+            if (item.MaDanhMucCha.HasValue)
+            {
+                // [DM-03] Nếu danh mục cha bị ẩn (không nằm trong dict đang hiển thị), bỏ qua nhánh con
+                // thay vì đẩy con lên roots — nếu không, danh mục con sẽ biến thành danh mục cấp 1 ngoài ý muốn.
+                if (dict.TryGetValue(item.MaDanhMucCha.Value, out var parent))
+                    parent.DanhMucCon.Add(item);
+                // else: parent đang ẩn → ẩn luôn nhánh con khỏi cây hiển thị khách hàng.
+            }
             else
+            {
                 roots.Add(item);
+            }
         }
         return Result<List<DanhMucResponse>>.Ok(roots);
     }
