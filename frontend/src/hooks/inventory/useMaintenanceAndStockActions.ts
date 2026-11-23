@@ -127,6 +127,30 @@ export function useMaintenanceAndStockActions(params: Params) {
     autoApprove?: boolean;
   }): ActionResult<StockAdjustmentReceipt> => {
     if (!input.lines.length) return { ok: false, message: "Phiếu điều chỉnh phải có ít nhất 1 dòng thiết bị." };
+
+    // [SA-04] Validate tung dong truoc khi tao phieu: khong submit toan bo neu 1 dong invalid.
+    const seenIds = new Set<string>();
+    for (let i = 0; i < input.lines.length; i++) {
+      const line = input.lines[i];
+      const label = `Dòng ${i + 1} (TB ${line.equipmentId || "chưa chọn"})`;
+      if (!line.equipmentId) return { ok: false, message: `${label}: chưa chọn thiết bị.` };
+      if (seenIds.has(line.equipmentId)) {
+        return { ok: false, message: `${label}: thiết bị ${line.equipmentId} trùng với dòng khác trong phiếu.` };
+      }
+      seenIds.add(line.equipmentId);
+      if (!line.newStatus) return { ok: false, message: `${label}: chưa chọn trạng thái mới sau điều chỉnh.` };
+      if (line.previousStatus && line.previousStatus === line.newStatus) {
+        return { ok: false, message: `${label}: trạng thái mới phải khác trạng thái hiện tại (${line.previousStatus}).` };
+      }
+      const equip = equipment.find((e) => e.id === line.equipmentId);
+      if (equip && equip.equipmentStatus === "Đang thuê") {
+        return { ok: false, message: `${label}: thiết bị đang cho khách thuê, không thể điều chỉnh kho.` };
+      }
+      if (!line.reason || !line.reason.trim()) {
+        return { ok: false, message: `${label}: thiếu lý do / ghi chú chi tiết.` };
+      }
+    }
+
     const now = new Date().toLocaleString("vi-VN");
     const autoApprove = input.autoApprove ?? false;
     const newReceipt: StockAdjustmentReceipt = {

@@ -83,12 +83,30 @@ export function useStockAdjustTab(app: ReturnType<typeof useApp>) {
   const displayedAdjustments = isRealApi ? realAdjustments : app.stockAdjustments;
   const currentEquip = app.equipment.find((e) => e.id === selectedEquipId);
 
+  // [SA-02] Khi doi thiet bi ma newStatus trung trang thai hien tai, tu dong chuyen sang trang thai khac.
+  useEffect(() => {
+    if (!currentEquip) return;
+    if (currentEquip.equipmentStatus === newStatus) {
+      const alts: EquipmentStatus[] = ["Thất lạc", "Đang bảo trì", "Ngừng sử dụng", "Sẵn sàng"];
+      const fallback = alts.find((s) => s !== currentEquip.equipmentStatus);
+      if (fallback) setNewStatus(fallback);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentEquip?.id]);
+
   // Lập và áp dụng phiếu điều chỉnh kho thủ công (UC6.10, UC6.11)
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setModalError("");
     if (!selectedEquipId) return setModalError("Vui lòng chọn mã thiết bị.");
     if (!reason.trim()) return setModalError("Vui lòng nhập lý do điều chỉnh kho.");
+    // [SA-02] Chan thiet bi dang cho khach thue va chan trang thai moi trung trang thai hien tai.
+    if (currentEquip?.equipmentStatus === "Đang thuê") {
+      return setModalError("Thiết bị đang cho khách thuê, không thể lập điều chỉnh kho.");
+    }
+    if (currentEquip && currentEquip.equipmentStatus === newStatus) {
+      return setModalError("Trạng thái mới sau điều chỉnh phải khác trạng thái hiện tại của thiết bị.");
+    }
 
     if (isRealApi) {
       const equipIdNum = Number(selectedEquipId);
