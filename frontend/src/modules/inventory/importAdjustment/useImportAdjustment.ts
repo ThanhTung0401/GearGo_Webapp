@@ -6,6 +6,9 @@ import type { ImportReceipt, ImportReceiptAdjustment } from "../../../store";
 /**
  * Custom hook trung gian cho Đề nghị điều chỉnh sai lệch phiếu nhập sau chốt (UC7.10 & UC7.10.1).
  */
+// [PN-10] Hướng điều chỉnh số lượng (thêm thiếu / loại thừa) để map đúng LoaiDieuChinh Backend.
+export type QuantityAdjustDirection = "ThemThieu" | "LoaiThua";
+
 export function useImportAdjustment(
   receipt: ImportReceipt,
   app: ReturnType<typeof useApp>,
@@ -13,6 +16,10 @@ export function useImportAdjustment(
   onSuccess?: () => void
 ) {
   const [type, setType] = useState<ImportReceiptAdjustment["type"]>("Giá vốn");
+  // [PN-10] Khi loại là "Số lượng", người dùng phải chọn Thêm thiếu (KhaiBaoThieuThietBi)
+  // hay Loại thừa (KhaiBaoTrungSaiThietBi) để tránh gửi mặc định sang "KhaiBaoThieuThietBi"
+  // khiến Admin duyệt bị tự động cộng thêm thiết bị vào kho thay vì giảm kho.
+  const [quantityDirection, setQuantityDirection] = useState<QuantityAdjustDirection>("ThemThieu");
   const [selectedLineId, setSelectedLineId] = useState<string>(receipt.lines[0]?.id || "");
   const [previousValue, setPreviousValue] = useState("");
   const [newValue, setNewValue] = useState("");
@@ -39,7 +46,14 @@ export function useImportAdjustment(
       if (!Number.isFinite(phieuNhapId)) return;
       setSubmitting(true);
       try {
-        const loaiDieuChinh = type === "Số lượng" ? "KhaiBaoThieuThietBi" : "SaiGiaNhap";
+        // [PN-10] Map loại điều chỉnh theo type + hướng (chỉ khi là "Số lượng").
+        // "Thông tin chứng từ" không đụng kho/giá → dùng SaiGiaNhap làm nhóm nhật ký (giữ nguyên hành vi cũ).
+        const loaiDieuChinh =
+          type === "Số lượng"
+            ? quantityDirection === "LoaiThua"
+              ? "KhaiBaoTrungSaiThietBi"
+              : "KhaiBaoThieuThietBi"
+            : "SaiGiaNhap";
         const maChiTietPhieuNhap =
           selectedLineId && Number.isFinite(Number(selectedLineId)) ? Number(selectedLineId) : undefined;
         const parsedNewPrice = Number(newValue.replace(/[^\d.-]/g, ""));
@@ -72,7 +86,22 @@ export function useImportAdjustment(
         onSuccess?.();
         onClose();
       } catch (err) {
-        setSubmitError(err instanceof Error ? err.message : "Không thể gửi đề nghị điều chỉnh phiếu nhập.");
+        // [PN-11] Hiển thị chi tiết lỗi từ server (LoiTheoDuongDan hoặc thông điệp cụ thể) thay vì generic alert.
+        let detail = "Không thể gửi đề nghị điều chỉnh phiếu nhập.";
+        if (err instanceof Error && err.message) {
+          detail = err.message;
+        }
+        // apiClient ném Error với message đã chứa thông điệp server. Nếu có cấu trúc JSON lỗi lồng, bóc ra.
+        const anyErr = err as { data?: { loiTheoDuongDan?: Array<{ duongDan?: string; thongDiep?: string }>; thongDiep?: string } };
+        if (anyErr?.data) {
+          const parts: string[] = [];
+          if (anyErr.data.thongDiep) parts.push(anyErr.data.thongDiep);
+          (anyErr.data.loiTheoDuongDan ?? []).forEach((l) => {
+            parts.push(l.duongDan ? `${l.duongDan}: ${l.thongDiep}` : l.thongDiep ?? "");
+          });
+          if (parts.length > 0) detail = parts.filter(Boolean).join(" | ");
+        }
+        setSubmitError(detail);
       } finally {
         setSubmitting(false);
       }
@@ -99,6 +128,7 @@ export function useImportAdjustment(
 
   return {
     type, setType,
+    quantityDirection, setQuantityDirection,
     selectedLineId, setSelectedLineId,
     previousValue, setPreviousValue,
     newValue, setNewValue,

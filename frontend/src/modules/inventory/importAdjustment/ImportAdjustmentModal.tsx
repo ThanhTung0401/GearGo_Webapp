@@ -82,6 +82,22 @@ export default function ImportAdjustmentModal({ receipt, app, onClose, onSuccess
             </select>
           </label>
 
+          {/* [PN-10] Khi là "Số lượng" bắt buộc chọn hướng để map đúng LoaiDieuChinh BE,
+              tránh default ThemThieu (tự động cộng kho) cho mọi lỗi số lượng. */}
+          {vm.type === "Số lượng" && (
+            <label className="font-semibold">
+              Hướng điều chỉnh số lượng:
+              <select
+                value={vm.quantityDirection}
+                onChange={(e) => vm.setQuantityDirection(e.target.value as "ThemThieu" | "LoaiThua")}
+                className="w-full p-2 rounded-md border border-gray-300 mt-1 bg-white"
+              >
+                <option value="ThemThieu">Bổ sung thiết bị khai báo thiếu (cộng kho)</option>
+                <option value="LoaiThua">Loại bỏ thiết bị khai báo thừa / trùng (trừ kho)</option>
+              </select>
+            </label>
+          )}
+
           <div className="grid grid-cols-2 gap-3">
             <label className="font-semibold">
               Giá trị trước điều chỉnh:
