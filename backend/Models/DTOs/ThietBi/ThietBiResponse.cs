@@ -9,6 +9,9 @@ public class ThietBiResponse
     public string MaThietBiHienThi { get; set; } = string.Empty;
     public long MaSanPhamHienTai { get; set; }
     public long MaChiTietPhieuNhap { get; set; }
+    // FN6-08: hiển thị mã phiếu nhập gốc và số lần đã cho thuê
+    public string? MaPhieuNhapHienThi { get; set; }
+    public int SoLanThue { get; set; }
     public string TrangThaiSuDung { get; set; } = string.Empty;
     public string TinhTrang { get; set; } = string.Empty;
     public decimal GiaNhap { get; set; }

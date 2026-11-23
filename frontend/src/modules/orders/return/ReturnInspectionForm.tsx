@@ -63,7 +63,9 @@ export function ReturnInspectionForm({
         </div>
         <button
           onClick={() => {
+            // FN5-05: bỏ qua thiết bị đã nằm trong phiếu nhận trả nháp
             debtRows.forEach((row) => {
+              if (row.maPhieuNhanTraDangGiu) return;
               if (!selectedItemsToReturn[row.key]) {
                 onToggleSelect(row.key, row.compensation, row.maChiTietBanGiao);
               }
@@ -84,15 +86,19 @@ export function ReturnInspectionForm({
           const isSelected = !!selectedItemsToReturn[row.key];
           const cond = itemConditions[row.key] || "Bình thường";
           const fee = itemSurcharges[row.key] || 0;
+          // FN5-05: thiết bị đã nằm trong phiếu nhận trả nháp → khóa checkbox, ngăn tick chọn lại
+          const isLocked = Boolean(row.maPhieuNhanTraDangGiu);
 
           return (
             /* Đổi màu viền & nền thẻ thiết bị khi được tick chọn nhận trả */
-            <div key={row.key} className={`so-debt-card ${isSelected ? "is-selected" : ""}`}>
+            <div key={row.key} className={`so-debt-card ${isSelected ? "is-selected" : ""} ${isLocked ? "opacity-70" : ""}`}>
               <div className="flex items-center gap-3">
                 <input
                   type="checkbox"
                   checked={isSelected}
-                  onChange={() => onToggleSelect(row.key, row.compensation, row.maChiTietBanGiao)}
+                  disabled={isLocked}
+                  title={isLocked ? `Thiết bị đã nằm trong phiếu nhận trả nháp #${row.maPhieuNhanTraDangGiu}` : undefined}
+                  onChange={() => !isLocked && onToggleSelect(row.key, row.compensation, row.maChiTietBanGiao)}
                   className="so-checkbox-lg"
                 />
                 <div className="so-flex-1">

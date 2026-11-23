@@ -43,9 +43,9 @@ public interface IDoiSoatService
     Task<Result<List<DoiSoatResponse>>> LayDanhSachDieuChinhAsync(long actorId);
 
     /// <summary>
-    /// Lấy thông tin đối soát theo mã đơn thuê
+    /// Lấy thông tin đối soát theo mã đơn thuê. Trả Result.Ok(null) (HTTP 200) khi đơn chưa lập đối soát (FN5-08).
     /// </summary>
-    Task<Result<DoiSoatResponse>> LayTheoDonAsync(long donId, long actorId);
+    Task<Result<DoiSoatResponse?>> LayTheoDonAsync(long donId, long actorId);
 
     /// <summary>
     /// Lấy thông tin đối soát theo mã đối soát

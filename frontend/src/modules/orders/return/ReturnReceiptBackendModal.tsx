@@ -1,6 +1,7 @@
 import { useApp } from "../../../context/AppContext";
 import type { NhanTraBackend, ChiTietNhanTraBackend } from "../../../services/api";
 import { formatBackendEnum, formatDateTimeVi, type Order } from "../../../store";
+import { usePermissionsContext } from "../../../features/permissions/PermissionsContext";
 
 interface ReturnReceiptBackendModalProps {
   app: ReturnType<typeof useApp>;
@@ -24,6 +25,9 @@ export function ReturnReceiptBackendModal({
   onSplitPendingLine,
   onCloseBackendReceipt,
 }: ReturnReceiptBackendModalProps) {
+  // FN5-07: Duyệt mất thiết bị là nghiệp vụ bồi thường tài chính, chỉ Quản trị viên được phép
+  const permCtx = usePermissionsContext();
+  const isAdmin = permCtx?.roleName === "QuanTriVien";
   return (
     <div className="so-modal-overlay">
       <div className="so-modal-card-640">
@@ -67,7 +71,7 @@ export function ReturnReceiptBackendModal({
                   )}
                 </div>
                 <div className="flex items-center gap-2 flex-wrap">
-                  {isLost && !lostApproved && (
+                  {isLost && !lostApproved && isAdmin && (
                     <button
                       disabled={returnBusy}
                       onClick={() => {
@@ -83,6 +87,9 @@ export function ReturnReceiptBackendModal({
                     >
                       Duyệt mất
                     </button>
+                  )}
+                  {isLost && !lostApproved && !isAdmin && (
+                    <span className="text-xs italic text-amber-700">Chờ Quản trị viên duyệt mất</span>
                   )}
                   {canSplit && (
                     <button

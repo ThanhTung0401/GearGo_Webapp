@@ -218,6 +218,14 @@ export function useReturnMutations(p: UseReturnMutationsParams) {
   const handleApplyOverdueFee = async () => {
     if (!order || !overdueInfo.isOverdue) return;
     if (app.realApi && !Number.isFinite(order.backendId ?? Number(order.id))) return;
+    // FN5-04: chặn lập trùng — nếu đã có phụ phí trễ hạn (Chờ duyệt / Đã duyệt) thì không gọi lại
+    const existing = surchargesBackend.find(
+      (s) => s.type === "Quá hạn trả" && (s.status === "Chờ duyệt" || s.status === "Đã duyệt")
+    );
+    if (existing) {
+      setReturnError("Phụ phí trễ hạn đã tồn tại cho đơn này. Không thể lập trùng.");
+      return;
+    }
     setReturnError(null);
     setReturnSuccess(null);
     setReturnBusy(true);

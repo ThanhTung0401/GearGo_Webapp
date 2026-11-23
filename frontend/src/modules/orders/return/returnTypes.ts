@@ -16,6 +16,8 @@ export interface DebtRowItem {
   displayCode: string;
   productName: string;
   compensation: number;
+  // FN5-05: thiết bị đang nằm trong phiếu nhận trả nháp (chưa chốt) thì phải khoá checkbox
+  maPhieuNhanTraDangGiu?: number | null;
 }
 
 export interface OverdueInfoState {
