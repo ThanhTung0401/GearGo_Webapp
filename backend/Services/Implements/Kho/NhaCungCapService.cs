@@ -130,6 +130,17 @@ public partial class NhaCungCapService : INhaCungCapService
         var trangThaiMoi = request.TrangThaiHopTac.Trim();
         if (ncc.TrangThaiHopTac == trangThaiMoi) return MapToResponse(ncc, null);
 
+        // SUP-03: Chặn chuyển sang Ngừng hợp tác khi NCC còn phiếu nhập Nháp chưa xử lý,
+        // tránh khóa chết các phiếu Nhập kho ở trạng thái không thể xác nhận.
+        if (trangThaiMoi == "NgungHopTac")
+        {
+            var coPhieuNhap = await _context.PhieuNhapHangs.AnyAsync(
+                p => p.MaNhaCungCap == id && p.TrangThai == GearGo.Models.Enums.TrangThaiPhieuNhap.Nhap, ct);
+            if (coPhieuNhap)
+                throw new XungDotDuLieuException("NCC_CON_PHIEU_NHAP_NHAP",
+                    "Nhà cung cấp đang có phiếu nhập nháp chưa hoàn tất. Vui lòng xác nhận hoặc hủy phiếu nhập nháp trước khi ngừng hợp tác.");
+        }
+
         var trangThaiCu = ncc.TrangThaiHopTac;
         ncc.TrangThaiHopTac = trangThaiMoi;
         GhiNhatKyNcc(maTaiKhoan, "DOI_TRANG_THAI_HOP_TAC_NCC", id.ToString(),

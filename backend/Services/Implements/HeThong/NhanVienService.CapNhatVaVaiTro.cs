@@ -89,6 +89,19 @@ public partial class NhanVienService
         nv.TaiKhoan.VaiTro = vaiTroMoi;
         nv.TaiKhoan.NgayCapNhat = DateTime.UtcNow;
 
+        // STF-04: Khi đổi vai trò tài khoản, xóa toàn bộ phân quyền override cũ của người này
+        // để Quản trị viên mới KHÔNG bị kẹt bộ quyền nghèo nàn của Nhân viên trước đó
+        // (gây lỗi 403 oan trên UI quản trị). Cũng áp dụng khi hạ cấp để Nhân viên trở lại
+        // kế thừa quyền mặc định của vai trò thay vì mắc kẹt với override Admin cũ.
+        var overrideTypes = new[]
+        {
+            $"user_perm_override:{nv.MaTaiKhoan}",
+            $"user_perm:{nv.MaTaiKhoan}",
+        };
+        var overrideClaims = _context.RoleClaims.Where(c => overrideTypes.Contains(c.ClaimType));
+        _context.RoleClaims.RemoveRange(overrideClaims);
+        nv.TaiKhoan.PermissionVersion += 1;
+
         _lichSu.GhiNhatKyThaoTac(new GhiNhatKyCommand(
             actorId, "DOI_VAI_TRO", "TAI_KHOAN", nv.MaTaiKhoan.ToString(),
             new { VaiTro = truoc }, new { VaiTro = vaiTroMoi }, lyDo));

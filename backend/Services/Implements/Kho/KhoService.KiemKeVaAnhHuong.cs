@@ -135,8 +135,14 @@ public partial class KhoService
 
         foreach (var don in donTuongLai)
         {
+            // SA-05: Bỏ qua các đơn đã qua giờ trả (không còn tranh chấp kho),
+            // và kẹp startCheck = Max(don.GioNhanDuKien, UtcNow) để các đơn cũ
+            // quá giờ nhận không làm KhaDungService.LayKhaDungNhieu trả về 0
+            // (chặn duyệt oan mọi phiếu điều chỉnh giảm kho).
+            if (don.GioTraDuKien <= DateTime.UtcNow) continue;
+            var startCheck = don.GioNhanDuKien < DateTime.UtcNow ? DateTime.UtcNow : don.GioNhanDuKien;
             var khaDungMap = await _khaDungService!.LayKhaDungNhieuAsync(
-                new List<long> { thietBi.MaSanPhamHienTai }, don.GioNhanDuKien, don.GioTraDuKien);
+                new List<long> { thietBi.MaSanPhamHienTai }, startCheck, don.GioTraDuKien);
             int khaDungConLai = khaDungMap.TryGetValue(thietBi.MaSanPhamHienTai, out int sl) ? sl : 0;
             if (khaDungConLai < 1)
             {

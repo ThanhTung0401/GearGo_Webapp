@@ -68,6 +68,10 @@ public partial class DanhGiaService
                 danhGia.ChiTietDonThue.MaSanPham));
 
         danhGia.TrangThaiHienThi = "HienThi";
+        // REV-02: Xóa LyDoAn & MaNguoiAn khi khôi phục để UI không hiển thị
+        // dòng chữ đỏ "Lý do ẩn: ..." trên thẻ đánh giá đã bỏ ẩn.
+        danhGia.LyDoAn = null;
+        danhGia.MaNguoiAn = null;
         danhGia.NgayCapNhat = DateTime.UtcNow;
 
         _context.NhatKyThaoTacs.Add(new NhatKyThaoTac

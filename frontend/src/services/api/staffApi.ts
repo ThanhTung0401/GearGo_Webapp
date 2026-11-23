@@ -90,6 +90,7 @@ export interface TaiKhoanResponse {
   maKhachHang?: number;
   ngayTao: string;
   ngayCapNhat: string;
+  diaChi?: string;
 }
 
 function buildQuery(params?: Record<string, unknown>): string {

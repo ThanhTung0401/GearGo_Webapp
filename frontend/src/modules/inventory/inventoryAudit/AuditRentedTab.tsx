@@ -41,7 +41,12 @@ export default function AuditRentedTab({ rentedEquipments, products, orders }: P
                 const ord = orders.find(
                   (o) =>
                     o.status === "Đang thuê" &&
-                    (o.assignedEquipmentIds?.includes(e.id) || o.items.some((it) => it.equipmentId === e.id))
+                    (o.assignedEquipment?.some(
+                      (ae) =>
+                        ae.equipmentId === e.id ||
+                        ae.equipmentDisplayCode === e.displayCode
+                    ) ||
+                      o.items.some((it) => it.equipmentId === e.id))
                 );
                 return (
                   <tr key={e.id} className="border-t border-[var(--color-bone,#E5E7EB)]">
