@@ -1,6 +1,6 @@
 import { useApp } from "../../context/AppContext";
 
-import { fmt, statusColors } from "../../store";
+import { fmt, formatDateTimeVi, statusColors } from "../../store";
 import Icon, { type IconName } from "../../components/Icon";
 
 import { type StaffTab } from "../orders/returnMapping";
@@ -14,8 +14,10 @@ export function OverviewTab({ app, openOrder }: { app: ReturnType<typeof useApp>
     return returnedCnt > 0 && returnedCnt < o.assignedEquipment.length;
   });
   const overdueOrders = app.orders.filter((o) => app.checkOrderOverdue(o).isOverdue);
-  const reconcile = app.orders.filter((o) => o.status === "Chờ đối soát");
-  const maintenanceCount = app.maintenanceReceipts.filter((m) => ["Chờ xử lý", "Đang bảo dưỡng"].includes(m.status)).length;
+  // [OV-05] Bổ sung "Đã nhận trả" để đơn vừa trả đủ không biến mất khỏi Tổng quan ca
+  const reconcile = app.orders.filter((o) => o.status === "Chờ đối soát" || o.status === "Đã nhận trả");
+  // [OV-02] Bổ sung "Đang sửa chữa" để khớp giá trị trả về từ catalogEquipmentMapper
+  const maintenanceCount = app.maintenanceReceipts.filter((m) => ["Chờ xử lý", "Đang bảo dưỡng", "Đang sửa chữa"].includes(m.status)).length;
 
   return (
     <div>
@@ -28,9 +30,22 @@ export function OverviewTab({ app, openOrder }: { app: ReturnType<typeof useApp>
           { label: "Trả một phần", value: partialReturned.length, color: "#C2410C", bg: "#FFF7ED", icon: "arrow-down" as IconName, tab: "return" as StaffTab },
           { label: "Quá hạn hẹn trả", value: overdueOrders.length, color: "#DC2626", bg: "#FEE2E2", icon: "alert-circle" as IconName, tab: "return" as StaffTab },
           { label: "Chờ đối soát", value: reconcile.length, color: "#374151", bg: "#F3F4F6", icon: "wallet" as IconName, tab: "return" as StaffTab },
-          { label: "Cần bảo trì", value: maintenanceCount, color: "#7C3AED", bg: "#F5F3FF", icon: "tool" as IconName, tab: "equipment" as StaffTab },
+          { label: "Cần bảo trì", value: maintenanceCount, color: "#7C3AED", bg: "#F5F3FF", icon: "tool" as IconName, tab: "warehouse" as StaffTab },
         ].map((s) => (
-          <div key={s.label} className="staff-kpi-card" style={{ background: s.bg }}>
+          <div
+            key={s.label}
+            role="button"
+            tabIndex={0}
+            onClick={() => openOrder("", s.tab)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                openOrder("", s.tab);
+              }
+            }}
+            className="staff-kpi-card"
+            style={{ background: s.bg, cursor: "pointer" }}
+          >
             <div style={{ color: s.color }}><Icon name={s.icon} size={22} /></div>
             <div className="staff-kpi-val" style={{ color: s.color }}>{s.value}</div>
             <div className="staff-kpi-label" style={{ color: s.color }}>{s.label}</div>
@@ -56,7 +71,7 @@ export function OverviewTab({ app, openOrder }: { app: ReturnType<typeof useApp>
                   <div>
                     <span className="so-alert-item-code">{o.displayCode || o.id}</span> — <strong>{o.customerName}</strong> ({o.customerPhone})
                     <div className="so-alert-item-meta">
-                      Hạn trả: {o.returnTime} · <strong className="so-alert-item-late">Trễ {od.overdueDays} ngày ({od.overdueHours} giờ)</strong>
+                      Hạn trả: {formatDateTimeVi(o.returnTime)} · <strong className="so-alert-item-late">Trễ {od.overdueDays} ngày ({od.overdueHours} giờ)</strong>
                     </div>
                   </div>
                   <div className="so-alert-item-actions">
@@ -77,13 +92,29 @@ export function OverviewTab({ app, openOrder }: { app: ReturnType<typeof useApp>
       <h3 className="so-section-heading">
         Đơn cần chuẩn bị & nhận trả hôm nay
       </h3>
+      {/* [OV-07] Bổ sung Empty State khi danh sách rỗng */}
+      {(() => {
+        // [OV-05] Bổ sung "Đã nhận trả" vào danh sách cần xử lý
+        const workingOrders = app.orders.filter((o) =>
+          ["Đã xác nhận", "Đang chuẩn bị", "Sẵn sàng nhận", "Đang thuê", "Chờ đối soát", "Đã nhận trả"].includes(o.status)
+        );
+        if (workingOrders.length === 0) {
+          return (
+            <div className="so-empty-box" style={{ padding: 16, textAlign: "center", color: "#6B7280", background: "#F9FAFB", borderRadius: 8 }}>
+              Hiện không có đơn nào cần xử lý trong ca.
+            </div>
+          );
+        }
+        return (
       <div className="flex flex-col gap-3">
-        {app.orders.filter((o) => ["Đã xác nhận", "Đang chuẩn bị", "Sẵn sàng nhận", "Đang thuê", "Chờ đối soát"].includes(o.status)).map((o) => {
+        {workingOrders.map((o) => {
           const sc = statusColors[o.status] || { bg: "#F3F4F6", text: "#374151" };
           const isOverdue = app.checkOrderOverdue(o).isOverdue;
           const returnedCnt = o.assignedEquipment.filter((ae) => ae.returnedAt).length;
           const isPartial = o.status === "Đang thuê" && returnedCnt > 0 && returnedCnt < o.assignedEquipment.length;
-          const actionTab: StaffTab = o.status === "Đang thuê" || o.status === "Chờ đối soát" ? "return" : "handover";
+          // [OV-05] Điều hướng "Đã nhận trả" sang tab "return"
+          const actionTab: StaffTab =
+            o.status === "Đang thuê" || o.status === "Chờ đối soát" || o.status === "Đã nhận trả" ? "return" : "handover";
 
           return (
             <div
@@ -121,15 +152,19 @@ export function OverviewTab({ app, openOrder }: { app: ReturnType<typeof useApp>
                 </div>
               </div>
               <div className="so-overview-order-meta">
-                <div className="so-overview-order-items">Hẹn nhận: {o.pickupTime ? o.pickupTime.replace("T", " ").slice(0, 16) : "—"}</div>
-                <div className="so-overview-order-items">Hẹn trả: {o.returnTime ? o.returnTime.replace("T", " ").slice(0, 16) : "—"}</div>
-                {o.total !== undefined && <div className="so-overview-order-total">{fmt(o.rental - o.discount + o.depositTotal)}</div>}
+                {/* [OV-01] Dùng formatDateTimeVi cho pickupTime/returnTime */}
+                <div className="so-overview-order-items">Hẹn nhận: {formatDateTimeVi(o.pickupTime)}</div>
+                <div className="so-overview-order-items">Hẹn trả: {formatDateTimeVi(o.returnTime)}</div>
+                {/* [OV-07] Luôn hiển thị tổng tiền, không ẩn ở Mock/Demo */}
+                <div className="so-overview-order-total">{fmt(Math.max(0, o.rental - o.discount) + o.depositTotal)}</div>
               </div>
               <span className="so-overview-order-arrow">→</span>
             </div>
           );
         })}
       </div>
+        );
+      })()}
     </div>
   );
 }
