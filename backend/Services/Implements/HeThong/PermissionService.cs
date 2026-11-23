@@ -177,13 +177,18 @@ public partial class PermissionService : IPermissionService
         var quyen = kq.ThanhCong && kq.DuLieu != null ? kq.DuLieu.QuyenCoDuoc : new List<string>();
         var version = kq.ThanhCong && kq.DuLieu != null ? kq.DuLieu.Version : 0;
 
-        var (coQuyenRieng, quyenRieng) = await LoadUserOverrideFromDbAsync(maTaiKhoan, ct);
-        if (coQuyenRieng)
-            quyen = quyenRieng.OrderBy(p => p).ToList();
-
-        // Lớp phòng thủ: vai trò không phải QuanTriVien không bao giờ nhận nhóm quyền AdminOnly
+        // STF-04: QuanTriVien LUÔN nhận full quyền Admin, bỏ qua override cũ sót lại
+        // (tránh lỗi 403 khi Nhân viên có user_perm_override được nâng lên Admin
+        // nhưng override cũ vẫn gắn vào RoleClaims).
         if (tk.VaiTro != DomainConstants.Roles.Admin)
+        {
+            var (coQuyenRieng, quyenRieng) = await LoadUserOverrideFromDbAsync(maTaiKhoan, ct);
+            if (coQuyenRieng)
+                quyen = quyenRieng.OrderBy(p => p).ToList();
+
+            // Lớp phòng thủ: vai trò không phải QuanTriVien không bao giờ nhận nhóm quyền AdminOnly
             quyen = quyen.Where(p => !DomainConstants.Permissions.AdminOnly.Contains(p)).ToList();
+        }
 
         return Result<QuyenCuaToiResponse>.Ok(new QuyenCuaToiResponse
         {
@@ -206,6 +211,11 @@ public partial class PermissionService : IPermissionService
         if (string.IsNullOrEmpty(roleName) || string.IsNullOrEmpty(permissionMa)) return false;
         if (roleName != DomainConstants.Roles.Admin && DomainConstants.Permissions.AdminOnly.Contains(permissionMa))
             return false;
+
+        // STF-04: Nếu là QuanTriVien, kiểm tra quyền theo role mặc định luôn (bỏ override cũ)
+        // để không bị kẹt bộ quyền Nhân viên sót lại khi được nâng vai trò.
+        if (roleName == DomainConstants.Roles.Admin)
+            return await KiemTraCoQuyenAsync(roleName, permissionMa, ct);
 
         // v2 §8.3 — version-check theo TaiKhoan.PermissionVersion: admin bump column → mọi pod reload ở request kế.
         var version = await LayAccountVersionAsync(maTaiKhoan, ct);

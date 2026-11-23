@@ -64,6 +64,22 @@ export function useStockAdjustTab(app: ReturnType<typeof useApp>) {
     void loadRealAdjustments();
   }, [isRealApi]);
 
+  // Self-healing: nếu F5 trực tiếp ở tab Điều chỉnh kho mà bootstrap chưa kịp nạp
+  // thiết bị/sản phẩm (useBootstrapData đang kẹt ở Đợt 1 refreshOrders), tự gọi
+  // refreshEquipment()/refreshCatalog() song song để dropdown không bị rỗng (SA-01).
+  useEffect(() => {
+    if (!isRealApi) return;
+    const needEquip = app.equipment.length === 0;
+    const needCatalog = app.products.length === 0;
+    if (needEquip || needCatalog) {
+      void Promise.all([
+        needEquip ? app.refreshEquipment?.() : Promise.resolve(),
+        needCatalog ? app.refreshCatalog?.() : Promise.resolve(),
+      ]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isRealApi]);
+
   const displayedAdjustments = isRealApi ? realAdjustments : app.stockAdjustments;
   const currentEquip = app.equipment.find((e) => e.id === selectedEquipId);
 
@@ -96,8 +112,8 @@ export function useStockAdjustTab(app: ReturnType<typeof useApp>) {
           ],
         };
         const created = await inventoryApi.lapPhieu(dto);
-        // Giữ phiếu ở trạng thái Chờ duyệt để Quản trị viên kiểm tra ảnh hưởng lịch trước khi áp dụng (UC6.10)
-        await inventoryApi.guiDuyet(created.maPhieuDieuChinh);
+        // SA-03: LapPhieuAsync đã tạo phiếu ở TrangThai = ChoDuyet, không cần gọi guiDuyet lại
+        // để tránh request thừa và bẫy modal mở khi guiDuyet lỗi mạng.
         await Promise.all([loadRealAdjustments(), app.refreshEquipment?.(), app.refreshCatalog?.()]);
         setShowModal(false);
         setSelectedEquipId("");

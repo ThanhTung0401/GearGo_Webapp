@@ -115,7 +115,7 @@ export function StaffAccountModal({
               <label className="adm-label--block">Mật khẩu khởi tạo *</label>
               <input
                 required
-                value={editingStaff.password || "GearGo@2026"}
+                value={editingStaff.password ?? ""}
                 onChange={(e) => onChange({ ...editingStaff, password: e.target.value })}
                 className="adm-field adm-field--compact adm-field--mono"
               />
