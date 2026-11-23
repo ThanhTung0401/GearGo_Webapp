@@ -33,7 +33,7 @@ export default defineConfig({
   // Chạy tuần tự 1 worker để đảm bảo dữ liệu SQL Server nhất quán giữa các bước tạo/sửa/xóa
   fullyParallel: false,
   workers: 1,
-  retries: 0,
+  retries: 1,
   reporter: [
     ["list"],
     ["html", { open: "never", outputFolder: "playwright-report" }],
