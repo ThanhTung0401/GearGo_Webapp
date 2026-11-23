@@ -1,0 +1,93 @@
+% =====================================================================
+%  CHƯƠNG 3 — THIẾT KẾ CƠ SỞ DỮ LIỆU
+%  Người viết: Minh Tú (Phần 3)
+%  Nguồn nội dung: Report/Assign/Phan_3_MinhTu_CoSoDuLieu.md
+% =====================================================================
+\chapter{Thiết kế Cơ sở dữ liệu}
+\label{chuong:co_so_du_lieu}
+
+\section{Mô hình ERD tổng thể}
+\label{sec:erd}
+
+% \begin{figure}[H]
+%   \centering
+%   \includegraphics[width=\textwidth]{images/erd_tong_the.png}
+%   \caption{Sơ đồ ERD toàn hệ thống GearGo --- 39 entities}
+%   \label{fig:erd}
+% \end{figure}
+
+Toàn hệ thống gồm \textbf{39 entities} được chia thành 6 cụm chính:
+
+\begin{enumerate}[leftmargin=2em]
+  \item \textbf{Tài khoản và Nhân sự} (3 bảng): \texttt{TaiKhoan}, \texttt{KhachHang}, \texttt{NhanVien} + bảng quyền RBAC.
+  \item \textbf{Danh mục và Sản phẩm} (3 bảng): \texttt{DanhMucSanPham}, \texttt{SanPham}, \texttt{HinhAnhSanPham}.
+  \item \textbf{Kho và Thiết bị} (5 bảng): \texttt{NhaCungCap}, \texttt{PhieuNhapHang}, \texttt{ChiTietPhieuNhap}, \texttt{ThietBi}, \texttt{DieuChinhKho}.
+  \item \textbf{Giỏ, Đơn và Giữ chỗ} (6 bảng): \texttt{GioThue}, \texttt{ChiTietGioThue}, \texttt{DonThue}, \texttt{ChiTietDonThue}, \texttt{GiuCho}, \texttt{LichSuTrangThaiDon}.
+  \item \textbf{Khuyến mãi và Chính sách} (5 bảng): \texttt{KhuyenMai}, \texttt{KhuyenMaiSanPham}, \texttt{KhuyenMaiDanhMuc}, \texttt{LuotSuDungKhuyenMai}, \texttt{ChinhSach}.
+  \item \textbf{Thanh toán, Phụ phí, Bàn giao, Bảo trì, Đánh giá, Thông báo, Nhật ký} (17 bảng còn lại).
+\end{enumerate}
+
+\section{Lược đồ cơ sở dữ liệu (RDM)}
+\label{sec:rdm}
+
+% [6 trang lược đồ tương ứng 6 cụm]
+
+\section{Từ điển dữ liệu (Data Dictionary)}
+\label{sec:data_dict}
+
+\subsection{Bảng TAI\_KHOAN}
+
+\subsection{Bảng KHACH\_HANG}
+
+\subsection{Bảng SAN\_PHAM}
+
+\subsection{Bảng THIET\_BI}
+
+\subsection{Bảng DON\_THUE}
+\label{subsec:don_thue}
+
+\subsection{Bảng CHI\_TIET\_DON\_THUE}
+
+\subsection{Bảng GIU\_CHO}
+
+\subsection{Bảng LUOT\_SU\_DUNG\_KHUYEN\_MAI}
+
+\subsection{Bảng THANH\_TOAN}
+
+\subsection{Bảng KHUYEN\_MAI}
+
+\subsection{Bảng CHINH\_SACH}
+
+\subsection{Bảng PHIEU\_NHAP\_HANG}
+
+\subsection{Bảng DANH\_GIA}
+
+\subsection{Bảng LICH\_SU\_TRANG\_THAI\_DON}
+
+\subsection{Bảng DIEU\_CHINH\_KHO}
+
+\subsection{Tóm tắt các bảng phụ trợ}
+
+\section{Quy tắc dữ liệu quan trọng}
+\label{sec:quy_tac_du_lieu}
+
+\subsection{Quy tắc ẩn / ngừng kinh doanh sản phẩm}
+
+\subsection{Quy tắc FIFO nhập kho và phân công thiết bị}
+
+\subsection{Quy tắc giữ chỗ 15 phút đồng bộ UTC}
+
+\subsection{Chính sách phiên bản --- không áp hồi tố đơn cũ}
+
+\subsection{Thuật toán tính khả dụng (Sweep Line)}
+
+\subsection{Idempotency trong thanh toán}
+
+\subsection{Ghi nhận lịch sử chuyển trạng thái đơn}
+
+\subsection{Audit RBAC --- PermissionVersion}
+
+\section{Cài đặt và Migration}
+\label{sec:cai_dat_db}
+
+% [Danh sách 7 migration EF Core + lệnh seed/reset]

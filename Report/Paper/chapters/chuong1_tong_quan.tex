@@ -1,0 +1,76 @@
+% =====================================================================
+%  CHƯƠNG 1 — TỔNG QUAN ĐỀ TÀI & CÔNG NGHỆ
+%  Người viết: Phạm Thanh Tùng (Phần 1)
+%  Nguồn nội dung: Report/Assign/Phan_1_ThanhTung_TongQuan_CaiDat.md
+% =====================================================================
+\chapter{Tổng quan đề tài và Công nghệ}
+\label{chuong:tong_quan}
+
+% TODO: Chép nội dung từ Phan_1_ThanhTung_TongQuan_CaiDat.md — mục A
+
+\section{Bối cảnh và lý do chọn đề tài}
+\label{sec:boi_canh}
+
+% [Nội dung 1.1 — khoảng 1-2 trang]
+
+\section{Mục tiêu}
+\label{sec:muc_tieu}
+
+\subsection{Mục tiêu cho khách hàng (end-user)}
+
+\subsection{Mục tiêu cho nhân viên (staff)}
+
+\subsection{Mục tiêu cho quản trị viên (admin)}
+
+\section{Phạm vi thực hiện}
+\label{sec:pham_vi}
+
+\subsection{Phạm vi chức năng thực hiện}
+
+\subsection{Phạm vi không thực hiện}
+
+\section{Công nghệ sử dụng}
+\label{sec:cong_nghe}
+
+\begin{table}[H]
+\centering
+\caption{Bảng công nghệ sử dụng}
+\label{tab:cong_nghe}
+\begin{tabularx}{\textwidth}{|l|X|}
+\hline
+\textbf{Thành phần} & \textbf{Công nghệ chính} \\ \hline
+Backend  & ASP.NET Core Web API (.NET 10), EF Core 9, SQL Server 2022 (Docker), JWT Bearer + ASP.NET Core Identity \\ \hline
+Frontend & React 19, TypeScript 5.7, Vite 8, Tailwind CSS 4, React Router DOM 7 \\ \hline
+Background Job & \texttt{DonThueExpirationJob} --- IHostedService, quét hết hạn giữ chỗ mỗi 1 phút \\ \hline
+Kiểm thử & xUnit (backend), Vitest (frontend), Playwright E2E (10 phân hệ frontend + backend) \\ \hline
+Tài liệu & Python \texttt{python-docx} (\texttt{scripts/chuong7/}), Playwright auto-annotation (\texttt{capture\_71\_ucs.mjs}) \\ \hline
+\end{tabularx}
+\end{table}
+
+\subsection{Backend --- ASP.NET Core 10}
+
+\subsection{Frontend --- React 19 + TypeScript + Vite}
+
+\subsection{Cơ sở dữ liệu --- SQL Server 2022 trên Docker}
+
+\subsection{Kiểm thử tự động --- Playwright 10 phân hệ}
+
+\section{Kế hoạch thực hiện và phân công}
+\label{sec:phan_cong}
+
+\begin{table}[H]
+\centering
+\caption{Bảng phân công thành viên}
+\label{tab:phan_cong_thanh_vien}
+\begin{tabularx}{\textwidth}{|c|l|X|c|}
+\hline
+\textbf{STT} & \textbf{Thành viên} & \textbf{Nhiệm vụ chính} & \textbf{\% đóng góp} \\ \hline
+1 & Phạm Thanh Tùng & Lead, Auth/Infra, điều phối migration, deploy, phần báo cáo tổng quan và cài đặt & 20\% \\ \hline
+2 & Kiện Minh & Catalog, tìm kiếm, khả dụng, đánh giá, thông báo, FE khách & 20\% \\ \hline
+3 & Minh Tú & Khuyến mãi, kho, thiết bị, kiểm kê, logic giữ lượt & 20\% \\ \hline
+4 & Kim Xuyến & Giỏ, báo giá, admin CRUD, tư vấn AI, FE admin & 20\% \\ \hline
+5 & Tuấn Kiệt & Đơn thuê, thanh toán, hết hạn, bảo trì, Playwright E2E & 20\% \\ \hline
+\end{tabularx}
+\end{table}
+
+% [Gantt chart tuần 1-7 — ảnh]

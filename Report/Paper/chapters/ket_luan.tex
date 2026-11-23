@@ -1,0 +1,46 @@
+% =====================================================================
+%  KẾT LUẬN & HƯỚNG PHÁT TRIỂN
+%  Người viết: Tuấn Kiệt (Phần 5 - mục B)
+% =====================================================================
+\chapter*{KẾT LUẬN VÀ HƯỚNG PHÁT TRIỂN}
+\addcontentsline{toc}{chapter}{Kết luận và Hướng phát triển}
+
+\section*{Kết quả đạt được}
+\addcontentsline{toc}{section}{Kết quả đạt được}
+
+Sau 7 tuần triển khai, nhóm đã hoàn thành \textbf{10 phân hệ nghiệp vụ} với \textbf{71 màn hình} và \textbf{39 entities}, đáp ứng đầy đủ các yêu cầu của đề tài:
+
+\begin{itemize}
+  \item \textbf{PH1 --- Tài khoản:} hai cổng đăng nhập độc lập, RBAC động \texttt{[RequirePermission]}, khóa tạm 15 phút sau 5 lần sai, phân quyền nhân viên linh động.
+  \item \textbf{PH2 --- Tư vấn và Khả dụng:} thuật toán Sweep Line, lọc 7 tiêu chí, tư vấn AI mock.
+  \item \textbf{PH3 --- Giỏ, Giữ chỗ, Hủy:} giỏ cộng dồn, giữ chỗ 15 phút đồng bộ UTC, áp mã khuyến mãi.
+  \item \textbf{PH4 --- Bàn giao và Nhận trả:} phân công serial, phiếu bàn giao, nhận trả một phần.
+  \item \textbf{PH5 --- Thanh toán và Đối soát:} VietQR 15 phút, callback idempotent, phụ phí và duyệt tranh chấp.
+  \item \textbf{PH6--7 --- Vòng đời thiết bị và Nhập kho:} FIFO, kiểm kê, điều chỉnh kho.
+  \item \textbf{PH8 --- Khuyến mãi và Chính sách:} chính sách phiên bản, không áp hồi tố.
+  \item \textbf{PH9 --- Đánh giá và Thông báo:} đánh giá sau thuê, phản hồi cửa hàng, thông báo deep link.
+  \item \textbf{PH10 --- Báo cáo và Nhật ký:} tách doanh thu thuê/cọc/phụ phí/hủy, audit log.
+\end{itemize}
+
+\section*{Hạn chế}
+\addcontentsline{toc}{section}{Hạn chế}
+
+\begin{itemize}
+  \item Chưa gửi email thật (chỉ log console), SendGrid chưa bật production.
+  \item VietQR sandbox --- chưa ký hợp đồng cổng thanh toán thật.
+  \item Chatbot AI (n8n + Gemini) đã có skeleton nhưng chưa deploy cloud.
+  \item Chưa thực hiện load test với 1000 user đồng thời.
+  \item Mobile responsive dưới 375px chưa polish hoàn thiện.
+\end{itemize}
+
+\section*{Hướng phát triển}
+\addcontentsline{toc}{section}{Hướng phát triển}
+
+\begin{enumerate}
+  \item Tích hợp cổng thanh toán production: VietQR, VNPay, MoMo.
+  \item SendGrid email + Firebase Cloud Messaging cho push notification.
+  \item Triển khai chatbot n8n + Gemini production, kèm RAG trên knowledge base nghiệp vụ.
+  \item Phân tích ML: dự báo nhu cầu theo mùa, gợi ý khuyến mãi động theo lịch sử khách.
+  \item Ứng dụng di động React Native.
+  \item Multi-tenant: hỗ trợ nhiều chi nhánh, đồng bộ kho liên chi nhánh.
+\end{enumerate}

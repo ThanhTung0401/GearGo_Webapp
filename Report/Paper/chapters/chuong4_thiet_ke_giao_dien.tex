@@ -1,0 +1,72 @@
+% =====================================================================
+%  CHƯƠNG 4 — THIẾT KẾ GIAO DIỆN & LUỒNG MÀN HÌNH
+%  Người viết:
+%    - Phần A (Khách vãng lai, Customer): Kiện Minh — Phan_2
+%    - Phần B (Staff, Admin):             Kim Xuyến — Phan_4
+% =====================================================================
+\chapter{Thiết kế Giao diện và Luồng màn hình}
+\label{chuong:giao_dien}
+
+\section{Tổng quan sitemap toàn hệ thống}
+\label{sec:sitemap_tong}
+
+Hệ thống chia làm hai cổng truy cập độc lập:
+\begin{itemize}
+  \item \textbf{Cổng khách:} \texttt{/} (home), \texttt{/login}, \texttt{/dang-ky}, \texttt{/san-pham}, \texttt{/gio-thue}, \texttt{/don-thue}.
+  \item \textbf{Cổng nội bộ:} \texttt{/staff/login}, \texttt{/staff/*} (nhân viên), \texttt{/admin/*} (quản trị).
+\end{itemize}
+
+% ---------------- PHẦN A: KHÁCH ----------------
+\section{Nhánh Khách vãng lai và Khách hàng}
+\label{sec:ui_khach}
+
+\subsection{Sitemap nhánh public/customer}
+
+\subsection{Danh sách màn hình nhánh khách}
+
+\begin{table}[H]
+\centering
+\caption{Danh sách màn hình nhánh Khách (trích)}
+\label{tab:screens_khach}
+\begin{tabularx}{\textwidth}{|c|l|c|X|}
+\hline
+\textbf{Mã} & \textbf{Tên màn hình} & \textbf{Đối tượng} & \textbf{Mô tả ngắn} \\ \hline
+SC-GU-01 & Trang chủ công khai         & Guest           & Hero banner, sản phẩm nổi bật \\ \hline
+SC-GU-02 & Danh sách SP + lọc          & Guest/Customer  & Filter TuKhoa, DanhMuc, SucChua, Gia \\ \hline
+SC-GU-03 & Chi tiết sản phẩm           & Guest/Customer  & Hình, phụ kiện, chính sách, đánh giá \\ \hline
+SC-GU-04 & Kiểm tra khả dụng           & Guest/Customer  & DatePicker GioNhan/GioTra \\ \hline
+SC-GU-05 & Tư vấn AI bộ đồ             & Guest/Customer  & Form nhu cầu chuyến đi \\ \hline
+SC-CS-04 & Giỏ thuê                    & Customer        & Dòng SP, số lượng, lịch, áp mã \\ \hline
+SC-CS-05 & Xác nhận đơn                & Customer        & Preview báo giá \& chính sách \\ \hline
+SC-CS-06 & Thanh toán VietQR           & Customer        & QR + đếm ngược 15 phút \\ \hline
+\end{tabularx}
+\end{table}
+
+\subsection{Screenshot và mô tả chi tiết}
+
+% ---------------- PHẦN B: STAFF/ADMIN ----------------
+\section{Nhánh Nhân viên và Quản trị viên}
+\label{sec:ui_admin}
+
+\subsection{Sitemap nhánh staff/admin}
+
+\subsection{Danh sách màn hình nhánh staff/admin}
+
+\begin{table}[H]
+\centering
+\caption{Danh sách màn hình nhánh Staff/Admin (trích)}
+\label{tab:screens_admin}
+\begin{tabularx}{\textwidth}{|c|l|c|X|}
+\hline
+\textbf{Mã} & \textbf{Tên màn hình} & \textbf{Đối tượng} & \textbf{Mô tả ngắn} \\ \hline
+SC-AD-01 & Dashboard admin             & Admin  & KPI 10 phân hệ, biểu đồ doanh thu \\ \hline
+SC-AD-04 & Phân quyền động             & Admin  & Matrix NV $\times$ quyền RequirePermission \\ \hline
+SC-AD-09 & Chính sách phiên bản        & Admin  & Timeline bản đang hiệu lực \\ \hline
+SC-ST-03 & Chuẩn bị đơn - phân công serial & Staff & Chọn mã thiết bị \\ \hline
+SC-ST-04 & Phiếu bàn giao              & Staff  & Checklist, ảnh trước thuê \\ \hline
+SC-ST-06 & Lập phụ phí                 & Staff  & Loại, bằng chứng, chuyển duyệt \\ \hline
+SC-ST-07 & Bảng đối soát cọc           & Staff  & Thu/hoàn, chốt Hoàn tất \\ \hline
+\end{tabularx}
+\end{table}
+
+\subsection{Screenshot nhánh staff/admin}

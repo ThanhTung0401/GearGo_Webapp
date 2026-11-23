@@ -1,0 +1,20 @@
+# LaTeX build artefacts
+*.aux
+*.bbl
+*.blg
+*.log
+*.out
+*.toc
+*.lof
+*.lot
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+*.pdf
+
+# chapters artefacts
+chapters/*.aux
+
+# Editor
+.vscode/
+.idea/

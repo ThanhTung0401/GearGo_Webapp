@@ -1,0 +1,72 @@
+% =====================================================================
+%  CHƯƠNG 2 — PHÂN TÍCH HỆ THỐNG
+%  Người viết: Kiện Minh (Phần 2 - mục A)
+%  Nguồn nội dung: Report/Assign/Phan_2_KienMinh_PhanTich_UIKhach.md
+% =====================================================================
+\chapter{Phân tích hệ thống}
+\label{chuong:phan_tich}
+
+\section{Đối tượng sử dụng}
+\label{sec:actors}
+
+Hệ thống GearGo phục vụ bốn đối tượng người dùng với các mức độ truy cập khác nhau.
+
+\subsection{Khách vãng lai (Guest)}
+
+\subsection{Khách hàng đã đăng nhập (Customer)}
+
+\subsection{Nhân viên (Staff --- phân quyền RBAC)}
+
+\subsection{Quản trị viên (Admin)}
+
+\section{Danh sách chức năng theo 10 phân hệ}
+\label{sec:danh_sach_chuc_nang}
+
+\begin{table}[H]
+\centering
+\caption{Ma trận chức năng 10 phân hệ $\times$ 4 actors}
+\label{tab:matran_chucnang}
+\begin{tabularx}{\textwidth}{|l|X|c|c|c|c|}
+\hline
+\textbf{Phân hệ} & \textbf{Nội dung chính} & \textbf{Admin} & \textbf{Staff} & \textbf{Customer} & \textbf{Guest} \\ \hline
+PH1  & Tài khoản \& Nhân sự                & X & X & X & Đăng ký \\ \hline
+PH2  & Tư vấn \& Khả dụng                  & -- & X & X & X \\ \hline
+PH3  & Giỏ, Giữ chỗ, Hủy                   & -- & -- & X & -- \\ \hline
+PH4  & Bàn giao \& Nhận trả                & X & X & Theo dõi & -- \\ \hline
+PH5  & Thanh toán, Phụ phí, Đối soát       & X & X & Thanh toán & -- \\ \hline
+PH6  & Sản phẩm, Thiết bị, Bảo trì         & X & X & -- & -- \\ \hline
+PH7  & NCC, Nhập kho, Kiểm kê              & X & X & -- & -- \\ \hline
+PH8  & Khuyến mãi, Chính sách              & X & -- & Áp mã & -- \\ \hline
+PH9  & Đánh giá \& Thông báo               & Duyệt & -- & X & -- \\ \hline
+PH10 & Báo cáo \& Nhật ký                  & X & Theo quyền & -- & -- \\ \hline
+\end{tabularx}
+\end{table}
+
+\section{Đặc tả chi tiết Use Case}
+\label{sec:dac_ta_uc}
+
+Phần này đặc tả 12 Use Case cốt lõi theo mẫu khung: Tên chức năng, Mục tiêu, Người thực hiện, Dữ liệu vào, Dữ liệu ra, Điều kiện trước, Luồng chính, Luồng lỗi, Quy tắc ràng buộc.
+
+\subsection{UC1.1 --- Đăng ký tài khoản khách hàng}
+
+\subsection{UC1.2 --- Đăng nhập hai cổng với khóa tạm 15 phút}
+
+\subsection{UC2.1 --- Tìm kiếm và lọc sản phẩm có phân trang}
+
+\subsection{UC2.3 --- Kiểm tra khả dụng theo lịch (Sweep Line)}
+
+\subsection{UC3.1 --- Thêm vào giỏ thuê và tính báo giá}
+
+\subsection{UC3.2 --- Tạo đơn thuê và giữ chỗ 15 phút}
+
+\subsection{UC3.4 --- Hủy đơn thuê chưa thanh toán}
+
+\subsection{UC4.2 --- Phân công mã thiết bị thực tế}
+
+\subsection{UC4.3 --- Bàn giao thiết bị cho khách hàng}
+
+\subsection{UC5.1 --- Thanh toán VietQR và xử lý callback idempotent}
+
+\subsection{UC8.1 --- Áp dụng mã khuyến mãi (quy tắc giữ lượt)}
+
+\subsection{UC9.1 --- Đánh giá sản phẩm sau khi thuê}

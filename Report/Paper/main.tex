@@ -1,0 +1,139 @@
+% =====================================================================
+%  Báo cáo đồ án môn Lập trình .NET — Đề tài GearGo
+%  Nhóm 10 — GVHD: Thầy Nguyễn Thanh Sang
+%  Trường Đại học Sài Gòn — Khoa Công nghệ Thông tin
+%  Tháng 12 / 2026
+%
+%  Biên dịch: latexmk -xelatex main.tex   (khuyến nghị)
+%             hoặc: xelatex main.tex ba lần
+% =====================================================================
+\documentclass[a4paper,13pt,oneside]{report}
+
+% --- Khổ giấy & lề chuẩn báo cáo Việt Nam (trên 2 — dưới 2 — trái 3 — phải 2 cm)
+\usepackage[a4paper,top=2cm,bottom=2cm,left=3cm,right=2cm]{geometry}
+
+% --- Font tiếng Việt (XeLaTeX)
+\usepackage{fontspec}
+\usepackage{polyglossia}
+\setdefaultlanguage{vietnamese}
+\setmainfont{Times New Roman}
+\setmonofont{DejaVu Sans Mono}[Scale=0.85]
+
+% --- Khoảng cách dòng 1.5
+\usepackage{setspace}
+\onehalfspacing
+
+% --- Các gói thường dùng
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{longtable}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{enumitem}
+\usepackage{float}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{listings}
+\usepackage{hyperref}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{tocloft}
+
+% --- Hyperref cấu hình
+\hypersetup{
+    colorlinks = true,
+    linkcolor  = black,
+    citecolor  = black,
+    urlcolor   = blue,
+    bookmarksnumbered = true,
+    pdftitle   = {Báo cáo Đồ án GearGo — Nhóm 10},
+    pdfauthor  = {Nhóm 10 — Khoa CNTT — Đại học Sài Gòn}
+}
+
+% --- Header & Footer
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small GearGo --- Nền tảng cho thuê thiết bị dã ngoại}
+\fancyhead[R]{\small Nhóm 10 --- Lập trình .NET}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\footrulewidth}{0pt}
+
+% --- Định dạng tiêu đề chương
+\titleformat{\chapter}[hang]
+  {\normalfont\Large\bfseries\MakeUppercase}
+  {CHƯƠNG \thechapter.}{0.5em}{}
+\titlespacing*{\chapter}{0pt}{-20pt}{20pt}
+
+% --- Cấu hình code listing (C#, TypeScript, SQL)
+\definecolor{codebg}{RGB}{245,245,245}
+\definecolor{codekeyword}{RGB}{0,0,160}
+\definecolor{codestring}{RGB}{160,0,0}
+\definecolor{codecomment}{RGB}{0,120,0}
+
+\lstdefinelanguage{csharp}{
+  morekeywords={class,public,private,protected,internal,static,void,int,string,bool,
+                async,await,Task,var,new,return,if,else,for,foreach,while,using,
+                namespace,interface,readonly,override,virtual,abstract,sealed},
+  sensitive=true,
+  morecomment=[l]{//},
+  morecomment=[s]{/*}{*/},
+  morestring=[b]"
+}
+
+\lstset{
+  backgroundcolor=\color{codebg},
+  basicstyle=\ttfamily\footnotesize,
+  keywordstyle=\color{codekeyword}\bfseries,
+  stringstyle=\color{codestring},
+  commentstyle=\color{codecomment}\itshape,
+  breaklines=true,
+  frame=single,
+  framerule=0.3pt,
+  showstringspaces=false,
+  tabsize=2,
+  captionpos=b,
+  numbers=left,
+  numberstyle=\tiny\color{gray},
+  numbersep=8pt
+}
+
+% --- Định nghĩa cho bảng tabularx cột trung tâm
+\newcolumntype{C}[1]{>{\centering\arraybackslash}p{#1}}
+
+% =====================================================================
+\begin{document}
+
+% ---------- BÌA & MỤC LỤC ----------
+\pagenumbering{roman}
+\input{bia}
+\newpage
+\input{nhan_xet}
+\newpage
+\input{loi_cam_on}
+\newpage
+
+\tableofcontents
+\newpage
+\listoffigures
+\newpage
+\listoftables
+\newpage
+
+% ---------- NỘI DUNG CHƯƠNG ----------
+\pagenumbering{arabic}
+\setcounter{page}{1}
+
+\include{chapters/chuong1_tong_quan}
+\include{chapters/chuong2_phan_tich}
+\include{chapters/chuong3_co_so_du_lieu}
+\include{chapters/chuong4_thiet_ke_giao_dien}
+\include{chapters/chuong5_kien_truc_source}
+\include{chapters/chuong6_cai_dat_trien_khai}
+\include{chapters/chuong7_kiem_thu}
+\include{chapters/ket_luan}
+\include{chapters/phu_luc}
+
+\end{document}

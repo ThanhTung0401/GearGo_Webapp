@@ -1,0 +1,89 @@
+% =====================================================================
+%  CHƯƠNG 7 — KIỂM THỬ
+%  Người viết: Tuấn Kiệt (Phần 5 - mục A)
+%  Nguồn nội dung: Report/Assign/Phan_5_TuanKiet_KiemThu_KetLuan.md
+% =====================================================================
+\chapter{Kiểm thử}
+\label{chuong:kiem_thu}
+
+\section{Chiến lược kiểm thử ba tầng}
+\label{sec:chien_luoc_test}
+
+\begin{enumerate}
+  \item \textbf{Unit test (xUnit)} --- \texttt{backend/test/GearGo.Tests/} --- kiểm thử domain service độc lập.
+  \item \textbf{Component test (Vitest)} --- \texttt{frontend/} --- kiểm thử React component và custom hook.
+  \item \textbf{End-to-end test (Playwright)} --- \texttt{tests/playwright/} --- kiểm thử luồng thật qua browser và API thật.
+\end{enumerate}
+
+\section{Playwright E2E --- 10 phân hệ $\times$ 2 nhánh}
+\label{sec:playwright}
+
+Bộ test Playwright gồm:
+\begin{itemize}
+  \item 10 spec \textbf{frontend} UI: \texttt{tests/playwright/frontend/phan\_he\_XX\_*/phan\_he\_XX.spec.ts}
+  \item 10 spec \textbf{backend} API: \texttt{tests/playwright/backend/phan\_he\_XX\_*/phan\_he\_XX.spec.ts}
+\end{itemize}
+
+\begin{lstlisting}[language=bash, caption={Lệnh chạy Playwright}]
+npm --prefix tests/playwright run test:frontend
+npm --prefix tests/playwright run test:backend
+npm --prefix tests/playwright test
+\end{lstlisting}
+
+Mỗi test tự seed dữ liệu và cleanup sau khi hoàn tất.
+
+\section{Bảng Test Cases (22 TC)}
+\label{sec:tc}
+
+\begin{longtable}{|c|c|p{3.5cm}|p{4cm}|p{2.5cm}|p{3cm}|c|}
+\caption{Bảng Test Cases tiêu biểu} \label{tab:test_cases} \\
+\hline
+\textbf{TC} & \textbf{PH} & \textbf{Chức năng} & \textbf{Bước thực hiện} & \textbf{Dữ liệu} & \textbf{KQ mong đợi} & \textbf{KQ} \\ \hline
+\endfirsthead
+\multicolumn{7}{c}{{\bfseries \tablename\ \thetable{} --- tiếp}} \\
+\hline
+\textbf{TC} & \textbf{PH} & \textbf{Chức năng} & \textbf{Bước thực hiện} & \textbf{Dữ liệu} & \textbf{KQ mong đợi} & \textbf{KQ} \\ \hline
+\endhead
+
+TC-01 & PH1 & Đăng ký khách thành công        & Mở \texttt{/dang-ky}, submit & test@geargo.vn / Abc@12345 & 201, redirect \texttt{/login} & Pass \\ \hline
+TC-02 & PH1 & Khóa 15' sau 5 lần sai          & Login sai 5 lần              & mật khẩu sai & 429 Tạm khóa 15p & Pass \\ \hline
+TC-03 & PH1 & Cổng nội bộ từ chối role khách  & \texttt{/staff/login}        & customer@geargo.vn & 403 & Pass \\ \hline
+TC-04 & PH2 & Tìm kiếm SP phân trang          & GET \texttt{/san-pham}       & page=1, size=12 & 12 SP, totalPages > 1 & Pass \\ \hline
+TC-05 & PH2 & Khả dụng Sweep Line             & GET /san-pham/\{id\}         & 2 lịch giao nhau & Tổng - max chồng & Pass \\ \hline
+TC-06 & PH2 & Ẩn SP \texttt{TamNgung}         & GET public list              & -- & Không xuất hiện & Pass \\ \hline
+TC-07 & PH3 & Cộng dồn SL khi thêm 2 lần      & POST /gio-thue/them $\times$2 & SL 1 + 2 & 1 dòng, SL = 3 & Pass \\ \hline
+TC-08 & PH3 & Mã \texttt{TEST10} giảm 10\%    & Áp mã                        & tiền thuê 600k & giảm 60k & Pass \\ \hline
+TC-09 & PH3 & Tạo đơn + GiuCho hạn 15'        & POST /don-thue              & giỏ 3 dòng & 3 GiuCho DangGiu & Pass \\ \hline
+TC-10 & PH3 & Hủy đơn giải phóng giữ chỗ      & POST /don-thue/\{id\}/huy   & -- & GiuCho DaGiaiPhong & Pass \\ \hline
+TC-11 & PH3 & Job tự HetHan sau 15'           & Chờ > 60s                   & -- & DonThue HetHan & Pass \\ \hline
+TC-12 & PH4 & Phân công serial thiết bị      & Staff Chuẩn bị đơn          & -- & ChiTietDonThue có MaThietBi & Pass \\ \hline
+TC-13 & PH4 & Nhận trả một phần               & Submit 2/3 thiết bị         & -- & Đơn vẫn DangThue + nhãn Trả một phần & Pass \\ \hline
+TC-14 & PH5 & Thanh toán mock $\to$ DaXacNhan & POST /tao-url $\to$ callback & -- & 2 ChiTietThanhToan (Thuê + Cọc) & Pass \\ \hline
+TC-15 & PH5 & Idempotent MaYeuCau             & Gọi callback 2 lần          & cùng MaYeuCau & Không ghi trùng & Pass \\ \hline
+TC-16 & PH5 & Admin duyệt phụ phí tranh chấp  & Staff lập $\to$ Admin duyệt & -- & TrangThai DaDuyet & Pass \\ \hline
+TC-17 & PH6 & Thay quyền $\to$ invalidate cache & Admin thu hồi $\to$ staff gọi API & -- & 403 ngay lần kế & Pass \\ \hline
+TC-18 & PH7 & Nhập kho sinh ThietBi          & Admin xác nhận PhieuNhap    & -- & N ThietBi SanSang & Pass \\ \hline
+TC-19 & PH8 & Mã KM vượt tổng lượt           & Khách N+1 áp mã giới hạn N  & -- & 400 KhuyenMaiKhongHopLe & Pass \\ \hline
+TC-20 & PH8 & Lượt hết hạn không chiếm lượt  & Đơn hết hạn chưa trả        & -- & Khách kế tiếp dùng được mã & Pass \\ \hline
+TC-21 & PH9 & 1 SP / 1 đơn chỉ đánh giá 1 lần & POST /danh-gia $\times$2    & -- & Lần 2 $\to$ 409 Conflict & Pass \\ \hline
+TC-22 & PH10 & Báo cáo doanh thu tách 4 cột   & GET /bao-cao/doanh-thu      & kỳ tùy chọn & 4 cột Thuê/Cọc/Phụ phí/Hủy & Pass \\ \hline
+\end{longtable}
+
+\section{Race condition và concurrency tests}
+\label{sec:race}
+
+\begin{itemize}
+  \item \textbf{Hai user cùng đặt thiết bị cuối} $\to$ chỉ một thành công (Isolation Serializable + sweep line check).
+  \item \textbf{Thanh toán chạy cùng job hết hạn} $\to$ không ghi đè (UPDATE có điều kiện \texttt{WHERE TrangThai = 'ChoThanhToan'}).
+  \item \textbf{Callback gửi trùng} $\to$ idempotent nhờ \texttt{ThanhToan.MaYeuCau} UNIQUE.
+\end{itemize}
+
+\section{Backend Unit test (xUnit)}
+\label{sec:unit_test}
+
+\begin{lstlisting}[language=bash]
+dotnet test GearGo_Webapp.sln
+\end{lstlisting}
+
+\section{Kết quả tổng hợp}
+\label{sec:ket_qua_test}

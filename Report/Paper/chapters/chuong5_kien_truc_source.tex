@@ -1,0 +1,110 @@
+% =====================================================================
+%  CHƯƠNG 5 — THIẾT KẾ XỬ LÝ & KIẾN TRÚC SOURCE
+%  Người viết: Kim Xuyến (Phần 4 - mục B)
+%  Nguồn nội dung: Report/Assign/Phan_4_KimXuyen_UIAdmin_KienTrucSource.md
+% =====================================================================
+\chapter{Thiết kế Xử lý và Kiến trúc Source}
+\label{chuong:kien_truc}
+
+\section{Kiến trúc tổng thể 3-tier}
+\label{sec:kien_truc_tong_the}
+
+Hệ thống GearGo được xây dựng theo kiến trúc 3-tier gồm:
+\begin{enumerate}
+  \item \textbf{Frontend React 19} --- Vite, Tailwind CSS, React Router 7, giao tiếp API qua HTTPS.
+  \item \textbf{Backend ASP.NET Core 10} --- Controllers, Services, EF Core, Middleware, Background Jobs.
+  \item \textbf{SQL Server 2022} --- chạy trong Docker container \texttt{geargo-sql}, migration bằng EF Core.
+\end{enumerate}
+
+\section{Kiến trúc Backend --- Layered Architecture}
+\label{sec:backend_arch}
+
+\subsection{Năm lớp chính}
+\begin{itemize}
+  \item \textbf{Controllers} (\texttt{backend/Controllers/}) --- HTTP routing, DTO validation, gọi service.
+  \item \textbf{Services} (\texttt{backend/Services/}) --- logic nghiệp vụ, giao dịch, kiểm tra quyền.
+  \item \textbf{Data} (\texttt{backend/Data/ApplicationDbContext.cs}) --- EF Core DbContext, Fluent API, seed.
+  \item \textbf{Models} (\texttt{backend/Models/\{Entities, DTOs, Enums\}/}) --- entity, DTO, enum.
+  \item \textbf{Cross-cutting} --- \texttt{Middleware/}, \texttt{Helpers/}, \texttt{BackgroundJobs/}, \texttt{Configuration/}.
+\end{itemize}
+
+\subsection{Quy ước đặt tên và ánh xạ SQL}
+
+\subsection{Danh sách Controller theo domain}
+\begin{itemize}
+  \item \texttt{Auth/}, \texttt{Catalog/}, \texttt{Order/}, \texttt{Finance/}, \texttt{Inventory/}, \texttt{Marketing/}, \texttt{Communication/}, \texttt{Report/}, \texttt{Debug/}.
+\end{itemize}
+
+\section{Kiến trúc Frontend --- Modular}
+\label{sec:frontend_arch}
+
+\subsection{Cấu trúc thư mục \texttt{frontend/src/}}
+
+\subsection{Quản lý trạng thái và routing}
+
+\subsection{RBAC phía Frontend}
+Component \texttt{<RequirePermission permission="..."/>} ẩn/hiện nút theo quyền động từ cache \texttt{PermissionsContext}.
+
+\section{Thiết kế module theo khung nghiệp vụ}
+\label{sec:modules}
+
+\begin{table}[H]
+\centering
+\caption{Ánh xạ Module $\leftrightarrow$ Backend Service $\leftrightarrow$ Frontend Module}
+\label{tab:module_mapping}
+\begin{tabularx}{\textwidth}{|l|X|X|l|}
+\hline
+\textbf{Module} & \textbf{Backend Service} & \textbf{Controller} & \textbf{FE Module} \\ \hline
+Auth           & \texttt{XacThucService}, \texttt{JwtService} & \texttt{AuthController} & \texttt{modules/auth} \\ \hline
+Catalog        & \texttt{SanPhamService}, \texttt{KhaDungService} & \texttt{Catalog/*} & \texttt{modules/catalog} \\ \hline
+Cart \& Quote  & \texttt{GioThueService}, \texttt{BaoGiaService} & \texttt{GioThueController} & \texttt{modules/catalog/cart} \\ \hline
+Order          & \texttt{DonThueService}, \texttt{GiuChoService} & \texttt{DonThueController} & \texttt{modules/orders} \\ \hline
+Payment        & \texttt{ThanhToanService} + gateway adapter & \texttt{ThanhToanController} & \texttt{modules/orders/payment} \\ \hline
+Inventory      & \texttt{PhieuNhapService}, \texttt{ThietBiService} & \texttt{Inventory/*} & \texttt{modules/inventory} \\ \hline
+Marketing      & \texttt{KhuyenMaiService}, \texttt{ChinhSachService} & \texttt{Marketing/*} & \texttt{modules/marketing} \\ \hline
+Review+Notify  & \texttt{DanhGiaService}, \texttt{ThongBaoService} & \texttt{Communication/*} & \texttt{modules/notifications} \\ \hline
+Report         & \texttt{BaoCaoService} & \texttt{Report/*} & \texttt{modules/reports} \\ \hline
+\end{tabularx}
+\end{table}
+
+\section{Mười truy vấn LINQ / SQL tiêu biểu}
+\label{sec:queries}
+
+\subsection{Truy vấn 1 --- Phân trang sản phẩm công khai với lọc trạng thái kinh doanh}
+
+\begin{lstlisting}[language=csharp, caption={LINQ --- TimKiemAsync}]
+// SanPhamService.TimKiemAsync
+var query = _db.SanPhams
+    .Where(sp => sp.TrangThaiKinhDoanh == "DangKinhDoanh")
+    .Where(sp => sp.DanhMuc.TrangThai == "HienThi");
+\end{lstlisting}
+
+\subsection{Truy vấn 2 --- Khả dụng thiết bị theo lịch (Sweep Line)}
+
+\subsection{Truy vấn 3 --- Tạo đơn + snapshot trong transaction Serializable}
+
+\subsection{Truy vấn 4 --- Nhập kho FIFO: phân công serial thiết bị}
+
+\subsection{Truy vấn 5 --- Báo cáo doanh thu tách thuê / cọc / phụ phí / hoàn}
+
+\subsection{Truy vấn 6 --- Idempotency callback thanh toán}
+
+\subsection{Truy vấn 7 --- Job hết hạn 15 phút với UPDATE có điều kiện}
+
+\subsection{Truy vấn 8 --- Kiểm tra mã khuyến mãi + loại lượt hết hạn}
+
+\subsection{Truy vấn 9 --- Cập nhật quyền động và invalidate cache}
+
+\subsection{Truy vấn 10 --- Lịch sử chuyển trạng thái đơn}
+
+\section{Background Jobs}
+\label{sec:background_jobs}
+
+\subsection{\texttt{DonThueExpirationJob}}
+
+\section{Cross-cutting: Exception handling và RBAC}
+\label{sec:cross_cutting}
+
+\subsection{ExceptionHandlingMiddleware}
+
+\subsection{Attribute \texttt{[RequirePermission]}}

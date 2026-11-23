@@ -1,0 +1,87 @@
+% =====================================================================
+%  CHƯƠNG 6 — CÀI ĐẶT & TRIỂN KHAI
+%  Người viết: Phạm Thanh Tùng (Phần 1 - mục B)
+%  Nguồn nội dung: Report/Assign/Phan_1_ThanhTung_TongQuan_CaiDat.md
+% =====================================================================
+\chapter{Cài đặt và Triển khai}
+\label{chuong:cai_dat}
+
+\section{Môi trường phát triển}
+\label{sec:moi_truong_dev}
+
+\begin{itemize}
+  \item \textbf{Hệ điều hành:} Windows 11 và Ubuntu 22.04 (nhóm hỗn hợp).
+  \item \textbf{.NET SDK 10} --- kiểm tra bằng \texttt{dotnet --version} $\geq$ 10.
+  \item \textbf{Node.js $\geq$ 20} + npm / pnpm.
+  \item \textbf{Docker Desktop} --- chạy SQL Server 2022.
+  \item \textbf{Python $\geq$ 3.10} --- tùy chọn, dùng script build Chương 7.
+  \item \textbf{IDE:} Visual Studio 2022 / JetBrains Rider / VS Code + C\# Dev Kit.
+\end{itemize}
+
+\section{Môi trường triển khai (demo)}
+\label{sec:moi_truong_deploy}
+
+\begin{itemize}
+  \item SQL Server 2022 trong Docker container \texttt{geargo-sql} --- host port \textbf{11433} $\to$ container port 1433.
+  \item Backend: \url{http://localhost:5000} --- Swagger UI tại \url{http://localhost:5000/swagger}.
+  \item Frontend (Vite dev server): \url{http://localhost:8443}.
+\end{itemize}
+
+\section{Hướng dẫn cài đặt và chạy}
+\label{sec:huong_dan_chay}
+
+\begin{lstlisting}[language=bash, caption={Bước 1 --- Khởi tạo SQL Server}]
+docker compose up -d
+\end{lstlisting}
+
+\begin{lstlisting}[language=bash, caption={Bước 2 --- Chạy Backend (tự migrate + seed)}]
+dotnet restore backend/GearGo.csproj
+dotnet run --project backend/GearGo.csproj --urls http://localhost:5000
+\end{lstlisting}
+
+\begin{lstlisting}[language=bash, caption={Bước 3 --- Chạy Frontend}]
+npm --prefix frontend install
+npm --prefix frontend run dev -- --port 8443 --host
+\end{lstlisting}
+
+\section{Tài khoản seed và hai cổng đăng nhập}
+\label{sec:tai_khoan_seed}
+
+\begin{itemize}
+  \item \textbf{Cổng Khách hàng:} \url{http://localhost:8443/login}
+  \item \textbf{Cổng Nhân viên / Quản trị:} \url{http://localhost:8443/staff/login}
+  \item \textbf{Mật khẩu seed chung:} \texttt{GearGo@2026}
+\end{itemize}
+
+\begin{table}[H]
+\centering
+\caption{Tài khoản seed phục vụ chấm điểm}
+\label{tab:tai_khoan_seed}
+\begin{tabularx}{\textwidth}{|l|l|l|X|}
+\hline
+\textbf{Cổng} & \textbf{Email / SĐT} & \textbf{Vai trò} & \textbf{Ghi chú} \\ \hline
+Khách hàng  & customer@geargo.vn (0901000003) & KhachHang    & Nguyễn Văn An \\ \hline
+Khách hàng  & quang.kh@geargo.vn               & KhachHang    & Trần Minh Quang \\ \hline
+Khách hàng  & locked.kh@geargo.vn              & KhachHang    & Tài khoản bị khóa --- test UC1.2 \\ \hline
+Nội bộ      & admin@geargo.vn (0901000001)    & QuanTriVien  & Nguyễn Văn Quản Trị (Full quyền) \\ \hline
+Nội bộ      & staff@geargo.vn (0901000002)    & NhanVien     & Lê Thị Mai \\ \hline
+Nội bộ      & tuan.staff@geargo.vn (0901000005) & NhanVien   & Trần Tuấn \\ \hline
+\end{tabularx}
+\end{table}
+
+\section{Reset và seed lại cơ sở dữ liệu}
+\label{sec:reset_db}
+
+\begin{lstlisting}[language=bash]
+dotnet ef database drop -f --project backend/GearGo.csproj
+dotnet run --project backend/GearGo.csproj --urls http://localhost:5000
+\end{lstlisting}
+
+\section{Cấu hình quan trọng}
+\label{sec:cau_hinh}
+
+\begin{itemize}
+  \item \texttt{backend/appsettings.json} --- connection string, JWT secret, cấu hình VietQR.
+  \item \texttt{frontend/.env.development} --- \texttt{VITE\_API\_URL=http://localhost:5000}, \texttt{VITE\_USE\_MOCK=false}.
+  \item Không hard-code đường dẫn tuyệt đối theo máy; mọi path tương đối từ root repo.
+\end{itemize}
