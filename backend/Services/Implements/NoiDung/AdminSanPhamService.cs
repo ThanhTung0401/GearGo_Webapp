@@ -22,12 +22,56 @@ public class AdminSanPhamService : IAdminSanPhamService
 
     public async Task<object> LayDanhSachAsync(string? tuKhoa, int trang = 1, int soMoiTrang = 12)
     {
-        var query = _context.Set<SanPham>().AsQueryable();
+        // [SP-02] Include HinhAnhs và project sang DTO phẳng để Frontend không mất ảnh thật và nhận đúng
+        // chuỗi TrangThaiKinhDoanh thay vì số (0/1/2) khi JsonStringEnumConverter chưa đăng ký.
+        var query = _context.Set<SanPham>().AsNoTracking().Include(s => s.HinhAnhs).AsQueryable();
         if (!string.IsNullOrEmpty(tuKhoa))
             query = query.Where(s => s.TenSanPham.Contains(tuKhoa) || s.MaSanPhamHienThi.Contains(tuKhoa));
 
         var total = await query.CountAsync();
-        var items = await query.Skip((trang - 1) * soMoiTrang).Take(soMoiTrang).ToListAsync();
+        var raw = await query
+            .OrderByDescending(s => s.MaSanPham)
+            .Skip((trang - 1) * soMoiTrang).Take(soMoiTrang)
+            .Select(s => new
+            {
+                s.MaSanPham,
+                s.MaDanhMuc,
+                s.MaSanPhamHienThi,
+                s.TenSanPham,
+                s.ThuongHieu,
+                s.MoTa,
+                s.SucChua,
+                s.KichThuoc,
+                s.ThongSo,
+                s.GiaThueMoiNgay,
+                s.MucCocMoiThietBi,
+                s.GiaTriBoiThuong,
+                TrangThaiKinhDoanh = s.TrangThaiKinhDoanh,
+                HinhAnhChinh = s.HinhAnhs.OrderBy(h => h.ThuTu).FirstOrDefault(h => h.LaAnhChinh) != null
+                    ? s.HinhAnhs.OrderBy(h => h.ThuTu).First(h => h.LaAnhChinh).DuongDan
+                    : (s.HinhAnhs.OrderBy(h => h.ThuTu).FirstOrDefault() != null ? s.HinhAnhs.OrderBy(h => h.ThuTu).First().DuongDan : null),
+                HinhAnhs = s.HinhAnhs.OrderBy(h => h.ThuTu).Select(h => h.DuongDan).ToList()
+            })
+            .ToListAsync();
+
+        var items = raw.Select(s => new
+        {
+            s.MaSanPham,
+            s.MaDanhMuc,
+            s.MaSanPhamHienThi,
+            s.TenSanPham,
+            s.ThuongHieu,
+            s.MoTa,
+            s.SucChua,
+            s.KichThuoc,
+            s.ThongSo,
+            s.GiaThueMoiNgay,
+            s.MucCocMoiThietBi,
+            s.GiaTriBoiThuong,
+            TrangThaiKinhDoanh = s.TrangThaiKinhDoanh.ToString(),
+            s.HinhAnhChinh,
+            s.HinhAnhs
+        }).ToList();
         return new { Total = total, Items = items };
     }
 

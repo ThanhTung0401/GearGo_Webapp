@@ -5,6 +5,9 @@ namespace GearGo.Models.DTOs.SanPham;
 public class SanPhamResponse
 {
     public long MaSanPham { get; set; }
+    // [SP-06] Thêm mã hiển thị + trạng thái kinh doanh để Frontend giữ được displayCode và rawStatus.
+    public string MaSanPhamHienThi { get; set; } = null!;
+    public string TrangThaiKinhDoanh { get; set; } = "DangKinhDoanh";
     public long MaDanhMuc { get; set; }
     public string TenSanPham { get; set; } = null!;
     public string? ThuongHieu { get; set; }

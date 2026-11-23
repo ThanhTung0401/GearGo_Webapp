@@ -110,7 +110,10 @@ public class SanPhamService : ISanPhamService
 
     private static SanPhamResponse MapResponse(SanPham x) => new()
     {
-        MaSanPham = x.MaSanPham, MaDanhMuc = x.MaDanhMuc, TenSanPham = x.TenSanPham,
+        MaSanPham = x.MaSanPham,
+        MaSanPhamHienThi = x.MaSanPhamHienThi, // [SP-06]
+        TrangThaiKinhDoanh = x.TrangThaiKinhDoanh.ToString(), // [SP-06]
+        MaDanhMuc = x.MaDanhMuc, TenSanPham = x.TenSanPham,
         ThuongHieu = x.ThuongHieu, MoTa = x.MoTa, SucChua = x.SucChua,
         KichThuoc = x.KichThuoc, ThongSo = x.ThongSo, GiaThueMoiNgay = x.GiaThueMoiNgay,
         MucCocMoiThietBi = x.MucCocMoiThietBi, GiaTriBoiThuong = x.GiaTriBoiThuong,
