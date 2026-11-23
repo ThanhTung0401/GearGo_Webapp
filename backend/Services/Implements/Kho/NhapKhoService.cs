@@ -27,8 +27,10 @@ public class NhapKhoService : INhapKhoService
     {
         var account = await _context.TaiKhoans.Include(t => t.NhanVien)
             .FirstOrDefaultAsync(t => t.MaTaiKhoan == actorId);
-        if (account == null || account.VaiTro != "QuanTriVien" || account.NhanVien == null || account.NhanVien.TrangThaiLamViec != "DangLamViec")
-            return Result<KetQuaNhapKhoResponse>.Loi("FORBIDDEN", "Chỉ quản trị viên mới được xác nhận nhập kho.");
+        // [PN-06] Bỏ hard-coded account.VaiTro != "QuanTriVien": quyền PhieuNhap.Duyet đã được kiểm tra ở controller.
+        // Nhân viên kho được cấp quyền PhieuNhap_Duyet phải xác nhận nhập kho được.
+        if (account == null || account.TrangThai != "HoatDong" || account.NhanVien == null || account.NhanVien.TrangThaiLamViec != "DangLamViec")
+            return Result<KetQuaNhapKhoResponse>.Loi("FORBIDDEN", "Tài khoản không hoạt động hoặc nhân sự đã nghỉ việc, không thể xác nhận nhập kho.");
 
         using var transaction = await _context.Database.BeginTransactionAsync();
         try
@@ -114,7 +116,15 @@ public class NhapKhoService : INhapKhoService
         foreach (var dongReq in request.DanhSachDong)
         {
             var chiTiet = phieuNhap.ChiTietPhieuNhaps.First(c => c.MaChiTietPhieuNhap == dongReq.MaChiTietPhieuNhap);
-            chiTiet.SoLuong = dongReq.ThietBi.Count;
+            // [PN-08] Lưu dấu vết số lượng từ chối trả NCC trước khi ghi đè SoLuong thực nhận.
+            var soLuongDuKien = chiTiet.SoLuong;
+            var soLuongThucNhan = dongReq.ThietBi.Count;
+            if (soLuongThucNhan < soLuongDuKien)
+            {
+                var auditNote = $"Dự kiến: {soLuongDuKien}, Thực nhận: {soLuongThucNhan}, Từ chối trả NCC: {soLuongDuKien - soLuongThucNhan}";
+                chiTiet.GhiChu = string.IsNullOrWhiteSpace(chiTiet.GhiChu) ? auditNote : $"{chiTiet.GhiChu} | {auditNote}";
+            }
+            chiTiet.SoLuong = soLuongThucNhan;
             chiTiet.TenSanPhamLucNhap = chiTiet.SanPham.TenSanPham;
             newTongTien += chiTiet.SoLuong * chiTiet.DonGiaNhap;
 
