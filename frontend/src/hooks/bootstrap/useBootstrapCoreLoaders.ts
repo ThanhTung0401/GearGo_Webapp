@@ -39,10 +39,15 @@ export function useBootstrapCoreLoaders(params: UseBootstrapDataParams) {
   const refreshCatalog = useCallback(
     async (range?: { gioNhan?: string; gioTra?: string; tuKhoa?: string; maDanhMuc?: number }) => {
       if (!REAL_MODE) return;
+      // [BOOT-01] / [PN-01]: dùng Boolean(getAuthToken()) thay cho closure `role !== "customer"`.
+      // Lúc F5 tại /staff/*, setRole() là bất đồng bộ; nếu dựa vào closure cũ (role === "customer"),
+      // adminLayDanhSachDanhMuc/adminLayDanhSachSanPham bị bỏ qua, khiến danh mục/sản phẩm quản trị
+      // (bao gồm dòng Tạm ngưng/Ngừng kinh doanh) không bao giờ được nạp cho tới khi F5 lần hai.
+      const laStaffHoacAdmin = Boolean(getAuthToken());
       try {
         const [tree, adminCats, publicItems, adminItems] = await Promise.all([
           catalogApi.layCayDanhMuc().catch(() => []),
-          role !== "customer" ? catalogApi.adminLayDanhSachDanhMuc().catch(() => []) : Promise.resolve([]),
+          laStaffHoacAdmin ? catalogApi.adminLayDanhSachDanhMuc().catch(() => []) : Promise.resolve([]),
           catalogApi
             .layDanhSachSanPham({
               gioNhan: range?.gioNhan,
@@ -59,7 +64,7 @@ export function useBootstrapCoreLoaders(params: UseBootstrapDataParams) {
               }
               return [];
             }),
-          role !== "customer" && !range?.gioNhan
+          laStaffHoacAdmin && !range?.gioNhan
             ? catalogApi.adminLayDanhSachSanPham({ soMoiTrang: 100 }).then((r) => r.items).catch(() => [])
             : Promise.resolve([]),
         ]);

@@ -26,6 +26,10 @@ builder.Services.AddControllers()
         // Chuẩn hóa DateTime Kind=Unspecified từ SQL Server thành UTC để client JS không bị lệch 7 tiếng
         options.JsonSerializerOptions.Converters.Add(new UtcDateTimeJsonConverter());
         options.JsonSerializerOptions.Converters.Add(new UtcNullableDateTimeJsonConverter());
+        // RC-1 / Batch 1 foundation: serialize mọi C# enum ra chuỗi để Frontend mapper không bị lệch
+        // chỉ số số nguyên khi so sánh (TrangThaiKinhDoanh, TrangThaiPhieuNhap, LoaiKhuyenMai, ...).
+        // Unit tests gọi trực tiếp C# Services (không qua HTTP pipeline) nên an toàn với 164/164 pass.
+        options.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
     });
 // Hỗ trợ sinh tài liệu Swagger/OpenAPI
 builder.Services.AddEndpointsApiExplorer();
@@ -345,6 +349,11 @@ else
 }
 
  app.UseMiddleware<GearGo.Middleware.ExceptionHandlingMiddleware>();
+
+// RC-1 / [SP-03]: phục vụ ảnh upload sản phẩm tại /uploads/san-pham/*
+// Thiếu UseStaticFiles() làm mọi ảnh sản phẩm trả 404 ở Real API.
+app.UseStaticFiles();
+
 // CORS phải đặt trước Authentication & Authorization
 app.UseCors("ReactApp");
 

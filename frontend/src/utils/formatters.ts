@@ -106,6 +106,32 @@ const BACKEND_ENUM_LABELS: Record<string, string> = {
   NoShowHoanCoc: "Không đến nhận — Hoàn cọc theo chính sách",
   NoShowGiuCoc: "Không đến nhận — Giữ cọc theo chính sách",
   NoShowHuyDon: "Không đến nhận — Hủy đơn giữ chỗ",
+  // Batch 1 foundation [BACKEND-ENUM]: bổ sung đủ nhãn enum backend gặp trong 23 chức năng.
+  KhongDenNhan: "Không đến nhận",
+  ChuaThanhToan: "Chưa thanh toán",
+  Tren48Gio: "Trên 48 giờ",
+  Tu24Den48Gio: "Từ 24 đến 48 giờ",
+  Duoi24Gio: "Dưới 24 giờ",
+  CuaHangHuy: "Cửa hàng hủy",
+  SuaChua: "Sửa chữa",
+  VeSinh: "Vệ sinh",
+  Dat: "Đạt",
+  ThieuPhuKien: "Thiếu phụ kiện",
+  // Nhật ký thao tác – các hành động phổ biến
+  TAO: "Tạo mới",
+  CAP_NHAT: "Cập nhật",
+  XOA: "Xóa",
+  DUYET: "Duyệt",
+  TU_CHOI: "Từ chối",
+  BAN_HANH: "Ban hành",
+  NGUNG_KHUYEN_MAI: "Ngừng khuyến mãi",
+  GUI_THONG_BAO: "Gửi thông báo",
+  CAP_QUYEN: "Cập nhật quyền",
+  DOI_VAI_TRO: "Đổi vai trò",
+  DANG_NHAP: "Đăng nhập",
+  DANG_XUAT: "Đăng xuất",
+  KHOA_TAI_KHOAN: "Khóa tài khoản",
+  MO_KHOA_TAI_KHOAN: "Mở khóa tài khoản",
 };
 
 export const formatBackendEnum = (code?: string | null, fallback = "—"): string => {

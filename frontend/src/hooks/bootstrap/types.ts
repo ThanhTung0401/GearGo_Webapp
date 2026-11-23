@@ -24,7 +24,8 @@ import type {
 
 export interface UseBootstrapDataParams {
   role: Role;
-  currentUser: { id?: string; name: string } | null;
+  // [BOOT-02]/[BOOT-03]: fingerprint quyền và kiểm permission trước khi gọi API quản trị.
+  currentUser: { id?: string; name: string; permissions?: string[] } | null;
   pageRef: MutableRefObject<Page>;
   categoriesRef: MutableRefObject<Category[]>;
   setRole: Dispatch<SetStateAction<Role>>;

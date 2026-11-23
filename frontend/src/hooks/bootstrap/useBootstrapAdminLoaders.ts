@@ -35,6 +35,7 @@ import type { UseBootstrapDataParams } from "./types";
 export function useBootstrapAdminLoaders(params: UseBootstrapDataParams) {
   const {
     role,
+    currentUser,
     setEquipment,
     setMaintenanceReceipts,
     setStockAdjustments,
@@ -51,6 +52,15 @@ export function useBootstrapAdminLoaders(params: UseBootstrapDataParams) {
     setCustomers,
     setFinancialAdjustments,
   } = params;
+
+  // [BOOT-03] / [F5-02]: kiểm tra quyền trước khi gọi các API quản trị để tránh bão 403
+  // khi Nhân viên không có NhanVien.Xem / TaiKhoan.Xem / DoiSoat.Xem đăng nhập.
+  const laAdmin = role === "admin";
+  const coQuyen = (perm: string): boolean => {
+    if (laAdmin) return true;
+    const perms = currentUser?.permissions ?? [];
+    return perms.includes(perm);
+  };
 
   const refreshEquipment = useCallback(async () => {
     if (!REAL_MODE || !getAuthToken() || (role !== "staff" && role !== "admin")) return;
@@ -145,7 +155,10 @@ export function useBootstrapAdminLoaders(params: UseBootstrapDataParams) {
   }, [role, setAuditLogs]);
 
   const refreshAdminAuxiliaryData = useCallback(() => {
-    void staffApi
+    if (!REAL_MODE || !getAuthToken() || (role !== "staff" && role !== "admin")) return;
+    // [BOOT-03] / [F5-02]: kiểm tra quyền trước khi gọi để tránh bão 403 làm nghẽn apiClient
+    // (apiClient dòng 98 gọi lặp /api/auth/quyen-cua-toi mỗi lần nhận 403).
+    if (coQuyen("NhanVien.Xem")) void staffApi
       .timNhanVien({ soMoiTrang: 50 })
       .then((res) => {
         setStaffAccounts(
@@ -163,7 +176,7 @@ export function useBootstrapAdminLoaders(params: UseBootstrapDataParams) {
       })
       .catch(() => {});
 
-    void staffApi
+    if (coQuyen("TaiKhoan.Xem")) void staffApi
       .timTaiKhoan({ vaiTro: "KhachHang", soMoiTrang: 50 })
       .then((res) => {
         setCustomers(
@@ -184,13 +197,18 @@ export function useBootstrapAdminLoaders(params: UseBootstrapDataParams) {
       })
       .catch(() => {});
 
-    void reconciliationApi
+    if (coQuyen("DoiSoat.Xem")) void reconciliationApi
       .layDanhSachDieuChinh()
       .then((items) => {
         setFinancialAdjustments(
-          (items ?? []).map((ds) => {
-            const isRefund = Number(ds.soTienCanHoan ?? 0) > 0;
-            const amount = isRefund ? Number(ds.soTienCanHoan ?? 0) : Number(ds.soTienCanThuThem ?? 0);
+          (items ?? []).map((ds: any) => {
+            // [ADJ-01]: Backend đổi tên field DTO thành canHoan / canThuThem.
+            // Đọc cả tên mới lẫn tên cũ để tương thích ngược (FE vẫn fallback khi Backend
+            // chưa rebuild) và không hiển thị toàn bộ phiếu bù trừ bằng 0đ.
+            const canHoan = Number(ds.canHoan ?? ds.soTienCanHoan ?? 0);
+            const canThu = Number(ds.canThuThem ?? ds.soTienCanThuThem ?? 0);
+            const isRefund = canHoan > 0;
+            const amount = isRefund ? canHoan : canThu;
             return {
               id: `DCDS-${ds.maDoiSoat}`,
               orderId: ds.maDonHienThi || String(ds.maDonThue),
@@ -198,14 +216,14 @@ export function useBootstrapAdminLoaders(params: UseBootstrapDataParams) {
               amount,
               reason: ds.lyDoDieuChinh || `Điều chỉnh đối soát #${ds.maDoiSoat}`,
               status: ds.trangThai === "DaChot" ? ("Đã duyệt" as const) : ("Chờ duyệt" as const),
-              createdBy: ds.nguoiLap || "Quản trị viên",
+              createdBy: ds.tenNguoiLap || ds.nguoiLap || "Quản trị viên",
               createdAt: ds.thoiDiemLap,
             };
           })
         );
       })
       .catch(() => {});
-  }, [setStaffAccounts, setCustomers, setFinancialAdjustments]);
+  }, [role, currentUser?.permissions, setStaffAccounts, setCustomers, setFinancialAdjustments]);
 
   return {
     refreshEquipment,

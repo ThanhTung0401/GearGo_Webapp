@@ -31,16 +31,23 @@ export function useBootstrapData(params: UseBootstrapDataParams) {
     const onPermissionChanged = () => {
       void loadersRef.current.core.hydrateSession(true);
     };
+    // [BOOT-02]: PermissionsTab.tsx phát "geargo-permissions-changed" (gạch ngang),
+    // useBootstrapData trước đây chỉ nghe "geargo:permissions-changed" (hai chấm) → mất sự kiện.
+    // Nghe cả hai tên để tương thích ngược và không mất event dù phía nào phát.
     window.addEventListener("geargo:permissions-changed", onPermissionChanged);
+    window.addEventListener("geargo-permissions-changed", onPermissionChanged);
     return () => {
       cancelled = true;
       window.removeEventListener("geargo:permissions-changed", onPermissionChanged);
+      window.removeEventListener("geargo-permissions-changed", onPermissionChanged);
     };
   }, []);
 
-  // Chỉ nạp dữ liệu theo phiên khi tài khoản hoặc vai trò thực sự đổi
+  // [BOOT-02]: fingerprint quyền → sessionKey đổi khi Admin thêm/xóa quyền của NhanVien,
+  // kích hoạt runStaggered() nạp lại các tab quản trị thay vì chờ F5.
+  const permsKey = (params.currentUser?.permissions ?? []).slice().sort().join(",");
   const sessionKey = params.currentUser
-    ? `${params.currentUser.id ?? params.currentUser.name ?? "user"}:${params.role}`
+    ? `${params.currentUser.id ?? params.currentUser.name ?? "user"}:${params.role}:${permsKey}`
     : "";
 
   useEffect(() => {
@@ -61,8 +68,11 @@ export function useBootstrapData(params: UseBootstrapDataParams) {
         return;
       }
 
-      // Đợt 1: Đơn thuê & Thông báo (quan trọng nhất)
-      await Promise.all([c.refreshOrders(), a.refreshNotifications()]);
+      // [BOOT-01] Staff/Admin login: nạp lại catalog admin ngay Đợt 1 vì trước đó refreshCatalog()
+      // ở lượt bootstrap ban đầu đã chạy khi chưa có token (closure role === "customer"), bỏ qua
+      // adminLayDanhSachDanhMuc/adminLayDanhSachSanPham.
+      // Đợt 1: Catalog quản trị + Đơn thuê & Thông báo
+      await Promise.all([c.refreshCatalog(), c.refreshOrders(), a.refreshNotifications()]);
       if (cancelled || !getAuthToken()) return;
 
       // Đợt 2: Kho thiết bị & Phiếu nhập & NCC
@@ -94,6 +104,8 @@ export function useBootstrapData(params: UseBootstrapDataParams) {
     refreshReviews: admin.refreshReviews,
     refreshNotifications: admin.refreshNotifications,
     refreshAuditLogs: admin.refreshAuditLogs,
+    // [BOOT-03]: expose để các tab Nhân viên / Khách hàng / Bù trừ tài chính gọi lại sau CRUD.
+    refreshAdminAuxiliaryData: admin.refreshAdminAuxiliaryData,
     upsertOrder: core.upsertOrder,
     hydrateSession: core.hydrateSession,
   };

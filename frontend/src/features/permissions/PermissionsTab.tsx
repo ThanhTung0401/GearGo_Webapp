@@ -182,7 +182,10 @@ export function PermissionsTab() {
         setSelectedPerms(new Set(r.quyenCoDuoc));
         setMsg({ type: "ok", text: `Đã lưu phân quyền riêng cho ${r.hoTen} (${r.quyenCoDuoc.length} quyền).` });
       }
+      // [BOOT-02]: phát đồng thời cả 2 tên sự kiện để useBootstrapData nhận được dù lắng nghe
+      // tên nào (gạch ngang hoặc hai chấm). Tránh race-condition mất event khi đổi quyền.
       window.dispatchEvent(new CustomEvent("geargo-permissions-changed"));
+      window.dispatchEvent(new CustomEvent("geargo:permissions-changed"));
     } catch (e) {
       setMsg({ type: "err", text: `Lỗi: ${(e as Error).message}` });
     } finally {
@@ -199,7 +202,9 @@ export function PermissionsTab() {
       setStaffDetail(r);
       setSelectedPerms(new Set(r.quyenCoDuoc));
       setMsg({ type: "ok", text: `Đã đưa ${r.hoTen} về kế thừa quyền mặc định của vai trò Nhân viên.` });
+      // [BOOT-02]: phát đồng thời cả 2 tên sự kiện (xem ghi chú ở save()).
       window.dispatchEvent(new CustomEvent("geargo-permissions-changed"));
+      window.dispatchEvent(new CustomEvent("geargo:permissions-changed"));
     } catch (e) {
       setMsg({ type: "err", text: `Lỗi: ${(e as Error).message}` });
     } finally {
