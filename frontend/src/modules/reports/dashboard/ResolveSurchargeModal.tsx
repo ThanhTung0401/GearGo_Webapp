@@ -1,4 +1,4 @@
-import { fmt, type Order, type Surcharge } from "../../../store";
+import { fmt, formatDateTimeVi, type Order, type Surcharge } from "../../../store";
 
 interface ResolveSurchargeModalProps {
   resolvingSurcharge: { order: Order; surcharge: Surcharge };
@@ -59,7 +59,8 @@ export function ResolveSurchargeModal({
         {/* Thông tin căn cứ đề xuất & Đơn hàng */}
         <div className="adm-card--parchment mb-4 text-[0.82rem]">
           <div className="adm-grid-2 gap-2 mb-2">
-            <div>Đơn hàng: <strong>{order.id}</strong></div>
+            {/* [DB-02] Dùng displayCode (DT-...) thay vì id số thô */}
+            <div>Đơn hàng: <strong>{order.displayCode || order.id}</strong></div>
             <div>Khách hàng: <strong>{order.customerName}</strong> ({order.customerPhone})</div>
             <div>Thiết bị liên quan: <strong className="font-mono text-forest">{surcharge.equipmentId}</strong></div>
             <div>Người lập đề xuất: <strong>{surcharge.createdBy}</strong></div>
@@ -80,7 +81,8 @@ export function ResolveSurchargeModal({
               <div className="font-bold text-[#1D4ED8] mb-1">
                 📋 Lúc bàn giao (BBBG - UC4.2)
               </div>
-              <div>Thời gian: {order.handoverRecord?.handoverAt || order.pickupTime}</div>
+              {/* [DB-03] Dùng formatDateTimeVi để chuẩn hóa ISO sang dd/MM/yyyy HH:mm */}
+              <div>Thời gian: {formatDateTimeVi(order.handoverRecord?.handoverAt || order.pickupTime)}</div>
               <div>Nhân viên giao: {order.handoverRecord?.staffName || "Cửa hàng"}</div>
               <div>Tình trạng: {beforeCondition}</div>
               <div className="mt-1 text-[#4B5563]">
@@ -93,7 +95,8 @@ export function ResolveSurchargeModal({
               <div className="font-bold text-[#DC2626] mb-1">
                 📦 Lúc nhận trả (PNT - UC4.3)
               </div>
-              <div>Thời gian: {order.returnedAt || "Đã nhận trả"}</div>
+              {/* [DB-03] Dùng formatDateTimeVi để chuẩn hóa ISO sang dd/MM/yyyy HH:mm */}
+              <div>Thời gian: {order.returnedAt ? formatDateTimeVi(order.returnedAt) : "Đã nhận trả"}</div>
               <div>Tình trạng: {afterCondition}</div>
               <div className="mt-1 text-[#991B1B]">
                 Tổn thất ghi nhận: {surcharge.reason}
@@ -159,7 +162,8 @@ export function ResolveSurchargeModal({
                 </label>
                 <input
                   type="number"
-                  min={0}
+                  /* [DB-05] min=1 để chặn 0đ gây lỗi 400 SO_TIEN_KHONG_HOP_LE từ Backend */
+                  min={1}
                   max={surcharge.amount}
                   value={adjustedAmount}
                   onChange={(e) => onAdjustedAmountChange(Number(e.target.value))}

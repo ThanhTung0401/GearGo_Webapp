@@ -47,7 +47,8 @@ export function DisputeCenterPanel({ pendingSurcharges, onResolveClick }: Disput
                   </span>
                 </div>
                 <div className="text-xs text-gray-500">
-                  Đơn {order.id} · Khách: {order.customerName} ({order.customerPhone}) · Lý do: {surcharge.reason}
+                  {/* [DB-02] Hiển thị displayCode (DT-...) thay vì id số thô */}
+                  Đơn {order.displayCode || order.id} · Khách: {order.customerName} ({order.customerPhone}) · Lý do: {surcharge.reason}
                 </div>
                 {surcharge.customerResponse && (
                   <div className="adm-dispute-reply">

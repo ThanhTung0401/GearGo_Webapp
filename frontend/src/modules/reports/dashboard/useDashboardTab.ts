@@ -38,6 +38,22 @@ export function useDashboardTab(app: ReturnType<typeof useApp>) {
   const [revenueSummary, setRevenueSummary] = useState<{ tongDoanhThuHoanTat?: number; soDonHoanTat?: number } | null>(null);
   const [depositSummary, setDepositSummary] = useState<{ tongCocChuaTatToan?: number } | null>(null);
 
+  // [DB-09] Tách hàm refresh để có thể gọi lại sau khi chốt đối soát / duyệt phụ phí / hủy đơn.
+  const refreshDashboardSummary = async () => {
+    if (!isRealApi) return;
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+    const endOfNow = now.toISOString();
+    const [opsRes, revRes, depRes] = await Promise.allSettled([
+      reportApi.layBaoCaoVanHanh({ tuNgay: startOfMonth, denNgay: endOfNow }),
+      reportApi.layDoanhThuHoanTat({ tuNgay: startOfMonth, denNgay: endOfNow, soMoiTrang: 20 }),
+      reportApi.layCocChuaTatToan({ soMoiTrang: 20 }),
+    ]);
+    if (opsRes.status === "fulfilled") setOpsReport(opsRes.value);
+    if (revRes.status === "fulfilled") setRevenueSummary(revRes.value);
+    if (depRes.status === "fulfilled") setDepositSummary(depRes.value);
+  };
+
   // Tải số liệu tổng quan thật trong tháng hiện tại từ Backend khi bật Real API
   useEffect(() => {
     if (!isRealApi) return;
@@ -59,6 +75,11 @@ export function useDashboardTab(app: ReturnType<typeof useApp>) {
       active = false;
     };
   }, [isRealApi]);
+
+  // [DB-09] Dẫn xuất activeAdminOrder luôn lấy bản mới nhất từ app.orders để tránh stale state
+  const activeAdminOrder: Order | null = adminSelectedOrder
+    ? (app.orders.find((o) => o.id === adminSelectedOrder.id) ?? adminSelectedOrder)
+    : null;
 
   const { has, data: myPerm } = usePermissions();
 
@@ -131,6 +152,16 @@ export function useDashboardTab(app: ReturnType<typeof useApp>) {
     e.preventDefault();
     if (!resolvingSurcharge) return;
     setResolveError("");
+    // [DB-05] Validate adjustedAmount trước khi gọi Backend để tránh lỗi 400 SO_TIEN_KHONG_HOP_LE
+    if (
+      resolutionType === "adjusted" &&
+      (!Number.isFinite(adjustedAmount) || adjustedAmount <= 0 || adjustedAmount > resolvingSurcharge.surcharge.amount)
+    ) {
+      setResolveError(
+        "Số tiền điều chỉnh phải lớn hơn 0đ và không vượt quá mức phí ban đầu (nếu miễn phí hoàn toàn vui lòng chọn Bác bỏ phụ phí)."
+      );
+      return;
+    }
     const finalAmt =
       resolutionType === "rejected" ? 0 : resolutionType === "adjusted" ? adjustedAmount : resolvingSurcharge.surcharge.amount;
     const reasonText =
@@ -164,6 +195,8 @@ export function useDashboardTab(app: ReturnType<typeof useApp>) {
           await surchargeApi.duyetPhi(surchargeId, reasonText);
         }
         await app.refreshOrders?.();
+        // [DB-09] Làm mới số liệu KPI tổng quan sau khi duyệt/xử lý tranh chấp phụ phí
+        await refreshDashboardSummary();
         setResolvingSurcharge(null);
       } catch (err) {
         setResolveError(err instanceof Error ? err.message : "Không thể xử lý kết luận phụ phí lên máy chủ.");
@@ -217,7 +250,10 @@ export function useDashboardTab(app: ReturnType<typeof useApp>) {
           dauVanTayXemTruoc: storeCancelPreview?.dauVanTay,
         });
         await app.refreshOrders?.();
-        setBannerMessage({ type: "success", text: `Đã hủy đơn ${storeCancelOrder.id} từ phía cửa hàng (UC3.4).` });
+        // [DB-09] Làm mới số liệu KPI tổng quan sau khi cửa hàng hủy đơn
+        await refreshDashboardSummary();
+        // [DB-02] Dùng displayCode (DT-...) thay vì id số thô trong banner
+        setBannerMessage({ type: "success", text: `Đã hủy đơn ${storeCancelOrder.displayCode || storeCancelOrder.id} từ phía cửa hàng (UC3.4).` });
         setStoreCancelOrder(null);
       } catch (err) {
         setStoreCancelError(err instanceof Error ? err.message : "Không thể hủy đơn hàng.");
@@ -226,6 +262,16 @@ export function useDashboardTab(app: ReturnType<typeof useApp>) {
       }
       return;
     }
+    // [DB-06] Chế độ Mock/Demo: thực sự chuyển trạng thái đơn và hiển thị banner
+    app.advanceOrderStatus?.(
+      storeCancelOrder.id,
+      "Cửa hàng hủy",
+      `Cửa hàng hủy: ${storeCancelReason.trim()}`
+    );
+    setBannerMessage({
+      type: "success",
+      text: `Đã hủy đơn ${storeCancelOrder.displayCode || storeCancelOrder.id} từ phía cửa hàng (UC3.4).`,
+    });
     setStoreCancelOrder(null);
   };
 
@@ -233,7 +279,11 @@ export function useDashboardTab(app: ReturnType<typeof useApp>) {
     has, myPerm, currentMonthNum, displayRevenue, displayCompletedCount, processingOrdersCount,
     displayRentedCount, displayTotalEquip, displayHeldDeposit, pendingSurcharges,
     exportingCsv, bannerMessage, handleExportDashboardReport,
-    statusFilter, setStatusFilter, adminSelectedOrder, setAdminSelectedOrder,
+    refreshDashboardSummary,
+    statusFilter, setStatusFilter,
+    // [DB-09] activeAdminOrder luôn phản chiếu state mới nhất từ app.orders.
+    adminSelectedOrder: activeAdminOrder,
+    setAdminSelectedOrder,
     resolvingSurcharge, setResolvingSurcharge, resolutionType, setResolutionType,
     adjustedAmount, setAdjustedAmount, resolutionReason, setResolutionReason,
     resolvingLoading, resolveError, handleOpenResolveSurcharge, handleSubmitResolveSurcharge,
