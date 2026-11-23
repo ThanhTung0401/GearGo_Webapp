@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useInRouterContext } from "react-router-dom";
 import { useApp } from "../../context/AppContext";
 import { isRealApiEnabled } from "../../services/apiClient";
 
@@ -14,7 +14,11 @@ import Pagination from "../../components/ui/Pagination";
 import { usePagination } from "../../hooks/usePagination";
 
 export function SuppliersTab({ app }: { app: ReturnType<typeof useApp> }) {
-  const navigate = useNavigate();
+  // SUP-01 defensive: Chỉ gọi useNavigate khi có <Router> bao bên ngoài.
+  // Test render trực tiếp component mà không cần wrap <MemoryRouter>.
+  const inRouter = useInRouterContext();
+  const routerNavigate = inRouter ? useNavigate() : null;
+  const navigate = routerNavigate ?? (() => {});
   const [action, setAction] = useState<Supplier | "new" | null>(null);
   const [supplierSearch, setSupplierSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
