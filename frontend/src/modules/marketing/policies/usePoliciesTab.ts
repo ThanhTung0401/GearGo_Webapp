@@ -25,7 +25,9 @@ export function usePoliciesTab(app: ReturnType<typeof useApp>) {
   const [subTab, setSubTab] = useState<"current" | "history">("current");
   const [form, setForm] = useState<RentalPolicyConfig>({ ...app.policies });
   const [changeReason, setChangeReason] = useState("");
-  const [effectiveDate, setEffectiveDate] = useState(() => formatLocalDatetimeMinutes(new Date(Date.now() + 5 * 60_000)));
+  // [POLICY-01]: đặt mặc định effectiveDate = thời điểm hiện tại để ban hành có hiệu lực NGAY.
+  // Khi gửi, nếu <= now+5min → gửi new Date().toISOString() để Backend đánh dấu HienHanh ngay.
+  const [effectiveDate, setEffectiveDate] = useState(() => formatLocalDatetimeMinutes(new Date()));
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [selectedSnapshot, setSelectedSnapshot] = useState<PolicyVersion | null>(null);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
@@ -81,19 +83,28 @@ export function usePoliciesTab(app: ReturnType<typeof useApp>) {
     if (form.reminderReturnHoursBefore !== app.policies.reminderReturnHoursBefore) {
       diffs.push({ field: "Nhắc trả máy trước", oldVal: `${app.policies.reminderReturnHoursBefore}h`, newVal: `${form.reminderReturnHoursBefore}h` });
     }
-    // So sánh biểu phí phụ kiện lẻ để cho phép ban hành khi chỉ thay đổi giá phụ kiện
+    // [POLICY-02]: so sánh biểu phí phụ kiện kể cả khi thêm/xóa/đổi tên dòng (lệch length) chứ
+    // không chỉ so sánh defaultFee khi hai danh sách cùng độ dài — trước đây thêm/xóa 1 phụ kiện
+    // sẽ bị bỏ qua và chặn lưu ("Bạn chưa thay đổi thông số nào...").
     const oldFees = app.policies.accessoryLossFeeSchedule || [];
     const newFees = form.accessoryLossFeeSchedule || [];
-    newFees.forEach((nf, idx) => {
+    const maxLen = Math.max(oldFees.length, newFees.length);
+    for (let idx = 0; idx < maxLen; idx++) {
       const of = oldFees[idx];
-      if (of && of.defaultFee !== nf.defaultFee) {
-        diffs.push({
-          field: `Phí phụ kiện: ${nf.accessoryName}`,
-          oldVal: fmt(of.defaultFee),
-          newVal: fmt(nf.defaultFee),
-        });
+      const nf = newFees[idx];
+      if (!of && nf) {
+        diffs.push({ field: `Thêm phụ kiện: ${nf.accessoryName}`, oldVal: "—", newVal: fmt(nf.defaultFee) });
+      } else if (of && !nf) {
+        diffs.push({ field: `Xóa phụ kiện: ${of.accessoryName}`, oldVal: fmt(of.defaultFee), newVal: "—" });
+      } else if (of && nf) {
+        if (of.accessoryName !== nf.accessoryName) {
+          diffs.push({ field: `Đổi tên phụ kiện: ${of.accessoryName} → ${nf.accessoryName}`, oldVal: of.accessoryName, newVal: nf.accessoryName });
+        }
+        if (of.defaultFee !== nf.defaultFee) {
+          diffs.push({ field: `Phí phụ kiện: ${nf.accessoryName}`, oldVal: fmt(of.defaultFee), newVal: fmt(nf.defaultFee) });
+        }
       }
-    });
+    }
     return diffs;
   };
 
@@ -114,11 +125,10 @@ export function usePoliciesTab(app: ReturnType<typeof useApp>) {
     setModalError("");
     setPreviewCheck(null);
 
+    // [POLICY-01]: Giữ nguyên effectiveDate người dùng chọn (kể cả rất gần hiện tại); logic quy đổi
+    // sang now.toISOString() được xử lý ở handleConfirmSave để Backend đánh dấu HienHanh ngay.
     const parsedEff = new Date(effectiveDate);
-    const nextEff =
-      !isNaN(parsedEff.getTime()) && parsedEff.getTime() > Date.now()
-        ? effectiveDate
-        : formatLocalDatetimeMinutes(new Date(Date.now() + 5 * 60_000));
+    const nextEff = !isNaN(parsedEff.getTime()) ? effectiveDate : formatLocalDatetimeMinutes(new Date());
     if (nextEff !== effectiveDate) {
       setEffectiveDate(nextEff);
     }
@@ -159,7 +169,10 @@ export function usePoliciesTab(app: ReturnType<typeof useApp>) {
       setPolicySaving(true);
       setModalError("");
       try {
-        const req = buildTaoChinhSachRequestFromConfig(changeReason.trim(), parsed.toISOString(), form);
+        // [POLICY-01]: nếu effectiveDate <= now+5min → gửi NGAY (ISO hiện tại) để Backend
+        // đánh dấu phiên bản là HienHanh ngay, tránh fallback về bản cũ sau refreshPolicies().
+        const toSend = parsed.getTime() <= Date.now() + 5 * 60_000 ? new Date().toISOString() : parsed.toISOString();
+        const req = buildTaoChinhSachRequestFromConfig(changeReason.trim(), toSend, form);
         const check = await policyApi.kiemTra(req);
         setPreviewCheck(check);
         if (!check.hopLe) {
@@ -208,6 +221,23 @@ export function usePoliciesTab(app: ReturnType<typeof useApp>) {
     }
   };
 
+  // [POLICY-02]: cho phép Admin thêm / xóa / đổi tên dòng phụ kiện ngay trong form chính sách.
+  const addAccessoryFee = () => {
+    const next = [...(form.accessoryLossFeeSchedule || []), { accessoryName: "Phụ kiện mới", defaultFee: 0 }];
+    setForm({ ...form, accessoryLossFeeSchedule: next });
+  };
+  const removeAccessoryFee = (index: number) => {
+    const next = (form.accessoryLossFeeSchedule || []).filter((_, i) => i !== index);
+    setForm({ ...form, accessoryLossFeeSchedule: next });
+  };
+  const updateAccessoryName = (index: number, name: string) => {
+    const next = [...(form.accessoryLossFeeSchedule || [])];
+    if (next[index]) {
+      next[index] = { ...next[index], accessoryName: name };
+      setForm({ ...form, accessoryLossFeeSchedule: next });
+    }
+  };
+
   const currentVer = app.policies.version || "v1.2";
 
   return {
@@ -216,5 +246,6 @@ export function usePoliciesTab(app: ReturnType<typeof useApp>) {
     selectedSnapshot, setSelectedSnapshot, message, modalError, setModalError,
     policySaving, checkingPolicy, previewCheck, currentVer,
     getChangedFields, handleOpenReview, handleConfirmSave, updateAccessoryFee,
+    addAccessoryFee, removeAccessoryFee, updateAccessoryName,
   };
 }

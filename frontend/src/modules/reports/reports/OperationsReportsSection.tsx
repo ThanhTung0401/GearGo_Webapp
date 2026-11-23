@@ -150,14 +150,19 @@ export function OperationsReportsSection({
         </div>
 
         <div
-          onClick={() =>
+          onClick={() => {
+            // [REP-03]: khi Real API, dùng app.maintenanceReceipts + maintReport.thietBiHayHong
+            // vì damageRecords (từ o.returnReceipts trong app.orders) luôn rỗng ở Real API.
+            const serverDamage = isRealApi
+              ? ((app as any).maintenanceReceipts ?? []).concat(maintReport?.thietBiHayHong ?? [])
+              : damageRecords;
             onDrilldown({
               title: "Chi tiết các trường hợp thiết bị hư hỏng/mất mát",
               subtitle: `Danh sách biên bản nhận trả ghi nhận thiết bị hỏng có kết luận`,
               type: "damage",
-              items: damageRecords,
-            })
-          }
+              items: isRealApi && serverDamage.length > 0 ? serverDamage : damageRecords,
+            });
+          }}
           className={`adm-report-kpi-card ${damageRecords.length > 0 ? "is-warn" : ""}`}
         >
           <div className="text-[0.75rem] text-[#92400E] font-semibold">Bảo trì & Hư hỏng kỳ</div>

@@ -103,7 +103,9 @@ public class GuiThongBaoService : IGuiThongBaoService
 
     public async Task<Result<ThongBaoAdminResponse>> ThuLaiAsync(long maThongBao, ThuLaiThongBaoRequest request, long maTaiKhoanAdmin, CancellationToken ct = default)
     {
-        await ActorGuard.EnsureQuanTriVienAsync(_context, maTaiKhoanAdmin, ct);
+        // [NOTIF-04]: Controller đã khóa bằng [RequirePermission(ThongBao_Gui)] → không cần chặn
+        // cứng VaiTro == QuanTriVien; cho phép Nhân viên có quyền ThongBao.Gui thử lại thủ công.
+        await ActorGuard.EnsureVanHanhAsync(_context, maTaiKhoanAdmin, ct);
 
         var tb = await _context.ThongBaos.FirstOrDefaultAsync(t => t.MaThongBao == maThongBao, ct);
         if (tb == null) return Result<ThongBaoAdminResponse>.Loi("THONG_BAO_NOT_FOUND", "Thông báo không tồn tại.");

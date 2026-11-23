@@ -65,8 +65,17 @@ export function useAdjustmentsTab(app: ReturnType<typeof useApp>) {
     if (!rawOrderId) return null;
     const matched = app.orders.find((o) => o.id === rawOrderId || o.displayCode === rawOrderId);
     if (matched?.backendId) return matched.backendId;
-    const parsed = Number(rawOrderId.replace(/\D/g, ""));
-    return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+    // [ADJ-03]: nếu không khớp trong app.orders:
+    //  - chuỗi thuần số → parse trực tiếp
+    //  - mã hiển thị "ORD-2026-001"/"DT-20261123-05" → lấy cụm số CUỐI sau dấu "-"
+    //    thay vì replace(/\D/g,"") (sẽ gộp 2026001/2026112305 sai với ID thực).
+    if (/^\d+$/.test(rawOrderId)) {
+      const parsed = Number(rawOrderId);
+      return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+    }
+    const tail = rawOrderId.match(/-(\d+)$/)?.[1] ?? rawOrderId.match(/(\d+)$/)?.[1];
+    const parsedTail = tail ? Number(tail) : NaN;
+    return Number.isInteger(parsedTail) && parsedTail > 0 ? parsedTail : null;
   };
 
   // Tự động tra cứu biên bản đối soát và danh sách phụ phí khi chọn đơn hàng trong modal
@@ -122,6 +131,11 @@ export function useAdjustmentsTab(app: ReturnType<typeof useApp>) {
       setReconcileModalError("Số tiền hoàn lại cho khách phải lớn hơn 0.");
       return;
     }
+    // [ADJ-04]: chặn hoàn vượt tổng tiền giao dịch gốc để không bị Backend từ chối 400.
+    if (reconcileOutcome === "HopLe_HoanTienThua" && reconcileRefundAmount > Number(reconcileTarget.tongSoTien ?? 0)) {
+      setReconcileModalError("Số tiền hoàn không được vượt quá tổng số tiền giao dịch.");
+      return;
+    }
     setReconcileBusy(true);
     setReconcileModalError("");
     setPaySuccess("");
@@ -156,8 +170,22 @@ export function useAdjustmentsTab(app: ReturnType<typeof useApp>) {
         setModalError("Sai lệch phiếu nhập kho (UC7.10) được kiểm soát và duyệt tại mục Điều chỉnh kho.");
         return;
       }
-      if (!orderDoiSoat) {
-        setModalError("Vui lòng chọn đơn thuê đã có biên bản đối soát gốc để lập điều chỉnh tài chính sau chốt (UC5.7).");
+      // [ADJ-02]: cho phép ghi nhận chứng từ không gắn đối soát đã chốt (lưu vào app store).
+      if (!orderDoiSoat || orderDoiSoat.trangThai !== "DaChot") {
+        // Fallback: lưu vào store cục bộ để bảng FinancialAdjustmentsTable có bản ghi mới ngay.
+        app.saveFinancialAdjustment({
+          type,
+          amount,
+          orderId: orderId || undefined,
+          importReceiptId: importReceiptId || undefined,
+          reason: reason.trim(),
+          status: "Chờ duyệt",
+          createdBy: "Quản trị viên",
+        });
+        setShowModal(false);
+        setReason("");
+        setSelectedSurchargeId("");
+        setPaySuccess("Đã ghi nhận chứng từ điều chỉnh (chưa có đối soát gốc — chờ chốt đối soát).");
         return;
       }
 
@@ -180,7 +208,20 @@ export function useAdjustmentsTab(app: ReturnType<typeof useApp>) {
         await reconciliationApi.lapDieuChinh(orderDoiSoat.maDoiSoat, {
           lyDoDieuChinh: reason.trim(),
           danhSachMaPhuPhiDieuChinh: adjustedSurchargeIds,
+          // [ADJ-02]: gửi kèm số tiền có dấu để Backend tự dựng PhuPhi điều chỉnh khi không có phụ phí gốc.
+          soTienDieuChinhCoDau: signedAmount,
           ghiChu: reason.trim(),
+        } as any);
+        // [ADJ-02]: cập nhật ngay bảng FinancialAdjustmentsTable sau khi lưu thành công.
+        app.saveFinancialAdjustment({
+          type,
+          amount,
+          orderId: orderId || undefined,
+          importReceiptId: importReceiptId || undefined,
+          reason: reason.trim(),
+          status: "Đã duyệt",
+          createdBy: "Quản trị viên",
+          approvedBy: "Quản trị viên",
         });
         await Promise.all([loadPendingPayments(), app.refreshOrders?.()]);
         setPaySuccess(`Đã lập biên bản điều chỉnh sau chốt cho đơn #${orderDoiSoat.maDonHienThi || orderDoiSoat.maDonThue}.`);

@@ -185,9 +185,14 @@ public partial class PermissionService : IPermissionService
         if (tk.VaiTro != DomainConstants.Roles.Admin)
             quyen = quyen.Where(p => !DomainConstants.Permissions.AdminOnly.Contains(p)).ToList();
 
+        // [PERM-02]: cộng gộp Version của role + account để /api/auth/quyen-cua-toi thay đổi
+        // mỗi khi Admin cập nhật quyền riêng của tài khoản (bump TaiKhoan.PermissionVersion).
+        var accountVersion = await LayAccountVersionAsync(maTaiKhoan, ct);
+        var versionTongHop = version + accountVersion;
+
         return Result<QuyenCuaToiResponse>.Ok(new QuyenCuaToiResponse
         {
-            MaTaiKhoan = maTaiKhoan, RoleName = tk.VaiTro, Version = version, Quyen = quyen
+            MaTaiKhoan = maTaiKhoan, RoleName = tk.VaiTro, Version = versionTongHop, Quyen = quyen
         });
     }
 

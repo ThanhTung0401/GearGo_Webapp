@@ -32,5 +32,8 @@ public class ChiTietSuDungItem
     public DateTime ThoiDiemHetHan { get; set; }
     public DateTime? ThoiDiemSuDung { get; set; }
     public decimal TienGiamDon { get; set; }
+    // [PROMO-06]: tiền thuê gốc của đơn (trước giảm) để Frontend hiển thị cột "Tiền thuê gốc"
+    // trong Modal Chi tiết khuyến mãi (trước đây luôn hiển thị "—" vì gán cứng rental = 0).
+    public decimal TienThueDon { get; set; }
     public string TrangThaiDonThue { get; set; } = string.Empty;
 }

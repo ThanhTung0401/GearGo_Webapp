@@ -79,7 +79,25 @@ export function PermissionsTab() {
   }, []);
 
   const loadStaffList = useCallback(async () => {
-    if (!isRealApiEnabled()) return;
+    // [PERM-01]: ở chế độ Mock/Demo (!isRealApiEnabled()), fallback nạp danh sách từ store để
+    // tab "Phân quyền riêng 1 nhân viên" hoạt động đầy đủ — trước đây staffList luôn rỗng.
+    if (!isRealApiEnabled()) {
+      try {
+        const mod = await import("../../data/initialStaff");
+        const items = (mod as { INITIAL_STAFF_ACCOUNTS?: Array<{ id: string; username?: string; name: string; email?: string }> }).INITIAL_STAFF_ACCOUNTS ?? [];
+        const mapped = items.map((s) => ({
+          maTaiKhoan: Number(s.id),
+          hoTen: s.name,
+          email: s.email ?? s.username ?? "",
+          vaiTro: "NhanVien" as const,
+        }));
+        setStaffList(mapped as any);
+        if (mapped.length > 0) setSelectedStaffId((prev) => prev ?? mapped[0].maTaiKhoan);
+      } catch {
+        /* nếu không có INITIAL_STAFF_ACCOUNTS vẫn im lặng — Demo mode chỉ cần không crash */
+      }
+      return;
+    }
     try {
       const res = await staffApi.timNhanVien({ vaiTro: "NhanVien", soMoiTrang: 100 });
       const items = res.items ?? [];
@@ -213,7 +231,17 @@ export function PermissionsTab() {
   };
 
   const save = async () => {
+    // [PERM-01]: kiểm MIN_STAFF CHO CẢ chế độ phân quyền theo vai trò VÀ phân quyền riêng NhanVien.
+    // Trước đây chỉ kiểm ở mode "role" nên Admin có thể lưu 0 quyền cho 1 nhân viên cụ thể khiến
+    // nhân viên đó đăng nhập bị tê liệt hoàn toàn (không có quyền cơ bản nào).
     if (mode === "role" && selectedRole === "NhanVien") {
+      const thieu = MIN_STAFF.filter((p) => !selectedPerms.has(p));
+      if (thieu.length > 0) {
+        setConfirmMissingPerms(thieu);
+        return;
+      }
+    }
+    if (mode === "staff" && staffDetail?.roleName === "NhanVien") {
       const thieu = MIN_STAFF.filter((p) => !selectedPerms.has(p));
       if (thieu.length > 0) {
         setConfirmMissingPerms(thieu);
@@ -294,7 +322,9 @@ export function PermissionsTab() {
             <select
               id="select-staff-perm"
               value={selectedStaffId ?? ""}
-              onChange={(e) => setSelectedStaffId(Number(e.target.value))}
+              // [PERM-01]: Number("") trả về 0 → gọi GET /api/phan-quyen/nhan-vien/0 gây 404.
+              // Chuyển value rỗng về null thay vì 0 để không kích hoạt loadStaffPerms(0).
+              onChange={(e) => setSelectedStaffId(e.target.value ? Number(e.target.value) : null)}
               className="adm-select min-w-[260px]"
             >
               {staffList.length === 0 && <option value="">Chưa có nhân viên nào</option>}

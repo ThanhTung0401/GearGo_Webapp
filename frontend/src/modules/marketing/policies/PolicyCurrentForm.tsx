@@ -8,6 +8,10 @@ interface PolicyCurrentFormProps {
   currentVer: string;
   onChangeForm: (next: RentalPolicyConfig) => void;
   onUpdateAccessoryFee: (index: number, newFee: number) => void;
+  // [POLICY-02]: cho phép Admin thêm / xóa / đổi tên dòng phụ kiện ngay trong form.
+  onAddAccessoryFee?: () => void;
+  onRemoveAccessoryFee?: (index: number) => void;
+  onUpdateAccessoryName?: (index: number, name: string) => void;
   onSubmitReview: (e: React.FormEvent) => void;
 }
 
@@ -20,6 +24,9 @@ export function PolicyCurrentForm({
   currentVer,
   onChangeForm,
   onUpdateAccessoryFee,
+  onAddAccessoryFee,
+  onRemoveAccessoryFee,
+  onUpdateAccessoryName,
   onSubmitReview,
 }: PolicyCurrentFormProps) {
   return (
@@ -183,8 +190,17 @@ export function PolicyCurrentForm({
           </div>
           <div className="adm-grid-auto-lg">
             {(form.accessoryLossFeeSchedule || []).map((item, idx) => (
-              <div key={item.accessoryName} className="adm-policy-fee-item">
-                <span className="text-[0.75rem] font-semibold">{item.accessoryName}</span>
+              <div key={idx} className="adm-policy-fee-item">
+                {onUpdateAccessoryName ? (
+                  <input
+                    type="text"
+                    value={item.accessoryName}
+                    onChange={(e) => onUpdateAccessoryName(idx, e.target.value)}
+                    className="adm-field adm-field--compact"
+                  />
+                ) : (
+                  <span className="text-[0.75rem] font-semibold">{item.accessoryName}</span>
+                )}
                 <input
                   type="number"
                   step="10000"
@@ -193,9 +209,19 @@ export function PolicyCurrentForm({
                   onChange={(e) => onUpdateAccessoryFee(idx, Number(e.target.value))}
                   className="adm-policy-fee-input"
                 />
+                {onRemoveAccessoryFee && (
+                  <button type="button" onClick={() => onRemoveAccessoryFee(idx)} className="adm-btn adm-btn--xs adm-btn--danger" title="Xóa phụ kiện">
+                    ✕
+                  </button>
+                )}
               </div>
             ))}
           </div>
+          {onAddAccessoryFee && (
+            <button type="button" onClick={onAddAccessoryFee} className="adm-btn adm-btn--sm adm-btn--secondary mt-2">
+              + Thêm phụ kiện
+            </button>
+          )}
         </div>
       </div>
 

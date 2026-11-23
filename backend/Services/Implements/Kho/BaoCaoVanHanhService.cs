@@ -18,8 +18,16 @@ public class BaoCaoVanHanhService : IBaoCaoVanHanhService
 
     public async Task<BaoCaoVanHanhChiTietResponse> LayBaoCaoVanHanhAsync(BoLocBaoCaoRequest filter)
     {
+        // [REP-01]: Kiểm tra tuNgay > denNgay như BaoCaoTaiChinhService/BaoCaoKhoService đã làm.
+        if (filter.TuNgay.HasValue && filter.DenNgay.HasValue && filter.TuNgay.Value > filter.DenNgay.Value)
+            throw new ArgumentException("Khoảng ngày lọc không hợp lệ: Từ ngày phải <= Đến ngày.");
+
         var tuNgay = filter.TuNgay ?? DateTime.UtcNow.AddDays(-DomainConstants.Policies.DefaultReportDays);
         var denNgay = filter.DenNgay ?? DateTime.UtcNow;
+        // [REP-01]: nếu denNgay là 00:00:00, mở rộng tới cuối ngày để không mất dữ liệu phát sinh
+        // trong ngày cuối kỳ (vd lọc 1 ngày trả về 0 do so sánh <= 2026-11-23 00:00:00).
+        if (filter.DenNgay.HasValue && filter.DenNgay.Value.TimeOfDay == TimeSpan.Zero)
+            denNgay = filter.DenNgay.Value.Date.AddDays(1).AddTicks(-1);
 
         var tongQuan = await TinhTongQuanVanHanhAsync(tuNgay, denNgay);
         var chiSoSanPham = await TinhChiSoTheoSanPhamAsync(filter, tuNgay, denNgay);

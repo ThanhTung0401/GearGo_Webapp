@@ -167,6 +167,8 @@ public partial class QuanTriKhuyenMaiService : IQuanTriKhuyenMaiService
                 ThoiDiemHetHan = l.ThoiDiemHetHan,
                 ThoiDiemSuDung = l.ThoiDiemSuDung,
                 TienGiamDon = l.DonThue.TongTienGiam,
+                // [PROMO-06]: bổ sung tiền thuê gốc trước giảm để FE không hiển thị 0đ.
+                TienThueDon = l.DonThue.TongTienThueTruocGiam,
                 TrangThaiDonThue = l.DonThue.TrangThai.ToString()
             }).ToList()
         });

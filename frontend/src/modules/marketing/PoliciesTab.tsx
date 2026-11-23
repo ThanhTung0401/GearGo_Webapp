@@ -58,6 +58,9 @@ export function PoliciesTab({ app }: { app: ReturnType<typeof useApp> }) {
           currentVer={policy.currentVer}
           onChangeForm={policy.setForm}
           onUpdateAccessoryFee={policy.updateAccessoryFee}
+          onAddAccessoryFee={policy.addAccessoryFee}
+          onRemoveAccessoryFee={policy.removeAccessoryFee}
+          onUpdateAccessoryName={policy.updateAccessoryName}
           onSubmitReview={policy.handleOpenReview}
         />
       )}

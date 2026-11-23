@@ -31,6 +31,7 @@ public class NhatKyService : INhatKyService
         string? tuKhoa,
         int trang = 1,
         int soMoiTrang = 20,
+        string? vaiTro = null,
         CancellationToken ct = default)
     {
         trang = Math.Max(1, trang);
@@ -60,6 +61,12 @@ public class NhatKyService : INhatKyService
 
         if (maTaiKhoan.HasValue)
             query = query.Where(n => n.MaTaiKhoan == maTaiKhoan.Value);
+        // [AUDIT-03]: lọc theo vai trò người thực hiện ở server để Pagination chính xác.
+        if (!string.IsNullOrWhiteSpace(vaiTro))
+        {
+            var vt = vaiTro.Trim();
+            query = query.Where(n => n.TaiKhoan != null && n.TaiKhoan.VaiTro == vt);
+        }
         if (!string.IsNullOrWhiteSpace(hanhDong))
             query = query.Where(n => n.HanhDong == hanhDong.Trim());
         if (!string.IsNullOrWhiteSpace(loaiDoiTuong))
@@ -68,15 +75,21 @@ public class NhatKyService : INhatKyService
             query = query.Where(n => n.MaDoiTuong == maDoiTuong.Trim());
         if (tuNgay.HasValue && denNgay.HasValue && tuNgay.Value > denNgay.Value)
             throw new GearGo.Exceptions.DuLieuKhongHopLeException("KHOANG_THOI_GIAN_KHONG_HOP_LE", "Từ ngày không được lớn hơn đến ngày.");
+        // [AUDIT-03]: ThoiDiem lưu UTC; người dùng chọn theo giờ VN (+7). Quy đổi tuNgay/denNgay
+        // từ giờ VN sang UTC trước khi so sánh để không mất bản ghi 00:00–06:59 sáng của ngày tuNgay.
+        var lechVn = GearGo.Helpers.BaoCaoCsvHelper.LechGioVn;
         if (tuNgay.HasValue)
-            query = query.Where(n => n.ThoiDiem >= tuNgay.Value);
+        {
+            var tuUtc = tuNgay.Value - lechVn;
+            query = query.Where(n => n.ThoiDiem >= tuUtc);
+        }
         if (denNgay.HasValue)
         {
-            // Nếu chỉ truyền ngày (00:00:00), mở rộng hết ngày đó để không bỏ sót nhật ký phát sinh trong ngày
-            var denMoc = denNgay.Value.TimeOfDay == TimeSpan.Zero
+            var denMocLocal = denNgay.Value.TimeOfDay == TimeSpan.Zero
                 ? denNgay.Value.Date.AddDays(1)
                 : denNgay.Value.AddTicks(1);
-            query = query.Where(n => n.ThoiDiem < denMoc);
+            var denMocUtc = denMocLocal - lechVn;
+            query = query.Where(n => n.ThoiDiem < denMocUtc);
         }
         if (!string.IsNullOrWhiteSpace(tuKhoa))
         {
@@ -141,9 +154,12 @@ public class NhatKyService : INhatKyService
         if (string.IsNullOrWhiteSpace(loaiDoiTuong) || string.IsNullOrWhiteSpace(maDoiTuong))
             return null;
 
+        // [AUDIT-02]: GET /api/don-thue/{id} có [Authorize(Policy="CustomerOnly")] → Admin/Staff bị 403.
+        // Endpoint cho Admin/Staff là /api/don-thue/xu-ly/{id}. Bổ sung mapping cho KHUYEN_MAI, CHINH_SACH,
+        // VAI_TRO, NHA_CUNG_CAP, SAN_PHAM, DANH_MUC để Modal mở chứng từ Audit Log hoạt động.
         return loaiDoiTuong.ToUpperInvariant() switch
         {
-            "DON_THUE" => $"/api/don-thue/{maDoiTuong}",
+            "DON_THUE" => $"/api/don-thue/xu-ly/{maDoiTuong}",
             "PHIEU_NHAP" or "PHIEUNHAPHANG" => $"/api/phieu-nhap/{maDoiTuong}",
             "PHIEU_BAO_TRI" => $"/api/bao-tri/{maDoiTuong}",
             "PHIEU_DIEU_CHINH_KHO" => $"/api/dieu-chinh-kho/{maDoiTuong}",
@@ -151,6 +167,12 @@ public class NhatKyService : INhatKyService
             "THIET_BI" => $"/api/thiet-bi/{maDoiTuong}",
             "TAI_KHOAN" => laQuanTriVien ? $"/api/tai-khoan/{maDoiTuong}" : null,
             "NHAN_VIEN" => laQuanTriVien ? $"/api/nhan-vien/{maDoiTuong}" : null,
+            "KHUYEN_MAI" => $"/api/khuyen-mai/{maDoiTuong}",
+            "CHINH_SACH" => long.TryParse(maDoiTuong, out _) ? $"/api/chinh-sach/{maDoiTuong}" : "/api/chinh-sach/hien-hanh",
+            "VAI_TRO" or "QUYEN_VAI_TRO" or "ROLE_PERMISSION" => laQuanTriVien ? $"/api/phan-quyen/vai-tro/{maDoiTuong}" : null,
+            "NHA_CUNG_CAP" => $"/api/nha-cung-cap/{maDoiTuong}",
+            "SAN_PHAM" => $"/api/san-pham/{maDoiTuong}",
+            "DANH_MUC" => $"/api/danh-muc/{maDoiTuong}",
             _ => null
         };
     }

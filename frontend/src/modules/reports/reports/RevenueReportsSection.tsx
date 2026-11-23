@@ -63,14 +63,28 @@ export function RevenueReportsSection({
 
       <div className="adm-kpi-3 mb-6">
         <div
-          onClick={() =>
+          onClick={() => {
+            // [REP-03]: khi Real API có revReport.items, dùng chính items đó (map sang Order-like)
+            // để số dòng drilldown khớp 100% với KPI; tránh bị thiếu do app.orders chỉ nạp 50 đơn đầu.
+            const serverItems = isRealApi && Array.isArray(revReport?.items) ? (revReport.items as any[]) : null;
+            const mapped: Order[] = serverItems
+              ? serverItems.map((r) => ({
+                  ...completedOrders[0],
+                  id: String(r.maDonThue ?? r.id ?? r.maDonHienThi ?? ""),
+                  displayCode: r.maDonHienThi || String(r.maDonThue ?? ""),
+                  customerName: r.tenKhachHang || `KH#${r.maKhachHang ?? ""}`,
+                  rental: Number(r.doanhThuTienThueThuan ?? r.tienThueThuan ?? r.tienThue ?? 0),
+                  status: "Đã hoàn tất",
+                  createdAt: r.thoiDiemChot || r.thoiDiemHoanTat || r.ngayHoanTat || "",
+                } as unknown as Order))
+              : completedOrders;
             onDrilldown({
               title: "Danh sách đơn thuê hoàn tất cấu thành doanh thu",
               subtitle: `Các đơn đã thanh toán và quyết toán hoàn tất trong kỳ`,
               type: "orders",
-              items: completedOrders,
-            })
-          }
+              items: mapped,
+            });
+          }}
           className="adm-card adm-card--padded-sm cursor-pointer hover:border-forest"
         >
           <div className="adm-hint-text text-[0.78rem] font-semibold">Doanh thu tiền thuê thuần</div>

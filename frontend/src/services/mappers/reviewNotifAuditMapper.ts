@@ -84,10 +84,23 @@ export interface AuditLogEntryWithRef extends AuditLogEntry {
 }
 
 export function mapNhatKyToAuditLog(nk: NhatKyThaoTacBackend): AuditLogEntryWithRef {
+  // [AUDIT-01]: nếu duLieuTruoc/duLieuSau là chuỗi JSON thô (bắt đầu bằng { hoặc [),
+  // không ghép nguyên JSON vào cột "Chi tiết nội dung" trên bảng — chỉ hiển thị lý do
+  // và ghi chú có snapshot để người dùng bấm "Chi tiết" xem bản format đẹp trong Modal.
+  const laJsonRaw = (s?: string | null) => {
+    if (!s) return false;
+    const trim = s.trim();
+    return trim.startsWith("{") || trim.startsWith("[");
+  };
+  const coSnapshot = laJsonRaw(nk.duLieuTruoc) || laJsonRaw(nk.duLieuSau);
   const summaryParts = [
     nk.lyDo ? `Lý do: ${nk.lyDo}` : "",
-    nk.duLieuTruoc ? `Trước: ${nk.duLieuTruoc}` : "",
-    nk.duLieuSau ? `Sau: ${nk.duLieuSau}` : "",
+    coSnapshot
+      ? "Có ghi nhận snapshot dữ liệu trước/sau — nhấn Chi tiết để xem"
+      : [
+          nk.duLieuTruoc ? `Trước: ${nk.duLieuTruoc}` : "",
+          nk.duLieuSau ? `Sau: ${nk.duLieuSau}` : "",
+        ].filter(Boolean).join(" | "),
   ].filter(Boolean);
 
   return {

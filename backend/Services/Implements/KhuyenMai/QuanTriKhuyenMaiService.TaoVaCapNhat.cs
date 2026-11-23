@@ -140,7 +140,12 @@ public partial class QuanTriKhuyenMaiService
                 return Result<KhuyenMaiResponse>.Loi("CAU_HINH_GIAM_KHONG_HOP_LE", "Số tiền giảm phải lớn hơn 0.");
             km.GiaTriGiam = req.GiaTriGiam.Value;
         }
-        if (req.MucGiamToiDa.HasValue) km.MucGiamToiDa = req.MucGiamToiDa.Value;
+        // [PROMO-01]: FE luôn gửi payload đầy đủ (null = bỏ giới hạn); nếu dùng .HasValue thì
+        // Backend bỏ qua null và giữ giới hạn cũ. Validate nếu có giá trị thì phải > 0 rồi gán thẳng.
+        // Với loại giảm SoTien, không bao giờ áp mức giảm tối đa (tránh cắt trần số tiền cố định).
+        if (req.MucGiamToiDa.HasValue && req.MucGiamToiDa.Value <= 0)
+            return Result<KhuyenMaiResponse>.Loi("CAU_HINH_GIAM_KHONG_HOP_LE", "Mức giảm tối đa phải lớn hơn 0 hoặc để trống (không giới hạn).");
+        km.MucGiamToiDa = km.LoaiGiam == LoaiKhuyenMai.SoTien ? null : req.MucGiamToiDa;
         if (req.TienThueToiThieu.HasValue)
         {
             if (req.TienThueToiThieu.Value < 0)
@@ -193,8 +198,9 @@ public partial class QuanTriKhuyenMaiService
             if (request.KetThuc.HasValue) km.KetThuc = request.KetThuc.Value;
             if (km.BatDau > km.KetThuc) { await tx.RollbackAsync(); return Result<KhuyenMaiResponse>.Loi("CAU_HINH_GIAM_KHONG_HOP_LE", "Thời điểm bắt đầu không được sau thời điểm kết thúc."); }
 
-            if (request.GioiHanTongLuot.HasValue) km.GioiHanTongLuot = request.GioiHanTongLuot.Value;
-            if (request.GioiHanMoiKhach.HasValue) km.GioiHanMoiKhach = request.GioiHanMoiKhach.Value;
+            // [PROMO-01]: FE gửi null để bỏ giới hạn → gán thẳng, không dùng .HasValue.
+            km.GioiHanTongLuot = request.GioiHanTongLuot;
+            km.GioiHanMoiKhach = request.GioiHanMoiKhach;
 
             if (tongDangChiem == 0 && await ApDungCauHinhChuaCamKetAsync(km, request) is { } loiCauHinh)
             {

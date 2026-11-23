@@ -93,7 +93,25 @@ export function ReportsImportSection({
                     </tr>
                   ) : (
                     realReceiptPaging.pagedItems.map((p) => {
-                      const matchedReceipt = app.importReceipts.find((r) => r.id === String(p.maPhieuNhap));
+                      // [REP-04]: nếu phiếu không nằm trong 50 phiếu đầu của app.importReceipts, dựng
+                      // trực tiếp ImportReceipt từ p/p.dong để nút "🔍 Mở chứng từ" luôn hoạt động.
+                      const matchedReceipt =
+                        app.importReceipts.find((r) => r.id === String(p.maPhieuNhap)) ??
+                        ({
+                          id: String(p.maPhieuNhap),
+                          displayCode: p.maPhieuHienThi || String(p.maPhieuNhap),
+                          supplierId: "",
+                          supplierName: p.tenNhaCungCapHienTai ?? "",
+                          receivedAt: p.ngayNhapThucTe ?? "",
+                          status: "Đã nhập kho",
+                          totalValue: Number(p.tongGiaTriHieuLuc ?? p.tongGiaTriGoc ?? 0),
+                          lines: (p.dong ?? []).map((d: any) => ({
+                            productId: String(d.maSanPhamNguon ?? d.maSanPham ?? ""),
+                            productName: d.tenSanPhamLucNhap ?? d.tenSanPham ?? "",
+                            quantity: Number(d.soLuongHieuLuc ?? d.soLuongGoc ?? 0),
+                            unitPrice: Number(d.donGiaGoc ?? 0),
+                          })),
+                        } as any);
                       return (
                         <tr key={p.maPhieuNhap}>
                           <td className="adm-cell-code">{p.maPhieuHienThi || p.maPhieuNhap}</td>
@@ -102,13 +120,9 @@ export function ReportsImportSection({
                           <td>{(p.dong ?? []).length} sản phẩm</td>
                           <td className="adm-cell-mono font-bold text-[var(--color-forest)]">{fmt(Number(p.tongGiaTriHieuLuc ?? p.tongGiaTriGoc ?? 0))}</td>
                           <td>
-                            {matchedReceipt ? (
-                              <button onClick={() => setViewingReceipt(matchedReceipt)} className="btn btn-secondary btn-sm adm-btn-xs">
-                                🔍 Mở chứng từ
-                              </button>
-                            ) : (
-                              <span className="adm-muted-note">#{p.maPhieuNhap}</span>
-                            )}
+                            <button onClick={() => setViewingReceipt(matchedReceipt)} className="btn btn-secondary btn-sm adm-btn-xs">
+                              🔍 Mở chứng từ
+                            </button>
                           </td>
                         </tr>
                       );

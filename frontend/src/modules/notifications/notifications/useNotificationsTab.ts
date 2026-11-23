@@ -92,6 +92,11 @@ export function useNotificationsTab(app: ReturnType<typeof useApp>) {
         maTaiKhoanNhan = parsedTk;
       }
 
+      // [NOTIF-03]: nếu bật deep-link đến đơn mà không nhập mã đích → chặn thay vì âm thầm gửi null.
+      if (hasActionLink && actionType === "order" && !actionTargetId.trim()) {
+        setSendError("Vui lòng nhập mã đơn hàng đích cho liên kết điều hướng.");
+        return;
+      }
       // Quy đổi mã đơn thuê hiển thị sang backendId số nếu có gắn deep-link đơn hàng
       let maDonThue: number | null = null;
       if (hasActionLink && actionType === "order" && actionTargetId.trim()) {
@@ -100,7 +105,10 @@ export function useNotificationsTab(app: ReturnType<typeof useApp>) {
         if (matched?.backendId) {
           maDonThue = matched.backendId;
         } else {
-          const digits = Number(rawOrder.replace(/\D/g, ""));
+          // [NOTIF-03]: ưu tiên lấy cụm số CUỐI cùng sau dấu "-" (VD: ORD-2026-001 → 001 → 1),
+          // thay vì gộp mọi chữ số (2026001) gây 400 DON_THUE_NOT_FOUND.
+          const tail = rawOrder.match(/(\d+)$/)?.[1];
+          const digits = tail ? Number(tail) : Number(rawOrder.replace(/\D/g, ""));
           if (Number.isInteger(digits) && digits > 0) {
             maDonThue = digits;
           }

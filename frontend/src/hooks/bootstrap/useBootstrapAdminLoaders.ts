@@ -138,7 +138,9 @@ export function useBootstrapAdminLoaders(params: UseBootstrapDataParams) {
     try {
       const res = await notificationApi.layCuaToi({ soMoiTrang: 30 });
       setNotifications((res.items ?? []).map((tb) => mapThongBaoToNotification(tb, role)));
-      setUnreadNotificationCount(Number(res.soChuaDoc ?? 0));
+      // [NOTIF-02]: PagedResult không có soChuaDoc; fallback đếm từ items (daDoc / thoiDiemDoc).
+      const fallback = (res.items ?? []).filter((tb: any) => !tb.daDoc && !tb.thoiDiemDoc).length;
+      setUnreadNotificationCount(Number((res as any).soChuaDoc ?? fallback));
     } catch {
       // Không chặn giao diện nếu endpoint thông báo tạm lỗi
     }

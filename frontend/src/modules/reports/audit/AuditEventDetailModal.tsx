@@ -17,6 +17,19 @@ export function AuditEventDetailModal({
   onClose,
   onOpenRelatedDoc,
 }: AuditEventDetailModalProps) {
+  // [AUDIT-01]: format chuỗi JSON đẹp (indent 2 ký tự) nếu là JSON; nếu không, trả về nguyên.
+  const formatJsonOrRaw = (s?: string | null): string => {
+    if (!s) return "";
+    const trim = s.trim();
+    if (trim.startsWith("{") || trim.startsWith("[")) {
+      try {
+        return JSON.stringify(JSON.parse(trim), null, 2);
+      } catch {
+        return s;
+      }
+    }
+    return s;
+  };
   return (
     <div className="adm-modal-overlay">
       <div className="adm-modal-dialog is-lg max-w-[640px]">
@@ -62,7 +75,11 @@ export function AuditEventDetailModal({
           <div className="adm-card--soft p-3.5">
             <div className="text-[0.75rem] text-[#6B7280] font-bold mb-1">HÀNH ĐỘNG & NỘI DUNG BIẾN ĐỘNG:</div>
             <div className="font-semibold text-[var(--color-forest)] mb-1.5">{selectedEvent.action}</div>
-            <div className="text-[#374151] leading-relaxed">{selectedEvent.detail}</div>
+            {/* [AUDIT-01]: không in trùng JSON thô ở selectedEvent.detail; chỉ hiển thị khi detail
+                không có "snapshot" (đã được mapper tóm tắt) hoặc là mô tả thuần văn bản. */}
+            {!/snapshot/i.test(selectedEvent.detail) && (
+              <div className="text-[#374151] leading-relaxed">{selectedEvent.detail}</div>
+            )}
             {selectedEvent.lyDo && (
               <div className="mt-2 text-[0.78rem] text-[#4B5563]">
                 <strong>Lý do ghi nhận:</strong> {selectedEvent.lyDo}
@@ -75,13 +92,14 @@ export function AuditEventDetailModal({
               {selectedEvent.duLieuTruoc && (
                 <div className="adm-audit-diff-before">
                   <div className="font-bold text-[#991B1B] mb-1">Dữ liệu trước</div>
-                  <pre className="adm-audit-pre">{selectedEvent.duLieuTruoc}</pre>
+                  {/* [AUDIT-01]: format JSON đẹp bằng helper formatJsonOrRaw */}
+                  <pre className="adm-audit-pre">{formatJsonOrRaw(selectedEvent.duLieuTruoc)}</pre>
                 </div>
               )}
               {selectedEvent.duLieuSau && (
                 <div className="adm-audit-diff-after">
                   <div className="font-bold text-[#166534] mb-1">Dữ liệu sau</div>
-                  <pre className="adm-audit-pre">{selectedEvent.duLieuSau}</pre>
+                  <pre className="adm-audit-pre">{formatJsonOrRaw(selectedEvent.duLieuSau)}</pre>
                 </div>
               )}
             </div>

@@ -47,15 +47,21 @@ export default function PromotionDetailModal({ promotion, app, onClose, onEdit, 
 
   // Dữ liệu hiển thị ưu tiên backend nếu có
   const appliedRows = app.realApi && usageReport
-    ? usageReport.chiTietSuDung.map((ct) => ({
-        key: String(ct.maLuotSuDung),
-        displayId: ct.maDonHienThi || String(ct.maDonThue),
-        customerName: ct.tenKhachHang || `KH#${ct.maKhachHang}`,
-        date: ct.thoiDiemSuDung || ct.thoiDiemGiuLuot,
-        rental: 0,
-        discount: Number(ct.tienGiamDon ?? 0),
-        status: ct.trangThaiDonThue || ct.trangThaiLuot,
-      }))
+    ? usageReport.chiTietSuDung.map((ct) => {
+        // [PROMO-06]: lấy tiền thuê gốc từ Backend (tienThueDon mới bổ sung ở ChiTietSuDungItem);
+        // fallback tra từ app.orders nếu đơn nằm trong 50 đơn đầu.
+        const tienThueDon = Number((ct as { tienThueDon?: number | null }).tienThueDon ?? NaN);
+        const fallback = app.orders.find((o) => o.displayCode === ct.maDonHienThi || (o as { backendId?: number }).backendId === ct.maDonThue)?.rental ?? 0;
+        return {
+          key: String(ct.maLuotSuDung),
+          displayId: ct.maDonHienThi || String(ct.maDonThue),
+          customerName: ct.tenKhachHang || `KH#${ct.maKhachHang}`,
+          date: ct.thoiDiemSuDung || ct.thoiDiemGiuLuot,
+          rental: Number.isFinite(tienThueDon) ? tienThueDon : fallback,
+          discount: Number(ct.tienGiamDon ?? 0),
+          status: ct.trangThaiDonThue || ct.trangThaiLuot,
+        };
+      })
     : app.orders
         .filter((order) => {
           const hasUsage = usages.some((u) => u.orderId === order.id && u.status === "used");
