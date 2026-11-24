@@ -63,10 +63,16 @@ jobs:
           VITE_USE_MOCK: "false"
         run: npm run build
 
-  # ── Job 3: Kiểm thử E2E Playwright 10 phân hệ kèm SQL Server container ────────
+  # ── Job 3: Kiểm thử E2E Playwright 10 phân hệ, SHARD thành 5 matrix jobs song song ────
+  # Mỗi matrix job khởi 1 SQL Server container riêng (chi phí resource chấp nhận được trên runner free)
+  # và chạy --shard=INDEX/5 cho project=frontend. Backend API (34 case nhẹ) chỉ chạy ở shard=1 để tiết kiệm.
   playwright-e2e:
-    name: Playwright E2E (10 Subsystems)
+    name: Playwright E2E (shard ${{ matrix.shard }}/5)
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4, 5]
     services:
       sqlserver:
         image: mcr.microsoft.com/mssql/server:2022-latest
@@ -155,18 +161,22 @@ jobs:
             sleep 2
           done
 
-      - name: Run Playwright 10-subsystem test suite
+      - name: Run Playwright shard
         working-directory: tests/playwright
         env:
           API_URL: http://localhost:5000
           APP_URL: http://localhost:8443
+          SHARD_INDEX: ${{ matrix.shard }}
+          SHARD_TOTAL: 5
+          CI: "true"
         run: npm test
 
       - name: Upload Playwright report, videos & failure traces
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-report
+          # Tách artifact theo shard để 5 job matrix không ghi đè lên nhau
+          name: playwright-report-shard-${{ matrix.shard }}
           path: |
             tests/playwright/playwright-report/
             tests/playwright/test-results/
