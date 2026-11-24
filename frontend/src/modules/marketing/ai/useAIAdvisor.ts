@@ -258,6 +258,7 @@ export function useAIAdvisor() {
     isAnalyzing,
     analysisStep,
     advisorError,
+    setAdvisorError,
     aiResponse,
     addingToCart,
     scheduleConflict,

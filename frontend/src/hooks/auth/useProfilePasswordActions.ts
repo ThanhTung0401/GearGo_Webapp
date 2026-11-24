@@ -24,6 +24,7 @@ export interface AuthSessionUser {
   role: Role;
   permissions?: string[];
   address?: string;
+  avatarUrl?: string;
 }
 
 interface Params {

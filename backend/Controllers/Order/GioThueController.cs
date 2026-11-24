@@ -1,4 +1,4 @@
-﻿using GearGo.Helpers;
+using GearGo.Helpers;
 using GearGo.Models.DTOs.GioThue;
 using GearGo.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -8,7 +8,7 @@ namespace GearGo.Controllers.Order;
 
 [Route("api/gio-thue")]
 [ApiController]
-[Authorize(Policy = "CustomerOnly")]
+[Authorize(Roles = "KhachHang,NhanVien,QuanTriVien")]
 public class GioThueController : BaseApiController
 {
     private readonly IGioThueService _gioThueService;

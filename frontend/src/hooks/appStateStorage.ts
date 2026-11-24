@@ -95,6 +95,7 @@ export interface PersistedState {
     role: Role;
     permissions?: string[];
     address?: string;
+    avatarUrl?: string;
   } | null;
   pickupDate: string;
   returnDate: string;

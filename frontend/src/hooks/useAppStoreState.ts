@@ -54,6 +54,7 @@ export type CurrentUserProfile = {
   role: Role;
   permissions?: string[];
   address?: string;
+  avatarUrl?: string;
 };
 
 const persistedState = loadPersistedState();

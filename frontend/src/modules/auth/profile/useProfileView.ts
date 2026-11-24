@@ -1,6 +1,7 @@
 import { useState, useEffect, type FormEvent } from "react";
 import { useApp } from "../../../context/AppContext";
 import { profileApi, authApi } from "../../../services/api";
+import { toRelativeAssetUrl } from "../../../utils";
 
 export type ProfileSectionTab = "profile" | "security" | "reviews";
 
@@ -141,7 +142,7 @@ export function useProfileView() {
           soDienThoai: profile.phone.trim(),
           diaChi: profile.address.trim() || null,
           ngaySinh: profile.birthDate || null,
-          anhDaiDien: profile.avatarUrl.trim() || null,
+          anhDaiDien: toRelativeAssetUrl(profile.avatarUrl) || null,
           maOtp: contactChanged ? otpCode.trim() : null,
         });
         const next: CustomerProfileData = {
@@ -154,6 +155,16 @@ export function useProfileView() {
         };
         setSavedProfile(next);
         setProfile(next);
+        if (app.currentUser) {
+          app.login({
+            ...app.currentUser,
+            name: next.name,
+            email: next.email,
+            phone: next.phone,
+            address: next.address,
+            avatarUrl: next.avatarUrl || undefined,
+          });
+        }
         setOtpCode("");
         setOtpInfo("");
         setSaved(true);
@@ -167,6 +178,16 @@ export function useProfileView() {
 
     localStorage.setItem("geargo-demo-customer-profile", JSON.stringify(profile));
     setSavedProfile(profile);
+    if (app.currentUser) {
+      app.login({
+        ...app.currentUser,
+        name: profile.name,
+        email: profile.email,
+        phone: profile.phone,
+        address: profile.address,
+        avatarUrl: profile.avatarUrl || undefined,
+      });
+    }
     setSaved(true);
     app.addAuditLog({
       actor: profile.name,

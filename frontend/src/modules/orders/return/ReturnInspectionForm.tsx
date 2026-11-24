@@ -1,8 +1,12 @@
+import { useState } from "react";
 import type React from "react";
 import { fmt, Order, ReturnReceiptItem } from "../../../store";
+import { uploadOrReadDataUrl } from "../../../services/api";
+import { getErrorMessage, resolveAssetUrl } from "../../../utils";
 import type { DebtRowItem } from "./returnTypes";
 
 interface ReturnInspectionFormProps {
+  realApi: boolean;
   order: Order;
   debtRows: DebtRowItem[];
   currentReturnRound: number;
@@ -15,6 +19,8 @@ interface ReturnInspectionFormProps {
   setItemSurcharges: React.Dispatch<React.SetStateAction<Record<string, number>>>;
   returnStaffNote: string;
   setReturnStaffNote: (v: string) => void;
+  damagePhotos: string[];
+  setDamagePhotos: React.Dispatch<React.SetStateAction<string[]>>;
   returnBusy: boolean;
   onToggleSelect: (rowKey: string, compensation: number, maChiTietBanGiao?: number) => void;
   onConditionChange: (rowKey: string, cond: ReturnReceiptItem["condition"], compensation: number) => void;
@@ -32,6 +38,7 @@ const CONDITION_OPTIONS: ReturnReceiptItem["condition"][] = [
 
 // Form kiểm tra tình trạng từng thiết bị còn nợ và lập phiếu nhận trả theo đợt (UC4.3)
 export function ReturnInspectionForm({
+  realApi,
   order,
   debtRows,
   currentReturnRound,
@@ -44,11 +51,14 @@ export function ReturnInspectionForm({
   setItemSurcharges,
   returnStaffNote,
   setReturnStaffNote,
+  damagePhotos,
+  setDamagePhotos,
   returnBusy,
   onToggleSelect,
   onConditionChange,
   onCreateReceipt,
 }: ReturnInspectionFormProps) {
+  const [photoNotice, setPhotoNotice] = useState("");
   const selCount = debtRows.filter((r) => selectedItemsToReturn[r.key]).length;
   const remainAfter = debtRows.length - selCount;
 
@@ -167,6 +177,62 @@ export function ReturnInspectionForm({
           onChange={(e) => setReturnStaffNote(e.target.value)}
           className="so-staff-note-input"
         />
+      </div>
+
+      <div className="mb-3">
+        <span className="so-photo-label">Ảnh bằng chứng tình trạng / hư hại khi nhận trả (UC4.3):</span>
+        <div className="flex gap-2 items-center flex-wrap">
+          {damagePhotos.map((url, i) => (
+            <div key={i} className="relative inline-block">
+              <img src={resolveAssetUrl(url)} alt={`Bằng chứng nhận trả ${i + 1}`} className="so-photo-thumb" />
+              <button
+                type="button"
+                aria-label="Xóa ảnh bằng chứng"
+                onClick={() => setDamagePhotos((prev) => prev.filter((_, idx) => idx !== i))}
+                className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-red-600 text-white text-[10px] leading-none flex items-center justify-center cursor-pointer"
+              >
+                ×
+              </button>
+            </div>
+          ))}
+          <label
+            className="so-photo-add-btn cursor-pointer inline-flex items-center justify-center"
+            aria-label="Tải ảnh bằng chứng nhận trả từ máy"
+            title="Tải ảnh bằng chứng từ máy"
+          >
+            📷+
+            <input
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              multiple
+              className="hidden"
+              onChange={async (e) => {
+                const files = Array.from(e.target.files ?? []);
+                if (files.length === 0) return;
+                try {
+                  const urls: string[] = [];
+                  for (const file of files) {
+                    const uploaded = await uploadOrReadDataUrl(file, realApi, "evidence");
+                    if (uploaded) urls.push(uploaded);
+                  }
+                  if (urls.length > 0) {
+                    setDamagePhotos((prev) => [...prev, ...urls]);
+                    setPhotoNotice(`Đã thêm ${urls.length} ảnh bằng chứng nhận trả (hiện có ${damagePhotos.length + urls.length} ảnh).`);
+                  }
+                } catch (err) {
+                  setPhotoNotice(getErrorMessage(err, "Không thể tải ảnh bằng chứng."));
+                } finally {
+                  e.target.value = "";
+                }
+              }}
+            />
+          </label>
+        </div>
+        {photoNotice && (
+          <div role="status" className="mt-1.5 text-xs text-[var(--color-success-text)]">
+            {photoNotice}
+          </div>
+        )}
       </div>
 
       {/* Phân biệt trạng thái trả một phần vs hoàn tất thu hồi */}

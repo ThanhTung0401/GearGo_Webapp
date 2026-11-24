@@ -1,4 +1,5 @@
 export * from "./apiHelpers";
+export * from "./uploadApi";
 export * from "./authApi";
 export * from "./profileApi";
 export * from "./staffApi";

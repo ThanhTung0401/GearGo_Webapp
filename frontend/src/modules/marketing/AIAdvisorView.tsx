@@ -35,14 +35,14 @@ export function AIAdvisorView() {
         <div className="flex gap-2 mt-5 cp-ai-tabs">
           <button
             type="button"
-            onClick={() => { vm.setAdvisorMode("ai"); vm.setSent(false); }}
+            onClick={() => { vm.setAdvisorMode("ai"); vm.setSent(false); vm.setAdvisorError(""); }}
             className={`cp-ai-tab ${vm.advisorMode === "ai" ? "is-active" : ""}`}
           >
             🤖 AI tư vấn thông minh
           </button>
           <button
             type="button"
-            onClick={() => { vm.setAdvisorMode("presets"); vm.setSent(false); }}
+            onClick={() => { vm.setAdvisorMode("presets"); vm.setSent(false); vm.setAdvisorError(""); }}
             className={`cp-ai-tab ${vm.advisorMode === "presets" ? "is-active" : ""}`}
           >
             📦 Bộ combo mẫu có sẵn (UC2.4.1)

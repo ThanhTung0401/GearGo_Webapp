@@ -1,4 +1,5 @@
-﻿import { useApp } from "../App";
+import { useEffect } from "react";
+import { useApp } from "../App";
 import { CartView } from "../modules/orders/CartView";
 import { CheckoutView } from "../modules/orders/CheckoutView";
 import { OrderConfirmedView } from "../modules/orders/OrderConfirmedView";
@@ -8,6 +9,15 @@ import { AIAdvisorView } from "../modules/marketing/AIAdvisorView";
 
 export default function CustomerPortal() {
   const app = useApp();
+  const needsLogin = (app.page === "my-orders" || app.page === "profile") && !app.currentUser;
+
+  useEffect(() => {
+    if (needsLogin) {
+      app.setPage("login");
+    }
+  }, [needsLogin, app]);
+
+  if (needsLogin) return null;
   if (app.page === "cart") return <CartView />;
   if (app.page === "checkout") return <CheckoutView />;
   if (app.page === "order-confirmed") return <OrderConfirmedView />;

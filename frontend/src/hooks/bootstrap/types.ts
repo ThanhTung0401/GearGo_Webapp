@@ -40,6 +40,7 @@ export interface UseBootstrapDataParams {
       role: Role;
       permissions?: string[];
       address?: string;
+      avatarUrl?: string;
     } | null>
   >;
   setAuthLoading: Dispatch<SetStateAction<boolean>>;

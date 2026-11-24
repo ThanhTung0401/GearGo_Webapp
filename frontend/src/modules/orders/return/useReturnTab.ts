@@ -63,9 +63,7 @@ export function useReturnTab(
   const [overdueOrdersBackend, setOverdueOrdersBackend] = useState<DonQuaHanBackend[]>([]);
   const [scanningOverdue, setScanningOverdue] = useState(false);
   const [contactLogsBackend, setContactLogsBackend] = useState<NhatKyLienHeQuaHanBackend[]>([]);
-  const [damagePhotos] = useState<string[]>([
-    "https://images.unsplash.com/photo-1510312305653-8ed496efae75?w=200&auto=format&fit=crop&q=60",
-  ]);
+  const [damagePhotos, setDamagePhotos] = useState<string[]>([]);
 
   const order = selectedOrder;
 
@@ -227,6 +225,7 @@ export function useReturnTab(
     viewingReceipt, setViewingReceipt, viewingBackendReceipt, setViewingBackendReceipt,
     statusFilter, setStatusFilter, returnReceiptsBackend, affectedOrdersBackend,
     returnLoading, returnBusy, returnError, returnSuccess, setReturnSuccess,
+    damagePhotos, setDamagePhotos,
     rejectingSurchargeId, setRejectingSurchargeId, rejectReason, setRejectReason,
     approveLostTarget, setApproveLostTarget, lostApproveReason, setLostApproveReason,
     lostBienBan, setLostBienBan, lostCompAmount, setLostCompAmount,

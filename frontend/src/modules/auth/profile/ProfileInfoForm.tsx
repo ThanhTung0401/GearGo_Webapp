@@ -1,4 +1,7 @@
+import { useState } from "react";
 import type { CustomerProfileData } from "./useProfileView";
+import { uploadOrReadDataUrl } from "../../../services/api";
+import { getErrorMessage, resolveAssetUrl } from "../../../utils";
 
 interface ProfileInfoFormProps {
   realApi: boolean;
@@ -25,7 +28,6 @@ const PROFILE_FIELDS: { key: keyof CustomerProfileData; label: string; type: str
   { key: "email", label: "Email", type: "email" },
   { key: "birthDate", label: "Ngày sinh", type: "date" },
   { key: "address", label: "Địa chỉ thường trú / liên hệ", type: "text" },
-  { key: "avatarUrl", label: "Ảnh đại diện (URL)", type: "url" },
 ];
 
 /**
@@ -49,6 +51,9 @@ export function ProfileInfoForm({
   onSaveProfile,
   onCancelChanges,
 }: ProfileInfoFormProps) {
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const [avatarNotice, setAvatarNotice] = useState("");
+
   return (
     <form
       onSubmit={(e) => {
@@ -66,7 +71,7 @@ export function ProfileInfoForm({
         </div>
         {profile.avatarUrl && (
           <img
-            src={profile.avatarUrl}
+            src={resolveAssetUrl(profile.avatarUrl)}
             alt={profile.name}
             className="cp-profile-avatar"
           />
@@ -92,6 +97,50 @@ export function ProfileInfoForm({
             />
           </div>
         ))}
+        <div className="form-group">
+          <label className="form-label">Ảnh đại diện</label>
+          <div className="flex gap-2 items-center flex-wrap">
+            <label
+              className={`btn btn-secondary btn-sm ${avatarUploading ? "opacity-50 pointer-events-none" : "cursor-pointer"}`}
+            >
+              {avatarUploading ? "Đang tải..." : "📷 Tải ảnh lên"}
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                className="hidden"
+                disabled={avatarUploading}
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  setAvatarUploading(true);
+                  setAvatarNotice("");
+                  try {
+                    const url = await uploadOrReadDataUrl(file, realApi, "avatars");
+                    setProfile({ ...profile, avatarUrl: url });
+                    setSaved(false);
+                    setAvatarNotice("Đã tải ảnh đại diện lên. Nhấn \"Lưu thay đổi\" để cập nhật.");
+                  } catch (err) {
+                    setAvatarNotice(getErrorMessage(err, "Không thể tải ảnh đại diện."));
+                  } finally {
+                    setAvatarUploading(false);
+                    e.target.value = "";
+                  }
+                }}
+              />
+            </label>
+            <input
+              type="text"
+              placeholder="Hoặc dán URL ảnh (/uploads/... hoặc https://...)"
+              value={profile.avatarUrl ?? ""}
+              onChange={(e) => {
+                setProfile({ ...profile, avatarUrl: e.target.value });
+                setSaved(false);
+              }}
+              className="form-input flex-1 min-w-[180px]"
+            />
+          </div>
+          {avatarNotice && <p className="text-xs text-gray-500 mt-1">{avatarNotice}</p>}
+        </div>
       </div>
 
       {/* UC1.6: Khối xác minh OTP khi thay đổi Email hoặc Số điện thoại */}

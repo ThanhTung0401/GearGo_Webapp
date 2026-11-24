@@ -1,5 +1,8 @@
+import { useState } from "react";
 import type { useApp } from "../../../App";
 import type { ImportReceipt, ImportReceiptAdjustment } from "../../../store";
+import { uploadOrReadDataUrl } from "../../../services/api";
+import { getErrorMessage } from "../../../utils";
 import { useImportAdjustment } from "./useImportAdjustment";
 
 interface Props {
@@ -14,6 +17,8 @@ interface Props {
  */
 export default function ImportAdjustmentModal({ receipt, app, onClose, onSuccess }: Props) {
   const vm = useImportAdjustment(receipt, app, onClose, onSuccess);
+  const [uploadingEvidence, setUploadingEvidence] = useState(false);
+  const [evidenceNotice, setEvidenceNotice] = useState("");
 
   return (
     <div
@@ -134,13 +139,43 @@ export default function ImportAdjustmentModal({ receipt, app, onClose, onSuccess
           </label>
 
           <label className="font-semibold">
-            Chứng từ đối soát / Số biên bản liên quan:
-            <input
-              placeholder="VD: Hóa đơn GTGT điều chỉnh số 004812, BB thỏa thuận ngày 22/10..."
-              value={vm.evidence}
-              onChange={(e) => vm.setEvidence(e.target.value)}
-              className="w-full p-2 rounded-md border border-gray-300 mt-1"
-            />
+            Chứng từ đối soát / Số biên bản hoặc ảnh đính kèm:
+            <div className="flex gap-2 items-center mt-1">
+              <input
+                placeholder="VD: Hóa đơn GTGT điều chỉnh số 004812 hoặc tải ảnh chứng từ..."
+                value={vm.evidence}
+                onChange={(e) => vm.setEvidence(e.target.value)}
+                className="flex-1 p-2 rounded-md border border-gray-300"
+              />
+              <label
+                className={`px-3 py-2 rounded-md border border-gray-300 bg-gray-50 text-xs font-semibold ${uploadingEvidence ? "opacity-50 pointer-events-none" : "cursor-pointer hover:bg-gray-100"}`}
+              >
+                {uploadingEvidence ? "Đang tải..." : "📷 Tải ảnh"}
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  className="hidden"
+                  disabled={uploadingEvidence}
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    setUploadingEvidence(true);
+                    setEvidenceNotice("");
+                    try {
+                      const url = await uploadOrReadDataUrl(file, Boolean(app.realApi), "inventory");
+                      vm.setEvidence(url);
+                      setEvidenceNotice("Đã tải ảnh chứng từ lên thành công.");
+                    } catch (err) {
+                      setEvidenceNotice(getErrorMessage(err, "Không thể tải ảnh chứng từ."));
+                    } finally {
+                      setUploadingEvidence(false);
+                      e.target.value = "";
+                    }
+                  }}
+                />
+              </label>
+            </div>
+            {evidenceNotice && <span className="block text-xs font-normal text-gray-500 mt-1">{evidenceNotice}</span>}
           </label>
 
           <label className="font-semibold">

@@ -88,6 +88,7 @@ export function ReturnTab({
 
             {state.debtRows.length > 0 && (
               <ReturnInspectionForm
+                realApi={Boolean(app.realApi)}
                 order={state.order}
                 debtRows={state.debtRows}
                 currentReturnRound={state.currentReturnRound}
@@ -100,6 +101,8 @@ export function ReturnTab({
                 setItemSurcharges={state.setItemSurcharges}
                 returnStaffNote={state.returnStaffNote}
                 setReturnStaffNote={state.setReturnStaffNote}
+                damagePhotos={state.damagePhotos}
+                setDamagePhotos={state.setDamagePhotos}
                 returnBusy={state.returnBusy}
                 onToggleSelect={state.handleToggleSelect}
                 onConditionChange={state.handleConditionChange}

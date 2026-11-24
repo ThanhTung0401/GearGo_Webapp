@@ -13,7 +13,7 @@ public partial class TuVanAIService
         if (request.CacDong == null || !request.CacDong.Any())
             throw new DuLieuKhongHopLeException("DAU_VAO_TU_VAN_KHONG_HOP_LE", "Danh sách sản phẩm thêm vào giỏ không được rỗng.");
 
-        var trueKhId = await ActorGuard.LayMaKhachHangAsync(_context, maKhachHang, cancellationToken);
+        var trueKhId = await ActorGuard.LayHoacTaoMaKhachHangAsync(_context, maKhachHang, cancellationToken);
         var gio = await _context.GioThues.Include(g => g.ChiTietGioThues)
             .FirstOrDefaultAsync(g => g.MaKhachHang == trueKhId, cancellationToken);
 

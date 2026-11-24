@@ -2,7 +2,8 @@ import { useState } from "react";
 import type React from "react";
 import { useApp } from "../../../context/AppContext";
 import { fmt, formatDateTimeVi, Order } from "../../../store";
-import { getErrorMessage, readFileAsDataUrl, validateImageFile } from "../../../utils";
+import { uploadOrReadDataUrl } from "../../../services/api";
+import { getErrorMessage, resolveAssetUrl } from "../../../utils";
 
 interface HandoverChecklistPanelProps {
   app: ReturnType<typeof useApp>;
@@ -164,7 +165,19 @@ export function HandoverChecklistPanel({
           <span className="so-photo-label">Ảnh bằng chứng hiện trạng trước thuê (UC4.2 Dòng 747):</span>
           <div className="flex gap-2 items-center flex-wrap">
             {evidencePhotos.map((url, i) => (
-              <img key={i} src={url} alt="Bằng chứng giao" className="so-photo-thumb" />
+              <div key={i} className="relative inline-block">
+                <img src={resolveAssetUrl(url)} alt="Bằng chứng giao" className="so-photo-thumb" />
+                {setEvidencePhotos && (
+                  <button
+                    type="button"
+                    aria-label="Xóa ảnh bằng chứng"
+                    onClick={() => setEvidencePhotos((prev) => prev.filter((_, idx) => idx !== i))}
+                    className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-red-600 text-white text-[10px] leading-none flex items-center justify-center cursor-pointer"
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
             ))}
             <label
               className="so-photo-add-btn cursor-pointer inline-flex items-center justify-center"
@@ -183,16 +196,15 @@ export function HandoverChecklistPanel({
                   try {
                     const urls: string[] = [];
                     for (const file of files) {
-                      validateImageFile(file, 5);
-                      const dataUrl = await readFileAsDataUrl(file);
-                      if (dataUrl) urls.push(dataUrl);
+                      const uploaded = await uploadOrReadDataUrl(file, Boolean(app.realApi), "evidence");
+                      if (uploaded) urls.push(uploaded);
                     }
                     if (urls.length > 0 && setEvidencePhotos) {
                       setEvidencePhotos((prev) => [...prev, ...urls]);
                       setPhotoNotice(`Đã thêm ${urls.length} ảnh bằng chứng (hiện có ${evidencePhotos.length + urls.length} ảnh).`);
                     }
                   } catch (err) {
-                    setPhotoNotice(getErrorMessage(err, "Không thể đọc tệp ảnh đã chọn."));
+                    setPhotoNotice(getErrorMessage(err, "Không thể tải tệp ảnh đã chọn."));
                   } finally {
                     e.target.value = "";
                   }

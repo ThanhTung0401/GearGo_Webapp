@@ -215,6 +215,7 @@ export function useBootstrapCoreLoaders(params: UseBootstrapDataParams) {
           email: profile?.email || me.email || "",
           phone: profile?.soDienThoai || "",
           address: profile?.diaChi ?? undefined,
+          avatarUrl: profile?.anhDaiDien ?? undefined,
           role: nextRole,
           permissions: perms?.cacQuyen ?? [],
         });

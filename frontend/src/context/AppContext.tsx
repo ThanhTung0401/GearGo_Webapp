@@ -38,7 +38,7 @@ export interface AppState {
   policyVersions: PolicyVersion[];
   auditLogs: AuditLogEntry[];
   financialAdjustments: FinancialAdjustment[];
-  currentUser: { id?: string; username?: string; name: string; email: string; phone: string; role: Role; permissions?: string[]; address?: string } | null;
+  currentUser: { id?: string; username?: string; name: string; email: string; phone: string; role: Role; permissions?: string[]; address?: string; avatarUrl?: string } | null;
   pickupDate: string;
   returnDate: string;
   pickupHour: string;
@@ -108,7 +108,7 @@ export interface AppState {
   resumePromotion: (promoId: string) => ActionResult;
   addAuditLog: (entry: { actor: string; role: string; action: string; targetEntity: string; targetId: string; detail: string }) => void;
   saveFinancialAdjustment: (adj: Omit<FinancialAdjustment, "id" | "createdAt">) => ActionResult<FinancialAdjustment>;
-  login: (user: { id?: string; username?: string; name: string; email: string; phone: string; role: Role; permissions?: string[]; address?: string }) => void;
+  login: (user: { id?: string; username?: string; name: string; email: string; phone: string; role: Role; permissions?: string[]; address?: string; avatarUrl?: string }) => void;
   logout: () => Promise<void> | void;
   updateCurrentUserProfile: (info: { name: string; phone: string; email: string; otp?: string }) => Promise<ActionResult>;
   changeCurrentUserPassword: (oldPass: string, newPass: string) => Promise<ActionResult>;

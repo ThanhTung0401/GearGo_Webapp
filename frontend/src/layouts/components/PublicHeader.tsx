@@ -4,6 +4,7 @@ import Icon from "../../components/Icon";
 import ConfirmModal from "../../components/ui/ConfirmModal";
 import { notificationApi } from "../../services/api";
 import type { AppNotification } from "../../types";
+import { resolveAssetUrl } from "../../utils";
 
 export interface PublicHeaderProps {
   onOpenMobileMenu: () => void;
@@ -104,10 +105,17 @@ export default function PublicHeader({
           <nav className="hidden lg:flex items-center gap-1">
             {customerNavigation.map((item) => {
               const isActive = page === item.p;
+              const requiresAuth = item.p === "my-orders" || item.p === "profile";
               return (
                 <button
                   key={item.label}
-                  onClick={() => setPage(item.p)}
+                  onClick={() => {
+                    if (requiresAuth && !currentUser) {
+                      setPage("login");
+                      return;
+                    }
+                    setPage(item.p);
+                  }}
                   className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                     isActive
                       ? "bg-white/15 text-white"
@@ -252,9 +260,17 @@ export default function PublicHeader({
                 className="flex items-center gap-2 px-1.5 sm:px-2.5 py-1 rounded-xl bg-white/10 hover:bg-white/15 border border-white/15 text-white cursor-pointer transition-colors"
                 title="Hồ sơ cá nhân & Đổi mật khẩu"
               >
-                <div className="w-6 h-6 rounded-full bg-[var(--color-amber)] text-white font-bold text-[0.7rem] flex items-center justify-center shrink-0">
-                  {currentUser.name.charAt(0)}
-                </div>
+                {currentUser.avatarUrl ? (
+                  <img
+                    src={resolveAssetUrl(currentUser.avatarUrl)}
+                    alt={currentUser.name}
+                    className="w-6 h-6 rounded-full object-cover shrink-0"
+                  />
+                ) : (
+                  <div className="w-6 h-6 rounded-full bg-[var(--color-amber)] text-white font-bold text-[0.7rem] flex items-center justify-center shrink-0">
+                    {currentUser.name.charAt(0)}
+                  </div>
+                )}
                 <span className="text-xs font-bold hidden md:inline max-w-[100px] truncate">
                   {currentUser.name}
                 </span>

@@ -44,6 +44,32 @@ public static class ActorGuard
         return ma ?? throw new KhongCoQuyenException("Tài khoản chưa có hồ sơ khách hàng.");
     }
 
+    /// <summary>
+    /// Lấy MaKhachHang cho cả khách hàng, nhân viên và quản trị viên đang hoạt động.
+    /// Nếu nhân viên/quản trị viên chưa có hồ sơ KHACH_HANG thì tự khởi tạo để dùng được Tư vấn AI &amp; Giỏ thuê.
+    /// </summary>
+    public static async Task<long> LayHoacTaoMaKhachHangAsync(ApplicationDbContext ctx, long maTaiKhoan, CancellationToken ct = default)
+    {
+        var tk = await LayTaiKhoanHoatDongAsync(ctx, maTaiKhoan, ct);
+        if (tk.VaiTro != "KhachHang" && tk.VaiTro != "NhanVien" && tk.VaiTro != "QuanTriVien")
+            throw new KhongCoQuyenException("Tài khoản không có quyền sử dụng chức năng này.");
+
+        var ma = await ctx.KhachHangs.Where(k => k.MaTaiKhoan == maTaiKhoan)
+            .Select(k => (long?)k.MaKhachHang).FirstOrDefaultAsync(ct);
+        if (ma.HasValue) return ma.Value;
+
+        var hoTenNhanVien = await ctx.NhanViens.Where(n => n.MaTaiKhoan == maTaiKhoan)
+            .Select(n => n.HoTen).FirstOrDefaultAsync(ct);
+        var newKh = new KhachHang
+        {
+            MaTaiKhoan = tk.MaTaiKhoan,
+            HoTen = !string.IsNullOrWhiteSpace(hoTenNhanVien) ? hoTenNhanVien : (tk.Email?.Split('@')[0] ?? "KhachHang")
+        };
+        ctx.KhachHangs.Add(newKh);
+        await ctx.SaveChangesAsync(ct);
+        return newKh.MaKhachHang;
+    }
+
     /// <summary>Nhân viên/quản trị viên đang hoạt động; nếu có hồ sơ NHAN_VIEN thì phải còn đang làm việc.</summary>
     public static async Task EnsureVanHanhAsync(ApplicationDbContext ctx, long maTaiKhoan, CancellationToken ct = default)
     {
