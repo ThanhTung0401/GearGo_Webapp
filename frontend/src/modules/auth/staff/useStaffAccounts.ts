@@ -292,7 +292,7 @@ export function useStaffAccounts(app: ReturnType<typeof useApp>) {
       await runModalMutation(
         async () => {
           const res = await staffApi.ghiNhanNghiViec(resolveNvId(resigningStaff.id), {
-            ngayNghiViec: new Date(`${resignDate}T00:00:00Z`).toISOString(),
+            ngayNghiViec: resignDate,
             lyDo: resignReason.trim(),
           });
           if (res.congViecCanBanGiao && res.congViecCanBanGiao.length > 0) {

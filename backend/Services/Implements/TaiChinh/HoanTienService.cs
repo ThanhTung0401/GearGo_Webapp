@@ -97,7 +97,7 @@ public partial class HoanTienService : IHoanTienService
     public async Task<HoanTienTheoDonResponse> TongHopTheoDonAsync(long maDonThue, bool laNoiBo, CancellationToken ct = default)
     {
         var rows = await _context.HoanTiens.AsNoTracking()
-            .Where(h => h.ChiTietThanhToanGoc.ThanhToan.MaDonThue == maDonThue).OrderBy(h => h.MaHoanTien)
+            .Where(h => h.ChiTietThanhToanGoc.ThanhToan.MaDonThue == maDonThue).OrderByDescending(h => h.ThoiDiemYeuCau).ThenByDescending(h => h.MaHoanTien)
             .Select(h => new HoanTienRow(h.MaHoanTien, h.MaYeuCau, h.MaChiTietThanhToanGoc, h.ChiTietThanhToanGoc.MucDich,
                 h.MaDoiSoat, h.LoaiHoan, h.SoTien, h.TrangThai, h.ThoiDiemYeuCau, h.ThoiDiemThanhCong, h.LyDo, h.MaGiaoDichHoanCong))
             .ToListAsync(ct);

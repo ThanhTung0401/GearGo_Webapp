@@ -95,7 +95,7 @@ public partial class TruyVanDonThueService : ITruyVanDonThueService
             q = q.Where(d => d.TrangThai == TrangThaiDonThue.SanSangNhan);
 
         var total = await q.CountAsync();
-        var items = await q.OrderBy(d => d.GioNhanDuKien).ThenBy(d => d.MaDonThue)
+        var items = await q.OrderByDescending(d => d.NgayDat).ThenByDescending(d => d.MaDonThue)
             .Skip((trang - 1) * soMoi).Take(soMoi)
             .Select(d => new DonVanHanhTomTatResponse(
                 d.MaDonThue, d.MaDonHienThi, d.MaKhachHang, d.KhachHang.HoTen,

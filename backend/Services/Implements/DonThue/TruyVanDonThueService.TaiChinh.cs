@@ -15,7 +15,7 @@ public partial class TruyVanDonThueService
         var phuPhi = await TaiPhuPhiTongHopAsync(maDonThue, laNoiBo);
 
         var doiSoat = await _context.DoiSoatTienCocs.AsNoTracking()
-            .Where(d => d.MaDonThue == maDonThue).OrderBy(d => d.ThoiDiemLap).ThenBy(d => d.MaDoiSoat)
+            .Where(d => d.MaDonThue == maDonThue).OrderByDescending(d => d.ThoiDiemLap).ThenByDescending(d => d.MaDoiSoat)
             .Select(d => new DoiSoatDonResponse(d.MaDoiSoat, d.MaDoiSoatGoc, d.MaDoiSoatGoc != null, d.LoaiDoiSoat,
                 d.TienCocDuocDoiSoat, d.TongPhuPhiDuocDuyet, d.SoTienCanHoan, d.SoTienCanThuThem, d.TrangThai,
                 d.ThoiDiemLap, d.ThoiDiemChot, d.LyDoDieuChinh))
@@ -77,7 +77,7 @@ public partial class TruyVanDonThueService
     private async Task<PhuPhiTongHopResponse> TaiPhuPhiTongHopAsync(long maDonThue, bool laNoiBo)
     {
         var phiAll = await _context.PhuPhis.AsNoTracking()
-            .Where(p => p.MaDonThue == maDonThue).OrderBy(p => p.MaPhuPhi)
+            .Where(p => p.MaDonThue == maDonThue).OrderByDescending(p => p.ThoiDiemLap).ThenByDescending(p => p.MaPhuPhi)
             .Select(p => new PhuPhiDonResponse(p.MaPhuPhi, p.LoaiPhi, p.SoTien, p.LyDo, p.TrangThaiDuyet, p.TrangThaiTranhChap,
                 p.KetQuaGiaiQuyet, p.MaPhuPhiGoc, p.MaDoiSoat, p.MaPhuPhiGoc != null))
             .ToListAsync();
@@ -108,7 +108,7 @@ public partial class TruyVanDonThueService
             tts.Where(t => t.TrangThai != TrangThaiThanhToan.ThanhCong && t.TrangThai != TrangThaiThanhToan.ThatBai).Sum(t => t.TongSoTien));
 
         var hoanRows = await _context.HoanTiens.AsNoTracking()
-            .Where(h => h.ChiTietThanhToanGoc.ThanhToan.MaDonThue == maDonThue).OrderBy(h => h.MaHoanTien)
+            .Where(h => h.ChiTietThanhToanGoc.ThanhToan.MaDonThue == maDonThue).OrderByDescending(h => h.ThoiDiemYeuCau).ThenByDescending(h => h.MaHoanTien)
             .Select(h => new { h.MaHoanTien, h.MaYeuCau, h.LoaiHoan, h.SoTien, h.TrangThai, h.ThoiDiemThanhCong })
             .ToListAsync();
         var dongHoan = hoanRows.Select(h => new HoanTienTongHop.Dong(h.MaHoanTien, h.MaYeuCau, h.LoaiHoan, h.SoTien, h.TrangThai)).ToList();

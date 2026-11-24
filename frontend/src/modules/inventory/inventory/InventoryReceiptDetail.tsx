@@ -1,4 +1,5 @@
 import { fmt, formatBackendEnum, formatDateTimeVi, type ImportReceipt, type ImportReceiptAdjustment, type Product } from "../../../store";
+import { resolveAssetUrl } from "../../../utils";
 import Pagination from "../../../components/ui/Pagination";
 import { usePagination } from "../../../hooks/usePagination";
 import { Can } from "../../../features/permissions/PermissionsContext";
@@ -183,7 +184,25 @@ export function InventoryReceiptDetail({
                         Lý do: <em>{adj.reason}</em> (Người lập: {adj.createdBy} lúc {formatDateTimeVi(adj.createdAt)})
                       </div>
                       {adj.evidence && (
-                        <div className="text-[#6B7280] text-[0.7rem] mt-0.5">Chứng từ kèm: {adj.evidence}</div>
+                        <div className="text-[#6B7280] text-[0.7rem] mt-1">
+                          <span>Chứng từ kèm: </span>
+                          {/^(\/uploads\/|data:image\/|https?:\/\/.+\.(png|jpe?g|webp|gif))/i.test(adj.evidence.trim()) ? (
+                            <a
+                              href={resolveAssetUrl(adj.evidence.trim())}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="inline-block mt-1"
+                            >
+                              <img
+                                src={resolveAssetUrl(adj.evidence.trim())}
+                                alt="Chứng từ điều chỉnh"
+                                className="w-20 h-14 object-cover rounded border border-gray-200"
+                              />
+                            </a>
+                          ) : (
+                            <span>{adj.evidence}</span>
+                          )}
+                        </div>
                       )}
 
                       {adj.status === "Chờ duyệt" && (

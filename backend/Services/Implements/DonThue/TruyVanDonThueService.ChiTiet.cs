@@ -21,7 +21,7 @@ public partial class TruyVanDonThueService
             .ToListAsync();
 
         var thanhToan = await _context.ThanhToans.AsNoTracking()
-            .Where(t => t.MaDonThue == maDonThue).OrderBy(t => t.ThoiDiemTao).ThenBy(t => t.MaThanhToan)
+            .Where(t => t.MaDonThue == maDonThue).OrderByDescending(t => t.ThoiDiemTao).ThenByDescending(t => t.MaThanhToan)
             .Select(t => new ThanhToanDonResponse(t.MaThanhToan, t.PhuongThuc, t.TrangThai, t.TongSoTien, t.ThoiDiemThanhCong))
             .ToListAsync();
         var daThu = thanhToan.Where(t => t.TrangThai == "ThanhCong").Sum(t => t.TongSoTien);

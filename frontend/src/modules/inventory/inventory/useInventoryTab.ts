@@ -3,7 +3,41 @@ import { useApp } from "../../../context/AppContext";
 import { isRealApiEnabled } from "../../../services/apiClient";
 import { inventoryApi } from "../../../services/api/inventoryApi";
 import { importReceiptApi } from "../../../services/api/importReceiptApi";
-import { type ImportReceipt } from "../../../store";
+import { fmt, type ImportReceipt } from "../../../store";
+
+// Giải mã chuỗi JSON hoặc biên bản sai sót trong chi tiết điều chỉnh kho sang text dễ đọc
+function formatAdjustmentValue(raw: string | undefined, side: "truoc" | "sau", loai?: string): string {
+  if (!raw || !raw.trim()) return "—";
+  const trimmed = raw.trim();
+  let extracted = trimmed;
+
+  if (trimmed.startsWith("{")) {
+    try {
+      const obj = JSON.parse(trimmed) as Record<string, unknown>;
+      const direct = obj[side];
+      if (direct !== undefined && direct !== null && String(direct).trim() !== "") {
+        extracted = String(direct);
+      } else {
+        const fallback = obj.donGiaThucTe ?? obj.donGiaNhap ?? obj.soLuongMoi ?? obj.soLuongThucTe ?? obj.giaTri;
+        if (fallback !== undefined && fallback !== null) extracted = String(fallback);
+      }
+    } catch {
+      // Giữ nguyên chuỗi gốc nếu không phải JSON hợp lệ
+    }
+  } else {
+    const match = trimmed.match(/^\[Biên bản sai sót:\s*(.+)\]$/i);
+    if (match?.[1]) extracted = match[1].trim();
+  }
+
+  const isPrice =
+    loai === "SaiGiaNhap" ||
+    loai?.toLowerCase().includes("giá") ||
+    trimmed.toLowerCase().includes("dongia");
+  if (isPrice && /^-?\d+(\.\d+)?$/.test(extracted)) {
+    return fmt(Number(extracted));
+  }
+  return extracted;
+}
 
 export interface ServerReceiptAdjustment {
   id: string;
@@ -69,7 +103,10 @@ export function useInventoryTab(app: ReturnType<typeof useApp>) {
 
   const filteredReceipts = app.importReceipts
     .slice()
-    .reverse()
+    .sort((a, b) => {
+      const diff = new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+      return diff !== 0 ? diff : Number(b.id) - Number(a.id);
+    })
     .filter((receipt) => {
       const matchSupplier = supplierFilter === "Tất cả" || receipt.supplierName === supplierFilter;
       const matchStatus = statusFilter === "Tất cả" || receipt.status === statusFilter;
@@ -87,12 +124,12 @@ export function useInventoryTab(app: ReturnType<typeof useApp>) {
       return matchSupplier && matchStatus && matchSearch && matchDate;
     });
 
-  // Tự động chọn phiếu đầu tiên sau khi dữ liệu async tải xong
+  // Tự động chọn phiếu mới nhất sau khi dữ liệu async tải xong
   useEffect(() => {
-    if (!selectedId && app.importReceipts.length > 0) {
-      setSelectedId(app.importReceipts[app.importReceipts.length - 1].id);
+    if (!selectedId && filteredReceipts.length > 0) {
+      setSelectedId(filteredReceipts[0].id);
     }
-  }, [selectedId, app.importReceipts]);
+  }, [selectedId, filteredReceipts]);
 
   const selected = app.importReceipts.find((receipt) => receipt.id === selectedId);
 
@@ -122,14 +159,14 @@ export function useInventoryTab(app: ReturnType<typeof useApp>) {
             rawStatus: dc.trangThai,
             type: dc.loaiDieuChinh ?? "Điều chỉnh nhập",
             status: st,
-            previousValue: firstLine?.giaTriTruoc ?? "—",
-            newValue: firstLine?.giaTriSau ?? "—",
+            previousValue: formatAdjustmentValue(firstLine?.giaTriTruoc, "truoc", dc.loaiDieuChinh),
+            newValue: formatAdjustmentValue(firstLine?.giaTriSau, "sau", dc.loaiDieuChinh),
             reason: dc.lyDo ?? "",
             createdBy: dc.tenNguoiLapLucLap ?? `NV#${dc.maNguoiLap}`,
-            createdAt: dc.thoiDiemLap ? new Date(dc.thoiDiemLap).toLocaleString("vi-VN") : "",
+            createdAt: dc.thoiDiemLap ?? "",
             evidence: dc.bangChung?.join(", "),
             reviewedBy: dc.tenNguoiDuyetLucDuyet,
-            reviewedAt: dc.thoiDiemDuyet ? new Date(dc.thoiDiemDuyet).toLocaleString("vi-VN") : undefined,
+            reviewedAt: dc.thoiDiemDuyet ?? undefined,
           };
         })
       );

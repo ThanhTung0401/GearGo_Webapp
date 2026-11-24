@@ -68,7 +68,7 @@ export function useImportReceiptActions(params: Params) {
 
     const receipt: ImportReceipt = { ...input, id: input.id || makeId("RECEIPT"), displayCode };
     const exists = importReceipts.some((item) => item.id === receipt.id);
-    setImportReceipts((current) => (exists ? current.map((item) => (item.id === receipt.id ? receipt : item)) : [...current, receipt]));
+    setImportReceipts((current) => (exists ? current.map((item) => (item.id === receipt.id ? receipt : item)) : [receipt, ...current]));
     return { ok: true, data: receipt };
   };
 

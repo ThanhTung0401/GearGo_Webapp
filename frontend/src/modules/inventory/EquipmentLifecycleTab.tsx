@@ -77,7 +77,7 @@ export function EquipmentTab({ app }: { app: ReturnType<typeof useApp> }) {
           {statuses.map((s) => <option key={s}>{s}</option>)}
         </select>
         <div className="flex gap-2 flex-wrap">
-          {["Sẵn sàng", "Đang thuê", "Đang bảo trì"].map((s) => {
+          {["Sẵn sàng", "Đang thuê", "Đang bảo trì", "Thất lạc", "Ngừng sử dụng"].map((s) => {
             const cnt = app.equipment.filter((e) => e.equipmentStatus === s).length;
             const st = statusStyle[s];
             /* Màu nền/chữ chip đếm lấy động từ bảng màu trạng thái statusStyle */
