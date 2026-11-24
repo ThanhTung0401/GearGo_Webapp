@@ -8,6 +8,11 @@ import { uniqueSuffix } from "../../helpers/testData.js";
  * Mỗi test đảm bảo isolation bằng uniqueSuffix() cho mọi mã.
  */
 test.describe("PH6 Deep - Catalog/Product/Equipment/Maintenance", () => {
+  // R5-PH678: Cap per-test timeout for BE API tests.
+  test.beforeEach(() => {
+    test.setTimeout(30_000);
+  });
+
   // ===== (a) NEGATIVE: Danh mục =====
   test("PH6D-01 - Tạo danh mục thiếu tên -> 400/422", async ({ request }) => {
     const { token } = await loginApi(request, "admin");

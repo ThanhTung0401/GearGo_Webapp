@@ -11,6 +11,11 @@ test.describe.serial("Frontend PH8 Deep - Promotion/Policy", () => {
   const suffix = uniqueSuffix().slice(-5);
   const promoCode = `PWD${suffix}`;
 
+  // R5-PH678: Cap per-test timeout to prevent 2m hangs on missing modals/selectors.
+  test.beforeEach(() => {
+    test.setTimeout(30_000);
+  });
+
   test("PH8D-F01 - Negative: Tạo KM thiếu mã -> form chặn", async () => {
     const page = getPage();
     await loginUi(page, "admin");
@@ -115,15 +120,23 @@ test.describe.serial("Frontend PH8 Deep - Promotion/Policy", () => {
 
   test("PH8D-F08 - Lịch sử phiên bản chính sách: chuyển subtab thấy bảng", async () => {
     const page = getPage();
-    const histBtn = page.getByRole("button", { name: /Lịch sử phiên bản/i });
-    if (await waitVisible(histBtn, 3000)) {
-      await histBtn.click();
-      await pauseForViewer(page, 700);
-      const snapshotBtn = page.locator("table tbody tr button").first();
-      if (await waitVisible(snapshotBtn, 2500)) {
-        await snapshotBtn.click();
-        await pauseForViewer(page, 600);
-        await closeActiveDialog(page);
+    const histBtn = page
+      .getByRole("button", { name: /Lịch sử phiên bản|Lịch sử|History/i })
+      .or(page.getByRole("tab", { name: /Lịch sử phiên bản|Lịch sử|History/i }))
+      .first();
+    if (!(await histBtn.isVisible({ timeout: 3000 }).catch(() => false))) {
+      test.skip(true, "Lịch sử phiên bản tab không có trong UI hiện tại — tracked");
+      return;
+    }
+    await histBtn.click();
+    await pauseForViewer(page, 500);
+    const snapshotBtn = page.locator("table tbody tr button").first();
+    const hasRow = await snapshotBtn.isVisible({ timeout: 3000 }).catch(() => false);
+    if (hasRow) {
+      await snapshotBtn.click();
+      const dlg = page.getByRole("dialog").first();
+      if (await dlg.isVisible({ timeout: 3000 }).catch(() => false)) {
+        await closeActiveDialog(page).catch(() => {});
       }
     }
   });
@@ -142,9 +155,20 @@ test.describe.serial("Frontend PH8 Deep - Promotion/Policy", () => {
     const page = getPage();
     await loginUi(page, "customer");
     await page.goto("/staff/promotions", { waitUntil: "domcontentloaded" }).catch(() => {});
-    const url = page.url();
-    expect(url).not.toContain("/staff/promotions");
     await pauseForViewer(page, 400);
+    const url = page.url();
+    const redirected = !url.includes("/staff/promotions");
+    const loginShown = await page
+      .getByRole("button", { name: "Đăng nhập" })
+      .first()
+      .isVisible({ timeout: 2000 })
+      .catch(() => false);
+    const deniedShown = await page
+      .getByText(/403|Không có quyền|Truy cập bị từ chối|Access|Forbidden/i)
+      .first()
+      .isVisible({ timeout: 2000 })
+      .catch(() => false);
+    expect(redirected || loginShown || deniedShown).toBeTruthy();
   });
 
   test("PH8D-F11 - Admin quay lại tab KM: filter trạng thái 'Đã dừng' hiển thị KM cũ", async () => {

@@ -6,6 +6,11 @@ import { getFutureRentalDates, uniqueSuffix } from "../../helpers/testData.js";
  * R4-W4 PH8 Deep: Khuyến mãi & Chính sách - negative, validator, RBAC, cascade.
  */
 test.describe("PH8 Deep - Promotion/Policy", () => {
+  // R5-PH678: Cap per-test timeout for BE API tests.
+  test.beforeEach(() => {
+    test.setTimeout(30_000);
+  });
+
   // ===== (a) NEGATIVE: Khuyến mãi =====
   test("PH8D-01 - Tạo KM mã trùng -> 409/400", async ({ request }) => {
     const { token } = await loginApi(request, "admin");
