@@ -86,6 +86,13 @@ export function useCustomersTab(app: ReturnType<typeof useApp>) {
   };
 
   useEffect(() => {
+    if (realApi && app.orders.length === 0) {
+      // [CUS-02] Tự nạp danh sách đơn khi F5 thẳng vào tab Khách hàng để không bị thống kê 0 đơn / 0đ
+      void app.refreshOrders?.();
+    }
+  }, [realApi, app.orders.length]);
+
+  useEffect(() => {
     const timer = window.setTimeout(() => {
       void loadCustomerList();
     }, 250);

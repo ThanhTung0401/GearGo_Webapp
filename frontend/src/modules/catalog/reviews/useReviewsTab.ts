@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useApp } from "../../../context/AppContext";
 import { isRealApiEnabled } from "../../../services/apiClient";
 import { reviewApi } from "../../../services/api/reviewApi";
@@ -22,6 +22,7 @@ export function useReviewsTab(app: ReturnType<typeof useApp>) {
 
   // State đồng bộ API đánh giá thật (/api/danh-gia)
   const [apiReviews, setApiReviews] = useState<Review[]>([]);
+  const [totalReviewsCount, setTotalReviewsCount] = useState<number>(0);
   const [reviewLoading, setReviewLoading] = useState(false);
   const [actionBusy, setActionBusy] = useState(false);
   const [reviewError, setReviewError] = useState("");
@@ -38,7 +39,11 @@ export function useReviewsTab(app: ReturnType<typeof useApp>) {
         trangThai: statusFilter === "active" ? "HienThi" : statusFilter === "hidden" ? "BiAn" : undefined,
         soMoiTrang: 50,
       });
-      setApiReviews((res.items ?? []).map(mapDanhGiaToReview));
+      const items = (res.items ?? []).map(mapDanhGiaToReview);
+      setApiReviews(items);
+      if (statusFilter === "all") {
+        setTotalReviewsCount(Number(res.totalItems ?? items.length));
+      }
     } catch (err) {
       setReviewError(err instanceof Error ? err.message : "Không thể tải danh sách đánh giá từ máy chủ.");
     } finally {
@@ -76,7 +81,7 @@ export function useReviewsTab(app: ReturnType<typeof useApp>) {
       setReviewSuccess("");
       try {
         await reviewApi.adminAn(reviewId, hideReason);
-        await Promise.all([loadReviews(), app.refreshReviews?.()]);
+        await Promise.all([loadReviews(), app.refreshReviews?.(), app.refreshCatalog?.()]);
         setReviewSuccess(`Đã ẩn đánh giá #${hideModalReview.id} với lý do vi phạm.`);
         setHideModalReview(null);
       } catch (err) {
@@ -133,7 +138,7 @@ export function useReviewsTab(app: ReturnType<typeof useApp>) {
       setReviewSuccess("");
       try {
         await reviewApi.adminKhoiPhuc(reviewId, "Mở hiển thị lại đánh giá đã kiểm duyệt");
-        await Promise.all([loadReviews(), app.refreshReviews?.()]);
+        await Promise.all([loadReviews(), app.refreshReviews?.(), app.refreshCatalog?.()]);
         setReviewSuccess(`Đã khôi phục hiển thị đánh giá #${rev.id}.`);
       } catch (err) {
         setReviewError(err instanceof Error ? err.message : "Không thể khôi phục hiển thị đánh giá.");
@@ -189,6 +194,7 @@ export function useReviewsTab(app: ReturnType<typeof useApp>) {
     setReplyError,
     loadReviews,
     sourceReviews,
+    totalCount: realApi ? (totalReviewsCount || sourceReviews.length) : app.reviews.length,
     filtered,
     handleConfirmHide,
     handleConfirmReply,

@@ -175,13 +175,12 @@ export function HandoverChecklistPanel({
                   "https://images.unsplash.com/photo-1526178613658-3f1622045557?w=200&auto=format&fit=crop&q=60",
                 ];
                 if (setEvidencePhotos) {
-                  setEvidencePhotos((prev) => {
-                    const idx = Math.max(0, prev.length - 2);
-                    const next = seeds[idx % seeds.length];
-                    const updated = [...prev, next];
-                    setPhotoNotice(`Đã thêm 1 ảnh bằng chứng (hiện có ${updated.length} ảnh).`);
-                    return updated;
-                  });
+                  // Tính trước ảnh mới & cập nhật notice bên ngoài updater của setEvidencePhotos để tránh setState lồng khi render
+                  const idx = Math.max(0, evidencePhotos.length - 2);
+                  const next = seeds[idx % seeds.length];
+                  const nextLen = evidencePhotos.length + 1;
+                  setEvidencePhotos((prev) => [...prev, next]);
+                  setPhotoNotice(`Đã thêm 1 ảnh bằng chứng (hiện có ${nextLen} ảnh).`);
                 } else {
                   setPhotoNotice("Đã chụp thêm 1 ảnh bằng chứng thiết bị tại quầy.");
                 }

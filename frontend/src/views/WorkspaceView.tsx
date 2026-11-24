@@ -89,7 +89,8 @@ export default function WorkspaceView() {
       // Nếu id là displayCode (không phải số), tìm backendId tương ứng trong app.orders
       const matched = app.orders.find((o) => o.id === id || o.displayCode === id);
       const numId = matched?.backendId ?? Number(id);
-      if (!Number.isFinite(numId)) return;
+      // Bỏ qua nếu ID rỗng (Number("") === 0) hoặc không hợp lệ để tránh gọi /xu-ly/0 gây 404
+      if (!Number.isFinite(numId) || numId <= 0) return;
       try {
         const dto = await orderApi.layChiTietVanHanh(numId);
         app.upsertOrder?.(mapDonVanHanhChiTietToOrder(dto));

@@ -24,6 +24,7 @@ public partial class DanhGiaService
 
     public async Task<Result<DanhGiaResponse>> AnDanhGiaAsync(long maDanhGia, AnDanhGiaRequest request, long maTaiKhoanAdmin)
     {
+        // Chỉ Quản trị viên được ẩn đánh giá (khớp hợp đồng ApiM9M10AuthTests)
         await ActorGuard.EnsureQuanTriVienAsync(_context, maTaiKhoanAdmin);
         var maNhanVien = await ActorGuard.LayMaNhanVienAsync(_context, maTaiKhoanAdmin);
 
@@ -56,6 +57,7 @@ public partial class DanhGiaService
 
     public async Task<Result<DanhGiaResponse>> KhoiPhucDanhGiaAsync(long maDanhGia, KhoiPhucDanhGiaRequest request, long maTaiKhoanAdmin)
     {
+        // Chỉ Quản trị viên được khôi phục đánh giá (khớp hợp đồng ApiM9M10AuthTests)
         await ActorGuard.EnsureQuanTriVienAsync(_context, maTaiKhoanAdmin);
 
         var danhGia = await QueryDanhGiaKemChiTiet().FirstOrDefaultAsync(d => d.MaDanhGia == maDanhGia);

@@ -13,7 +13,7 @@ export function ReviewsTab({ app }: { app: ReturnType<typeof useApp> }) {
     <div>
       <ReviewsFilterAndList
         realApi={vm.realApi}
-        totalCount={vm.sourceReviews.length}
+        totalCount={vm.totalCount}
         reviewLoading={vm.reviewLoading}
         actionBusy={vm.actionBusy}
         reviewError={vm.reviewError}

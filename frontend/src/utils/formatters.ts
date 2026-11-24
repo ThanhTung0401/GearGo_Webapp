@@ -60,6 +60,14 @@ export const formatDateTimeVi = (value?: string | Date | null, fallback = "—")
 };
 
 /**
+ * Thay thế mọi chuỗi ngày giờ ISO 8601 nhúng trong văn bản thành định dạng tiếng Việt
+ */
+export const formatIsoDatesInText = (text: string): string =>
+  text.replace(/\b\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z?\b/g, (iso) =>
+    formatDateTimeVi(iso, iso)
+  );
+
+/**
  * Ánh xạ nhãn tiếng Việt cho các mã enum backend tránh hiển thị chuỗi thô lên UI
  */
 const BACKEND_ENUM_LABELS: Record<string, string> = {

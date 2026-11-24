@@ -6,7 +6,7 @@ import type { AppNotification, AuditLogEntry, Review } from "../../types";
 import type { NhatKyThaoTacBackend } from "../api/auditApi";
 import type { ThongBaoBackend } from "../api/notificationApi";
 import type { DanhGiaBackend } from "../api/reviewApi";
-import { formatBackendEnum } from "../../utils/formatters";
+import { formatBackendEnum, formatIsoDatesInText } from "../../utils/formatters";
 
 export function mapDanhGiaToReview(dg: DanhGiaBackend): Review {
   const hasReply = Boolean(dg.phanHoiCuaHang);
@@ -120,7 +120,7 @@ export function mapNhatKyToAuditLog(nk: NhatKyThaoTacBackend): AuditLogEntryWith
     action: actionLabel,
     targetEntity: entityLabel,
     targetId: nk.maDoiTuong ?? "-",
-    detail: summaryParts.join(" | ") || actionLabel,
+    detail: formatIsoDatesInText(summaryParts.join(" | ") || actionLabel),
     thamChieuUrl: nk.thamChieuUrl,
     duLieuTruoc: nk.duLieuTruoc,
     duLieuSau: nk.duLieuSau,
