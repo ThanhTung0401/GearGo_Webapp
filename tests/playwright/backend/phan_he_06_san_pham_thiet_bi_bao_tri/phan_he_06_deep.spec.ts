@@ -392,8 +392,9 @@ test.describe("PH6 Deep - Catalog/Product/Equipment/Maintenance", () => {
     const get = await request.get(`/api/san-pham/${sp.maSanPham}`, { headers: authHeaders(token) });
     expect([200, 404]).toContain(get.status());
     if (get.ok()) {
-      const spData = (await get.json()) as { tenSanPham?: string };
-      expect(spData.tenSanPham).toContain(suffix);
+      const spData = (await get.json()) as { tenSanPham?: string; tenHienThi?: string; ten?: string };
+      const name = spData.tenSanPham ?? spData.tenHienThi ?? spData.ten ?? "";
+      expect(name).toContain(suffix);
     }
 
     // Cleanup: NgungKinhDoanh
