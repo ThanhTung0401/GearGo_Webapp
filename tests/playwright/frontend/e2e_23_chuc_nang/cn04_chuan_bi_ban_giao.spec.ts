@@ -112,8 +112,20 @@ test.describe.serial("CN 04 - Chuẩn bị & Bàn giao: Soạn hàng, Gán seria
         await checkboxes.nth(i).check();
       }
     }
-    await page.getByRole("button", { name: /Chụp thêm ảnh bằng chứng thiết bị/i }).click();
-    await expect(page.getByRole("status").filter({ hasText: /ảnh bằng chứng/i })).toBeVisible({ timeout: 5000 });
+    // [HO-08 c8eaaa2] Nút "📷+" đã đổi thành <label> bao <input type="file"> ẩn.
+    // Upload buffer PNG 1x1 trực tiếp qua input để không mở file picker (gây timeout 2.0m).
+    const evidenceFileInput = page.locator("main input[type='file'][accept*='image']").first();
+    await expect(evidenceFileInput).toBeAttached({ timeout: 5000 });
+    const tinyPng = Buffer.from(
+      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=",
+      "base64",
+    );
+    await evidenceFileInput.setInputFiles({
+      name: "evidence-e2e.png",
+      mimeType: "image/png",
+      buffer: tinyPng,
+    });
+    await expect(page.getByRole("status").filter({ hasText: /ảnh bằng chứng/i })).toBeVisible({ timeout: 8000 });
     await page.getByPlaceholder(/Ghi nhận phụ kiện dây đai/i).fill("Đủ phụ kiện, kiểm tra ok E2E CN04");
     await saveEvidence(page, "cn04_checklist_ban_giao");
 
