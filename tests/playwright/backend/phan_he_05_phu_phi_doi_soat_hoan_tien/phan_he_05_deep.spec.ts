@@ -13,7 +13,7 @@ import { API_URL } from "../../helpers/testData.js";
  *  (c) RBAC per UC: staff vs admin cho Phi.Duyet >500k, DoiSoat.Chot, PhieuNhanTra.Chot.
  *  (e) F5: giữ bảng tính preview, không mất cọc sau reload.
  */
-test.describe.serial("[PH5-DEEP] Phụ phí, Đối soát cọc & Hoàn tiền (negative + RBAC + F5 + cascade)", () => {
+test.describe("[PH5-DEEP] Phụ phí, Đối soát cọc & Hoàn tiền (negative + RBAC + F5 + cascade)", () => {
   test.setTimeout(90_000);
 
   async function getAdmin(request: APIRequestContext) {
