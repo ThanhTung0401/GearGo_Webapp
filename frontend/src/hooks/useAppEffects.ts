@@ -21,6 +21,7 @@ import type {
   Supplier,
 } from "../store";
 import { parseServerTimestamp } from "../modules/orders/customerUtils";
+import { getAuthToken } from "../services/apiClient";
 import { PREFS_STORAGE_KEY, REAL_MODE, STORAGE_KEY, type PersistedState } from "./appStateStorage";
 import type { CurrentUserProfile } from "./useAppStoreState";
 
@@ -163,7 +164,26 @@ export function useAppEffects(params: UseAppEffectsParams) {
 
   useEffect(() => {
     if (REAL_MODE) {
-      localStorage.setItem(PREFS_STORAGE_KEY, JSON.stringify({ pickupDate, returnDate, pickupHour, returnHour }));
+      let existingGuestCart: CartItem[] | undefined;
+      try {
+        const raw = localStorage.getItem(PREFS_STORAGE_KEY);
+        if (raw) existingGuestCart = (JSON.parse(raw) as { cart?: CartItem[] }).cart;
+      } catch {
+        existingGuestCart = undefined;
+      }
+      // Khi chưa đăng nhập, lưu giỏ tạm khách vãng lai vào localStorage để không mất lúc chuyển sang đăng nhập.
+      // Khi đã có token, giữ nguyên guestCart tạm cho tới khi refreshCart() gộp lên backend và xóa đi.
+      const guestCart = !getAuthToken() ? cart : existingGuestCart;
+      localStorage.setItem(
+        PREFS_STORAGE_KEY,
+        JSON.stringify({
+          pickupDate,
+          returnDate,
+          pickupHour,
+          returnHour,
+          ...(guestCart && guestCart.length > 0 ? { cart: guestCart } : {}),
+        })
+      );
       return;
     }
     const state: PersistedState = {

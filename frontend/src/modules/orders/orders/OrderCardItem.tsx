@@ -1,4 +1,4 @@
-import { fmt, statusColors, type Order } from "../../../store";
+import { fmt, formatDateTimeVi, statusColors, type Order } from "../../../store";
 
 interface OrderCardItemProps {
   order: Order;
@@ -27,13 +27,13 @@ export function OrderCardItem({
         <div>
           <div className="flex items-center gap-2">
             <span className="font-mono text-xs text-moss font-bold">{o.displayCode || o.id}</span>
-            <span className="cp-order-created">· Tạo lúc: {o.createdAt}</span>
+            <span className="cp-order-created">· Tạo lúc: {formatDateTimeVi(o.createdAt)}</span>
           </div>
           <div className="font-bold text-bark my-1 text-sm">
             {o.items.length > 0 ? o.items.map((i) => `${i.productName} ×${i.qty}`).join(", ") : `Đơn thuê ${o.displayCode || o.id}`}
           </div>
           <div className="text-xs text-gray-500">
-            📅 Lịch nhận - trả: <strong>{o.pickupTime}</strong> → <strong>{o.returnTime}</strong>
+            📅 Lịch nhận - trả: <strong>{formatDateTimeVi(o.pickupTime)}</strong> → <strong>{formatDateTimeVi(o.returnTime)}</strong>
           </div>
         </div>
 

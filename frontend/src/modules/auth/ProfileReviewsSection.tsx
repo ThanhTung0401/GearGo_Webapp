@@ -1,4 +1,4 @@
-import type { Order } from "../../store";
+import { formatDateVi, type Order } from "../../store";
 import { useProfileReviews } from "./profile/useProfileReviews";
 import { ReviewExistingBlock } from "./profile/ReviewExistingBlock";
 import { ReviewComposerForm } from "./profile/ReviewComposerForm";
@@ -78,7 +78,7 @@ export function ProfileReviewsSection({
                     <div>
                       <strong className="font-mono text-forest">{el.maDonHienThi || el.maDonThue}</strong>
                       <span className="text-xs text-gray-400 ml-3">
-                        Hoàn tất: {completedDate ? new Date(completedDate).toLocaleDateString("vi-VN") : "-"}
+                        Hoàn tất: {formatDateVi(completedDate, "-")}
                       </span>
                     </div>
                     <span className="badge badge-success">Đã hoàn tất</span>
@@ -131,7 +131,7 @@ export function ProfileReviewsSection({
                 <div>
                   <strong className="font-mono text-forest">{order.id}</strong>
                   <span className="text-xs text-gray-400 ml-3">
-                    Hoàn tất: {order.reconciledAt || order.createdAt}
+                    Hoàn tất: {formatDateVi(order.reconciledAt || order.createdAt)}
                   </span>
                 </div>
                 <span className="badge badge-success">Đã hoàn tất</span>

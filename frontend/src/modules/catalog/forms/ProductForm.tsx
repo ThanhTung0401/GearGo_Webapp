@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useApp } from "../../../context/AppContext";
 import { isRealApiEnabled } from "../../../services/apiClient";
+import { resolveAssetUrl, toRelativeAssetUrl } from "../../../utils/formatters";
 
 import { catalogApi, type HinhAnhSanPhamBackend } from "../../../services/api/catalogApi";
 
@@ -20,8 +21,13 @@ export function ProductForm({ app, product, onClose }: { app: ReturnType<typeof 
     (product?.status === "inactive" ? "TamNgung" : "DangKinhDoanh")
   );
   const [specText, setSpecText] = useState(Object.entries(form.specifications ?? {}).map(([key, value]) => `${key}: ${value}`).join("\n"));
-  const [imageText, setImageText] = useState((form.images?.length ? form.images : [form.image]).filter(Boolean).join("\n"));
-  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [imageText, setImageText] = useState(
+    (form.images?.length ? form.images : [form.image])
+      .filter(Boolean)
+      .map((u) => toRelativeAssetUrl(u))
+      .join("\n")
+  );
+  const [uploadFiles, setUploadFiles] = useState<File[]>([]);
   const [serverImages, setServerImages] = useState<HinhAnhSanPhamBackend[]>([]);
   const [deletingImgId, setDeletingImgId] = useState<number | null>(null);
   const [error, setError] = useState("");
@@ -45,7 +51,13 @@ export function ProductForm({ app, product, onClose }: { app: ReturnType<typeof 
     try {
       await catalogApi.adminXoaHinhAnh(maHinhAnh);
       setServerImages((prev) => prev.filter((img) => img.maHinhAnh !== maHinhAnh));
-      setImageText((prev) => prev.split("\n").filter((u) => u.trim() !== duongDan).join("\n"));
+      const targetRel = toRelativeAssetUrl(duongDan);
+      setImageText((prev) =>
+        prev
+          .split("\n")
+          .filter((u) => toRelativeAssetUrl(u) !== targetRel)
+          .join("\n")
+      );
       await app.refreshCatalog?.();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Không thể xóa hình ảnh sản phẩm.");
@@ -66,7 +78,7 @@ export function ProductForm({ app, product, onClose }: { app: ReturnType<typeof 
     if (!form.name.trim()) return setError("Tên sản phẩm không được để trống.");
 
     const specifications = Object.fromEntries(specText.split("\n").map((line) => line.split(":")).filter((parts) => parts.length >= 2).map(([key, ...value]) => [key.trim(), value.join(":").trim()]));
-    const images = imageText.split("\n").map((url) => url.trim()).filter(Boolean);
+    const images = imageText.split("\n").map((url) => toRelativeAssetUrl(url)).filter(Boolean);
 
     if (isRealApiEnabled()) {
       const catId = Number(form.categoryId) || (app.categories[0] ? Number(app.categories[0].id) : NaN);
@@ -120,11 +132,13 @@ export function ProductForm({ app, product, onClose }: { app: ReturnType<typeof 
           form.id = String(created.maSanPham);
         }
 
-        // UC49: Upload hình ảnh qua Multipart Form Data nếu người dùng chọn tệp
-        if (uploadFile && savedSpId) {
-          const imgRes = await catalogApi.adminUploadHinhAnh(savedSpId, uploadFile);
-          if (imgRes && imgRes.duongDan) {
-            images.unshift(imgRes.duongDan);
+        // UC49: Upload nhiều hình ảnh qua Multipart Form Data nếu người dùng chọn tệp
+        if (uploadFiles.length > 0 && savedSpId) {
+          for (const file of uploadFiles) {
+            const imgRes = await catalogApi.adminUploadHinhAnh(savedSpId, file);
+            if (imgRes && imgRes.duongDan) {
+              images.unshift(imgRes.duongDan);
+            }
           }
         }
       } catch (err) {
@@ -174,23 +188,41 @@ export function ProductForm({ app, product, onClose }: { app: ReturnType<typeof 
       
       {/* Upload file hình ảnh Multipart Form Data (UC49) */}
       <label className="adm-label">
-        Tải ảnh từ máy tính (Multipart Form Data - UC49)
+        Tải ảnh từ máy tính (hỗ trợ chọn nhiều ảnh - UC49)
         <input
           type="file"
+          multiple
           accept="image/jpeg,image/png,image/webp"
           onChange={(e) => {
-            const file = e.target.files?.[0];
-            if (file) {
-              if (file.size > 5 * 1024 * 1024) {
-                setError("Dung lượng file ảnh vượt quá 5MB.");
-                return;
-              }
-              setUploadFile(file);
+            const files = Array.from(e.target.files ?? []);
+            if (files.length === 0) return;
+            const invalid = files.find((f) => f.size > 5 * 1024 * 1024);
+            if (invalid) {
+              setError(`Ảnh "${invalid.name}" vượt quá giới hạn 5MB.`);
+              return;
             }
+            setError("");
+            setUploadFiles((prev) => [...prev, ...files]);
+            e.target.value = "";
           }}
           className="adm-field"
         />
-        {uploadFile && <span className="adm-hint-text font-semibold text-[var(--color-forest)]">✓ Đã chọn file: {uploadFile.name} ({(uploadFile.size / 1024).toFixed(1)} KB)</span>}
+        {uploadFiles.length > 0 && (
+          <div className="flex flex-wrap gap-2 mt-1">
+            {uploadFiles.map((file, idx) => (
+              <span key={`${file.name}-${idx}`} className="adm-hint-text font-semibold text-[var(--color-forest)] inline-flex items-center gap-1">
+                ✓ {file.name} ({(file.size / 1024).toFixed(1)} KB)
+                <button
+                  type="button"
+                  onClick={() => setUploadFiles((prev) => prev.filter((_, i) => i !== idx))}
+                  className="text-red-600 hover:underline ml-1"
+                >
+                  ×
+                </button>
+              </span>
+            ))}
+          </div>
+        )}
       </label>
 
       {serverImages.length > 0 && (
@@ -201,7 +233,7 @@ export function ProductForm({ app, product, onClose }: { app: ReturnType<typeof 
           <div className="flex flex-wrap gap-2">
             {serverImages.map((img) => (
               <div key={img.maHinhAnh} className="adm-prod-server-img-card">
-                <img src={img.duongDan} alt="Ảnh sản phẩm" className="adm-prod-server-img" />
+                <img src={resolveAssetUrl(img.duongDan)} alt="Ảnh sản phẩm" className="adm-prod-server-img" />
                 {img.laAnhChinh && (
                   <span className="adm-prod-primary-tag">
                     Chính
@@ -222,7 +254,7 @@ export function ProductForm({ app, product, onClose }: { app: ReturnType<typeof 
       )}
 
       <label className="adm-label">URL hình ảnh <span className="adm-label-note">Mỗi dòng một URL; dòng đầu là ảnh chính.</span><textarea rows={3} value={imageText} onChange={(e) => setImageText(e.target.value)} placeholder="https://..." className="adm-field" /></label>
-      {imageText.split("\n")[0]?.trim() && <img src={imageText.split("\n")[0].trim()} alt="Xem trước sản phẩm" className="adm-prod-preview-img" />}
+      {imageText.split("\n")[0]?.trim() && <img src={resolveAssetUrl(imageText.split("\n")[0].trim())} alt="Xem trước sản phẩm" className="adm-prod-preview-img" />}
       <div className="adm-card--parchment text-xs">Giá thuê: <strong>{fmt(form.pricePerDay)}</strong> · Cọc: <strong>{fmt(form.deposit)}</strong> · Bồi thường: <strong>{fmt(form.compensation)}</strong></div>
       {error && <div role="alert" className="adm-alert is-error-solid adm-alert--block mb-0">{error}</div>}
       <FormActions onClose={onClose} loading={loading} />

@@ -1,4 +1,4 @@
-import { fmt, type Order, type Surcharge } from "../../../store";
+import { fmt, formatDateTimeVi, type Order, type Surcharge } from "../../../store";
 import type { DonChiTietBackend, PhieuBanGiaoKhachBackend } from "../../../services/api";
 import type { ExtraPayStatus, ViewingRecordType } from "./useMyOrders";
 import { OrderSurchargesBlock } from "./OrderSurchargesBlock";
@@ -216,7 +216,7 @@ export function OrderDetailPanel({
                   <div className="cp-order-handover-row">
                     <span>Trạng thái: <strong>{bg.trangThai}</strong></span>
                     {bg.thoiDiemGiaoThucTe && (
-                      <span>{new Date(bg.thoiDiemGiaoThucTe).toLocaleString("vi-VN")}</span>
+                      <span>{formatDateTimeVi(bg.thoiDiemGiaoThucTe)}</span>
                     )}
                   </div>
                   {bg.chiTiet?.length > 0 && (
@@ -263,7 +263,7 @@ export function OrderDetailPanel({
           {detail.statusHistory.map((h, i) => (
             <div key={i} className="flex items-center gap-2 text-xs">
               <span className="badge badge-neutral text-xs cp-order-history-badge">{h.status}</span>
-              <span className="text-gray-400 text-xs">{h.at} · {h.by}</span>
+              <span className="text-gray-400 text-xs">{formatDateTimeVi(h.at)} · {h.by}</span>
             </div>
           ))}
         </div>

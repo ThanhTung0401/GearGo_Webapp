@@ -37,8 +37,18 @@ test.describe.serial("CN 01 - Tổng quan ca: KPI, Cảnh báo quá hạn & Đi�
     const prepKpiText = await page.locator(".staff-kpi-card").filter({ hasText: "Cần chuẩn bị" }).first().innerText();
     expect(prepKpiText, "KPI Cần chuẩn bị phải hiển thị giá trị >= 1").toMatch(/[1-9]\d*/);
 
-    // 2. Đối chiếu chéo 1: Đơn vừa tạo phải hiển thị trong mục "Đơn cần chuẩn bị & nhận trả hôm nay"
-    const seededRow = page.locator("main .so-overview-order-row").filter({ hasText: seeded.displayCode }).first();
+    // 2. Đối chiếu chéo 1: Đơn vừa tạo phải hiển thị trong mục "Đơn cần chuẩn bị & nhận trả hôm nay" (có phân trang)
+    let seededRow = page.locator("main .so-overview-order-row").filter({ hasText: seeded.displayCode }).first();
+    if (!(await waitVisible(seededRow, 2000))) {
+      for (let p = 2; p <= 8; p++) {
+        const pBtn = page.locator("main").getByRole("button", { name: String(p), exact: true }).first();
+        if (!(await waitVisible(pBtn, 800))) break;
+        await pBtn.click();
+        await page.waitForTimeout(250);
+        seededRow = page.locator("main .so-overview-order-row").filter({ hasText: seeded.displayCode }).first();
+        if (await waitVisible(seededRow, 1000)) break;
+      }
+    }
     await expect(seededRow, `Đơn ${seeded.displayCode} phải xuất hiện trên Tổng quan ca`).toBeVisible({ timeout: 10_000 });
     await expect(seededRow).toContainText("Đã xác nhận");
     await saveEvidence(page, "cn01_tong_quan_ca_7_kpi");

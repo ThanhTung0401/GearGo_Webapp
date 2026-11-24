@@ -11,6 +11,28 @@ const env = (import.meta as unknown as { env?: Record<string, string | undefined
 export const API_BASE = (env.VITE_API_URL ?? "").replace(/\/+$/, "");
 export const TOKEN_KEY = "geargo-token";
 
+/**
+ * Ghép API_BASE cho các đường dẫn tài nguyên tương đối từ Backend (/uploads/...) để tránh 404 trên Vite dev server.
+ */
+export function resolveAssetUrl(url: string | undefined | null): string {
+  if (!url) return "";
+  if (url.startsWith("/uploads/")) {
+    return API_BASE ? `${API_BASE}${url}` : url;
+  }
+  return url;
+}
+
+/**
+ * Chuẩn hóa URL đã ghép API_BASE về dạng tương đối (/uploads/...) trước khi gửi lại Backend, tránh trùng lặp bản ghi.
+ */
+export function toRelativeAssetUrl(url: string): string {
+  const trimmed = url.trim();
+  if (API_BASE && trimmed.startsWith(`${API_BASE}/uploads/`)) {
+    return trimmed.slice(API_BASE.length);
+  }
+  return trimmed;
+}
+
 export function isRealApiEnabled(): boolean {
   return Boolean(API_BASE) && env.VITE_USE_MOCK !== "true";
 }

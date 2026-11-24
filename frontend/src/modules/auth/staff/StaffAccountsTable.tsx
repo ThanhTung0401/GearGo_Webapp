@@ -1,4 +1,4 @@
-import type { StaffAccount } from "../../../store";
+import { formatDateVi, type StaffAccount } from "../../../store";
 import Icon from "../../../components/Icon";
 import { Can } from "../../../features/permissions/PermissionsContext";
 import { Permissions } from "../../../constants/permissions";
@@ -99,7 +99,7 @@ export function StaffAccountsTable({
                   </td>
                   <td>
                     <div className="font-bold text-[0.88rem]">{s.name}</div>
-                    <div className="adm-cell-sub">Tạo ngày: {s.createdAt}</div>
+                    <div className="adm-cell-sub">Tạo ngày: {formatDateVi(s.createdAt)}</div>
                   </td>
                   <td className="adm-cell-mono text-[0.82rem]">
                     @{s.username}

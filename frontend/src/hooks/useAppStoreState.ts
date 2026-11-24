@@ -152,7 +152,8 @@ export function useAppStoreState() {
     const list = persistedState?.orders ?? INITIAL_ORDERS;
     return list.some((o) => o.status === "Hoàn tất") ? list : [...list, DEMO_ORDER_COMPLETED];
   });
-  const [cart, setCart] = useState<CartItem[]>(REAL_MODE ? [] : (persistedState?.cart ?? []));
+  // Khôi phục giỏ tạm từ localStorage cho khách vãng lai ở cả chế độ Real API
+  const [cart, setCart] = useState<CartItem[]>(persistedState?.cart ?? []);
   const [importReceipts, setImportReceipts] = useState<ImportReceipt[]>(() =>
     REAL_MODE ? [] : normalizeDemoImportReceipts(suppliers)
   );

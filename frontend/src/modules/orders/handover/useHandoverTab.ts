@@ -102,6 +102,22 @@ export function useHandoverTab(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedOrder?.id]);
 
+  // Đồng bộ lại assignments khi hydrateOperationalOrder điền assignedEquipment bất đồng bộ (hữu ích khi nhân viên chỉ có quyền BanGiao.*).
+  useEffect(() => {
+    if (!selectedOrder || selectedOrder.assignedEquipment.length === 0) return;
+    setAssignments((prev) => {
+      if (Object.keys(prev).length > 0) return prev;
+      const hydrated: Record<string, string[]> = {};
+      selectedOrder.items.forEach((item) => {
+        const found = selectedOrder.assignedEquipment
+          .filter((ae) => ae.productId === item.productId)
+          .map((ae) => ae.equipmentId);
+        if (found.length > 0) hydrated[item.productId] = found;
+      });
+      return Object.keys(hydrated).length > 0 ? hydrated : prev;
+    });
+  }, [selectedOrder?.id, selectedOrder?.assignedEquipment]);
+
   // [HO-05][HO-06] Chỉ đổi subTab và tải draftBbbg khi status thay đổi - KHÔNG reset form.
   useEffect(() => {
     if (!selectedOrder) return;

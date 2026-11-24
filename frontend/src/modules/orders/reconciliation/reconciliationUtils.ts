@@ -14,14 +14,17 @@ export function computeReconciliationMetrics(
 ) {
   const effectiveSurcharges = realApi && surchargesBackend ? surchargesBackend : order.surcharges;
 
-  // 1. Kiểm tra tiền điều kiện & dòng sự kiện phụ 1.1
+  const isOrderCompleted = order.status === "Hoàn tất" || doiSoatBackend?.trangThai === "DaChot";
+
+  // 1. Kiểm tra tiền điều kiện & dòng sự kiện phụ 1.1 (bỏ qua nếu đơn đã chốt/hoàn tất để tránh hiện hộp chặn đỏ)
   const debtEquipment = order.assignedEquipment.filter((ae) => !ae.returnedAt);
   const pendingSurcharges = effectiveSurcharges.filter((s) => s.status === "Chờ duyệt");
   const disputedSurcharges = effectiveSurcharges.filter((s) => s.status === "Tranh chấp");
   const isBlocked =
-    realApi && previewBackend
+    !isOrderCompleted &&
+    (realApi && previewBackend
       ? !previewBackend.duDieuKien || pendingSurcharges.length > 0 || disputedSurcharges.length > 0
-      : debtEquipment.length > 0 || pendingSurcharges.length > 0 || disputedSurcharges.length > 0;
+      : debtEquipment.length > 0 || pendingSurcharges.length > 0 || disputedSurcharges.length > 0);
 
   // 2. Tính toán căn cứ bảng đối soát (ưu tiên số liệu máy chủ khi bật realApi)
   const depositCollected = realApi
@@ -55,7 +58,6 @@ export function computeReconciliationMetrics(
   const netDifference = refundAmount > 0 ? refundAmount : -extraAmount;
   const isBalanced = refundAmount === 0 && extraAmount === 0;
 
-  const isOrderCompleted = order.status === "Hoàn tất" || doiSoatBackend?.trangThai === "DaChot";
   const isConfirmed =
     Boolean(order.reconciliation?.confirmedAt) ||
     doiSoatBackend?.trangThai === "DaXacNhan" ||

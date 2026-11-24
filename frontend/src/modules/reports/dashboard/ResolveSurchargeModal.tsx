@@ -1,4 +1,4 @@
-import { fmt, formatDateTimeVi, type Order, type Surcharge } from "../../../store";
+import { fmt, formatBackendEnum, formatDateTimeVi, type Order, type Surcharge } from "../../../store";
 
 interface ResolveSurchargeModalProps {
   resolvingSurcharge: { order: Order; surcharge: Surcharge };
@@ -31,6 +31,14 @@ export function ResolveSurchargeModal({
   onClose,
 }: ResolveSurchargeModalProps) {
   const { order, surcharge } = resolvingSurcharge;
+  const latestReturnReceipt = order.returnReceipts?.[order.returnReceipts.length - 1];
+  const returnAt = order.returnedAt || latestReturnReceipt?.returnedAt;
+  const relatedEquipmentLabel =
+    !surcharge.equipmentId || surcharge.equipmentId === "-"
+      ? "Phụ phí cấp đơn (không gắn thiết bị riêng)"
+      : order.assignedEquipment.find((ae) => ae.equipmentId === surcharge.equipmentId)?.equipmentDisplayCode ||
+        surcharge.equipmentId;
+
   // Truy xuất tình trạng thiết bị ở biên bản bàn giao và phiếu nhận trả để đối chiếu
   const beforeCondition =
     order.handoverRecord?.items.find((i) => i.equipmentId === surcharge.equipmentId)?.condition ||
@@ -48,7 +56,7 @@ export function ResolveSurchargeModal({
               UC5.3: DUYỆT & XỬ LÝ TRANH CHẤP PHỤ PHÍ
             </span>
             <h3 className="modal-title font-bold text-lg text-bark mt-1">
-              Hồ sơ xử lý phụ phí: {surcharge.type}
+              Hồ sơ xử lý phụ phí: {formatBackendEnum(surcharge.type)}
             </h3>
           </div>
           <button type="button" onClick={onClose} className="btn btn-ghost btn-sm text-xl">
@@ -62,7 +70,7 @@ export function ResolveSurchargeModal({
             {/* [DB-02] Dùng displayCode (DT-...) thay vì id số thô */}
             <div>Đơn hàng: <strong>{order.displayCode || order.id}</strong></div>
             <div>Khách hàng: <strong>{order.customerName}</strong> ({order.customerPhone})</div>
-            <div>Thiết bị liên quan: <strong className="font-mono text-forest">{surcharge.equipmentId}</strong></div>
+            <div>Thiết bị liên quan: <strong className="font-mono text-forest">{relatedEquipmentLabel}</strong></div>
             <div>Người lập đề xuất: <strong>{surcharge.createdBy}</strong></div>
           </div>
           <div className="pt-2 border-t border-dashed border-[var(--color-bone)]">
@@ -96,8 +104,11 @@ export function ResolveSurchargeModal({
                 📦 Lúc nhận trả (PNT - UC4.3)
               </div>
               {/* [DB-03] Dùng formatDateTimeVi để chuẩn hóa ISO sang dd/MM/yyyy HH:mm */}
-              <div>Thời gian: {order.returnedAt ? formatDateTimeVi(order.returnedAt) : "Đã nhận trả"}</div>
-              <div>Tình trạng: {afterCondition}</div>
+              <div>Thời gian: {returnAt ? formatDateTimeVi(returnAt) : "Chưa ghi nhận thời gian"}</div>
+              {latestReturnReceipt?.staffName && (
+                <div>Nhân viên nhận: {latestReturnReceipt.staffName}</div>
+              )}
+              <div>Tình trạng: {formatBackendEnum(afterCondition)}</div>
               <div className="mt-1 text-[#991B1B]">
                 Tổn thất ghi nhận: {surcharge.reason}
               </div>
@@ -113,6 +124,10 @@ export function ResolveSurchargeModal({
           {surcharge.customerResponse ? (
             <div className="adm-alert is-warning adm-alert--block mb-0">
               <strong>Khách hàng phản hồi:</strong> "{surcharge.customerResponse}"
+            </div>
+          ) : surcharge.status === "Tranh chấp" ? (
+            <div className="adm-alert is-warning adm-alert--block mb-0">
+              ⚠️ Khách hàng đang khiếu nại khoản phụ phí này (trạng thái Tranh chấp — vui lòng đối chiếu chứng cứ trước và sau thuê để kết luận).
             </div>
           ) : (
             <div className="adm-card--soft p-2.5 text-[0.78rem] text-[#6B7280]">

@@ -1,5 +1,5 @@
 import { useApp } from "../../../context/AppContext";
-import { Order } from "../../../store";
+import { formatDateTimeVi, Order } from "../../../store";
 
 interface HandoverRecordModalProps {
   app: ReturnType<typeof useApp>;
@@ -46,7 +46,7 @@ export function HandoverRecordModal({
             </div>
             <div><strong>SĐT người nhận:</strong> {receiverPhone}</div>
             <div><strong>CCCD / Định danh:</strong> {receiverIdCard || "Đã kiểm tra đối chiếu"}</div>
-            <div><strong>Thời gian bàn giao:</strong> {new Date().toLocaleString("vi-VN")}</div>
+            <div><strong>Thời gian bàn giao:</strong> {formatDateTimeVi(new Date())}</div>
             <div><strong>Nhân viên bàn giao:</strong> {app.currentUser?.name || "Nhân viên kho"}</div>
           </div>
         </div>

@@ -1,4 +1,4 @@
-import { fmt, type Order, type Surcharge } from "../../../store";
+import { fmt, formatBackendEnum, type Order, type Surcharge } from "../../../store";
 
 interface DisputeCenterPanelProps {
   pendingSurcharges: Array<{ order: Order; surcharge: Surcharge }>;
@@ -41,7 +41,10 @@ export function DisputeCenterPanel({ pendingSurcharges, onResolveClick }: Disput
             >
               <div className="flex-1 min-w-[220px]">
                 <div className="flex items-center gap-2">
-                  <span className="font-bold text-sm">{surcharge.type} · {surcharge.equipmentId}</span>
+                  <span className="font-bold text-sm">
+                    {formatBackendEnum(surcharge.type)}
+                    {surcharge.equipmentId && surcharge.equipmentId !== "-" ? ` · ${surcharge.equipmentId}` : ""}
+                  </span>
                   <span className={`adm-pill adm-pill--xs ${isDisputed ? "is-danger" : "is-warning"}`}>
                     {isDisputed ? "⚠️ Khách đang khiếu nại" : "Chờ duyệt"}
                   </span>

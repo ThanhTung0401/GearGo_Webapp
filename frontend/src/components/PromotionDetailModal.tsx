@@ -187,8 +187,8 @@ export default function PromotionDetailModal({ promotion, app, onClose, onEdit, 
             <div className="grid gap-2" style={{ gridTemplateColumns: "1fr 1fr", fontSize: "0.78rem" }}>
               <div><span style={{ color: "#6B7280" }}>Tiền thuê tối thiểu:</span> <strong>{fmt(promotion.minimumRental)}</strong></div>
               <div><span style={{ color: "#6B7280" }}>Giảm tối đa:</span> <strong>{promotion.maxDiscount ? fmt(promotion.maxDiscount) : "Không giới hạn"}</strong></div>
-              <div><span style={{ color: "#6B7280" }}>Bắt đầu:</span> <strong>{new Date(promotion.startsAt).toLocaleString("vi-VN")}</strong></div>
-              <div><span style={{ color: "#6B7280" }}>Kết thúc:</span> <strong>{new Date(promotion.endsAt).toLocaleString("vi-VN")}</strong></div>
+              <div><span style={{ color: "#6B7280" }}>Bắt đầu:</span> <strong>{formatDateTimeVi(promotion.startsAt)}</strong></div>
+              <div><span style={{ color: "#6B7280" }}>Kết thúc:</span> <strong>{formatDateTimeVi(promotion.endsAt)}</strong></div>
               <div><span style={{ color: "#6B7280" }}>Giới hạn mỗi khách:</span> <strong>{promotion.perCustomerLimit ?? 1} lượt/khách</strong></div>
               <div>
                 <span style={{ color: "#6B7280" }}>Phạm vi:</span>{" "}

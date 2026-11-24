@@ -27,6 +27,8 @@ export function MyOrdersView() {
         {ORDER_STATUS_OPTIONS.map((st) => {
           const count = st === "Tất cả"
             ? app.orders.length
+            : st === "Hết hạn"
+            ? app.orders.filter((o) => o.status === "Hết hạn" || (o.status as string) === "Hết hạn thanh toán").length
             : st === "Đã hủy"
             ? app.orders.filter((o) => o.status === "Khách hủy" || o.status === "Cửa hàng hủy").length
             : app.orders.filter((o) => o.status === st).length;

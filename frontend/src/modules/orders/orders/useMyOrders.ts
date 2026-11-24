@@ -22,7 +22,11 @@ export const ORDER_STATUS_OPTIONS = [
   "Tất cả",
   "Chờ thanh toán",
   "Đã xác nhận",
+  "Đang chuẩn bị",
+  "Sẵn sàng nhận",
   "Đang thuê",
+  "Đã nhận trả",
+  "Chờ đối soát",
   "Hoàn tất",
   "Hết hạn",
   "Đã hủy",
@@ -59,6 +63,7 @@ export function useMyOrders() {
 
   const myOrders = app.orders.filter((o) => {
     if (statusTab === "Tất cả") return true;
+    if (statusTab === "Hết hạn") return o.status === "Hết hạn" || (o.status as string) === "Hết hạn thanh toán";
     if (statusTab === "Đã hủy") return o.status === "Khách hủy" || o.status === "Cửa hàng hủy";
     return o.status === statusTab;
   });

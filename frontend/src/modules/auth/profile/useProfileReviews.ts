@@ -2,7 +2,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useApp } from "../../../context/AppContext";
 import { reviewApi, type SanPhamDuDieuKienDanhGiaBackend } from "../../../services/api";
 import { mapDanhGiaToReview } from "../../../services/mappers";
-import { getErrorMessage, readFileAsDataUrl, validateImageFile } from "../../../utils";
+import { getErrorMessage, readFileAsDataUrl, validateImageFile, resolveAssetUrl } from "../../../utils";
 import type { Review } from "../../../store";
 
 export interface ReviewTarget {
@@ -63,7 +63,7 @@ export function useProfileReviews(onEligibleCountChange?: (count: number) => voi
         validateImageFile(file, 5);
         if (app.realApi) {
           const uploaded = await reviewApi.uploadHinhAnh(file);
-          if (uploaded.url) uploadedUrls.push(uploaded.url);
+          if (uploaded.url) uploadedUrls.push(resolveAssetUrl(uploaded.url) || uploaded.url);
         } else {
           const dataUrl = await readFileAsDataUrl(file);
           if (dataUrl) uploadedUrls.push(dataUrl);

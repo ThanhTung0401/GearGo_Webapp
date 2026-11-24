@@ -180,7 +180,7 @@ export function InventoryReceiptDetail({
                         Giá trị: <span className="line-through text-[#9CA3AF]">{adj.previousValue}</span> → <strong>{adj.newValue}</strong>
                       </div>
                       <div className="text-[#6B7280] mt-0.5">
-                        Lý do: <em>{adj.reason}</em> (Người lập: {adj.createdBy} lúc {adj.createdAt})
+                        Lý do: <em>{adj.reason}</em> (Người lập: {adj.createdBy} lúc {formatDateTimeVi(adj.createdAt)})
                       </div>
                       {adj.evidence && (
                         <div className="text-[#6B7280] text-[0.7rem] mt-0.5">Chứng từ kèm: {adj.evidence}</div>
@@ -209,7 +209,7 @@ export function InventoryReceiptDetail({
                       )}
                       {adj.status === "Đã duyệt" && (
                         <div className="text-[0.7rem] text-[#15803D] mt-1 font-semibold">
-                          ✓ Đã duyệt bởi {adj.reviewedBy} lúc {adj.reviewedAt}
+                          ✓ Đã duyệt bởi {adj.reviewedBy} lúc {formatDateTimeVi(adj.reviewedAt)}
                         </div>
                       )}
                       {adj.status === "Từ chối" && (

@@ -2,6 +2,8 @@ import { useApp } from "../../context/AppContext";
 
 import { fmt, formatDateTimeVi, statusColors } from "../../store";
 import Icon, { type IconName } from "../../components/Icon";
+import Pagination from "../../components/ui/Pagination";
+import { usePagination } from "../../hooks/usePagination";
 
 import { type StaffTab } from "../orders/returnMapping";
 export function OverviewTab({ app, openOrder }: { app: ReturnType<typeof useApp>; openOrder: (id: string, tab: StaffTab) => void }) {
@@ -18,6 +20,10 @@ export function OverviewTab({ app, openOrder }: { app: ReturnType<typeof useApp>
   const reconcile = app.orders.filter((o) => o.status === "Chờ đối soát" || o.status === "Đã nhận trả");
   // [OV-02] Bổ sung "Đang sửa chữa" để khớp giá trị trả về từ catalogEquipmentMapper
   const maintenanceCount = app.maintenanceReceipts.filter((m) => ["Chờ xử lý", "Đang bảo dưỡng", "Đang sửa chữa"].includes(m.status)).length;
+  const workingOrders = app.orders.filter((o) =>
+    ["Đã xác nhận", "Đang chuẩn bị", "Sẵn sàng nhận", "Đang thuê", "Chờ đối soát", "Đã nhận trả"].includes(o.status)
+  );
+  const workingPaging = usePagination(workingOrders, 6);
 
   return (
     <div>
@@ -92,79 +98,81 @@ export function OverviewTab({ app, openOrder }: { app: ReturnType<typeof useApp>
       <h3 className="so-section-heading">
         Đơn cần chuẩn bị & nhận trả hôm nay
       </h3>
-      {/* [OV-07] Bổ sung Empty State khi danh sách rỗng */}
-      {(() => {
-        // [OV-05] Bổ sung "Đã nhận trả" vào danh sách cần xử lý
-        const workingOrders = app.orders.filter((o) =>
-          ["Đã xác nhận", "Đang chuẩn bị", "Sẵn sàng nhận", "Đang thuê", "Chờ đối soát", "Đã nhận trả"].includes(o.status)
-        );
-        if (workingOrders.length === 0) {
-          return (
-            <div className="so-empty-box" style={{ padding: 16, textAlign: "center", color: "#6B7280", background: "#F9FAFB", borderRadius: 8 }}>
-              Hiện không có đơn nào cần xử lý trong ca.
-            </div>
-          );
-        }
-        return (
-      <div className="flex flex-col gap-3">
-        {workingOrders.map((o) => {
-          const sc = statusColors[o.status] || { bg: "#F3F4F6", text: "#374151" };
-          const isOverdue = app.checkOrderOverdue(o).isOverdue;
-          const returnedCnt = o.assignedEquipment.filter((ae) => ae.returnedAt).length;
-          const isPartial = o.status === "Đang thuê" && returnedCnt > 0 && returnedCnt < o.assignedEquipment.length;
-          // [OV-05] Điều hướng "Đã nhận trả" sang tab "return"
-          const actionTab: StaffTab =
-            o.status === "Đang thuê" || o.status === "Chờ đối soát" || o.status === "Đã nhận trả" ? "return" : "handover";
+      {/* [OV-07] Bổ sung Empty State và phân trang cho danh sách đơn trong ca */}
+      {workingOrders.length === 0 ? (
+        <div className="so-empty-box" style={{ padding: 16, textAlign: "center", color: "#6B7280", background: "#F9FAFB", borderRadius: 8 }}>
+          Hiện không có đơn nào cần xử lý trong ca.
+        </div>
+      ) : (
+        <>
+          <div className="flex flex-col gap-3">
+            {workingPaging.pagedItems.map((o) => {
+              const sc = statusColors[o.status] || { bg: "#F3F4F6", text: "#374151" };
+              const isOverdue = app.checkOrderOverdue(o).isOverdue;
+              const returnedCnt = o.assignedEquipment.filter((ae) => ae.returnedAt).length;
+              const isPartial = o.status === "Đang thuê" && returnedCnt > 0 && returnedCnt < o.assignedEquipment.length;
+              // [OV-05] Điều hướng "Đã nhận trả" sang tab "return"
+              const actionTab: StaffTab =
+                o.status === "Đang thuê" || o.status === "Chờ đối soát" || o.status === "Đã nhận trả" ? "return" : "handover";
 
-          return (
-            <div
-              key={o.id}
-              role="button"
-              tabIndex={0}
-              onClick={() => openOrder(o.id, actionTab)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  openOrder(o.id, actionTab);
-                }
-              }}
-              className="so-overview-order-row hover:shadow-md transition-shadow"
-            >
-              <div className="so-flex-1">
-                <div className="flex items-center gap-2 mb-1 flex-wrap">
-                  <span className="so-overview-order-code">{o.displayCode || o.id}</span>
-                  {/* Màu trạng thái lấy động từ bảng ánh xạ statusColors */}
-                  <span className="so-status-pill" style={{ background: sc.bg, color: sc.text }}>{o.status}</span>
-                  {isPartial && (
-                    <span className="so-badge-partial">
-                      Đã trả {returnedCnt}/{o.assignedEquipment.length} món
-                    </span>
-                  )}
-                  {isOverdue && (
-                    <span className="so-badge-overdue">
-                      Quá hạn
-                    </span>
-                  )}
+              return (
+                <div
+                  key={o.id}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => openOrder(o.id, actionTab)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      openOrder(o.id, actionTab);
+                    }
+                  }}
+                  className="so-overview-order-row hover:shadow-md transition-shadow"
+                >
+                  <div className="so-flex-1">
+                    <div className="flex items-center gap-2 mb-1 flex-wrap">
+                      <span className="so-overview-order-code">{o.displayCode || o.id}</span>
+                      {/* Màu trạng thái lấy động từ bảng ánh xạ statusColors */}
+                      <span className="so-status-pill" style={{ background: sc.bg, color: sc.text }}>{o.status}</span>
+                      {isPartial && (
+                        <span className="so-badge-partial">
+                          Đã trả {returnedCnt}/{o.assignedEquipment.length} món
+                        </span>
+                      )}
+                      {isOverdue && (
+                        <span className="so-badge-overdue">
+                          Quá hạn
+                        </span>
+                      )}
+                    </div>
+                    <div className="so-overview-order-name">{o.customerName} · {o.customerPhone}</div>
+                    <div className="so-overview-order-items">
+                      {o.items.length > 0 ? o.items.map((i) => `${i.productName || "Thiết bị"} ×${i.qty}`).join(", ") : `Đã gán ${o.assignedEquipment.length} thiết bị`}
+                    </div>
+                  </div>
+                  <div className="so-overview-order-meta">
+                    {/* [OV-01] Dùng formatDateTimeVi cho pickupTime/returnTime */}
+                    <div className="so-overview-order-items">Hẹn nhận: {formatDateTimeVi(o.pickupTime)}</div>
+                    <div className="so-overview-order-items">Hẹn trả: {formatDateTimeVi(o.returnTime)}</div>
+                    {/* [OV-07] Luôn hiển thị tổng tiền, không ẩn ở Mock/Demo */}
+                    <div className="so-overview-order-total">{fmt(Math.max(0, o.rental - o.discount) + o.depositTotal)}</div>
+                  </div>
+                  <span className="so-overview-order-arrow">→</span>
                 </div>
-                <div className="so-overview-order-name">{o.customerName} · {o.customerPhone}</div>
-                <div className="so-overview-order-items">
-                  {o.items.length > 0 ? o.items.map((i) => `${i.productName || "Thiết bị"} ×${i.qty}`).join(", ") : `Đã gán ${o.assignedEquipment.length} thiết bị`}
-                </div>
-              </div>
-              <div className="so-overview-order-meta">
-                {/* [OV-01] Dùng formatDateTimeVi cho pickupTime/returnTime */}
-                <div className="so-overview-order-items">Hẹn nhận: {formatDateTimeVi(o.pickupTime)}</div>
-                <div className="so-overview-order-items">Hẹn trả: {formatDateTimeVi(o.returnTime)}</div>
-                {/* [OV-07] Luôn hiển thị tổng tiền, không ẩn ở Mock/Demo */}
-                <div className="so-overview-order-total">{fmt(Math.max(0, o.rental - o.discount) + o.depositTotal)}</div>
-              </div>
-              <span className="so-overview-order-arrow">→</span>
-            </div>
-          );
-        })}
-      </div>
-        );
-      })()}
+              );
+            })}
+          </div>
+          <Pagination
+            page={workingPaging.page}
+            totalPages={workingPaging.totalPages}
+            totalItems={workingPaging.totalItems}
+            startIndex={workingPaging.startIndex}
+            endIndex={workingPaging.endIndex}
+            onPageChange={workingPaging.setPage}
+            itemLabel="đơn hàng"
+          />
+        </>
+      )}
     </div>
   );
 }

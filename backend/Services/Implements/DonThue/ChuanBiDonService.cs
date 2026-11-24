@@ -72,7 +72,7 @@ public partial class ChuanBiDonService : IChuanBiDonService
 
             await _db.SaveChangesAsync(ct);
             await tx.CommitAsync(ct);
-            return Result<ChuanBiResponse>.Ok(XayDungResponse(don, new List<PhanCongThietBi>()));
+            return Result<ChuanBiResponse>.Ok(XayDungResponse(don, await TaiPhanCongHieuLucAsync(donId, ct)));
         }
         catch { await tx.RollbackAsync(ct); throw; }
     }

@@ -9,8 +9,8 @@ import {
   mapDonVanHanhTomTatToOrder,
   mapSanPhamToProduct,
 } from "../../services/mappers";
-import type { Order } from "../../store";
-import { mapBackendRoleToFrontend, REAL_MODE } from "../appStateStorage";
+import type { CartItem, Order } from "../../store";
+import { mapBackendRoleToFrontend, PREFS_STORAGE_KEY, REAL_MODE } from "../appStateStorage";
 import type { UseBootstrapDataParams } from "./types";
 
 /**
@@ -90,6 +90,31 @@ export function useBootstrapCoreLoaders(params: UseBootstrapDataParams) {
   const refreshCart = useCallback(async () => {
     if (!REAL_MODE || !getAuthToken()) return;
     try {
+      // Gộp giỏ tạm của khách vãng lai (thêm trước khi đăng nhập) lên tài khoản backend
+      try {
+        const prefsRaw = localStorage.getItem(PREFS_STORAGE_KEY);
+        if (prefsRaw) {
+          const prefs = JSON.parse(prefsRaw) as { cart?: CartItem[]; [k: string]: unknown };
+          if (Array.isArray(prefs.cart) && prefs.cart.length > 0) {
+            const guestItems = [...prefs.cart];
+            delete prefs.cart;
+            localStorage.setItem(PREFS_STORAGE_KEY, JSON.stringify(prefs));
+            for (const item of guestItems) {
+              const maSanPham = Number(item.productId);
+              if (Number.isFinite(maSanPham) && maSanPham > 0 && item.qty > 0) {
+                try {
+                  await rentalCartApi.themVaoGio(maSanPham, item.qty);
+                } catch {
+                  // Bỏ qua món không đủ tồn kho nhưng vẫn giữ các món hợp lệ khác
+                }
+              }
+            }
+          }
+        }
+      } catch {
+        // Bỏ qua nếu localStorage không hợp lệ
+      }
+
       const gio = await rentalCartApi.layGio();
       setCart((gio.chiTiet ?? []).map((ct) => ({ productId: String(ct.maSanPham), qty: ct.soLuong })));
       setAppliedPromoCode(gio.maKhuyenMaiApDung ?? "");

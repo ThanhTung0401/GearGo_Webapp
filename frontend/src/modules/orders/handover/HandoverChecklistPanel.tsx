@@ -2,6 +2,7 @@ import { useState } from "react";
 import type React from "react";
 import { useApp } from "../../../context/AppContext";
 import { fmt, formatDateTimeVi, Order } from "../../../store";
+import { getErrorMessage, readFileAsDataUrl, validateImageFile } from "../../../utils";
 
 interface HandoverChecklistPanelProps {
   app: ReturnType<typeof useApp>;
@@ -165,31 +166,39 @@ export function HandoverChecklistPanel({
             {evidencePhotos.map((url, i) => (
               <img key={i} src={url} alt="Bằng chứng giao" className="so-photo-thumb" />
             ))}
-            <button
-              type="button"
-              /* [HO-08] Nút 📷+ phải thực sự thêm URL ảnh vào mảng evidencePhotos, không chỉ set notice. */
-              onClick={() => {
-                const seeds = [
-                  "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?w=200&auto=format&fit=crop&q=60",
-                  "https://images.unsplash.com/photo-1476231682828-37e571bc172f?w=200&auto=format&fit=crop&q=60",
-                  "https://images.unsplash.com/photo-1526178613658-3f1622045557?w=200&auto=format&fit=crop&q=60",
-                ];
-                if (setEvidencePhotos) {
-                  // Tính trước ảnh mới & cập nhật notice bên ngoài updater của setEvidencePhotos để tránh setState lồng khi render
-                  const idx = Math.max(0, evidencePhotos.length - 2);
-                  const next = seeds[idx % seeds.length];
-                  const nextLen = evidencePhotos.length + 1;
-                  setEvidencePhotos((prev) => [...prev, next]);
-                  setPhotoNotice(`Đã thêm 1 ảnh bằng chứng (hiện có ${nextLen} ảnh).`);
-                } else {
-                  setPhotoNotice("Đã chụp thêm 1 ảnh bằng chứng thiết bị tại quầy.");
-                }
-              }}
-              className="so-photo-add-btn"
-              aria-label="Chụp thêm ảnh bằng chứng thiết bị"
+            <label
+              className="so-photo-add-btn cursor-pointer inline-flex items-center justify-center"
+              aria-label="Chọn ảnh bằng chứng thiết bị từ máy"
+              title="Tải ảnh bằng chứng từ máy"
             >
               📷+
-            </button>
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                multiple
+                className="hidden"
+                onChange={async (e) => {
+                  const files = Array.from(e.target.files ?? []);
+                  if (files.length === 0) return;
+                  try {
+                    const urls: string[] = [];
+                    for (const file of files) {
+                      validateImageFile(file, 5);
+                      const dataUrl = await readFileAsDataUrl(file);
+                      if (dataUrl) urls.push(dataUrl);
+                    }
+                    if (urls.length > 0 && setEvidencePhotos) {
+                      setEvidencePhotos((prev) => [...prev, ...urls]);
+                      setPhotoNotice(`Đã thêm ${urls.length} ảnh bằng chứng (hiện có ${evidencePhotos.length + urls.length} ảnh).`);
+                    }
+                  } catch (err) {
+                    setPhotoNotice(getErrorMessage(err, "Không thể đọc tệp ảnh đã chọn."));
+                  } finally {
+                    e.target.value = "";
+                  }
+                }}
+              />
+            </label>
           </div>
           {photoNotice && (
             <div role="status" className="mt-1.5 text-xs text-[var(--color-success-text)]">

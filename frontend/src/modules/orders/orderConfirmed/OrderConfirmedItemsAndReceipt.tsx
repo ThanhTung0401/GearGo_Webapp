@@ -1,4 +1,4 @@
-import { fmt, type MoneyTransaction, type Order } from "../../../store";
+import { fmt, formatDateTimeVi, type MoneyTransaction, type Order } from "../../../store";
 
 interface OrderConfirmedItemsAndReceiptProps {
   order: Order;
@@ -73,7 +73,7 @@ export function OrderConfirmedItemsAndReceipt({
             </div>
             <div className="flex justify-between">
               <span>Thời gian ghi nhận:</span>
-              <span>{order.paidAt || latestPayment?.createdAt}</span>
+              <span>{formatDateTimeVi(order.paidAt || latestPayment?.createdAt)}</span>
             </div>
             <div className="flex justify-between">
               <span>Tiền thuê thực nhận:</span>

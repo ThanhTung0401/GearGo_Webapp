@@ -1,5 +1,5 @@
 import Icon from "../../../components/Icon";
-import { fmt, type CustomerAccount } from "../../../store";
+import { fmt, formatDateVi, type CustomerAccount } from "../../../store";
 import { Can } from "../../../features/permissions/PermissionsContext";
 import { Permissions } from "../../../constants/permissions";
 import Pagination from "../../../components/ui/Pagination";
@@ -116,7 +116,7 @@ export function CustomersTable({
                     </td>
                     <td>
                       <div className="adm-cell-title text-[0.88rem]">{c.name}</div>
-                      <div className="adm-cell-sub">Tham gia: {c.createdAt}</div>
+                      <div className="adm-cell-sub">Tham gia: {formatDateVi(c.createdAt)}</div>
                     </td>
                     <td className="text-[0.82rem]">
                       <div><strong>{c.phone}</strong></div>

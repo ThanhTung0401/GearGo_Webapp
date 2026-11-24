@@ -207,14 +207,7 @@ public class BanGiaoService : IBanGiaoService
             if (phieu.ChiTietBanGiaos.Count < tongSoLuongDon)
                 return Result<bool>.Loi(DomainConstants.Errors.InvalidData, $"Chưa đủ thiết bị bàn giao ({phieu.ChiTietBanGiaos.Count}/{tongSoLuongDon}).");
 
-            var nhanVienThucHien = await _context.LayNhanVienAsync(maNhanVienChot);
-            var tenNhanVien = nhanVienThucHien?.HoTen ?? $"Nhân viên {maNhanVienChot}";
-
-            phieu.ChotPhieu(request.TenNguoiNhanThucTe, tenNhanVien);
-            if (nhanVienThucHien != null)
-                phieu.MaNhanVien = nhanVienThucHien.MaNhanVien;
-
-            // Kiểm tra điều kiện thanh toán qua Specification (bắt buộc nhân đủ SoLuong mỗi dòng — UC4.2)
+            // Kiểm tra điều kiện thanh toán qua Specification trước khi đổi trạng thái phiếu/đơn/thiết bị (UC4.2)
             decimal tongTienYeuCau = phieu.DonThue.ChiTietDonThues.Sum(c =>
                 (c.DonGiaThueMoiNgay * c.SoNgayTinhTien + c.MucCocMoiThietBi) * c.SoLuong - c.TienGiam);
             decimal tongDaDong = await _context.ThanhToans
@@ -224,6 +217,13 @@ public class BanGiaoService : IBanGiaoService
             var validationResult = BanGiaoValidationRules.KiemTraThanhToan(tongTienYeuCau, tongDaDong);
             if (!validationResult.ThanhCong)
                 return validationResult;
+
+            var nhanVienThucHien = await _context.LayNhanVienAsync(maNhanVienChot);
+            var tenNhanVien = nhanVienThucHien?.HoTen ?? $"Nhân viên {maNhanVienChot}";
+
+            phieu.ChotPhieu(request.TenNguoiNhanThucTe, tenNhanVien);
+            if (nhanVienThucHien != null)
+                phieu.MaNhanVien = nhanVienThucHien.MaNhanVien;
 
             AuditLogHelper.GhiLichSuDon(
                 _context,

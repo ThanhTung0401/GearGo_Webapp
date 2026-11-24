@@ -2,6 +2,8 @@
  * catalogEquipmentMapper.ts - Ánh xạ DTO Catalog (Danh mục, Sản phẩm), Thiết bị, Bảo trì & Điều chỉnh kho
  */
 
+import { resolveAssetUrl } from "../../utils/formatters";
+
 import type {
   Category,
   Equipment,
@@ -124,25 +126,6 @@ function normalizeTrangThaiKinhDoanh(raw: unknown): "DangKinhDoanh" | "TamNgung"
     if (raw === "0") return "DangKinhDoanh";
   }
   return "DangKinhDoanh";
-}
-
-// [SP-03] Ghép API_BASE cho ảnh /uploads/... để tránh Vite dev server trả 404.
-function resolveAssetUrl(url: string | undefined | null): string {
-  if (!url) return "";
-  if (url.startsWith("/uploads/")) {
-    // Lazy import để tránh circular import khi mapper chạy ở tầng dưới apiClient.
-    try {
-      const base = (globalThis as unknown as { __GEARGO_API_BASE__?: string }).__GEARGO_API_BASE__;
-      if (base) return `${base}${url}`;
-    } catch {
-      // ignore
-    }
-    // Fallback: dùng biến môi trường trực tiếp nếu globalThis chưa gắn.
-    const envBase = (import.meta as unknown as { env?: Record<string, string | undefined> }).env?.VITE_API_URL ?? "";
-    const normalized = envBase.replace(/\/+$/, "");
-    if (normalized) return `${normalized}${url}`;
-  }
-  return url;
 }
 
 export function mapSanPhamToProduct(sp: SanPhamBackend, categories: Category[] = []): Product & { availableCount?: number } {

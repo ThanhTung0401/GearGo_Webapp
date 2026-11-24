@@ -6,7 +6,7 @@ import type { AppNotification, AuditLogEntry, Review } from "../../types";
 import type { NhatKyThaoTacBackend } from "../api/auditApi";
 import type { ThongBaoBackend } from "../api/notificationApi";
 import type { DanhGiaBackend } from "../api/reviewApi";
-import { formatBackendEnum, formatIsoDatesInText } from "../../utils/formatters";
+import { formatBackendEnum, formatIsoDatesInText, resolveAssetUrl } from "../../utils/formatters";
 
 export function mapDanhGiaToReview(dg: DanhGiaBackend): Review {
   const hasReply = Boolean(dg.phanHoiCuaHang);
@@ -20,7 +20,7 @@ export function mapDanhGiaToReview(dg: DanhGiaBackend): Review {
     customerName: dg.tenKhachHang ?? dg.tenNguoiDung ?? "Khách hàng",
     rating: dg.soSao,
     comment: dg.noiDung ?? "",
-    images: Array.isArray(dg.danhSachAnh) ? dg.danhSachAnh : [],
+    images: Array.isArray(dg.danhSachAnh) ? dg.danhSachAnh.map((u) => resolveAssetUrl(u) || u) : [],
     createdAt,
     status: dg.trangThaiHienThi === "BiAn" ? "hidden" : "active",
     hiddenReason: dg.lyDoAn ?? undefined,

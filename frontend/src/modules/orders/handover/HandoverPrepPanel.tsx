@@ -21,7 +21,14 @@ interface HandoverPrepPanelProps {
   handleCompletePreparation: () => Promise<void>;
   handleReportShortage: () => Promise<void>;
   // [HO-07] Nhận prepState để biết slot nào đã lưu lên Backend (có maPhanCong).
-  prepState?: { danhSachDong: Array<{ maSanPham: number; danhSachPhanCong: Array<{ maThietBi: number }> }> } | null;
+  prepState?: {
+    danhSachDong: Array<{
+      maSanPham: number;
+      tenSanPham?: string;
+      soLuongCanGan?: number;
+      danhSachPhanCong: Array<{ maThietBi: number }>;
+    }>;
+  } | null;
 }
 
 // Phân hệ 4.1: Chuẩn bị kho, gán serial thiết bị, đổi mã thay thế và báo thiếu hàng
@@ -134,8 +141,11 @@ export function HandoverPrepPanel({
       {/* [HO-05] Fallback danh sách dòng từ prepState nếu order.items chưa hydrate (đơn vị trí >20) */}
       {(order.items.length > 0
         ? order.items
-        : // Giả lập OrderItem từ prepState.danhSachDong (nếu có) để dropdown vẫn hiện.
-          []
+        : (prepState?.danhSachDong ?? []).map((d) => ({
+            productId: String(d.maSanPham),
+            productName: d.tenSanPham || `Sản phẩm #${d.maSanPham}`,
+            qty: d.soLuongCanGan ?? d.danhSachPhanCong.length,
+          }))
       ).map((item) => {
         const chosenForItem = assignments[item.productId] || [];
         const avail = app.equipment.filter(

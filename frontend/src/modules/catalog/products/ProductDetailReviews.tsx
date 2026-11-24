@@ -1,4 +1,5 @@
 import type { Review } from "../../../types";
+import { formatDateVi } from "../../../store";
 
 interface ProductDetailReviewsProps {
   productReviews: Review[];
@@ -56,7 +57,7 @@ export function ProductDetailReviews({
                     <span className="lp-review-author">{rev.customerName}</span>
                     <span className="lp-review-verified">✓ Khách thuê thực tế</span>
                   </div>
-                  <div className="lp-review-meta">{rev.createdAt} · Đơn #{rev.orderId}</div>
+                  <div className="lp-review-meta">{formatDateVi(rev.createdAt)} · Đơn #{rev.orderId}</div>
                 </div>
                 <div className="lp-review-stars">{"★".repeat(rev.rating)}{"☆".repeat(5 - rev.rating)}</div>
               </div>

@@ -1,6 +1,32 @@
 // ─── Formatters ───────────────────────────────────────────────────────────────
 
 /**
+ * Ghép API_BASE cho đường dẫn ảnh tương đối (/uploads/...) để không bị 404 trên Vite dev server.
+ */
+export function resolveAssetUrl(url: string | undefined | null): string {
+  if (!url) return "";
+  if (url.startsWith("/uploads/")) {
+    const envBase = (import.meta as unknown as { env?: Record<string, string | undefined> }).env?.VITE_API_URL ?? "";
+    const normalized = envBase.replace(/\/+$/, "");
+    return normalized ? `${normalized}${url}` : url;
+  }
+  return url;
+}
+
+/**
+ * Chuẩn hóa URL đã ghép API_BASE về dạng tương đối (/uploads/...) trước khi gửi lại Backend.
+ */
+export function toRelativeAssetUrl(url: string): string {
+  const trimmed = url.trim();
+  const envBase = (import.meta as unknown as { env?: Record<string, string | undefined> }).env?.VITE_API_URL ?? "";
+  const normalized = envBase.replace(/\/+$/, "");
+  if (normalized && trimmed.startsWith(`${normalized}/uploads/`)) {
+    return trimmed.slice(normalized.length);
+  }
+  return trimmed;
+}
+
+/**
  * Định dạng số tiền sang chuẩn VNĐ (Ví dụ: 150000 -> "150.000đ")
  */
 export const fmt = (n?: number | null): string =>
@@ -20,23 +46,28 @@ function parseDateSafe(value?: string | Date | null): Date | null {
   if (value instanceof Date) return Number.isNaN(value.getTime()) ? null : value;
   const trimmed = String(value).trim();
   if (!trimmed) return null;
-  // Hỗ trợ chuỗi "YYYY-MM-DD HH:mm" hoặc "YYYY-MM-DD"
-  const normalized =
+  // Hỗ trợ chuỗi "YYYY-MM-DD HH:mm" hoặc ISO 8601 từ Backend
+  let normalized =
     /^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}/.test(trimmed)
       ? trimmed.replace(/\s+/, "T")
       : trimmed;
+  // Nếu là ISO có giây từ Backend nhưng thiếu hậu tố múi giờ, mặc định coi là UTC
+  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?$/.test(normalized)) {
+    normalized += "Z";
+  }
   const parsed = new Date(normalized);
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
 
 /**
- * Định dạng ngày sang chuỗi dd/MM/yyyy (trả về fallback nếu rỗng hoặc không hợp lệ)
+ * Định dạng ngày sang chuỗi dd/MM/yyyy theo múi giờ Việt Nam (trả về fallback nếu rỗng hoặc không hợp lệ)
  */
 export const formatDateVi = (value?: string | Date | null, fallback = "—"): string => {
   if (!value) return fallback;
   const date = parseDateSafe(value);
   if (!date) return typeof value === "string" ? value : fallback;
   return date.toLocaleDateString("vi-VN", {
+    timeZone: "Asia/Ho_Chi_Minh",
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
@@ -44,13 +75,14 @@ export const formatDateVi = (value?: string | Date | null, fallback = "—"): st
 };
 
 /**
- * Định dạng ngày giờ sang chuỗi dd/MM/yyyy HH:mm (trả về fallback nếu rỗng hoặc không hợp lệ)
+ * Định dạng ngày giờ sang chuỗi dd/MM/yyyy HH:mm theo múi giờ Việt Nam (trả về fallback nếu rỗng hoặc không hợp lệ)
  */
 export const formatDateTimeVi = (value?: string | Date | null, fallback = "—"): string => {
   if (!value) return fallback;
   const date = parseDateSafe(value);
   if (!date) return typeof value === "string" ? value : fallback;
   return date.toLocaleString("vi-VN", {
+    timeZone: "Asia/Ho_Chi_Minh",
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
@@ -114,6 +146,10 @@ const BACKEND_ENUM_LABELS: Record<string, string> = {
   NoShowHoanCoc: "Không đến nhận — Hoàn cọc theo chính sách",
   NoShowGiuCoc: "Không đến nhận — Giữ cọc theo chính sách",
   NoShowHuyDon: "Không đến nhận — Hủy đơn giữ chỗ",
+  // Loại phụ phí nhận trả / tranh chấp
+  HuHongThietBi: "Hư hỏng thiết bị",
+  TreHan: "Trễ hạn",
+  CanVeSinh: "Cần vệ sinh",
   // Batch 1 foundation [BACKEND-ENUM]: bổ sung đủ nhãn enum backend gặp trong 23 chức năng.
   KhongDenNhan: "Không đến nhận",
   ChuaThanhToan: "Chưa thanh toán",

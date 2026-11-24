@@ -165,7 +165,7 @@ export function ReconciliationTraceModals(props: Props) {
               <div className="recon-print-doc-meta">
                 <div className="recon-print-doc-title">BIÊN BẢN ĐỐI SOÁT CỌC</div>
                 <div className="recon-print-doc-code">BBDS-{order.displayCode || order.id}</div>
-                <div className="recon-print-doc-date">Ngày lập: {order.reconciledAt ? formatDateTimeVi(order.reconciledAt) : new Date().toLocaleString("vi-VN")}</div>
+                <div className="recon-print-doc-date">Ngày lập: {formatDateTimeVi(order.reconciledAt || new Date())}</div>
               </div>
             </div>
 

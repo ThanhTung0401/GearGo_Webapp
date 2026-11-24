@@ -1,4 +1,4 @@
-import { fmt, type Promotion } from "../../../store";
+import { fmt, formatDateVi, type Promotion } from "../../../store";
 import { type PromoStatusFilter, type PromoTypeFilter } from "./usePromotionsTab";
 import { Can } from "../../../features/permissions/PermissionsContext";
 import { Permissions } from "../../../constants/permissions";
@@ -161,7 +161,7 @@ export function PromotionsList({
                   </div>
 
                   <div className="adm-hint-text text-[0.74rem]">
-                    Hiệu lực: {new Date(p.startsAt).toLocaleDateString("vi-VN")} → {new Date(p.endsAt).toLocaleDateString("vi-VN")} · Đã dùng: <strong>{p.usedCount}</strong> / {p.totalUsageLimit ?? "∞"} lượt
+                    Hiệu lực: {formatDateVi(p.startsAt)} → {formatDateVi(p.endsAt)} · Đã dùng: <strong>{p.usedCount}</strong> / {p.totalUsageLimit ?? "∞"} lượt
                   </div>
 
                   {/* Thanh tiến độ sử dụng lượt */}
