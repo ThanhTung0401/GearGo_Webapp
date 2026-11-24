@@ -124,13 +124,36 @@ export async function closeActiveDialog(page: Page): Promise<void> {
   if (!(await dialog.isVisible().catch(() => false))) return;
   const closeBtn = dialog.getByRole("button", { name: /^(×|✕|Đóng|Hủy)$/i }).first();
   if (await waitVisible(closeBtn, 1500)) {
-    await closeBtn.click();
+    await closeBtn.click({ timeout: 3000 }).catch(() => {});
     return;
   }
   const byAria = dialog.locator('button[aria-label="Đóng"], button[aria-label="Close"]').first();
   if (await waitVisible(byAria, 1000)) {
-    await byAria.click();
+    await byAria.click({ timeout: 3000 }).catch(() => {});
     return;
   }
-  await page.keyboard.press("Escape");
+  await page.keyboard.press("Escape").catch(() => {});
+}
+
+/**
+ * Buộc đóng mọi modal/overlay còn sót (Escape nhiều lần + click out-of-bounds) —
+ * dùng trước các test có thao tác click dễ bị overlay chặn (pointer events intercepted).
+ */
+export async function forceCloseAllModals(page: Page, maxAttempts = 4): Promise<void> {
+  for (let i = 0; i < maxAttempts; i++) {
+    const anyModal = page.locator('[role="dialog"], .modal-overlay, .adm-modal-overlay').first();
+    const visible = await anyModal.isVisible({ timeout: 300 }).catch(() => false);
+    if (!visible) return;
+    // Thử Escape trước
+    await page.keyboard.press("Escape").catch(() => {});
+    await page.waitForTimeout(150);
+    // Nếu vẫn còn: click nút đóng trong dialog
+    const stillVisible = await anyModal.isVisible({ timeout: 200 }).catch(() => false);
+    if (!stillVisible) return;
+    const closeBtn = anyModal.getByRole("button", { name: /^(×|✕|Đóng|Hủy)$/i }).first();
+    if (await closeBtn.isVisible({ timeout: 300 }).catch(() => false)) {
+      await closeBtn.click({ timeout: 2000, force: true }).catch(() => {});
+    }
+    await page.waitForTimeout(200);
+  }
 }

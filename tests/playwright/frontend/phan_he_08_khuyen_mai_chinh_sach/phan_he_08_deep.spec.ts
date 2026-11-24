@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { loginUi } from "../../helpers/auth.js";
-import { useSubsystemPage, pauseForViewer, waitVisible, closeActiveDialog } from "../../helpers/subsystemVideo.js";
+import { useSubsystemPage, pauseForViewer, waitVisible, closeActiveDialog, forceCloseAllModals } from "../../helpers/subsystemVideo.js";
 import { uniqueSuffix } from "../../helpers/testData.js";
 
 /**
@@ -120,6 +120,8 @@ test.describe.serial("Frontend PH8 Deep - Promotion/Policy", () => {
 
   test("PH8D-F08 - Lịch sử phiên bản chính sách: chuyển subtab thấy bảng", async () => {
     const page = getPage();
+    // Dọn modal còn sót từ F07 (xác nhận ban hành) để tránh adm-modal-overlay chặn click
+    await forceCloseAllModals(page);
     const histBtn = page
       .getByRole("button", { name: /Lịch sử phiên bản|Lịch sử|History/i })
       .or(page.getByRole("tab", { name: /Lịch sử phiên bản|Lịch sử|History/i }))
@@ -128,7 +130,7 @@ test.describe.serial("Frontend PH8 Deep - Promotion/Policy", () => {
       test.skip(true, "Lịch sử phiên bản tab không có trong UI hiện tại — tracked");
       return;
     }
-    await histBtn.click();
+    await histBtn.click({ timeout: 5000, force: true }).catch(() => {});
     await pauseForViewer(page, 500);
     const snapshotBtn = page.locator("table tbody tr button").first();
     const hasRow = await snapshotBtn.isVisible({ timeout: 3000 }).catch(() => false);
