@@ -6,6 +6,11 @@ import { uniqueSuffix } from "../../helpers/testData.js";
  * R4-W4 PH7 Deep: Nhà cung cấp & Nhập kho - negative, cascade, RBAC, F5 recovery.
  */
 test.describe("PH7 Deep - Supplier/Import", () => {
+  // R5-PH678: Cap per-test timeout for BE API tests.
+  test.beforeEach(() => {
+    test.setTimeout(30_000);
+  });
+
   // ===== (a) NEGATIVE: NCC =====
   test("PH7D-01 - Tạo NCC với email sai format -> 400/422", async ({ request }) => {
     const { token } = await loginApi(request, "admin");
