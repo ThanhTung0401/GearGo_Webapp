@@ -124,10 +124,15 @@ test.describe.serial("Frontend PH1: Quản lý Tài khoản & Nhân viên (UC1.1
     await addressInput.fill("128 Nguyễn Đình Chiểu, Q.3, TP.HCM");
     await page.getByRole("button", { name: "Lưu thay đổi" }).click();
     await expect(page.getByText(/Đã lưu hồ sơ thành công/i)).toBeVisible({ timeout: 10_000 });
+    // Chờ app.login(...) sau save ổn định DOM (ddfda6d thêm re-render header/avatar)
+    await page.waitForLoadState("networkidle").catch(() => {});
+    await page.waitForTimeout(1500);
     await pauseForViewer(page, 800);
 
     // UC1.12 dòng phụ 2.1: Nhập sai mật khẩu hiện tại & bấm Lưu -> kiểm tra hệ thống từ chối
-    await page.getByRole("button", { name: /Đổi mật khẩu|Bảo mật/i }).first().click();
+    const secTabBtn = page.getByRole("button", { name: /Đổi mật khẩu|Bảo mật/i }).first();
+    await secTabBtn.waitFor({ state: "visible", timeout: 10_000 });
+    await secTabBtn.click({ timeout: 15_000 });
     await expect(page.getByRole("heading", { name: /Đổi mật khẩu tài khoản/i })).toBeVisible();
     const passInputs = page.locator('input[type="password"]');
     await passInputs.nth(0).fill("SaiMatKhauCu");
