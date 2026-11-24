@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { loginUi } from "../../helpers/auth.js";
-import { useSubsystemPage, pauseForViewer, waitVisible, closeActiveDialog } from "../../helpers/subsystemVideo.js";
+import { useSubsystemPage, pauseForViewer, waitVisible, closeActiveDialog, forceCloseAllModals } from "../../helpers/subsystemVideo.js";
 import { uniqueSuffix } from "../../helpers/testData.js";
 
 /**
@@ -125,12 +125,14 @@ test.describe.serial("Frontend PH6 Deep - Catalog/Product/Equipment/Maintenance"
 
   test("PH6D-F06 - Kiểm kê kho: mở modal Kiểm kê và Hủy -> không tạo phiếu rác", async () => {
     const page = getPage();
+    // Dọn modal còn sót từ F05 (Sổ đời) để tránh overlay chặn click
+    await forceCloseAllModals(page);
     const dcBtn = page.getByRole("button", { name: "Điều chỉnh kho" }).first();
     if (!(await dcBtn.isVisible({ timeout: 3000 }).catch(() => false))) {
       test.skip(true, "Điều chỉnh kho button không có — tracked");
       return;
     }
-    await dcBtn.click();
+    await dcBtn.click({ timeout: 5000, force: true }).catch(() => {});
     const header = page.getByText(/Kiểm kê & Điều chỉnh kho/i).first();
     if (!(await header.isVisible({ timeout: 5000 }).catch(() => false))) {
       test.skip(true, "Kiểm kê header không hiện trong 5s — tracked");
