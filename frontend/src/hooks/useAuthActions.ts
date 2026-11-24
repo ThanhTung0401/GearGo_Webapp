@@ -26,12 +26,13 @@ export function useAuthActions(params: UseAuthActionsParams) {
   const { clearPrivateState, updateCurrentUserProfile, changeCurrentUserPassword } = useProfilePasswordActions(params);
 
   const login = (user: AuthSessionUser) => {
+    const isProfileRefresh = !!(params.currentUser?.id && params.currentUser.id === user.id);
     params.setCurrentUser(user);
     params.setRole(user.role);
     params.setPermissionNotice(null);
     if (REAL_MODE && getAuthToken()) {
       void params.hydrateSession(false);
-    } else {
+    } else if (!isProfileRefresh) {
       params.addAuditLog({
         actor: user.name,
         role: user.role === "admin" ? "Quản trị viên" : user.role === "staff" ? "Nhân viên" : "Khách hàng",
@@ -41,6 +42,7 @@ export function useAuthActions(params: UseAuthActionsParams) {
         detail: `Đăng nhập thành công với vai trò ${user.role}`,
       });
     }
+    if (isProfileRefresh) return;
     if (user.role !== "customer" || (user.permissions && user.permissions.length > 0)) params.setPage("workspace");
     else params.setPage("landing");
   };
