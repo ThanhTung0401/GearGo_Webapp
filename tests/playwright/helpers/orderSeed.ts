@@ -61,32 +61,48 @@ export async function seedPaidOrderApi(request: APIRequestContext): Promise<Seed
   // Đặt khung giờ cách hiện tại tối thiểu 4 giờ và thêm offset ngày ngẫu nhiên để tránh đụng lịch các lượt test trước
   const baseStart = Date.now() + 4 * 60 * 60 * 1000;
 
-  // 1. Lấy danh sách sản phẩm công khai đang mở cho thuê
-  const spRes = await request.get(`${API_URL}/api/san-pham?soMoiTrang=50`);
-  expect(spRes.ok(), `GET /api/san-pham thất bại: ${spRes.status()}`).toBeTruthy();
-  const spData = unwrapData<{ items?: Array<Record<string, unknown>> }>(await spRes.json());
-  const products = spData.items ?? (Array.isArray(spData) ? (spData as Array<Record<string, unknown>>) : []);
+  // 1. Lấy danh sách sản phẩm — ưu tiên /api/san-pham/quan-ly (admin) để thấy CẢ SP cũ có tồn kho
+  // (Public /api/san-pham lọc theo trạng thái kinh doanh và có thể chỉ trả SP mới test tạo không có TB)
+  const products: Array<Record<string, unknown>> = [];
+  for (let page = 1; page <= 10; page++) {
+    const spRes = await request.get(`${API_URL}/api/san-pham/quan-ly?trang=${page}&soMoiTrang=100`, {
+      headers: authHeaders(adminToken),
+    });
+    if (!spRes.ok()) break;
+    const spData = unwrapData<{ items?: Array<Record<string, unknown>> }>(await spRes.json());
+    const items = spData.items ?? (Array.isArray(spData) ? (spData as Array<Record<string, unknown>>) : []);
+    if (items.length === 0) break;
+    products.push(...items);
+    if (items.length < 100) break;
+  }
   expect(products.length, "Phải có ít nhất 1 sản phẩm đang mở thuê để seed đơn").toBeGreaterThan(0);
 
   // 2. Lấy thiết bị đang Sẵn sàng và ưu tiên sản phẩm có nhiều thiết bị Sẵn sàng nhất (và chưa bị đặt lịch)
-  const tbRes = await request.get(`${API_URL}/api/thiet-bi?trangThaiSuDung=SanSang&soMoiTrang=200`, {
+  // DTO: TimThietBiRequest { TrangThai, MaSanPhamHienTai, SoMoiTrang }
+  const tbRes = await request.get(`${API_URL}/api/thiet-bi?trangThai=SanSang&soMoiTrang=200`, {
     headers: authHeaders(adminToken),
   });
   expect(tbRes.ok(), `GET /api/thiet-bi thất bại: ${tbRes.status()}`).toBeTruthy();
-  const tbData = unwrapData<{ items?: Array<{ maThietBi: number; maSanPham: number }> }>(await tbRes.json());
-  const readyEquip = tbData.items ?? [];
+  const tbData = unwrapData<{ items?: Array<{ maThietBi: number; maSanPhamHienTai?: number; trangThaiSuDung?: string }> }>(await tbRes.json());
+  const allEquip = tbData.items ?? [];
+  // Client-side filter cho chắc (phòng BE không honor filter)
+  const readyEquip = allEquip.filter((e) => !e.trangThaiSuDung || e.trangThaiSuDung === "SanSang");
 
   const readyCountByProd = new Map<number, number>();
   for (const eq of readyEquip) {
-    const pid = Number(eq.maSanPham);
+    const pid = Number(eq.maSanPhamHienTai);
+    if (!pid) continue;
     readyCountByProd.set(pid, (readyCountByProd.get(pid) ?? 0) + 1);
   }
 
   const candidateProducts = [...products]
     .filter((p) => (readyCountByProd.get(Number(p.maSanPham)) ?? 0) > 0)
+    .filter((p) => !p.trangThaiKinhDoanh || p.trangThaiKinhDoanh === "DangKinhDoanh")
     .sort((a, b) => (readyCountByProd.get(Number(b.maSanPham)) ?? 0) - (readyCountByProd.get(Number(a.maSanPham)) ?? 0));
 
-  const pool = candidateProducts.length > 0 ? candidateProducts : products;
+  // Shuffle để phân tán booking giữa các test chạy song song (tránh HET_HANG dồn vào 1 SP)
+  const basePool = candidateProducts.length > 0 ? candidateProducts : products;
+  const pool = [...basePool].sort(() => Math.random() - 0.5);
 
   // 3. Thử tạo đơn thuê qua các ứng viên sản phẩm & khung ngày (+0 ngày cho lần đầu để hiện trong "hôm nay", fallback +15/+30 ngày nếu kẹt)
   const suffix = uniqueSuffix();
@@ -94,8 +110,10 @@ export async function seedPaidOrderApi(request: APIRequestContext): Promise<Seed
   let pickedProduct = pool[0];
   let lastError = "";
 
-  // Thử ưu tiên hôm nay (+0 ngày) qua các sản phẩm nhiều tồn kho, nếu tất cả bận thì tịnh tiến ngày để vẫn tạo được đơn sạch
-  const dayOffsets = [0, 3, 7, 14, 30, 45];
+  // Thử các khung ngày để tránh HET_HANG giữa các test song song.
+  // Random base offset (30-180 ngày) + 10 slot spacing cho mỗi test — tối thiểu overlap.
+  const baseOffset = 30 + Math.floor(Math.random() * 150);
+  const dayOffsets = Array.from({ length: 12 }, (_, i) => baseOffset + i * 15).sort(() => Math.random() - 0.5);
   outer: for (const offsetDays of dayOffsets) {
     const pickup = new Date(baseStart + offsetDays * 24 * 60 * 60 * 1000);
     const ret = new Date(pickup.getTime() + 48 * 60 * 60 * 1000);
@@ -198,18 +216,23 @@ export async function prepareAndHandoverOrderApi(
   expect(line, "Đơn phải có ít nhất 1 dòng chi tiết").toBeTruthy();
 
   // 2. Thử lần lượt các thiết bị Sẵn sàng của sản phẩm để tránh 409 nếu có chiếc đang giữ lịch
-  const tbRes = await request.get(`${API_URL}/api/thiet-bi?maSanPham=${line.maSanPham}&trangThaiSuDung=SanSang&soMoiTrang=50`, {
+  // Query DTO: TimThietBiRequest { MaSanPhamHienTai, TrangThai, SoMoiTrang }
+  const tbRes = await request.get(`${API_URL}/api/thiet-bi?maSanPhamHienTai=${line.maSanPham}&trangThai=SanSang&soMoiTrang=50`, {
     headers,
   });
   expect(tbRes.ok(), `Lấy thiết bị sẵn sàng thất bại: ${tbRes.status()}`).toBeTruthy();
-  const tbData = unwrapData<{ items: Array<{ maThietBi: number; maThietBiHienThi: string }> }>(await tbRes.json());
-  expect(tbData.items.length, `Không còn thiết bị Sẵn sàng cho sản phẩm #${line.maSanPham}`).toBeGreaterThan(0);
+  const tbData = unwrapData<{
+    items: Array<{ maThietBi: number; maThietBiHienThi: string; maSanPhamHienTai?: number }>;
+  }>(await tbRes.json());
+  // Client-side safety filter: chỉ giữ thiết bị thuộc đúng sản phẩm (phòng BE chưa honor filter)
+  const matchedItems = tbData.items.filter((it) => !it.maSanPhamHienTai || it.maSanPhamHienTai === line.maSanPham);
+  expect(matchedItems.length, `Không còn thiết bị Sẵn sàng cho sản phẩm #${line.maSanPham}`).toBeGreaterThan(0);
 
   let chosenEquip: { maThietBi: number; maThietBiHienThi: string } | null = null;
   let assignedData: typeof prep | null = null;
   let lastAssignError = "";
 
-  for (const eq of tbData.items) {
+  for (const eq of matchedItems) {
     const assignRes = await request.post(`${API_URL}/api/chuan-bi-don/${orderId}/phan-cong`, {
       headers,
       data: {

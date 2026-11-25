@@ -214,11 +214,16 @@ test.describe("PH1 Deep Backend: Negative / Cross / RBAC / Recovery", () => {
     const { token: adminToken } = await loginApi(request, "admin");
     const seeded = await seedStaff(request, adminToken);
 
-    const accRes = await request.get(`/api/tai-khoan?soMoiTrang=100`, { headers: authHeaders(adminToken) });
-    expect(accRes.ok()).toBeTruthy();
-    const body = (await accRes.json()) as { duLieu?: { items?: Array<Record<string, unknown>> }; items?: Array<Record<string, unknown>> };
-    const items = body.duLieu?.items ?? body.items ?? [];
-    const matched = items.find((it) => Number((it as { maTaiKhoan?: number }).maTaiKhoan) === seeded.maTaiKhoan);
+    // Scan tối đa 10 trang để tìm (seed data lớn có thể nhiều hơn 100 account)
+    let matched: Record<string, unknown> | undefined;
+    for (let page = 1; page <= 10 && !matched; page++) {
+      const accRes = await request.get(`/api/tai-khoan?trang=${page}&soMoiTrang=100`, { headers: authHeaders(adminToken) });
+      if (!accRes.ok()) break;
+      const body = (await accRes.json()) as { duLieu?: { items?: Array<Record<string, unknown>> }; items?: Array<Record<string, unknown>> };
+      const items = body.duLieu?.items ?? body.items ?? [];
+      if (items.length === 0) break;
+      matched = items.find((it) => Number((it as { maTaiKhoan?: number }).maTaiKhoan) === seeded.maTaiKhoan);
+    }
     expect(matched, "maTaiKhoan vừa tạo phải xuất hiện trong /api/tai-khoan").toBeTruthy();
   });
 

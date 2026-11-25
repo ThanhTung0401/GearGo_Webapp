@@ -53,6 +53,11 @@ export function attachTabGuard(
       const txt = msg.text();
       // Bỏ qua log resource 404/400 nếu đang nằm trong allowStatuses
       if (allowSet.size > 0 && /status of (400|403|404|409)/i.test(txt)) return;
+      // Bỏ qua "Failed to load resource" khi URL trùng ignorePatterns (vd favicon)
+      if (/Failed to load resource/i.test(txt)) {
+        const locUrl = msg.location()?.url ?? "";
+        if (ignorePatterns.some((re) => re.test(locUrl))) return;
+      }
       report.consoleErrors.push(txt);
     }
   });

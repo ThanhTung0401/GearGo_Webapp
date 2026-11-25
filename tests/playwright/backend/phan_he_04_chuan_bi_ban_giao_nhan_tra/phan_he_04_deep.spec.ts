@@ -98,13 +98,15 @@ test.describe("[PH4-DEEP] Chuẩn bị, Bàn giao, Nhận trả & Quá hạn (ne
     };
     const lineA = prepA.danhSachDong[0];
 
-    // Lấy 1 TB Sẵn sàng của sản phẩm
-    const tb = await request.get(`${API_URL}/api/thiet-bi?maSanPham=${lineA.maSanPham}&trangThaiSuDung=SanSang&soMoiTrang=5`, {
+    // Lấy 1 TB Sẵn sàng của sản phẩm (query params đúng: maSanPhamHienTai + trangThai)
+    const tb = await request.get(`${API_URL}/api/thiet-bi?maSanPhamHienTai=${lineA.maSanPham}&trangThai=SanSang&soMoiTrang=50`, {
       headers: authHeaders(token),
     });
     expect(tb.ok()).toBeTruthy();
-    const tbBody = ((await tb.json()) as { duLieu?: { items: Array<{ maThietBi: number }> } }).duLieu;
-    const items = tbBody?.items ?? [];
+    const tbBody = ((await tb.json()) as { duLieu?: { items: Array<{ maThietBi: number; maSanPhamHienTai?: number }> } }).duLieu;
+    const allItems = tbBody?.items ?? [];
+    // Client-side filter cho chắc
+    const items = allItems.filter((it) => !it.maSanPhamHienTai || it.maSanPhamHienTai === lineA.maSanPham);
     if (items.length === 0) {
       test.skip(true, "Không còn TB sẵn sàng để test gán trùng");
       return;
