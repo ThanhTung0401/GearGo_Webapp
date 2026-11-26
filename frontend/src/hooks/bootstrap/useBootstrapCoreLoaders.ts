@@ -137,29 +137,62 @@ export function useBootstrapCoreLoaders(params: UseBootstrapDataParams) {
     try {
       if (role === "staff" || role === "admin") {
         const paged = await orderApi.timDonVanHanh({ soMoiTrang: 50 });
-        const details = await Promise.allSettled(paged.items.slice(0, 20).map((o) => orderApi.layChiTietVanHanh(o.maDonThue)));
-        const detailMap = new Map<number, Order>();
-        details.forEach((r) => {
-          if (r.status === "fulfilled") detailMap.set(r.value.don.maDonThue, mapDonVanHanhChiTietToOrder(r.value));
+        // Cập nhật ngay danh sách tóm tắt để UI (KPI, hàng đợi chuẩn bị/bàn giao) hiển thị tức thì,
+        // không bị treo rỗng trong lúc chờ nạp chi tiết từng đơn.
+        setOrders((prev) => {
+          const prevMap = new Map(prev.map((o) => [o.id, o]));
+          return paged.items.map((o) => {
+            const summary = mapDonVanHanhTomTatToOrder(o);
+            const existing = prevMap.get(summary.id);
+            // Giữ lại chi tiết items/assignedEquipment cũ nếu cùng trạng thái để tránh nháy UI
+            return existing && existing.status === summary.status && existing.items.length > 0
+              ? { ...existing, ...summary, items: existing.items, assignedEquipment: existing.assignedEquipment, surcharges: existing.surcharges }
+              : summary;
+          });
         });
-        setOrders(paged.items.map((o) => detailMap.get(o.maDonThue) ?? mapDonVanHanhTomTatToOrder(o)));
+
+        // Nạp chi tiết 12 đơn đầu theo từng đợt nhỏ (4 request/lượt) ở nền để không nghẽn 6-connection HTTP/1.1
+        const topIds = paged.items.slice(0, 12).map((o) => o.maDonThue);
+        void (async () => {
+          for (let i = 0; i < topIds.length; i += 4) {
+            if (!getAuthToken()) return;
+            const batch = topIds.slice(i, i + 4);
+            const details = await Promise.allSettled(batch.map((id) => orderApi.layChiTietVanHanh(id)));
+            const detailMap = new Map<string, Order>();
+            details.forEach((r) => {
+              if (r.status === "fulfilled") {
+                const mapped = mapDonVanHanhChiTietToOrder(r.value);
+                detailMap.set(mapped.id, mapped);
+              }
+            });
+            if (detailMap.size > 0) {
+              setOrders((curr) => curr.map((o) => detailMap.get(o.id) ?? o));
+            }
+          }
+        })();
       } else {
         const paged = await orderApi.layDonCuaToi({ soMoiTrang: 50 });
-        const details = await Promise.allSettled(paged.items.slice(0, 20).map((o) => orderApi.layChiTietDon(o.maDonThue)));
-        const detailMap = new Map<number, Order>();
-        details.forEach((r) => {
-          if (r.status === "fulfilled") {
-            detailMap.set(
-              r.value.maDonThue,
-              mapDonChiTietToOrder(r.value, { customerId: currentUser?.id, customerName: currentUser?.name })
-            );
-          }
-        });
         setOrders(
-          paged.items.map(
-            (o) => detailMap.get(o.maDonThue) ?? mapDonTomTatToOrder(o, currentUser?.name ?? "Khách hàng", currentUser?.id ?? "")
-          )
+          paged.items.map((o) => mapDonTomTatToOrder(o, currentUser?.name ?? "Khách hàng", currentUser?.id ?? ""))
         );
+        const topIds = paged.items.slice(0, 12).map((o) => o.maDonThue);
+        void (async () => {
+          for (let i = 0; i < topIds.length; i += 4) {
+            if (!getAuthToken()) return;
+            const batch = topIds.slice(i, i + 4);
+            const details = await Promise.allSettled(batch.map((id) => orderApi.layChiTietDon(id)));
+            const detailMap = new Map<string, Order>();
+            details.forEach((r) => {
+              if (r.status === "fulfilled") {
+                const mapped = mapDonChiTietToOrder(r.value, { customerId: currentUser?.id, customerName: currentUser?.name });
+                detailMap.set(mapped.id, mapped);
+              }
+            });
+            if (detailMap.size > 0) {
+              setOrders((curr) => curr.map((o) => detailMap.get(o.id) ?? o));
+            }
+          }
+        })();
       }
     } catch (err) {
       console.warn("Không thể tải danh sách đơn thuê:", err);

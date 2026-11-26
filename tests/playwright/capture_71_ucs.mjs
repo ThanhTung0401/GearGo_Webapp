@@ -618,7 +618,7 @@ async function main() {
     await page.getByText(/Đang tải hồ sơ cá nhân/i).waitFor({ state: 'hidden', timeout: 10000 }).catch(() => {});
     await annotateAuto(page, 'UC1.5', 'UC1_5', 'Giao diện Xem thông tin cá nhân (SCR-1.5)', ['main', '.profile-page', 'body'], { maxItems: 8 });
 
-    // UC1.6: Cập nhật thông tin cá nhân
+    // UC1.6: Cập nhật thông tin cá nhân (bao gồm nút Tải ảnh lên avatar)
     await annotateCurated(
       page,
       'UC1.6',
@@ -628,6 +628,8 @@ async function main() {
         { loc: (p) => p.locator('main input').nth(0), name: 'Họ và tên', type: 'Text box', meaning: 'Chỉnh sửa họ và tên của khách hàng', domain: 'String', defaultVal: 'Theo hồ sơ hiện tại', note: 'Bắt buộc nhập' },
         { loc: (p) => p.locator('main input').nth(1), name: 'Số điện thoại', type: 'Text box', meaning: 'Chỉnh sửa số điện thoại liên hệ', domain: 'String (10 chữ số)', defaultVal: 'Theo hồ sơ hiện tại', note: '' },
         { loc: (p) => p.locator('main input').nth(2), name: 'Địa chỉ', type: 'Text box', meaning: 'Cập nhật địa chỉ liên hệ', domain: 'String', defaultVal: 'Theo hồ sơ hiện tại', note: '' },
+        { loc: (p) => p.locator('main label:has-text("Tải ảnh lên")').first(), name: 'Tải ảnh lên', type: 'Button / File upload', meaning: 'Tải lên ảnh đại diện mới từ thiết bị cá nhân', domain: 'Image (JPG/PNG/WEBP)', defaultVal: 'Không', note: '' },
+        { loc: (p) => p.locator('main input[placeholder*="URL ảnh" i]').first(), name: 'URL ảnh đại diện', type: 'Text box', meaning: 'Hoặc dán trực tiếp đường dẫn ảnh đại diện', domain: 'URL String', defaultVal: 'Theo hồ sơ hiện tại', note: '' },
         { loc: (p) => p.getByRole('button', { name: 'Lưu thay đổi' }).first(), name: 'Lưu thay đổi', type: 'Button', meaning: 'Lưu các thông tin cá nhân vừa cập nhật', domain: 'Null', defaultVal: 'Kích hoạt', note: '' },
       ],
       1
@@ -699,10 +701,32 @@ async function main() {
       await page.waitForTimeout(1000);
     }
 
-    // UC3.3: Theo dõi đơn thuê
+    // UC3.3: Theo dõi đơn thuê — ưu tiên lọc tab "Chờ thanh toán" để hiển thị rõ nút "Tiếp tục thanh toán"
     await page.getByRole('button', { name: 'Đơn thuê' }).first().click().catch(() => {});
     await page.waitForTimeout(700);
-    await annotateAuto(page, 'UC3.3', 'UC3_3', 'Giao diện Theo dõi đơn thuê (SCR-3.3)', ['main', 'body'], { maxItems: 8 });
+    const pendingPayTab = page.locator('main button').filter({ hasText: /Chờ thanh toán \([1-9]/i }).first();
+    if (await pendingPayTab.isVisible().catch(() => false)) {
+      await pendingPayTab.click().catch(() => {});
+      await page.waitForTimeout(500);
+    }
+    await annotateCurated(
+      page,
+      'UC3.3',
+      'UC3_3',
+      'Giao diện Theo dõi đơn thuê (SCR-3.3)',
+      [
+        { loc: (p) => p.locator('main button').filter({ hasText: /^Tất cả/i }).first(), name: 'Bộ lọc Tất cả', type: 'Tab / Button', meaning: 'Hiển thị toàn bộ danh sách đơn thuê của khách hàng', domain: 'Null', defaultVal: 'Đang chọn', note: '' },
+        { loc: (p) => p.locator('main button').filter({ hasText: /^Chờ thanh toán/i }).first(), name: 'Bộ lọc Chờ thanh toán', type: 'Tab / Button', meaning: 'Lọc các đơn đang giữ chỗ 15 phút chờ thanh toán', domain: 'Null', defaultVal: 'Kích hoạt', note: '' },
+        { loc: (p) => p.locator('main button').filter({ hasText: /^Đã xác nhận/i }).first(), name: 'Bộ lọc Đã xác nhận', type: 'Tab / Button', meaning: 'Lọc các đơn đã thanh toán thành công', domain: 'Null', defaultVal: 'Kích hoạt', note: '' },
+        { loc: (p) => p.locator('main button').filter({ hasText: /^Đang thuê/i }).first(), name: 'Bộ lọc Đang thuê', type: 'Tab / Button', meaning: 'Lọc các đơn đang trong thời gian thuê thiết bị', domain: 'Null', defaultVal: 'Kích hoạt', note: '' },
+        { loc: (p) => p.locator('main .cp-order-pay-now-btn, main button:has-text("Tiếp tục thanh toán")').first(), name: 'Tiếp tục thanh toán (15p)', type: 'Button', meaning: 'Mở lại màn hình thanh toán VietQR cho đơn đang giữ chỗ', domain: 'Null', defaultVal: 'Hiện với đơn Chờ thanh toán', note: '' },
+        { loc: (p) => p.locator('main [class*="cursor-pointer"]').first(), name: 'Thẻ chi tiết đơn thuê', type: 'Card / Row', meaning: 'Nhấn vào để xem tiến độ đơn, BBBG, PNT và bảng đối soát cọc', domain: 'Null', defaultVal: 'Kích hoạt', note: '' },
+      ],
+      1
+    );
+    // Trả về tab Tất cả trước khi sang UC3.4
+    await page.locator('main button').filter({ hasText: /^Tất cả/i }).first().click().catch(() => {});
+    await page.waitForTimeout(400);
 
     // UC3.4: Hủy đơn thuê (2 hình: Hình a chi tiết đơn có nút Yêu cầu hủy, Hình b hộp thoại xác nhận hủy)
     const confirmedTab = page.getByRole('button', { name: /Đã xác nhận/i }).first();
@@ -862,16 +886,33 @@ async function main() {
     await clickTab('Đơn thuê');
     await annotateAuto(page, 'UC4.5', 'UC4_5', 'Giao diện Tra cứu đơn thuê cho vận hành (SCR-4.5)', ['.internal-content'], { maxItems: 8, tableName: 'Bảng danh sách đơn thuê' });
 
-    // UC5.4: Đối soát cọc và hoàn tất đơn (tìm đúng mã đơn trước để không phụ thuộc trang phân trang)
+    // UC5.4: Đối soát cọc và hoàn tất đơn — ưu tiên đơn mẫu ORD-202611-109, fallback lọc theo trạng thái Chờ đối soát
     const orderSearchInput = content.getByPlaceholder(/Tìm mã đơn/i).first();
+    const orderStatusSelect = content.locator('select').first();
     if (await orderSearchInput.isVisible().catch(() => false)) {
       await orderSearchInput.fill('ORD-202611-109');
       await page.waitForTimeout(350);
     }
-    const row109 = content.locator('tr:has-text("ORD-202611-109")').first();
-    const reconBtnLoc = (await row109.isVisible().catch(() => false))
-      ? row109.getByRole('button', { name: 'Đối soát', exact: true })
-      : content.getByRole('button', { name: 'Đối soát', exact: true }).first();
+    let reconBtnLoc = content.locator('tr:has-text("ORD-202611-109")').getByRole('button', { name: 'Đối soát', exact: true }).first();
+    if (!(await reconBtnLoc.isVisible().catch(() => false))) {
+      // Nếu không tìm thấy mã mẫu (DB đã chạy test nhiều), xóa ô tìm và lọc theo trạng thái Chờ đối soát
+      if (await orderSearchInput.isVisible().catch(() => false)) {
+        await orderSearchInput.fill('');
+        await page.waitForTimeout(300);
+      }
+      if (await orderStatusSelect.isVisible().catch(() => false)) {
+        await orderStatusSelect.selectOption({ label: 'Chờ đối soát' }).catch(async () => {
+          await orderStatusSelect.selectOption({ label: 'Hoàn tất' }).catch(() => {});
+        });
+        await page.waitForTimeout(400);
+      }
+      reconBtnLoc = content.getByRole('button', { name: /^(Đối soát|Xem đối soát)$/i }).first();
+      if (!(await reconBtnLoc.isVisible().catch(() => false)) && (await orderStatusSelect.isVisible().catch(() => false))) {
+        await orderStatusSelect.selectOption({ index: 0 }).catch(() => {});
+        await page.waitForTimeout(400);
+        reconBtnLoc = content.getByRole('button', { name: /^(Đối soát|Xem đối soát|Hồ sơ)$/i }).first();
+      }
+    }
     const next54 = await annotateCurated(
       page,
       'UC5.4',
@@ -889,6 +930,10 @@ async function main() {
       await orderSearchInput.fill('');
       await page.waitForTimeout(300);
     }
+    if (await orderStatusSelect.isVisible().catch(() => false)) {
+      await orderStatusSelect.selectOption({ index: 0 }).catch(() => {});
+      await page.waitForTimeout(300);
+    }
 
     // UC5.6: Thực hiện hoàn tiền
     const refundOpenBtn = page.getByRole('button', { name: /Lập & xử lý hoàn tiền cọc|Hoàn tiền|Hoàn cọc/i }).first();
@@ -896,55 +941,61 @@ async function main() {
       await refundOpenBtn.click().catch(() => {});
       await page.waitForTimeout(500);
     }
-    await annotateAuto(page, 'UC5.6', 'UC5_6', 'Giao diện Thực hiện hoàn tiền (SCR-5.6)', MODAL_SCOPES, { maxItems: 8 });
+    await annotateAuto(page, 'UC5.6', 'UC5_6', 'Giao diện Thực hiện hoàn tiền (SCR-5.6)', [...MODAL_SCOPES, '.internal-content'], { maxItems: 8 });
     await closeModal();
 
-    // UC5.5: Thu tiền bổ sung (tìm đúng mã đơn trước để không phụ thuộc phân trang)
-    if (await orderSearchInput.isVisible().catch(() => false)) {
-      await orderSearchInput.fill('ORD-202611-108');
-      await page.waitForTimeout(350);
-    }
+    // UC5.5: Thu tiền bổ sung — chuyển sang Nhận trả & Phụ phí để chọn đúng đơn ORD-202611-108 (cần thu thêm 400k)
+    await clickTab('Nhận trả & Phụ phí');
     const btn108 = content.locator('button:has-text("ORD-202611-108")').first();
     if (await btn108.isVisible().catch(() => false)) {
       await btn108.click().catch(() => {});
       await page.waitForTimeout(700);
-      const collectOpenBtn = page.getByRole('button', { name: /Thu thêm bổ sung|Thu thêm/i }).first();
-      if (await collectOpenBtn.isVisible().catch(() => false)) {
-        await collectOpenBtn.click().catch(() => {});
-        await page.waitForTimeout(500);
-      }
     }
-    await annotateAuto(page, 'UC5.5', 'UC5_5', 'Giao diện Thu tiền bổ sung (SCR-5.5)', MODAL_SCOPES, { maxItems: 8 });
+    const collectOpenBtn = page.getByRole('button', { name: /Thu thêm bổ sung|Thu thêm/i }).first();
+    if (await collectOpenBtn.isVisible().catch(() => false)) {
+      await collectOpenBtn.click().catch(() => {});
+      await page.waitForTimeout(500);
+    }
+    await annotateAuto(page, 'UC5.5', 'UC5_5', 'Giao diện Thu tiền bổ sung (SCR-5.5)', [...MODAL_SCOPES, '.internal-content'], { maxItems: 8 });
     await closeModal();
 
-    // UC4.1: Chuẩn bị và phân công thiết bị
+    // UC4.1: Chuẩn bị và phân công thiết bị — ưu tiên ORD-202611-102, fallback thẻ đơn đầu tiên
     await clickTab('Chuẩn bị & Bàn giao');
-    const prepItem = content.locator('button:has-text("ORD-202611-102"), button:has-text("Đã xác nhận")').first();
+    let prepItem = content.locator('button:has-text("ORD-202611-102")').first();
+    if (!(await prepItem.isVisible().catch(() => false))) {
+      prepItem = content.locator('button').filter({ hasText: /DH|ORD-|DT-|Đã xác nhận|Đang chuẩn bị/i }).first();
+    }
     if (await prepItem.isVisible().catch(() => false)) {
       await prepItem.click().catch(() => {});
-      await page.waitForTimeout(600);
+      await page.waitForTimeout(700);
     }
     await annotateAuto(page, 'UC4.1', 'UC4_1', 'Giao diện Chuẩn bị và phân công thiết bị (SCR-4.1)', ['.internal-content'], { maxItems: 8 });
 
-    // UC4.2: Bàn giao thiết bị
+    // UC4.2: Bàn giao thiết bị — ưu tiên ORD-202611-107, fallback thẻ đơn Sẵn sàng đầu tiên
     const handoverTabBtn = content.getByRole('button', { name: /2\. Tiếp khách & Bàn giao/i }).first();
     if (await handoverTabBtn.isVisible().catch(() => false)) {
       await handoverTabBtn.click().catch(() => {});
       await page.waitForTimeout(600);
-      const readyOrder = content.locator('button:has-text("ORD-202611-107"), button:has-text("Sẵn sàng")').first();
+      let readyOrder = content.locator('button:has-text("ORD-202611-107")').first();
+      if (!(await readyOrder.isVisible().catch(() => false))) {
+        readyOrder = content.locator('button').filter({ hasText: /DH|ORD-|DT-|Sẵn sàng/i }).first();
+      }
       if (await readyOrder.isVisible().catch(() => false)) {
         await readyOrder.click().catch(() => {});
-        await page.waitForTimeout(600);
+        await page.waitForTimeout(700);
       }
     }
     await annotateAuto(page, 'UC4.2', 'UC4_2', 'Giao diện Bàn giao thiết bị (SCR-4.2)', ['.internal-content'], { maxItems: 8 });
 
-    // UC4.3: Nhận trả và kiểm tra thiết bị
+    // UC4.3: Nhận trả và kiểm tra thiết bị — ưu tiên ORD-202610-001 (đơn quá hạn trả đợt 2), fallback thẻ đầu tiên
     await clickTab('Nhận trả & Phụ phí');
-    const retItem = content.locator('button:has-text("ORD-202610-001"), button:has-text("ORD-202611-111")').first();
+    let retItem = content.locator('button:has-text("ORD-202610-001"), button:has-text("ORD-202611-111")').first();
+    if (!(await retItem.isVisible().catch(() => false))) {
+      retItem = content.locator('button').filter({ hasText: /DH|ORD-|DT-|Đang thuê|Chờ đối soát/i }).first();
+    }
     if (await retItem.isVisible().catch(() => false)) {
       await retItem.click().catch(() => {});
-      await page.waitForTimeout(600);
+      await page.waitForTimeout(700);
     }
     const firstCheck = content.locator('input[type="checkbox"]').first();
     if (await firstCheck.isVisible().catch(() => false)) {
@@ -1212,6 +1263,12 @@ async function main() {
     await annotateAuto(page, 'UC7.7', 'UC7_7', 'Giao diện Kiểm tra và xác nhận nhập kho (SCR-7.7)', [...MODAL_SCOPES, '.internal-content'], { maxItems: 8 });
     await closeModal();
 
+    // UC7.9: Chọn lại phiếu Nháp (PN-...) trước khi chụp để hiển thị nút Hủy nháp
+    const draftPnForCancel = content.locator('button:has-text("PN-")').filter({ hasText: 'Nháp' }).first();
+    if (await draftPnForCancel.isVisible().catch(() => false)) {
+      await draftPnForCancel.click().catch(() => {});
+      await page.waitForTimeout(400);
+    }
     await annotateCurated(
       page,
       'UC7.9',

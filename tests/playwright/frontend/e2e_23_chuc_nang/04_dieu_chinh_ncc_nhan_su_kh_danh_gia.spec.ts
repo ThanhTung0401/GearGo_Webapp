@@ -148,7 +148,8 @@ test.describe.serial("E2E 23 Chức năng [04/05]: Điều chỉnh kho, NCC, Nh�
 
   test("CN 16 - Đánh giá: Phản hồi, Ẩn vi phạm -> Bỏ ẩn (sạch dòng lý do ẩn)", async () => {
     const page = getPage();
-    const guard = attachTabGuard(page);
+    // Bỏ qua 404 ảnh upload cũ không còn file vật lý trên đĩa, vẫn bắt chặt mọi lỗi API 4xx/5xx
+    const guard = attachTabGuard(page, { ignoreUrlPatterns: [/favicon/i, /\/uploads\/reviews\//i] });
 
     await navigateStaffTab(page, "reviews");
     await expect(page.getByText(/Kiểm duyệt đánh giá/i).first()).toBeVisible({ timeout: 15_000 });

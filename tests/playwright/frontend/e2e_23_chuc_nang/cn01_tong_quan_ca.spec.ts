@@ -34,8 +34,9 @@ test.describe.serial("CN 01 - Tổng quan ca: KPI, Cảnh báo quá hạn & Đi�
     for (const label of kpiLabels) {
       await expect(page.locator(".staff-kpi-card").filter({ hasText: label }).first()).toBeVisible();
     }
-    const prepKpiText = await page.locator(".staff-kpi-card").filter({ hasText: "Cần chuẩn bị" }).first().innerText();
-    expect(prepKpiText, "KPI Cần chuẩn bị phải hiển thị giá trị >= 1").toMatch(/[1-9]\d*/);
+    // Chờ auto-retry tới khi API đơn hàng tải xong và KPI Cần chuẩn bị >= 1
+    const prepKpiCard = page.locator(".staff-kpi-card").filter({ hasText: "Cần chuẩn bị" }).first();
+    await expect(prepKpiCard, "KPI Cần chuẩn bị phải hiển thị giá trị >= 1").toContainText(/[1-9]\d*/, { timeout: 15_000 });
 
     // 2. Đối chiếu chéo 1: Đơn vừa tạo phải hiển thị trong mục "Đơn cần chuẩn bị & nhận trả hôm nay" (có phân trang)
     let seededRow = page.locator("main .so-overview-order-row").filter({ hasText: seeded.displayCode }).first();

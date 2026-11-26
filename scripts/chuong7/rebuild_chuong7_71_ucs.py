@@ -12,8 +12,8 @@ from normalize_components import normalize_component
 
 BACKUP_DOCX = "Document/GearGo_Chuong_7_Thiet_Ke_Giao_Dien_Day_Du_ReactJS.backup.docx"
 OUT_DOCX = "Document/GearGo_Chuong_7_Thiet_Ke_Giao_Dien_Day_Du_ReactJS.docx"
-MANIFEST_JSON = "Document/screenshots_uc/manifest_71_ucs.json"
-IMG_DIR = "Document/screenshots_uc"
+MANIFEST_JSON = "tests/playwright/Document/screenshots_uc/manifest_71_ucs.json"
+IMG_DIR = "tests/playwright/Document/screenshots_uc"
 
 
 def set_cell_shading(cell, fill_hex):

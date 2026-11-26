@@ -250,8 +250,8 @@ export function useDashboardTab(app: ReturnType<typeof useApp>) {
           dauVanTayXemTruoc: storeCancelPreview?.dauVanTay,
         });
         await app.refreshOrders?.();
-        // [DB-09] Làm mới số liệu KPI tổng quan sau khi cửa hàng hủy đơn
-        await refreshDashboardSummary();
+        // [DB-09] Làm mới KPI tổng quan ở nền để không chặn đóng modal hủy đơn
+        void refreshDashboardSummary();
         // [DB-02] Dùng displayCode (DT-...) thay vì id số thô trong banner
         setBannerMessage({ type: "success", text: `Đã hủy đơn ${storeCancelOrder.displayCode || storeCancelOrder.id} từ phía cửa hàng (UC3.4).` });
         setStoreCancelOrder(null);

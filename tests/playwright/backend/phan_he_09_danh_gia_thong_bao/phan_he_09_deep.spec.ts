@@ -117,21 +117,55 @@ test.describe("PH9 Deep: Đánh giá & Thông báo — Negative + RBAC + Cascade
   // ─────────────────────── (c) RBAC ───────────────────────
 
   test("D9.R-01 Staff gọi POST /api/thong-bao (broadcast) → 403 (thiếu ThongBao.Gui)", async ({ request }) => {
-    const { token } = await loginApi(request, "staff");
-    const res = await request.post("/api/thong-bao", {
-      headers: authHeaders(token),
-      data: { tieuDe: "Staff thử phát", noiDung: "body", loaiSuKien: "HeThong" },
-    });
-    expect([403, 401]).toContain(res.status());
+    const { token: adminToken } = await loginApi(request, "admin");
+    const { token: staffToken } = await loginApi(request, "staff");
+    const meRes = await request.get("/api/auth/quyen-cua-toi", { headers: authHeaders(staffToken) });
+    const staffId = Number(((await meRes.json()) as { maTaiKhoan?: number }).maTaiKhoan ?? 0);
+
+    // Cô lập quyền của staff (không cấp ThongBao.Gui) để kiểm tra đúng lớp chặn RBAC dù DB local đã chỉnh quyền
+    if (staffId > 0) {
+      await request.put(`/api/phan-quyen/nhan-vien/${staffId}`, {
+        headers: authHeaders(adminToken),
+        data: { quyen: ["DonThue.Xem", "ThongBao.Xem"] },
+      });
+    }
+    try {
+      const res = await request.post("/api/thong-bao", {
+        headers: authHeaders(staffToken),
+        data: { tieuDe: "Staff thử phát", noiDung: "body", loaiSuKien: "HeThong" },
+      });
+      expect([403, 401]).toContain(res.status());
+    } finally {
+      if (staffId > 0) {
+        await request.delete(`/api/phan-quyen/nhan-vien/${staffId}`, { headers: authHeaders(adminToken) }).catch(() => {});
+      }
+    }
   });
 
   test("D9.R-02 Staff không có DanhGia.Duyet → ẩn review 403 (REV-03)", async ({ request }) => {
-    const { token } = await loginApi(request, "staff");
-    const res = await request.post("/api/danh-gia/1/an", {
-      headers: authHeaders(token),
-      data: { lyDo: "Staff thử ẩn" },
-    });
-    expect([401, 403]).toContain(res.status());
+    const { token: adminToken } = await loginApi(request, "admin");
+    const { token: staffToken } = await loginApi(request, "staff");
+    const meRes = await request.get("/api/auth/quyen-cua-toi", { headers: authHeaders(staffToken) });
+    const staffId = Number(((await meRes.json()) as { maTaiKhoan?: number }).maTaiKhoan ?? 0);
+
+    // Cô lập quyền của staff (không cấp DanhGia.Duyet) để test ổn định trên cả DB sạch lẫn DB đã chỉnh
+    if (staffId > 0) {
+      await request.put(`/api/phan-quyen/nhan-vien/${staffId}`, {
+        headers: authHeaders(adminToken),
+        data: { quyen: ["DonThue.Xem", "DanhGia.Xem"] },
+      });
+    }
+    try {
+      const res = await request.post("/api/danh-gia/1/an", {
+        headers: authHeaders(staffToken),
+        data: { lyDo: "Staff thử ẩn" },
+      });
+      expect([401, 403]).toContain(res.status());
+    } finally {
+      if (staffId > 0) {
+        await request.delete(`/api/phan-quyen/nhan-vien/${staffId}`, { headers: authHeaders(adminToken) }).catch(() => {});
+      }
+    }
   });
 
   test("D9.R-03 Guest không có token → GET /api/thong-bao 401", async ({ request }) => {

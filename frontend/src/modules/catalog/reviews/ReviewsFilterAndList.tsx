@@ -180,6 +180,10 @@ export function ReviewsFilterAndList({
                         alt={`Ảnh đánh giá ${idx + 1}`}
                         className="adm-review-img"
                         onClick={() => window.open(img, "_blank")}
+                        onError={(e) => {
+                          // Ẩn thẻ ảnh nếu file vật lý trên server không còn tồn tại
+                          e.currentTarget.style.display = "none";
+                        }}
                         title="Click để xem ảnh kích thước gốc"
                       />
                     ))}
