@@ -53,21 +53,21 @@ Report/Paper/
 └── README.md
 ```
 
-## Nguồn nội dung
+## Phân công viết báo cáo (3 thành viên)
 
-Mỗi file `chapters/*.tex` là skeleton với `\section{}` + `% TODO`. Nội dung chi tiết nằm ở:
+| Thành viên | File phân công | Chương phụ trách |
+|---|---|---|
+| Nguyễn Minh Tú | `Report/Assign/Phan_3_MinhTu_Ch1_Ch3_Ch6_PhuLucA.md` | Ch.1, Ch.3, Ch.6, Phụ lục A |
+| Trần Kim Xuyến | `Report/Assign/Phan_4_KimXuyen_Ch2_Ch4_Ch5.md` | Ch.2, Ch.4 (toàn bộ), Ch.5 |
+| Mai Trần Tuấn Kiệt | `Report/Assign/Phan_5_TuanKiet_KiemThu_KetLuan.md` | Ch.7, Kết luận, Phụ lục B |
 
-- `Report/Assign/Phan_1_ThanhTung_TongQuan_CaiDat.md` → Ch.1, Ch.6, Phụ lục A
-- `Report/Assign/Phan_2_KienMinh_PhanTich_UIKhach.md` → Ch.2, Ch.4 (phần A)
-- `Report/Assign/Phan_3_MinhTu_CoSoDuLieu.md` → Ch.3
-- `Report/Assign/Phan_4_KimXuyen_UIAdmin_KienTrucSource.md` → Ch.4 (phần B), Ch.5
-- `Report/Assign/Phan_5_TuanKiet_KiemThu_KetLuan.md` → Ch.7, Kết luận, Phụ lục B
+Mỗi file `chapters/*.tex` là skeleton với `\section{}` + `% TODO`. Nội dung chi tiết nằm ở các file phân công trên.
 
 ## Checklist cần điền
 
-- [ ] MSSV + Lớp 5 thành viên trong `bia.tex`.
+- [x] MSSV + Lớp 5 thành viên trong `bia.tex`.
 - [ ] Logo trường `images/logo_sgu.png` (uncomment dòng `\includegraphics` trong `bia.tex`).
-- [ ] Ảnh ERD `images/erd_tong_the.png` (Chương 3).
-- [ ] 71 screenshot UC vào `images/uc/` (Chương 4 + Phụ lục B).
-- [ ] Sơ đồ C4, sequence diagram (Chương 5).
-- [ ] Playwright HTML report screenshot (Chương 7).
+- [ ] Ảnh ERD `images/erd_tong_the.png` (Chương 3 — Minh Tú).
+- [ ] 71 screenshot UC vào `images/uc/` (Chương 4 — Kim Xuyến + Phụ lục B — Tuấn Kiệt).
+- [ ] Sơ đồ C4, sequence diagram (Chương 5 — Kim Xuyến).
+- [ ] Playwright HTML report screenshot (Chương 7 — Tuấn Kiệt).
