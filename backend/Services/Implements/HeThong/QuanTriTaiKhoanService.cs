@@ -23,7 +23,8 @@ public class QuanTriTaiKhoanService : IQuanTriTaiKhoanService
     public async Task<Result<PhanTrangResponse<TaiKhoanResponse>>> TimTaiKhoanAsync(
         TimTaiKhoanRequest request, long actorId, CancellationToken ct = default)
     {
-        await ActorGuard.EnsureQuanTriVienAsync(_context, actorId, ct);
+        // Cho phép cả Nhân viên đang làm việc nếu đã được cấp quyền động TaiKhoan.Xem ở Controller
+        await ActorGuard.EnsureVanHanhAsync(_context, actorId, ct);
 
         var trang = Math.Max(1, request.Trang);
         var soMoiTrang = request.SoMoiTrang <= 0
@@ -32,7 +33,13 @@ public class QuanTriTaiKhoanService : IQuanTriTaiKhoanService
 
         var query = _context.TaiKhoans.AsNoTracking().AsQueryable();
         if (!string.IsNullOrWhiteSpace(request.VaiTro)) query = query.Where(t => t.VaiTro == request.VaiTro);
-        if (!string.IsNullOrWhiteSpace(request.TrangThai)) query = query.Where(t => t.TrangThai == request.TrangThai);
+        if (!string.IsNullOrWhiteSpace(request.TrangThai))
+        {
+            // Hỗ trợ cả trạng thái seed "TamKhoa" khi lọc tài khoản đang bị khóa ("BiKhoa")
+            query = request.TrangThai == DomainConstants.AccountStatus.Locked
+                ? query.Where(t => t.TrangThai == DomainConstants.AccountStatus.Locked || t.TrangThai == "TamKhoa")
+                : query.Where(t => t.TrangThai == request.TrangThai);
+        }
         if (!string.IsNullOrWhiteSpace(request.TuKhoa))
         {
             var kw = request.TuKhoa.Trim();
@@ -61,7 +68,8 @@ public class QuanTriTaiKhoanService : IQuanTriTaiKhoanService
 
     public async Task<Result<TaiKhoanResponse>> LayTaiKhoanAsync(long maTaiKhoan, long actorId, CancellationToken ct = default)
     {
-        await ActorGuard.EnsureQuanTriVienAsync(_context, actorId, ct);
+        // Cho phép cả Nhân viên đang làm việc nếu đã được cấp quyền động TaiKhoan.Xem ở Controller
+        await ActorGuard.EnsureVanHanhAsync(_context, actorId, ct);
         var tk = await TaiTaiKhoanAsync(maTaiKhoan, tracking: false, ct);
         return tk == null ? KhongThay() : Result<TaiKhoanResponse>.Ok(Map(tk));
     }
@@ -77,7 +85,8 @@ public class QuanTriTaiKhoanService : IQuanTriTaiKhoanService
     private async Task<Result<TaiKhoanResponse>> DoiTrangThaiAsync(
         long maTaiKhoan, string? lyDoRaw, bool khoa, long actorId, CancellationToken ct)
     {
-        await ActorGuard.EnsureQuanTriVienAsync(_context, actorId, ct);
+        // Cho phép Nhân viên có quyền động TaiKhoan.Quan thao tác, nhưng chặn khóa/mở khóa tài khoản Quản trị viên
+        await ActorGuard.EnsureVanHanhAsync(_context, actorId, ct);
 
         var lyDo = lyDoRaw?.Trim() ?? "";
         if (lyDo.Length == 0 || lyDo.Length > 1000)
@@ -88,6 +97,13 @@ public class QuanTriTaiKhoanService : IQuanTriTaiKhoanService
 
         var tk = await TaiTaiKhoanAsync(maTaiKhoan, tracking: true, ct);
         if (tk == null) return KhongThay();
+
+        if (tk.VaiTro == DomainConstants.Roles.Admin)
+        {
+            var actorRole = await _context.TaiKhoans.Where(t => t.MaTaiKhoan == actorId).Select(t => t.VaiTro).FirstOrDefaultAsync(ct);
+            if (actorRole != DomainConstants.Roles.Admin)
+                return Result<TaiKhoanResponse>.Loi(DomainConstants.Errors.Forbidden, "Nhân viên không được phép khóa hoặc mở khóa tài khoản Quản trị viên.");
+        }
 
         var truoc = new { tk.VaiTro, tk.TrangThai, tk.LyDoKhoa };
         var loiNghiepVu = khoa
@@ -107,7 +123,7 @@ public class QuanTriTaiKhoanService : IQuanTriTaiKhoanService
 
     private async Task<Result<TaiKhoanResponse>?> KiemTraKhoaAsync(TaiKhoan tk, string lyDo, CancellationToken ct)
     {
-        if (tk.TrangThai == DomainConstants.AccountStatus.Locked)
+        if (tk.TrangThai == DomainConstants.AccountStatus.Locked || tk.TrangThai == "TamKhoa")
             return Result<TaiKhoanResponse>.Loi(DomainConstants.Errors.InvalidState, "Tài khoản đã bị khóa.");
 
         if (QuanTriNhanSuHelper.LaQuanTriHoatDong(tk, tk.NhanVien)
@@ -121,7 +137,7 @@ public class QuanTriTaiKhoanService : IQuanTriTaiKhoanService
 
     private static Result<TaiKhoanResponse>? KiemTraMoKhoa(TaiKhoan tk)
     {
-        if (tk.TrangThai != DomainConstants.AccountStatus.Locked)
+        if (tk.TrangThai != DomainConstants.AccountStatus.Locked && tk.TrangThai != "TamKhoa")
             return Result<TaiKhoanResponse>.Loi(DomainConstants.Errors.InvalidState, "Tài khoản không bị khóa.");
         if (tk.NhanVien?.TrangThaiLamViec == DomainConstants.StaffStatus.Resigned)
             return Result<TaiKhoanResponse>.Loi(DomainConstants.Errors.StaffResigned, "Nhân viên đã nghỉ việc; không thể mở khóa tài khoản.");
