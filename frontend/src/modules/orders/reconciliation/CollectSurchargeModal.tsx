@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useApp } from "../../../App";
 import { paymentApi, reconciliationApi, type DoiSoatBackend, type YeuCauThuBackend } from "../../../services/api";
 import { fmt, type Order } from "../../../store";
@@ -38,10 +39,11 @@ export function CollectSurchargeModal(props: Props) {
     syncAfterMutation, reconBusy, setReconBusy,
     setReconError, setReconSuccess, onClose,
   } = props;
+  const [cashOutcome, setCashOutcome] = useState<"success" | "fail">("success");
   const showCollectModal = true;
   const setShowCollectModal = (open: boolean) => { if (!open) onClose(); };
   // Điều kiện vô hiệu hóa nút xác nhận thu bổ sung
-  const isSubmitDisabled = (collectMethod === "cash" && cashTendered < extraAmount) || reconBusy;
+  const isSubmitDisabled = (collectMethod === "cash" && cashOutcome === "success" && cashTendered < extraAmount) || reconBusy;
   return (
     <>
       {showCollectModal && (
@@ -104,6 +106,33 @@ export function CollectSurchargeModal(props: Props) {
                   <strong className={`recon-change-val ${cashTendered >= extraAmount ? "is-enough" : ""}`}>
                     {cashTendered >= extraAmount ? fmt(cashTendered - extraAmount) : "Chưa đủ tiền (Dòng 5.2)"}
                   </strong>
+                </div>
+                <div className="mt-2 pt-2 border-t border-gray-200">
+                  <div className="text-xs font-semibold text-gray-700 mb-1.5">Kết quả thu tiền mặt:</div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setCashOutcome("success")}
+                      className={`px-2.5 py-1.5 rounded-md text-xs font-bold border cursor-pointer ${
+                        cashOutcome === "success"
+                          ? "bg-emerald-600 text-white border-emerald-600"
+                          : "bg-white text-gray-700 border-gray-300"
+                      }`}
+                    >
+                      ✓ Thành công
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCashOutcome("fail")}
+                      className={`px-2.5 py-1.5 rounded-md text-xs font-bold border cursor-pointer ${
+                        cashOutcome === "fail"
+                          ? "bg-red-600 text-white border-red-600"
+                          : "bg-white text-gray-700 border-gray-300"
+                      }`}
+                    >
+                      ✕ Thất bại (Fail)
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
@@ -205,6 +234,10 @@ export function CollectSurchargeModal(props: Props) {
                 type="button"
                 disabled={isSubmitDisabled}
                 onClick={async () => {
+                  if (collectMethod === "cash" && cashOutcome === "fail") {
+                    setReconError("Thanh toán tiền mặt thất bại — giao dịch chưa được ghi nhận, bảng đối soát giữ nguyên chưa chốt.");
+                    return;
+                  }
                   const methodStr = collectMethod === "cash" ? "Tiền mặt tại quầy" : collectMethod === "pos" ? `Thẻ POS (${posTerminalCode}/${posAuthCode})` : "Quét VietQR";
                   if (app.realApi) {
                     setReconBusy(true);
