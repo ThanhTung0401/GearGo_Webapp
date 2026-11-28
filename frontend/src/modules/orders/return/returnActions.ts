@@ -168,10 +168,12 @@ export async function confirmApproveLostAction(params: {
   const donId = order.backendId ?? Number(order.id);
   const { phieuId, chiTiet } = approveLostTarget;
 
+  // Bỏ qua phụ phí mất đã bị Từ chối trước đó để QTV có thể lập & duyệt khoản bồi thường mới
   const matchedSurcharge = surchargesBackend.find(
     (s) =>
       s.handoverItemId === chiTiet.maChiTietBanGiao &&
       (s.type === "Mất thiết bị" || s.type === "Mất đồ") &&
+      s.status !== "Từ chối" &&
       s.backendId
   );
   let surchargeId = matchedSurcharge?.backendId;

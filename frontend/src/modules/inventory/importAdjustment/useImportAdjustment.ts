@@ -21,6 +21,7 @@ export function useImportAdjustment(
   // khiến Admin duyệt bị tự động cộng thêm thiết bị vào kho thay vì giảm kho.
   const [quantityDirection, setQuantityDirection] = useState<QuantityAdjustDirection>("ThemThieu");
   const [selectedLineId, setSelectedLineId] = useState<string>(receipt.lines[0]?.id || "");
+  const [selectedEquipmentIds, setSelectedEquipmentIds] = useState<number[]>([]);
   const [previousValue, setPreviousValue] = useState("");
   const [newValue, setNewValue] = useState("");
   const [reason, setReason] = useState("");
@@ -29,10 +30,26 @@ export function useImportAdjustment(
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
+  const selectedLine = receipt.lines.find((l) => String(l.id || "") === selectedLineId) ?? receipt.lines[0];
+
+  // Danh sách thiết bị thuộc dòng phiếu nhập đang chọn (dùng khi Loại bỏ thiết bị thừa/trùng)
+  const lineEquipments = app.equipment.filter((eq) => {
+    const matchLine = selectedLineId && eq.importReceiptLineId === selectedLineId;
+    const matchProduct = selectedLine && eq.productId === selectedLine.productId;
+    return (matchLine || (!eq.importReceiptLineId && matchProduct)) && eq.equipmentStatus !== "Đang thuê";
+  });
+
+  const toggleEquipmentId = (eqId: number) => {
+    setSelectedEquipmentIds((prev) =>
+      prev.includes(eqId) ? prev.filter((id) => id !== eqId) : [...prev, eqId]
+    );
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitError(null);
-    if (!previousValue.trim() || !newValue.trim()) {
+    const isRemoveExcess = type === "Số lượng" && quantityDirection === "LoaiThua";
+    if (!isRemoveExcess && (!previousValue.trim() || !newValue.trim())) {
       setSubmitError("Vui lòng nhập đầy đủ giá trị trước và sau khi điều chỉnh.");
       return;
     }
@@ -44,21 +61,56 @@ export function useImportAdjustment(
     if (app.realApi) {
       const phieuNhapId = Number(receipt.id);
       if (!Number.isFinite(phieuNhapId)) return;
-      setSubmitting(true);
-      try {
-        // [PN-10] Map loại điều chỉnh theo type + hướng (chỉ khi là "Số lượng").
-        // "Thông tin chứng từ" không đụng kho/giá → dùng SaiGiaNhap làm nhóm nhật ký (giữ nguyên hành vi cũ).
-        const loaiDieuChinh =
-          type === "Số lượng"
-            ? quantityDirection === "LoaiThua"
-              ? "KhaiBaoTrungSaiThietBi"
-              : "KhaiBaoThieuThietBi"
-            : "SaiGiaNhap";
-        const maChiTietPhieuNhap =
-          selectedLineId && Number.isFinite(Number(selectedLineId)) ? Number(selectedLineId) : undefined;
+
+      const loaiDieuChinh =
+        type === "Số lượng"
+          ? quantityDirection === "LoaiThua"
+            ? "KhaiBaoTrungSaiThietBi"
+            : "KhaiBaoThieuThietBi"
+          : "SaiGiaNhap";
+      const maChiTietPhieuNhap =
+        selectedLineId && Number.isFinite(Number(selectedLineId)) ? Number(selectedLineId) : undefined;
+
+      // Xây dựng danh sách chi tiết đúng theo loại điều chỉnh
+      let chiTietPayload: Array<{
+        maThietBi?: number;
+        maChiTietPhieuNhap?: number;
+        giaTriDeNghiSau?: unknown;
+        ghiChu?: string;
+      }> = [];
+
+      if (loaiDieuChinh === "KhaiBaoThieuThietBi") {
+        const prevQty = Number(previousValue.replace(/[^\d.-]/g, ""));
+        const newQty = Number(newValue.replace(/[^\d.-]/g, ""));
+        const delta = Math.round(newQty - prevQty);
+        if (!Number.isFinite(prevQty) || !Number.isFinite(newQty) || delta <= 0) {
+          setSubmitError("Số lượng sau điều chỉnh phải lớn hơn số lượng trước điều chỉnh (ít nhất +1 chiếc).");
+          return;
+        }
+        if (delta > 50) {
+          setSubmitError("Mỗi lần chỉ được bổ sung tối đa 50 thiết bị.");
+          return;
+        }
+        chiTietPayload = Array.from({ length: delta }, (_, idx) => ({
+          maChiTietPhieuNhap,
+          giaTriDeNghiSau: { loai: type, truoc: prevQty, sau: newQty, thuTuBoSung: idx + 1 },
+          ghiChu: `Bổ sung thiết bị thiếu (${idx + 1}/${delta}): ${prevQty} -> ${newQty}`,
+        }));
+      } else if (loaiDieuChinh === "KhaiBaoTrungSaiThietBi") {
+        if (selectedEquipmentIds.length === 0) {
+          setSubmitError("Vui lòng chọn ít nhất 1 thiết bị khai báo thừa/trùng cần loại bỏ.");
+          return;
+        }
+        chiTietPayload = selectedEquipmentIds.map((eqId) => ({
+          maThietBi: eqId,
+          maChiTietPhieuNhap,
+          giaTriDeNghiSau: { trangThai: "NgungSuDung", tinhTrang: "KhaiBaoSai" },
+          ghiChu: `Loại bỏ thiết bị khai báo thừa/trùng (#${eqId})`,
+        }));
+      } else {
         const parsedNewPrice = Number(newValue.replace(/[^\d.-]/g, ""));
         const giaTriDeNghiSau =
-          loaiDieuChinh === "SaiGiaNhap" && Number.isFinite(parsedNewPrice) && parsedNewPrice >= 0
+          Number.isFinite(parsedNewPrice) && parsedNewPrice >= 0
             ? {
                 donGiaHieuLuc: parsedNewPrice,
                 donGiaNhap: parsedNewPrice,
@@ -67,19 +119,23 @@ export function useImportAdjustment(
                 sau: newValue.trim(),
               }
             : { loai: type, truoc: previousValue.trim(), sau: newValue.trim() };
+        chiTietPayload = [
+          {
+            maChiTietPhieuNhap,
+            giaTriDeNghiSau,
+            ghiChu: `${type}: ${previousValue.trim()} -> ${newValue.trim()}`,
+          },
+        ];
+      }
 
+      setSubmitting(true);
+      try {
         const created = await inventoryApi.lapPhieu({
           loaiDieuChinh,
           maPhieuNhapLienQuan: phieuNhapId,
           lyDo: reason.trim(),
           bangChung: evidence.trim() ? [evidence.trim()] : undefined,
-          chiTiet: [
-            {
-              maChiTietPhieuNhap,
-              giaTriDeNghiSau,
-              ghiChu: `${type}: ${previousValue.trim()} -> ${newValue.trim()}`,
-            },
-          ],
+          chiTiet: chiTietPayload,
         });
         await inventoryApi.guiDuyet(created.maPhieuDieuChinh);
         await app.refreshImportReceipts?.();
@@ -130,6 +186,7 @@ export function useImportAdjustment(
     type, setType,
     quantityDirection, setQuantityDirection,
     selectedLineId, setSelectedLineId,
+    selectedEquipmentIds, lineEquipments, toggleEquipmentId,
     previousValue, setPreviousValue,
     newValue, setNewValue,
     reason, setReason,

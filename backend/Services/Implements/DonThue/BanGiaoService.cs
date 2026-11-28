@@ -207,9 +207,11 @@ public class BanGiaoService : IBanGiaoService
             if (phieu.ChiTietBanGiaos.Count < tongSoLuongDon)
                 return Result<bool>.Loi(DomainConstants.Errors.InvalidData, $"Chưa đủ thiết bị bàn giao ({phieu.ChiTietBanGiaos.Count}/{tongSoLuongDon}).");
 
-            // Kiểm tra điều kiện thanh toán qua Specification trước khi đổi trạng thái phiếu/đơn/thiết bị (UC4.2)
-            decimal tongTienYeuCau = phieu.DonThue.ChiTietDonThues.Sum(c =>
+            // Kiểm tra điều kiện thanh toán theo tổng tiền thuê sau giảm + cọc đã chốt trên DonThue (UC4.2)
+            decimal tongTienDon = Math.Max(0m, phieu.DonThue.TongTienThueTruocGiam - phieu.DonThue.TongTienGiam) + phieu.DonThue.TongTienCoc;
+            decimal tongTienChiTiet = phieu.DonThue.ChiTietDonThues.Sum(c =>
                 (c.DonGiaThueMoiNgay * c.SoNgayTinhTien + c.MucCocMoiThietBi) * c.SoLuong - c.TienGiam);
+            decimal tongTienYeuCau = tongTienDon > 0 ? tongTienDon : tongTienChiTiet;
             decimal tongDaDong = await _context.ThanhToans
                 .Where(t => t.MaDonThue == phieu.MaDonThue && t.TrangThai == DomainConstants.Status.Success)
                 .SumAsync(t => t.TongSoTien);

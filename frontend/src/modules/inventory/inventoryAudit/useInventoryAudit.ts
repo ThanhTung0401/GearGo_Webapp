@@ -55,12 +55,24 @@ export function useInventoryAudit(
 
     Promise.all([
       warehouseApi.layTongQuan(),
-      warehouseApi.timThietBi({ trang: 1, soMoiTrang: 200 }),
+      warehouseApi.timThietBi({ trang: 1, soMoiTrang: 100 }),
     ])
-      .then(([tq, paged]) => {
+      .then(async ([tq, firstPage]) => {
         if (cancelled) return;
         setTongQuan(tq);
-        setKhoItems(paged.items || []);
+        let allItems = firstPage.items || [];
+        // Backend giới hạn MaxPageSize = 100 và unwrapPaged chỉ trả totalItems/pageSize nên tự tính totalPages
+        const totalPages = Math.max(1, Math.ceil((firstPage.totalItems || 0) / Math.max(1, firstPage.pageSize || 100)));
+        if (totalPages > 1) {
+          const restPages = await Promise.all(
+            Array.from({ length: totalPages - 1 }, (_, i) =>
+              warehouseApi.timThietBi({ trang: i + 2, soMoiTrang: 100 })
+            )
+          );
+          if (cancelled) return;
+          allItems = [...allItems, ...restPages.flatMap((p) => p.items || [])];
+        }
+        setKhoItems(allItems);
       })
       .catch((err) => {
         if (!cancelled) {

@@ -1,4 +1,5 @@
 import { fmt } from "../../../store";
+import { useApp } from "../../../context/AppContext";
 import type { CheckoutPaymentMethod } from "./useCheckoutFlow";
 
 interface CheckoutOrderSummaryProps {
@@ -41,6 +42,8 @@ export function CheckoutOrderSummary({
   submitting,
   onConfirm,
 }: CheckoutOrderSummaryProps) {
+  const { policies } = useApp();
+  const holdMinutes = policies?.holdMinutes ?? 15;
   return (
     <div className="summary-card cp-summary-card">
       <h3 className="summary-title cp-summary-title cp-checkout-summary-title">
@@ -102,7 +105,7 @@ export function CheckoutOrderSummary({
               ⚡ Cổng thanh toán VietQR tự động
             </div>
             <div className="cp-vietqr-note-desc">
-              Mã QR chuyển khoản ngân hàng sẽ được tạo lập ngay ở bước kế tiếp kèm đồng hồ giữ chỗ 15 phút.
+              Mã QR chuyển khoản ngân hàng sẽ được tạo lập ngay ở bước kế tiếp kèm đồng hồ giữ chỗ {holdMinutes} phút.
             </div>
           </div>
         )}
@@ -134,11 +137,11 @@ export function CheckoutOrderSummary({
         disabled={!agreedTerms || submitting}
         className="btn btn-primary btn-lg btn-full mt-4 cp-btn-checkout"
       >
-        {submitting ? "Đang tạo đơn & giữ chỗ 15 phút..." : "✓ Xác nhận đặt thuê & Giữ chỗ 15 phút"}
+        {submitting ? `Đang tạo đơn & giữ chỗ ${holdMinutes} phút...` : `✓ Xác nhận đặt thuê & Giữ chỗ ${holdMinutes} phút`}
       </button>
 
       <p className="cp-cart-hold-note">
-        🔒 Cam kết giữ chỗ toàn bộ danh mục thiết bị trong 15 phút
+        🔒 Cam kết giữ chỗ toàn bộ danh mục thiết bị trong {holdMinutes} phút
       </p>
     </div>
   );

@@ -131,15 +131,23 @@ export function StockAdjustTable({
                       ))}
                     </td>
                     <td>
-                      {sa.lines.map((l, idx) => (
-                        <div key={`${l.equipmentId}-${idx}`} className="flex items-center gap-1 whitespace-nowrap">
-                          <span className="text-[#6B7280]">{l.previousStatus}</span>
-                          <span>→</span>
-                          <strong className={l.newStatus === "Ngừng sử dụng" ? "text-[#DC2626]" : l.newStatus === "Thất lạc" ? "text-[#B91C1C]" : "text-[var(--color-forest)]"}>
-                            {l.newStatus}
-                          </strong>
-                        </div>
-                      ))}
+                      {sa.note === "SaiGiaNhap" ? (
+                        <span className="adm-pill is-info">Điều chỉnh giá nhập</span>
+                      ) : sa.note === "KhaiBaoThieuThietBi" ? (
+                        <span className="adm-pill is-warning">Khai báo thiếu SL nhập</span>
+                      ) : sa.note === "KhaiBaoTrungSaiThietBi" ? (
+                        <span className="adm-pill is-warning">Khai báo trùng/sai mã TB</span>
+                      ) : (
+                        sa.lines.map((l, idx) => (
+                          <div key={`${l.equipmentId}-${idx}`} className="flex items-center gap-1 whitespace-nowrap">
+                            <span className="text-[#6B7280]">{l.previousStatus}</span>
+                            <span>→</span>
+                            <strong className={l.newStatus === "Ngừng sử dụng" ? "text-[#DC2626]" : l.newStatus === "Thất lạc" ? "text-[#B91C1C]" : "text-[var(--color-forest)]"}>
+                              {l.newStatus}
+                            </strong>
+                          </div>
+                        ))
+                      )}
                     </td>
                     <td>
                       <span className={`adm-pill ${sa.status === "Chờ duyệt" ? "is-warning" : sa.status === "Từ chối" ? "is-danger" : "is-success"}`}>

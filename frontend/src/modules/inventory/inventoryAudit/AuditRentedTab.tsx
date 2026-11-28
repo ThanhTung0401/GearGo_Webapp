@@ -1,4 +1,6 @@
 import type { Order, Product } from "../../../store";
+import Pagination from "../../../components/ui/Pagination";
+import { usePagination } from "../../../hooks/usePagination";
 import type { AuditEquipmentView } from "./useInventoryAudit";
 
 interface Props {
@@ -8,6 +10,7 @@ interface Props {
 }
 
 export default function AuditRentedTab({ rentedEquipments, products, orders }: Props) {
+  const paging = usePagination(rentedEquipments, 10);
   return (
     <div className="grid gap-3">
       <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 text-xs text-blue-800 flex gap-2.5 items-start">
@@ -36,7 +39,7 @@ export default function AuditRentedTab({ rentedEquipments, products, orders }: P
               </tr>
             </thead>
             <tbody>
-              {rentedEquipments.map((e) => {
+              {paging.pagedItems.map((e) => {
                 const prod = products.find((p) => p.id === e.productId);
                 const ord = orders.find(
                   (o) =>
@@ -66,6 +69,18 @@ export default function AuditRentedTab({ rentedEquipments, products, orders }: P
             </tbody>
           </table>
         </div>
+      )}
+
+      {rentedEquipments.length > 0 && (
+        <Pagination
+          page={paging.page}
+          totalPages={paging.totalPages}
+          totalItems={paging.totalItems}
+          startIndex={paging.startIndex}
+          endIndex={paging.endIndex}
+          onPageChange={paging.setPage}
+          itemLabel="thiết bị"
+        />
       )}
     </div>
   );

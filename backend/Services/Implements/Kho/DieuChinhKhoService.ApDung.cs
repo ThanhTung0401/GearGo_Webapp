@@ -163,11 +163,12 @@ public partial class DieuChinhKhoService
             return Result<DieuChinhKhoResponse>.Loi(DomainConstants.Errors.DetailNotFound, "Không tìm thấy dòng chi tiết phiếu nhập gốc.");
 
         string prefix = ctpn.SanPham?.TenSanPham != null ? ctpn.SanPham.TenSanPham.Split(' ')[0].ToUpper() : "TB";
+        // Gắn thêm MaChiTietDieuChinh để đảm bảo mã hiển thị không trùng khi duyệt nhiều thiết bị bổ sung trong cùng mili-giây
         var tbMoi = new ThietBi
         {
             MaChiTietPhieuNhap = ctpn.MaChiTietPhieuNhap,
             MaSanPhamHienTai = ctpn.MaSanPham,
-            MaThietBiHienThi = $"TB-{prefix}-{DateTime.UtcNow:yyyyMMddHHmmssfff}",
+            MaThietBiHienThi = $"TB-{prefix}-{DateTime.UtcNow:yyyyMMddHHmmssfff}-{ct.MaChiTietDieuChinh}",
             GiaNhap = ctpn.DonGiaNhap,
             TrangThaiSuDung = TrangThaiThietBi.SanSang,
             TinhTrang = "Mới (Bổ sung từ đợt nhập cũ)"

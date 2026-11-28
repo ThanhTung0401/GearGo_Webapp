@@ -236,7 +236,8 @@ public record PhuPhiDonResponse(
     string? KetQuaGiaiQuyet,
     long? MaPhuPhiGoc,
     long? MaDoiSoat,
-    bool LaDieuChinh
+    bool LaDieuChinh,
+    string? TenNguoiLap = null
 );
 
 public record DoiSoatDonResponse(

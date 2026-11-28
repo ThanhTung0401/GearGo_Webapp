@@ -11,6 +11,15 @@ export function OrderConfirmedView() {
 
   if (!order) return null;
 
+  // Tính thời gian giữ chỗ thực tế của đơn (ưu tiên expiresAt - createdAt, fallback chính sách hiện hành)
+  const holdMinutes = (() => {
+    if (order.expiresAt && order.createdAt) {
+      const diffMin = Math.round((new Date(order.expiresAt).getTime() - new Date(order.createdAt).getTime()) / 60000);
+      if (Number.isFinite(diffMin) && diffMin > 0) return diffMin;
+    }
+    return app.policies?.holdMinutes ?? 15;
+  })();
+
   const isPendingActive = !paid && !cancelled && !expired && seconds > 0;
 
   return (
@@ -30,7 +39,7 @@ export function OrderConfirmedView() {
               ? "Đơn thuê đã hủy & hoàn thiết bị về kho"
               : expired
               ? "Đơn thuê đã hết thời hạn giữ chỗ"
-              : "Đơn thuê đang chờ thanh toán (Giữ chỗ 15 phút)"}
+              : `Đơn thuê đang chờ thanh toán (Giữ chỗ ${holdMinutes} phút)`}
           </h2>
           <p className="text-sm opacity-90 mt-1 cp-confirmed-banner-desc">
             {paid
@@ -38,7 +47,7 @@ export function OrderConfirmedView() {
               : cancelled
               ? "Đơn thuê đã được hủy và toàn bộ thiết bị giữ chỗ đã được giải phóng ngay về kho."
               : expired
-              ? "Đã hết 15 phút chờ thanh toán, thiết bị đã được tự động hoàn về kho cho khách khác."
+              ? `Đã hết ${holdMinutes} phút chờ thanh toán, thiết bị đã được tự động hoàn về kho cho khách khác.`
               : "Vui lòng quét mã QR chuyển khoản hoặc thanh toán trước khi hết thời gian giữ chỗ."}
           </p>
         </div>

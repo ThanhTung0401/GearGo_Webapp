@@ -1,4 +1,4 @@
-﻿import { useCheckoutFlow } from "./cart/useCheckoutFlow";
+import { useCheckoutFlow } from "./cart/useCheckoutFlow";
 import { CheckoutReceiverSection } from "./cart/CheckoutReceiverSection";
 import { CheckoutOrderSummary } from "./cart/CheckoutOrderSummary";
 import { CheckoutQuoteModal } from "./cart/CheckoutQuoteModal";
@@ -9,6 +9,7 @@ import { CheckoutQuoteModal } from "./cart/CheckoutQuoteModal";
 export function CheckoutView() {
   const vm = useCheckoutFlow();
   const { app } = vm;
+  const holdMinutes = app.policies?.holdMinutes ?? 15;
 
   return (
     <div className="customer-container cp-container cp-container--1040">
@@ -22,7 +23,7 @@ export function CheckoutView() {
       <div className="customer-page-header cp-page-header">
         <h1 className="customer-page-title">Xác nhận thông tin đặt thuê & Giữ chỗ (UC3.2)</h1>
         <p className="text-sm text-gray-500 mt-1">
-          Hệ thống sẽ ghi nhận đơn và kích hoạt đồng hồ giữ chỗ 15 phút để bạn hoàn tất thanh toán.
+          Hệ thống sẽ ghi nhận đơn và kích hoạt đồng hồ giữ chỗ {holdMinutes} phút để bạn hoàn tất thanh toán.
         </p>
       </div>
 

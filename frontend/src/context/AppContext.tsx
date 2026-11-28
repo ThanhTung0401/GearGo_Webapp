@@ -108,6 +108,7 @@ export interface AppState {
   resumePromotion: (promoId: string) => ActionResult;
   addAuditLog: (entry: { actor: string; role: string; action: string; targetEntity: string; targetId: string; detail: string }) => void;
   saveFinancialAdjustment: (adj: Omit<FinancialAdjustment, "id" | "createdAt">) => ActionResult<FinancialAdjustment>;
+  reviewFinancialAdjustment?: (id: string, approved: boolean, actorName?: string) => ActionResult<FinancialAdjustment>;
   login: (user: { id?: string; username?: string; name: string; email: string; phone: string; role: Role; permissions?: string[]; address?: string; avatarUrl?: string }) => void;
   logout: () => Promise<void> | void;
   updateCurrentUserProfile: (info: { name: string; phone: string; email: string; otp?: string }) => Promise<ActionResult>;

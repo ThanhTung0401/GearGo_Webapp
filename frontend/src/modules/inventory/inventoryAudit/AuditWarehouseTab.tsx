@@ -1,4 +1,6 @@
 import type { Product } from "../../../store";
+import Pagination from "../../../components/ui/Pagination";
+import { usePagination } from "../../../hooks/usePagination";
 import type { AuditEquipmentView, AuditItemState } from "./useInventoryAudit";
 
 interface Props {
@@ -22,6 +24,7 @@ export default function AuditWarehouseTab({
   auditStates,
   onUpdateItem,
 }: Props) {
+  const paging = usePagination(filteredWarehouse, 10);
   return (
     <div className="grid gap-3">
       <div className="flex justify-between items-center gap-3 flex-wrap">
@@ -59,7 +62,7 @@ export default function AuditWarehouseTab({
             </tr>
           </thead>
           <tbody>
-            {filteredWarehouse.map((e) => {
+            {paging.pagedItems.map((e) => {
               const prod = products.find((p) => p.id === e.productId);
               const st = auditStates[e.id] || { checkResult: "Khớp", note: "" };
               const hasDiscrepancy = st.checkResult !== "Khớp";
@@ -113,6 +116,16 @@ export default function AuditWarehouseTab({
           </tbody>
         </table>
       </div>
+
+      <Pagination
+        page={paging.page}
+        totalPages={paging.totalPages}
+        totalItems={paging.totalItems}
+        startIndex={paging.startIndex}
+        endIndex={paging.endIndex}
+        onPageChange={paging.setPage}
+        itemLabel="thiết bị"
+      />
     </div>
   );
 }

@@ -20,6 +20,8 @@ public partial class PhuPhiService
             return Result<PhuPhiResponse>.Loi("KHONG_CO_QUYEN", "Khách hàng không sở hữu đơn thuê chứa khoản phụ phí này.");
         if (phuPhi.TrangThaiDuyet != "DaDuyet")
             return Result<PhuPhiResponse>.Loi("TRANG_THAI_KHONG_HOP_LE", "Chỉ có thể khiếu nại phụ phí đã được duyệt chính thức.");
+        if (phuPhi.MaDoiSoat != null)
+            return Result<PhuPhiResponse>.Loi("DOI_SOAT_DA_CHOT", "Phụ phí đã được chốt vào bảng đối soát, vui lòng liên hệ cửa hàng để điều chỉnh sau chốt (UC5.7).");
         if (phuPhi.TrangThaiTranhChap == "DangTranhChap")
             return Result<PhuPhiResponse>.Loi("PHI_DANG_TRANH_CHAP", "Phụ phí này đang trong quá trình giải quyết tranh chấp.");
 
@@ -48,17 +50,21 @@ public partial class PhuPhiService
         if (phuPhi.TrangThaiTranhChap != "DangTranhChap")
             return Result<PhuPhiResponse>.Loi("TRANG_THAI_KHONG_HOP_LE", "Phụ phí không ở trạng thái đang tranh chấp.");
 
-        // Không được hủy/sửa ngược khoản phụ phí đã khóa vào bảng đối soát (UC5.3 dòng phụ 4.2 -> chuyển UC5.7)
-        if (phuPhi.MaDoiSoat != null && (dto.KetQua == "HuyPhi" || dto.KetQua == "DieuChinh"))
-            return Result<PhuPhiResponse>.Loi("DOI_SOAT_DA_CHOT", "Phụ phí đã được chốt vào bảng đối soát. Vui lòng lập hồ sơ điều chỉnh tài chính sau chốt (UC5.7).");
-
+        // Nếu phụ phí đã khóa vào bảng đối soát: vẫn cho phép đóng trạng thái tranh chấp trên Dashboard,
+        // nhưng giữ nguyên số tiền/trạng thái đã khóa trong đối soát để kế toán xử lý qua UC5.7
         phuPhi.TrangThaiTranhChap = "DaGiaiQuyet";
-        phuPhi.KetQuaGiaiQuyet = $"{dto.KetQua}: {dto.LyDo}";
-
-        if (dto.KetQua == "HuyPhi")
-            phuPhi.TrangThaiDuyet = "TuChoi";
-        else if (dto.KetQua == "DieuChinh" && dto.SoTienDeXuatSauXuLy.HasValue)
-            phuPhi.SoTien = dto.SoTienDeXuatSauXuLy.Value;
+        if (phuPhi.MaDoiSoat != null && (dto.KetQua == "HuyPhi" || dto.KetQua == "DieuChinh"))
+        {
+            phuPhi.KetQuaGiaiQuyet = $"{dto.KetQua}: {dto.LyDo} (Đã chốt đối soát — xử lý bù trừ qua UC5.7)";
+        }
+        else
+        {
+            phuPhi.KetQuaGiaiQuyet = $"{dto.KetQua}: {dto.LyDo}";
+            if (dto.KetQua == "HuyPhi")
+                phuPhi.TrangThaiDuyet = "TuChoi";
+            else if (dto.KetQua == "DieuChinh" && dto.SoTienDeXuatSauXuLy.HasValue)
+                phuPhi.SoTien = dto.SoTienDeXuatSauXuLy.Value;
+        }
 
         await _context.SaveChangesAsync();
         return Result<PhuPhiResponse>.Ok(ChuyenSangPhuPhiResponse(phuPhi));

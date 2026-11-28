@@ -185,16 +185,23 @@ export function AdjustmentsModals(props: AdjustmentsModalsProps) {
 
               <div className="adm-grid-2">
                 <div>
-                  <label className="adm-label--block">Đơn hàng liên quan</label>
+                  <label className="adm-label--block">
+                    Đơn hàng liên quan {realApi ? "(chọn đơn đã hoàn tất) *" : ""}
+                  </label>
                   <select
+                    required={realApi}
                     value={orderId}
                     onChange={(e) => setOrderId(e.target.value)}
                     className="adm-field"
                   >
-                    <option value="">Không có</option>
-                    {orders.map((o) => (
-                      <option key={o.id} value={o.id}>{o.displayCode || o.id} ({o.customerName})</option>
-                    ))}
+                    <option value="">{realApi ? "— Chọn đơn đã chốt đối soát —" : "Không có"}</option>
+                    {[...orders]
+                      .sort((a, b) => (a.status === "Hoàn tất" ? -1 : 1) - (b.status === "Hoàn tất" ? -1 : 1))
+                      .map((o) => (
+                        <option key={o.id} value={o.id}>
+                          {o.displayCode || o.id} ({o.customerName}) — {o.status}
+                        </option>
+                      ))}
                   </select>
                 </div>
 

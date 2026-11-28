@@ -1,4 +1,5 @@
 import { fmt } from "../../../store";
+import { useApp } from "../../../context/AppContext";
 
 interface CartSummaryPanelProps {
   days: number;
@@ -38,6 +39,8 @@ export function CartSummaryPanel({
   onRemovePromo,
   onProceedToCheckout,
 }: CartSummaryPanelProps) {
+  const { policies } = useApp();
+  const holdMinutes = policies?.holdMinutes ?? 15;
   return (
     <div className="summary-card cp-summary-card">
       <h3 className="summary-title cp-summary-title">
@@ -136,7 +139,7 @@ export function CartSummaryPanel({
       </button>
 
       <p className="cp-cart-hold-note">
-        Giỏ thuê chỉ lưu tạm thời, hệ thống sẽ chính thức giữ chỗ 15 phút ở bước tạo đơn.
+        Giỏ thuê chỉ lưu tạm thời, hệ thống sẽ chính thức giữ chỗ {holdMinutes} phút ở bước tạo đơn.
       </p>
     </div>
   );

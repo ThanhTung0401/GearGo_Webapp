@@ -1,6 +1,5 @@
 import type { AppState } from "../../../context/AppContext";
 import { fmt } from "../../../store";
-import Icon from "../../../components/Icon";
 import { LANDING_CATEGORIES } from "./landingData";
 
 interface LandingCategoriesFeaturedProps {
@@ -22,24 +21,34 @@ export function LandingCategoriesFeatured({ app, hasValidPeriod }: LandingCatego
             Danh mục phổ biến
           </h2>
         </div>
-        <div className="flex gap-4 justify-center flex-wrap">
-          {LANDING_CATEGORIES.map((cat) => (
-            <button
-              key={cat.name}
-              onClick={() => app.setPage("products")}
-              className="card-hover-lift lp-cat-card"
-            >
-              {/* Giữ style inline động cho màu sắc riêng theo từng danh mục */}
-              <div
-                className="lp-cat-icon"
-                style={{ background: `${cat.color}14`, color: cat.color }}
+        <div className="lp-cat-grid">
+          {LANDING_CATEGORIES.map((cat) => {
+            const matchedCount = app.products.filter((p) =>
+              p.category.toLowerCase().includes(cat.name.toLowerCase())
+            ).length;
+            const displayCount = matchedCount > 0 ? matchedCount : cat.count;
+            return (
+              <button
+                key={cat.name}
+                type="button"
+                onClick={() => app.setPage("products")}
+                className="card-hover-lift lp-cat-card lp-cat-card--photo"
               >
-                <Icon name={cat.icon} size={24} />
-              </div>
-              <div className="lp-cat-name">{cat.name}</div>
-              <div className="lp-cat-count">{cat.count} trang bị</div>
-            </button>
-          ))}
+                <img
+                  src={cat.image}
+                  alt={cat.name}
+                  loading="lazy"
+                  className="lp-cat-bg-img"
+                />
+                <div className="lp-cat-scrim" />
+                <div className="lp-cat-badge">{displayCount} trang bị</div>
+                <div className="lp-cat-info">
+                  <div className="lp-cat-name">{cat.name}</div>
+                  <div className="lp-cat-sub">{cat.subtitle}</div>
+                </div>
+              </button>
+            );
+          })}
         </div>
       </section>
 

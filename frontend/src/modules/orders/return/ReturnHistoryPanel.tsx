@@ -35,6 +35,7 @@ export function ReturnHistoryPanel({
         <div className="flex flex-col gap-2">
           {backendPaging.pagedItems.map((rc) => {
             const isClosed = rc.trangThai === "DaChot";
+            const hasUnapprovedLost = !isClosed && rc.chiTiet.some((c) => c.ketLuan === "MatThietBi" && !c.thoiDiemDuyetMat);
             return (
               <div key={rc.maPhieu} className="so-receipt-row">
                 <div>
@@ -46,6 +47,9 @@ export function ReturnHistoryPanel({
                     <span className={`so-badge-tag ${isClosed ? "is-green" : "is-amber"}`}>
                       {formatBackendEnum(rc.trangThai)}
                     </span>
+                    {hasUnapprovedLost && (
+                      <span className="so-badge-tag is-orange">Cần duyệt mất</span>
+                    )}
                   </div>
                   <div className="so-receipt-meta">
                     {formatDateTimeVi(rc.thoiDiemChot || rc.thoiDiemLap)} · {rc.tenNhanVienLucNhan || "Nhân viên kho"} · {rc.chiTiet.length} thiết bị
