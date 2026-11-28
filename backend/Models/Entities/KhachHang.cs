@@ -28,4 +28,24 @@ public class KhachHang
 
     [ForeignKey(nameof(MaTaiKhoan))]
     public TaiKhoan TaiKhoan { get; set; } = null!;
+
+    public ICollection<DonThue> DonThues { get; set; } = new List<DonThue>();
+
+    // Overload 3 tham số khớp Class Diagram, giữ nguyên ảnh đại diện hiện tại
+    public void CapNhatHoSo(string? hoTen, string? diaChi, DateOnly? ngaySinh)
+        => CapNhatHoSo(hoTen, diaChi, ngaySinh, AnhDaiDien);
+
+    public void CapNhatHoSo(string? hoTen, string? diaChi, DateOnly? ngaySinh, string? anhDaiDien)
+    {
+        HoTen = hoTen;
+        DiaChi = diaChi;
+        NgaySinh = ngaySinh;
+        AnhDaiDien = anhDaiDien;
+    }
+
+    public List<DonThue> XemLichSuThue()
+        => DonThues.OrderByDescending(d => d.NgayDat).ToList();
+
+    public KhachHang LayThongTinChiTiet()
+        => this;
 }

@@ -9,7 +9,9 @@ import { AIAdvisorView } from "../modules/marketing/AIAdvisorView";
 
 export default function CustomerPortal() {
   const app = useApp();
-  const needsLogin = (app.page === "my-orders" || app.page === "profile") && !app.currentUser;
+  const isProtectedPage = app.page === "my-orders" || app.page === "profile";
+  // Chờ khôi phục phiên (authLoading) xong mới kiểm tra đăng nhập để tránh F5 bị đá về /login
+  const needsLogin = isProtectedPage && !app.authLoading && !app.currentUser;
 
   useEffect(() => {
     if (needsLogin) {
@@ -17,7 +19,7 @@ export default function CustomerPortal() {
     }
   }, [needsLogin, app]);
 
-  if (needsLogin) return null;
+  if ((isProtectedPage && app.authLoading) || needsLogin) return null;
   if (app.page === "cart") return <CartView />;
   if (app.page === "checkout") return <CheckoutView />;
   if (app.page === "order-confirmed") return <OrderConfirmedView />;

@@ -150,7 +150,7 @@ public class ApplicationDbContext : IdentityDbContext<IdentityUser<long>, Identi
 
             // Cấu hình Khóa ngoại MaKhachHang: Ngăn không cho xóa Khách hàng nếu họ có đơn thuê
             e.HasOne(d => d.KhachHang)
-                .WithMany()
+                .WithMany(k => k.DonThues)
                 .HasForeignKey(d => d.MaKhachHang)
                 .OnDelete(DeleteBehavior.Restrict);
         });

@@ -44,7 +44,7 @@ public partial class HoSoService : IHoSoService
             await ActorGuard.LayMaKhachHangAsync(_context, maTaiKhoan);
             var kh = await _context.KhachHangs.AsNoTracking().Include(k => k.TaiKhoan)
                 .FirstAsync(k => k.MaTaiKhoan == maTaiKhoan);
-            return Map(kh);
+            return Map(kh.LayThongTinChiTiet());
         }
 
         var nv = await _context.NhanViens.AsNoTracking().Include(n => n.TaiKhoan)

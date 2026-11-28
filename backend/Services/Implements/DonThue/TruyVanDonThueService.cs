@@ -39,16 +39,22 @@ public partial class TruyVanDonThueService : ITruyVanDonThueService
         var maKhach = await ActorGuard.LayMaKhachHangAsync(_context, maTaiKhoan);
         var (trang, soMoi) = ChuanHoaPhanTrang(filter.Trang, filter.SoMoiTrang);
 
-        var q = LocChung(_context.DonThues.AsNoTracking().Where(d => d.MaKhachHang == maKhach),
+        // Nối qua Entity KhachHang.XemLichSuThue() để luồng GET /api/don-thue gọi trực tiếp method của Entity
+        var kh = await _context.KhachHangs.AsNoTracking()
+            .Include(k => k.DonThues)
+            .ThenInclude(d => d.ChiTietDonThues)
+            .FirstAsync(k => k.MaKhachHang == maKhach);
+
+        var q = LocChung(kh.XemLichSuThue().AsQueryable(),
             filter.MaDon, filter.TuNgay, filter.DenNgay, filter.TrangThai);
 
-        var total = await q.CountAsync();
-        var items = await q.OrderByDescending(d => d.NgayDat).ThenByDescending(d => d.MaDonThue)
+        var total = q.Count();
+        var items = q.OrderByDescending(d => d.NgayDat).ThenByDescending(d => d.MaDonThue)
             .Skip((trang - 1) * soMoi).Take(soMoi)
             .Select(d => new DonTomTatResponse(
                 d.MaDonThue, d.MaDonHienThi, d.NgayDat, d.GioNhanDuKien, d.GioTraDuKien, d.TrangThai.ToString(),
                 d.TongTienThueTruocGiam, d.TongTienGiam, d.TongTienCoc, d.ChiTietDonThues.Count))
-            .ToListAsync();
+            .ToList();
 
         return new PagedResult<DonTomTatResponse> { Items = items, TotalItems = total, CurrentPage = trang, PageSize = soMoi };
     }

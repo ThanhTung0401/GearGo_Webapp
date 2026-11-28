@@ -77,10 +77,7 @@ public partial class HoSoService
         kh.TaiKhoan.Email = email;
         kh.TaiKhoan.SoDienThoai = sdt;
         kh.TaiKhoan.NgayCapNhat = DateTime.UtcNow;
-        kh.HoTen = hoTen;
-        kh.DiaChi = diaChi;
-        kh.NgaySinh = ngaySinh;
-        kh.AnhDaiDien = anh;
+        kh.CapNhatHoSo(hoTen, diaChi, ngaySinh, anh);
 
         _lichSu.GhiNhatKyThaoTac(new GhiNhatKyCommand(
             maTaiKhoan, "CAP_NHAT_HO_SO", "KHACH_HANG", kh.MaKhachHang.ToString(),
