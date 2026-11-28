@@ -55,6 +55,8 @@ export interface ThanhToanDonBackend {
   trangThai: string;
   tongSoTien: number;
   thoiDiemThanhCong?: string | null;
+  mucDich?: string | null;
+  ghiChu?: string | null;
 }
 
 export interface SuKienDonBackend {

@@ -48,7 +48,7 @@ export function OrderConfirmedView() {
               ? "Đơn thuê đã được hủy và toàn bộ thiết bị giữ chỗ đã được giải phóng ngay về kho."
               : expired
               ? `Đã hết ${holdMinutes} phút chờ thanh toán, thiết bị đã được tự động hoàn về kho cho khách khác.`
-              : "Vui lòng quét mã QR chuyển khoản hoặc thanh toán trước khi hết thời gian giữ chỗ."}
+              : "Vui lòng thanh toán qua VNPay Sandbox hoặc tiền mặt trước khi hết thời gian giữ chỗ."}
           </p>
         </div>
 
@@ -71,8 +71,6 @@ export function OrderConfirmedView() {
             <OrderConfirmedQrBox
               mm={vm.mm}
               ss={vm.ss}
-              totalAmount={totalAmount}
-              displayOrderCode={displayOrderCode}
             />
           )}
 
@@ -115,28 +113,91 @@ export function OrderConfirmedView() {
             </div>
           )}
 
-          {/* Nút xác nhận thanh toán / mô phỏng cho demo */}
+          {/* Nút xác nhận thanh toán: hỗ trợ VNPay Sandbox thật và Tiền mặt (chọn Thành công / Fail) */}
           {isPendingActive && (
-            <div className={app.realApi ? "my-4" : "grid grid-cols-2 gap-3 my-4 cp-confirmed-actions"}>
-              <button
-                disabled={vm.processing}
-                onClick={() => void vm.handlePay(true)}
-                className="btn btn-primary btn-md w-full cp-confirmed-pay-btn"
-              >
-                {vm.processing
-                  ? "Đang xử lý thanh toán..."
-                  : app.realApi
-                  ? "Xác nhận đã thanh toán VietQR"
-                  : "✓ Xác nhận thanh toán (Mô phỏng)"}
-              </button>
-              {!app.realApi && (
+            <div className="my-4 flex flex-col gap-3">
+              <div className="grid grid-cols-2 gap-2">
                 <button
-                  disabled={vm.processing}
-                  onClick={() => void vm.handlePay(false)}
-                  className="btn btn-secondary btn-md text-red-600 border-red-200 cp-confirmed-fail-btn"
+                  type="button"
+                  onClick={() => vm.setPaymentChannel("vnpay")}
+                  className={`px-3 py-2 rounded-lg text-xs font-bold border cursor-pointer ${
+                    vm.paymentChannel === "vnpay"
+                      ? "bg-[#1B3F2F] text-white border-[#1B3F2F]"
+                      : "bg-white text-gray-700 border-gray-300"
+                  }`}
                 >
-                  Mô phỏng lỗi thanh toán
+                  🏦 Cổng VNPay Sandbox
                 </button>
+                <button
+                  type="button"
+                  onClick={() => vm.setPaymentChannel("cash")}
+                  className={`px-3 py-2 rounded-lg text-xs font-bold border cursor-pointer ${
+                    vm.paymentChannel === "cash"
+                      ? "bg-[#1B3F2F] text-white border-[#1B3F2F]"
+                      : "bg-white text-gray-700 border-gray-300"
+                  }`}
+                >
+                  💵 Tiền mặt tại quầy
+                </button>
+              </div>
+
+              {vm.paymentChannel === "vnpay" ? (
+                <div className="p-3 rounded-lg bg-blue-50 border border-blue-200 text-xs text-blue-900 flex flex-col gap-2">
+                  <div>
+                    <strong>VNPay Sandbox (v2.1.0):</strong> Chuyển hướng sang <code>sandbox.vnpayment.vn</code> để thanh toán.
+                  </div>
+                  <div className="text-[0.72rem] text-blue-800">
+                    Thẻ test NCB: <strong>9704198526191432198</strong> · Chủ thẻ: <strong>NGUYEN VAN A</strong> · Ngày PH: <strong>07/15</strong> · OTP: <strong>123456</strong>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={vm.processing}
+                    onClick={() => void vm.handlePayWithVnPay()}
+                    className="btn btn-primary btn-md w-full cp-confirmed-pay-btn mt-1"
+                  >
+                    {vm.processing ? "Đang chuyển hướng sang VNPay Sandbox..." : "🏦 Thanh toán qua VNPay Sandbox →"}
+                  </button>
+                </div>
+              ) : (
+                <div className="p-3 rounded-lg bg-amber-50 border border-amber-200 text-xs flex flex-col gap-2.5">
+                  <div className="font-semibold text-amber-900">Chọn kết quả thanh toán tiền mặt:</div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => vm.setCashOutcome("success")}
+                      className={`px-3 py-2 rounded-md text-xs font-bold border cursor-pointer ${
+                        vm.cashOutcome === "success"
+                          ? "bg-emerald-600 text-white border-emerald-600"
+                          : "bg-white text-gray-700 border-gray-300"
+                      }`}
+                    >
+                      ✓ Thành công
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => vm.setCashOutcome("fail")}
+                      className={`px-3 py-2 rounded-md text-xs font-bold border cursor-pointer ${
+                        vm.cashOutcome === "fail"
+                          ? "bg-red-600 text-white border-red-600"
+                          : "bg-white text-gray-700 border-gray-300"
+                      }`}
+                    >
+                      ✕ Thất bại (Fail)
+                    </button>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={vm.processing}
+                    onClick={() => void vm.handlePay(vm.cashOutcome === "success")}
+                    className="btn btn-primary btn-md w-full cp-confirmed-pay-btn"
+                  >
+                    {vm.processing
+                      ? "Đang xử lý thanh toán..."
+                      : vm.cashOutcome === "success"
+                      ? "✓ Xác nhận thanh toán tiền mặt (Thành công)"
+                      : "✕ Ghi nhận thanh toán tiền mặt thất bại (Fail)"}
+                  </button>
+                </div>
               )}
             </div>
           )}

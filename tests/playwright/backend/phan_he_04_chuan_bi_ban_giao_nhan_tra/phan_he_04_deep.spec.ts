@@ -98,8 +98,8 @@ test.describe("[PH4-DEEP] Chuẩn bị, Bàn giao, Nhận trả & Quá hạn (ne
     };
     const lineA = prepA.danhSachDong[0];
 
-    // Lấy chi tiết đơn A để tạo đơn B CÙNG sản phẩm & CÙNG khung giờ thuê (đảm bảo xung đột lịch thật)
-    const detailARes = await request.get(`${API_URL}/api/don-thue/${seededA.orderId}`, { headers: authHeaders(token) });
+    // Lấy chi tiết đơn A bằng token khách hàng (GET /api/don-thue/{id} yêu cầu CustomerOnly)
+    const detailARes = await request.get(`${API_URL}/api/don-thue/${seededA.orderId}`, { headers: authHeaders(custToken) });
     expect(detailARes.ok()).toBeTruthy();
     const detailABody = ((await detailARes.json()) as { duLieu?: { gioNhanDuKien: string; gioTraDuKien: string } }).duLieu;
 

@@ -78,7 +78,7 @@ export function CollectSurchargeModal(props: Props) {
                 {[
                   { key: "cash", label: "💵 Tiền mặt" },
                   { key: "pos", label: "💳 Thẻ POS" },
-                  { key: "qr", label: "📱 VietQR" },
+                  { key: "qr", label: "🏦 VNPay Sandbox" },
                 ].map((m) => (
                   <button
                     key={m.key}
@@ -164,10 +164,10 @@ export function CollectSurchargeModal(props: Props) {
             {collectMethod === "qr" && (
               <div className="recon-method-panel is-qr">
                 <div className="recon-qr-box">
-                  📱
+                  🏦
                 </div>
-                <div className="recon-qr-title">Quét mã VietQR chuyển khoản nhanh</div>
-                <div className="recon-qr-code">Nội dung: GG {order.id} THUTHEM</div>
+                <div className="recon-qr-title">Cổng thanh toán VNPay Sandbox (v2.1.0)</div>
+                <div className="recon-qr-code">Chuyển hướng sang sandbox.vnpayment.vn · Thẻ test NCB: 9704198526191432198 (OTP: 123456)</div>
               </div>
             )}
 
@@ -247,9 +247,19 @@ export function CollectSurchargeModal(props: Props) {
                       if (ds.trangThai === "ChoChot" || ds.trangThai === "DaXacNhan") {
                         ds = await reconciliationApi.yeuCauXuLyTien(ds.maDoiSoat);
                       }
+                      if (collectMethod === "qr") {
+                        // Luồng VNPay Sandbox thật: tạo URL thanh toán có chữ ký HMAC-SHA512 và chuyển hướng
+                        const vnpRes = await paymentApi.taoVnPayUrl({
+                          maDoiSoat: ds.maDoiSoat,
+                          frontendReturnBaseUrl: window.location.origin,
+                        });
+                        if (!vnpRes.paymentUrl) throw new Error("Không tạo được URL VNPay Sandbox.");
+                        window.location.href = vnpRes.paymentUrl;
+                        return;
+                      }
                       const reqThu = await paymentApi.taoThuBoSung(
                         ds.maDoiSoat,
-                        collectMethod === "cash" ? "TienMat" : collectMethod === "qr" ? "VietQR" : "VNPAY"
+                        collectMethod === "cash" ? "TienMat" : "POS"
                       );
                       setPendingCollectReq(reqThu);
                       if (reqThu.trangThai === "ThanhCong") {
@@ -278,7 +288,11 @@ export function CollectSurchargeModal(props: Props) {
                 }}
                 className={`recon-modal-btn-submit ${isSubmitDisabled ? "is-disabled" : ""}`}
               >
-                {reconBusy ? "Đang xử lý..." : "✓ Xác nhận thu bổ sung → Khóa & Hoàn tất"}
+                {reconBusy
+                  ? "Đang xử lý..."
+                  : collectMethod === "qr"
+                  ? "🏦 Thanh toán qua VNPay Sandbox →"
+                  : "✓ Xác nhận thu bổ sung → Khóa & Hoàn tất"}
               </button>
             </div>
           </div>

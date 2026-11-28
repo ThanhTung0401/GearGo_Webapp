@@ -139,6 +139,7 @@ export function useCheckoutFlow() {
         app.setAppliedPromoCode("");
         app.setNewOrderId(mappedOrder.id);
         void app.refreshCatalog?.();
+        sessionStorage.setItem("geargo_checkout_payment_channel", paymentMethod === "store" ? "cash" : "vnpay");
         app.setPage("order-confirmed");
       } catch (error) {
         if (error instanceof ApiError && error.code === "BAO_GIA_THAY_DOI") {
@@ -194,6 +195,7 @@ export function useCheckoutFlow() {
 
     try {
       app.createOrder(promoCode);
+      sessionStorage.setItem("geargo_checkout_payment_channel", paymentMethod === "store" ? "cash" : "vnpay");
       app.setPage("order-confirmed");
     } catch (error) {
       setCheckoutError(error instanceof Error ? error.message : "Không thể tạo đơn thuê.");

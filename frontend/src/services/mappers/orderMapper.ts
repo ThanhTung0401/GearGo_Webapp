@@ -109,15 +109,22 @@ export function mapDonChiTietToOrder(
   );
 
   // Gom các giao dịch thu + hoàn thành MoneyTransaction thống nhất
-  const thuTx: MoneyTransaction[] = (dto.thanhToan ?? []).map((t: ThanhToanDonBackend) => ({
-    id: `TT-${t.maThanhToan}`,
-    type: "Thanh toán ban đầu" as TransactionType,
-    amount: Number(t.tongSoTien ?? 0),
-    status: mapTransactionStatus(t.trangThai),
-    createdAt: t.thoiDiemThanhCong ?? dto.ngayDat,
-    completedAt: t.thoiDiemThanhCong ?? undefined,
-    method: t.phuongThuc,
-  }));
+  const thuTx: MoneyTransaction[] = (dto.thanhToan ?? []).map((t: ThanhToanDonBackend) => {
+    // Phân biệt giao dịch thu bổ sung sau đối soát với thanh toán cọc/thuê ban đầu
+    const isSupplementary =
+      t.mucDich === "ThuBoSung" ||
+      (typeof t.ghiChu === "string" && t.ghiChu.includes("ThuBoSung"));
+    return {
+      id: `TT-${t.maThanhToan}`,
+      type: (isSupplementary ? "Thu thêm" : "Thanh toán ban đầu") as TransactionType,
+      amount: Number(t.tongSoTien ?? 0),
+      status: mapTransactionStatus(t.trangThai),
+      createdAt: t.thoiDiemThanhCong ?? dto.ngayDat,
+      completedAt: t.thoiDiemThanhCong ?? undefined,
+      method: t.phuongThuc,
+      note: t.ghiChu || (isSupplementary ? "Thu bổ sung sau đối soát" : "Thanh toán đơn thuê & cọc ban đầu"),
+    };
+  });
 
   const hoanTx: MoneyTransaction[] = (dto.hoanTien ?? []).map((h) => ({
     id: `HT-${h.maHoanTien}`,

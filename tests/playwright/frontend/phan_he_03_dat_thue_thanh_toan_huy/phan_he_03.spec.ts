@@ -67,7 +67,8 @@ test.describe.serial("Frontend PH3: Giỏ thuê, Đặt thuê, Thanh toán & H�
     await expect(page.getByText(/Thời hạn giữ chỗ còn lại:/i)).toBeVisible();
     await pauseForViewer(page, 900);
 
-    await page.getByRole("button", { name: /Xác nhận đã thanh toán VietQR/i }).click();
+    await page.getByRole("button", { name: /Tiền mặt tại quầy/i }).click();
+    await page.getByRole("button", { name: /Xác nhận thanh toán tiền mặt/i }).click();
     await expect(page.getByText(/Đơn thuê đã được thanh toán & xác nhận!/i)).toBeVisible({ timeout: 15_000 });
     await pauseForViewer(page, 900);
   });

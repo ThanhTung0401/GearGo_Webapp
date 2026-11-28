@@ -16,3 +16,7 @@ frontend/env.development
 .gemini/
 __pycache__/
 Document/OOAD_Nhóm 12.docx
+
+# Biến môi trường cục bộ (không commit secret)
+.env
+backend/.env

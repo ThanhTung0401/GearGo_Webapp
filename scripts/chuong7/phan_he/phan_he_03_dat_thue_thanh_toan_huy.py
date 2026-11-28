@@ -15,8 +15,8 @@ NATURAL_EVENTS = {
         ('3', 'Nhấn nút "Tiến hành xác nhận thuê"', 'Chuyển sang giao diện Tạo đơn thuê và giữ chỗ.'),
     ],
     'UC3.2': [
-        ('1', 'Điền thông tin người nhận, ghi chú và đánh dấu đồng ý điều khoản thuê', 'Hệ thống kiểm tra thông tin bắt buộc và bật nút xác nhận đặt thuê.'),
-        ('2', 'Nhấn nút "Xác nhận đặt thuê"', 'Hệ thống tạo đơn thuê mới, giữ chỗ thiết bị trong kho và chuyển sang giao diện Thanh toán và xác nhận đơn.'),
+        ('1', 'Điền thông tin người nhận, chọn phương thức thanh toán (VNPay Sandbox, Tiền mặt tại cửa hàng hoặc Ví điện tử qua VNPay) và đánh dấu đồng ý điều khoản thuê', 'Hệ thống kiểm tra thông tin bắt buộc, lưu kênh thanh toán đã chọn và bật nút xác nhận đặt thuê.'),
+        ('2', 'Nhấn nút "Xác nhận đặt thuê & Giữ chỗ 15 phút"', 'Hệ thống tạo đơn thuê mới, giữ chỗ thiết bị trong kho và chuyển sang giao diện Thanh toán và xác nhận đơn tương ứng với kênh đã chọn.'),
     ],
     'UC3.3': [
         ('1', 'Chọn các tab trạng thái đơn thuê (Chờ thanh toán, Đã xác nhận, Đang thuê, Hoàn tất...)', 'Lọc danh sách đơn thuê của khách hàng theo đúng trạng thái được chọn.'),
