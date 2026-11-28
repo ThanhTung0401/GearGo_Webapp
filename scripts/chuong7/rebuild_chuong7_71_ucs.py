@@ -1,6 +1,11 @@
 import os
 import json
 import re
+import shutil
+import subprocess
+import tempfile
+import zipfile
+import xml.etree.ElementTree as ET
 import docx
 from docx.shared import Inches, Pt, RGBColor
 from docx.enum.text import WD_ALIGN_PARAGRAPH
@@ -39,6 +44,76 @@ def style_table(table, col_widths, font_size_pt=10.5):
                         run.bold = True
             if row_idx == 0:
                 set_cell_shading(cell, "F3F3F3")
+
+
+def compress_images_to_jpeg(img_dir, out_dir, max_width=1280, quality=78):
+    """Nén toàn bộ ảnh PNG sang JPEG bằng .NET System.Drawing để giảm mạnh dung lượng DOCX mà vẫn giữ độ nét."""
+    ps_script = f"""
+Add-Type -AssemblyName System.Drawing
+$srcDir = '{img_dir}'
+$dstDir = '{out_dir}'
+$maxW = {max_width}
+$quality = [long]{quality}
+$codec = [System.Drawing.Imaging.ImageCodecInfo]::GetImageEncoders() | Where-Object {{ $_.MimeType -eq 'image/jpeg' }}
+$encParams = New-Object System.Drawing.Imaging.EncoderParameters(1)
+$encParams.Param[0] = New-Object System.Drawing.Imaging.EncoderParameter([System.Drawing.Imaging.Encoder]::Quality, $quality)
+
+Get-ChildItem -Path $srcDir -Filter '*.png' | ForEach-Object {{
+    $img = [System.Drawing.Image]::FromFile($_.FullName)
+    $w = $img.Width
+    $h = $img.Height
+    if ($w -gt $maxW) {{
+        $newW = $maxW
+        $newH = [int][Math]::Round($h * ($maxW / [double]$w))
+    }} else {{
+        $newW = $w
+        $newH = $h
+    }}
+    $bmp = New-Object System.Drawing.Bitmap($newW, $newH)
+    $g = [System.Drawing.Graphics]::FromImage($bmp)
+    $g.InterpolationMode = [System.Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic
+    $g.Clear([System.Drawing.Color]::White)
+    $g.DrawImage($img, 0, 0, $newW, $newH)
+    $g.Dispose()
+    $img.Dispose()
+    $outFile = Join-Path $dstDir ([System.IO.Path]::GetFileNameWithoutExtension($_.Name) + '.jpg')
+    $bmp.Save($outFile, $codec, $encParams)
+    $bmp.Dispose()
+}}
+"""
+    subprocess.run(["powershell", "-NoProfile", "-Command", ps_script], check=True)
+
+
+def prune_orphan_media(docx_path):
+    """Xóa toàn bộ ảnh rác trong word/media/ không còn được tham chiếu bởi word/document.xml."""
+    tmp_path = docx_path + ".tmp"
+    with zipfile.ZipFile(docx_path, "r") as zin:
+        doc_xml = zin.read("word/document.xml").decode("utf-8", errors="ignore")
+        rels_xml = zin.read("word/_rels/document.xml.rels")
+        used_rids = set(re.findall(r'r:(?:embed|id|link)="([^"]+)"', doc_xml))
+
+        rels_root = ET.fromstring(rels_xml)
+        used_media = set()
+        for rel in list(rels_root):
+            rid = rel.attrib.get("Id", "")
+            target = rel.attrib.get("Target", "")
+            if target.startswith("media/"):
+                if rid in used_rids:
+                    used_media.add("word/" + target)
+                else:
+                    rels_root.remove(rel)
+
+        new_rels_bytes = ET.tostring(rels_root, encoding="utf-8", xml_declaration=True)
+        with zipfile.ZipFile(tmp_path, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=9) as zout:
+            for item in zin.infolist():
+                if item.filename.startswith("word/media/") and item.filename not in used_media:
+                    continue
+                if item.filename == "word/_rels/document.xml.rels":
+                    zout.writestr(item, new_rels_bytes)
+                else:
+                    zout.writestr(item, zin.read(item.filename))
+
+    shutil.move(tmp_path, docx_path)
 
 
 def main():
@@ -100,6 +175,13 @@ def main():
         r.font.size = Pt(13)
         r.font.color.rgb = RGBColor(0x00, 0x00, 0x00)
 
+    # Nén ảnh sang JPEG vào thư mục tạm trước khi chèn để tránh phình dung lượng DOCX
+    max_w = int(os.environ.get("CHUONG7_IMG_MAX_W", "1280"))
+    quality = int(os.environ.get("CHUONG7_IMG_QUALITY", "75"))
+    tmp_img_ctx = tempfile.TemporaryDirectory()
+    compressed_dir = tmp_img_ctx.name
+    compress_images_to_jpeg(IMG_DIR, compressed_dir, max_width=max_w, quality=quality)
+
     # Duyệt qua 71 màn hình SCR-1.1 .. SCR-10.4
     total_imgs = 0
     for idx, (scr_id, scr_name, uc_id, img_key) in enumerate(SCREENS_71, start=1):
@@ -121,7 +203,9 @@ def main():
         for img_i, img_meta in enumerate(imgs):
             img_file = img_meta["file"]
             img_cap = img_meta.get("caption") or f"{scr_name} ({scr_id})"
-            img_path = os.path.join(IMG_DIR, img_file)
+            jpg_name = os.path.splitext(img_file)[0] + ".jpg"
+            jpg_path = os.path.join(compressed_dir, jpg_name)
+            img_path = jpg_path if os.path.exists(jpg_path) else os.path.join(IMG_DIR, img_file)
             if os.path.exists(img_path):
                 p_img = doc.add_paragraph()
                 p_img.alignment = WD_ALIGN_PARAGRAPH.CENTER
@@ -194,7 +278,10 @@ def main():
         style_table(tb, [0.47, 2.28, 3.54], font_size_pt=10.5)
 
     doc.save(OUT_DOCX)
-    print(f"Saved {OUT_DOCX} successfully with {len(SCREENS_71)} screens and {total_imgs} annotated images!")
+    tmp_img_ctx.cleanup()
+    prune_orphan_media(OUT_DOCX)
+    size_mb = os.path.getsize(OUT_DOCX) / (1024 * 1024)
+    print(f"Saved {OUT_DOCX} successfully ({size_mb:.2f} MB) with {len(SCREENS_71)} screens and {total_imgs} annotated images!")
 
 
 if __name__ == "__main__":
