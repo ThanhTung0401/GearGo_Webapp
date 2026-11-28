@@ -8,6 +8,7 @@ import { buildQuery, PagedBackendResponse, unwrapPaged, unwrapResult } from "./a
 export interface ThongBaoBackend {
   maThongBao: number;
   maDonThue?: number | null;
+  maDonHienThi?: string | null;
   tieuDe: string;
   noiDung: string;
   daDoc?: boolean;

@@ -65,6 +65,11 @@ export default function PublicHeader({
     setNotifDropdownOpen(false);
     if (!n.actionLink) return;
     if (n.actionLink.type === "order") {
+      if (n.actionLink.targetId) {
+        // Lưu mã đơn mục tiêu để MyOrdersView tự mở đúng panel chi tiết khi điều hướng tới
+        sessionStorage.setItem("geargo_open_order_id", n.actionLink.targetId);
+        window.dispatchEvent(new CustomEvent("geargo:open-order", { detail: { orderId: n.actionLink.targetId } }));
+      }
       setPage("my-orders");
     } else if (n.actionLink.type === "reviews") {
       sessionStorage.setItem("geargo_profile_section", "reviews");

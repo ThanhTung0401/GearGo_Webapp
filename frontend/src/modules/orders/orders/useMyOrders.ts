@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useApp } from "../../../context/AppContext";
 import type { Surcharge } from "../../../store";
 import {
@@ -60,6 +60,39 @@ export function useMyOrders() {
   const [orderPolicy, setOrderPolicy] = useState<Record<string, unknown> | null>(null);
   const [extraPayBusy, setExtraPayBusy] = useState(false);
   const [extraPayStatus, setExtraPayStatus] = useState<ExtraPayStatus | null>(null);
+
+  // Tự động mở đúng đơn thuê khi người dùng bấm "Xem đơn" từ chuông thông báo
+  useEffect(() => {
+    const openTarget = (rawId: string | null) => {
+      if (!rawId) return;
+      sessionStorage.removeItem("geargo_open_order_id");
+      setStatusTab("Tất cả");
+      const matched = app.orders.find(
+        (o) => o.id === rawId || String(o.backendId) === rawId || o.displayCode === rawId
+      );
+      const targetOrderId = matched?.id ?? rawId;
+      setSelected(targetOrderId);
+      setActionError("");
+      if (app.realApi) {
+        setLoadingDetail(true);
+        void refreshOrderById(targetOrderId)
+          .catch((err) => {
+            setActionError(err instanceof Error ? err.message : "Không thể tải chi tiết đơn thuê.");
+          })
+          .finally(() => setLoadingDetail(false));
+      }
+    };
+
+    openTarget(sessionStorage.getItem("geargo_open_order_id"));
+
+    const onOpenOrder = (e: Event) => {
+      const custom = e as CustomEvent<{ orderId?: string }>;
+      openTarget(custom.detail?.orderId ?? sessionStorage.getItem("geargo_open_order_id"));
+    };
+    window.addEventListener("geargo:open-order", onOpenOrder);
+    return () => window.removeEventListener("geargo:open-order", onOpenOrder);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [app.realApi]);
 
   const myOrders = app.orders.filter((o) => {
     if (statusTab === "Tất cả") return true;

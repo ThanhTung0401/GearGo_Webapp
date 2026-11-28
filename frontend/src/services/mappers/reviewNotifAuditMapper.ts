@@ -58,10 +58,16 @@ export function mapThongBaoToNotification(
   tb: ThongBaoBackend,
   targetRole: AppNotification["targetRole"] = "all"
 ): AppNotification {
+  // Chuẩn hóa mã đơn hiển thị nếu thông báo cũ trong DB từng lưu dạng DH-00000x
+  const legacyCode = tb.maDonThue ? `DH-${String(tb.maDonThue).padStart(6, "0")}` : null;
+  const displayCode = tb.maDonHienThi?.trim() || null;
+  const fixOrderCode = (text: string) =>
+    legacyCode && displayCode ? text.replaceAll(legacyCode, displayCode) : text;
+
   return {
     id: String(tb.maThongBao),
-    title: tb.tieuDe,
-    message: tb.noiDung,
+    title: fixOrderCode(tb.tieuDe),
+    message: fixOrderCode(tb.noiDung),
     type: inferNotifType(tb.loaiSuKien),
     category: inferNotifCategory(tb.loaiSuKien),
     targetRole,
@@ -71,7 +77,7 @@ export function mapThongBaoToNotification(
       ? {
           type: "order",
           targetId: String(tb.maDonThue),
-          label: `Xem đơn #${tb.maDonThue}`,
+          label: displayCode ? `Xem đơn ${displayCode}` : `Xem đơn #${tb.maDonThue}`,
         }
       : undefined,
   };

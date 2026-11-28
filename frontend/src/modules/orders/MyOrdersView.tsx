@@ -106,10 +106,16 @@ export function MyOrdersView() {
             onCheckExtraPayStatus={vm.handleCheckExtraPayStatus}
             onGoToReviewQuick={() => {
               sessionStorage.setItem("geargo_profile_section", "reviews");
+              sessionStorage.setItem("geargo_review_order_id", String(detail.backendId ?? detail.id));
               vm.setSelected(null);
               app.setPage("profile");
             }}
-            onGoToProfile={() => app.setPage("profile")}
+            onGoToProfile={() => {
+              sessionStorage.setItem("geargo_profile_section", "reviews");
+              sessionStorage.setItem("geargo_review_order_id", String(detail.backendId ?? detail.id));
+              vm.setSelected(null);
+              app.setPage("profile");
+            }}
             onOpenCancel={vm.handleOpenCancel}
           />
         )}

@@ -210,7 +210,11 @@ export function mapDonChiTietToOrder(
   }
 
   // [OV-04][OD-04] Loại bỏ các phân công đã hủy (DaHuy) để Modal Hồ sơ không hiển thị thiết bị cũ đã đổi.
-  const conNoCodes = new Set<string>((dto.taiChinh?.nhanTra?.conNo ?? []).map((c) => String(c.maThietBiHienThi)));
+  // Backend trả về field `thietBiConNo` (fallback `conNo` nếu có)
+  const nhanTraInfo = dto.taiChinh?.nhanTra as { thietBiConNo?: Array<{ maThietBiHienThi?: string | null }>; conNo?: Array<{ maThietBiHienThi?: string | null }> } | undefined;
+  const conNoCodes = new Set<string>(
+    (nhanTraInfo?.thietBiConNo ?? nhanTraInfo?.conNo ?? []).map((c) => String(c.maThietBiHienThi ?? ""))
+  );
   const effectivePhanCong = (extra?.phanCong ?? []).filter((pc) => pc.trangThai !== "DaHuy");
   const orderStatusText = mapOrderStatusFromBackend(dto.trangThai);
   const isAfterHandover = ["Đang thuê", "Đã nhận trả", "Chờ đối soát", "Hoàn tất"].includes(orderStatusText);

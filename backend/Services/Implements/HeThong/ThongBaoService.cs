@@ -85,7 +85,9 @@ public class ThongBaoService : IThongBaoService
         var items = await q
             .OrderByDescending(t => t.ThoiDiemTao).ThenByDescending(t => t.MaThongBao)
             .Skip((trang - 1) * soMoi).Take(soMoi)
-            .Select(t => new ThongBaoResponse(t.MaThongBao, t.MaDonThue, t.TieuDe, t.NoiDung, t.ThoiDiemTao, t.ThoiDiemDoc, t.LoaiSuKien))
+            .Select(t => new ThongBaoResponse(
+                t.MaThongBao, t.MaDonThue, t.TieuDe, t.NoiDung, t.ThoiDiemTao, t.ThoiDiemDoc, t.LoaiSuKien,
+                t.DonThue != null ? t.DonThue.MaDonHienThi : null))
             .ToListAsync();
 
         return new PagedResult<ThongBaoResponse> { Items = items, TotalItems = total, CurrentPage = trang, PageSize = soMoi };
@@ -99,7 +101,9 @@ public class ThongBaoService : IThongBaoService
 
         return await _context.ThongBaos.AsNoTracking()
                    .Where(t => t.MaThongBao == maThongBao && t.MaTaiKhoan == maTaiKhoan)
-                   .Select(t => new ThongBaoResponse(t.MaThongBao, t.MaDonThue, t.TieuDe, t.NoiDung, t.ThoiDiemTao, t.ThoiDiemDoc, t.LoaiSuKien))
+                   .Select(t => new ThongBaoResponse(
+                t.MaThongBao, t.MaDonThue, t.TieuDe, t.NoiDung, t.ThoiDiemTao, t.ThoiDiemDoc, t.LoaiSuKien,
+                t.DonThue != null ? t.DonThue.MaDonHienThi : null))
                    .FirstOrDefaultAsync()
                ?? throw new ThongBaoKhongTimThayException();
     }
