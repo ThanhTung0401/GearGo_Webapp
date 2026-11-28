@@ -73,7 +73,9 @@ public record ThanhToanDonResponse(
     string? PhuongThuc,
     string TrangThai,
     decimal TongSoTien,
-    DateTime? ThoiDiemThanhCong
+    DateTime? ThoiDiemThanhCong,
+    string? MucDich = null,
+    string? GhiChu = null
 );
 
 public record SuKienDonResponse(
@@ -236,7 +238,8 @@ public record PhuPhiDonResponse(
     string? KetQuaGiaiQuyet,
     long? MaPhuPhiGoc,
     long? MaDoiSoat,
-    bool LaDieuChinh
+    bool LaDieuChinh,
+    string? TenNguoiLap = null
 );
 
 public record DoiSoatDonResponse(

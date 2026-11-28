@@ -65,12 +65,23 @@ export function useBootstrapAdminLoaders(params: UseBootstrapDataParams) {
   const refreshEquipment = useCallback(async () => {
     if (!REAL_MODE || !getAuthToken() || (role !== "staff" && role !== "admin")) return;
     try {
-      const [eqRes, btRes, adjRes] = await Promise.all([
-        equipmentApi.timKiemThietBi({ soMoiTrang: 200 }).catch(() => ({ items: [] })),
-        equipmentApi.timKiemBaoTri({ soMoiTrang: 200 }).catch(() => ({ items: [] })),
-        inventoryApi.timPhieu({ soMoiTrang: 200 }).catch(() => ({ items: [] })),
+      const [eqFirst, btRes, adjRes] = await Promise.all([
+        equipmentApi.timKiemThietBi({ trang: 1, soMoiTrang: 100 }).catch(() => ({ items: [], totalItems: 0, pageSize: 100 })),
+        equipmentApi.timKiemBaoTri({ soMoiTrang: 100 }).catch(() => ({ items: [] })),
+        inventoryApi.timPhieu({ soMoiTrang: 100 }).catch(() => ({ items: [] })),
       ]);
-      setEquipment((eqRes.items ?? []).map(mapThietBiToEquipment));
+      // Nạp hết các trang thiết bị còn lại (do Backend giới hạn MaxPageSize = 100)
+      let allEqItems = eqFirst.items ?? [];
+      const eqTotalPages = Math.max(1, Math.ceil((eqFirst.totalItems || 0) / Math.max(1, eqFirst.pageSize || 100)));
+      if (eqTotalPages > 1) {
+        const restEq = await Promise.all(
+          Array.from({ length: eqTotalPages - 1 }, (_, i) =>
+            equipmentApi.timKiemThietBi({ trang: i + 2, soMoiTrang: 100 }).catch(() => ({ items: [] }))
+          )
+        );
+        allEqItems = [...allEqItems, ...restEq.flatMap((p) => p.items ?? [])];
+      }
+      setEquipment(allEqItems.map(mapThietBiToEquipment));
       setMaintenanceReceipts((btRes.items ?? []).map(mapBaoTriToReceipt));
       setStockAdjustments((adjRes.items ?? []).map(mapDieuChinhKhoToReceipt));
     } catch (err) {

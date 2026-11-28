@@ -22,6 +22,7 @@ export function useAdjustmentsTab(app: ReturnType<typeof useApp>) {
 
   // State kết nối API thật: đối chiếu ngoại lệ thanh toán & điều chỉnh đối soát sau chốt
   const [pendingPayments, setPendingPayments] = useState<GiaoDichCanDoiChieuBackend[]>([]);
+  const [serverAdjustments, setServerAdjustments] = useState<FinancialAdjustment[]>([]);
   const [payLoading, setPayLoading] = useState(false);
   const [payError, setPayError] = useState("");
   const [paySuccess, setPaySuccess] = useState("");
@@ -47,8 +48,30 @@ export function useAdjustmentsTab(app: ReturnType<typeof useApp>) {
     setPayLoading(true);
     setPayError("");
     try {
-      const items = await paymentApi.layDanhSachCanDoiChieu();
+      const [items, dieuChinhList] = await Promise.all([
+        paymentApi.layDanhSachCanDoiChieu(),
+        reconciliationApi.layDanhSachDieuChinh().catch(() => [] as DoiSoatBackend[]),
+      ]);
       setPendingPayments(items ?? []);
+      // Map các biên bản điều chỉnh sau chốt từ DB sang FinancialAdjustment để không mất khi F5
+      setServerAdjustments(
+        (dieuChinhList ?? []).map((ds) => {
+          const thuThem = Number(ds.soTienCanThuThem ?? 0);
+          const hoanLai = Number(ds.soTienCanHoan ?? 0);
+          const rawAmount = thuThem > 0 ? thuThem : hoanLai > 0 ? hoanLai : Math.abs(Number(ds.tongPhuPhiDuocDuyet ?? 0));
+          return {
+            id: `DS-DC-${ds.maDoiSoat}`,
+            type: thuThem > 0 ? "Thu bù" : "Hoàn trả",
+            amount: rawAmount,
+            orderId: ds.maDonHienThi || String(ds.maDonThue),
+            reason: ds.lyDoDieuChinh || "Điều chỉnh sau chốt đối soát",
+            createdAt: ds.thoiDiemLap,
+            createdBy: ds.nguoiLap || "Quản trị viên",
+            approvedBy: ds.nguoiChot || ds.nguoiLap || "Quản trị viên",
+            status: ds.trangThai === "DaChot" ? "Đã duyệt" : "Chờ duyệt",
+          };
+        })
+      );
     } catch (err) {
       setPayError(err instanceof Error ? err.message : "Không thể tải danh sách giao dịch cần đối chiếu ngoại lệ.");
     } finally {
@@ -170,22 +193,8 @@ export function useAdjustmentsTab(app: ReturnType<typeof useApp>) {
         setModalError("Sai lệch phiếu nhập kho (UC7.10) được kiểm soát và duyệt tại mục Điều chỉnh kho.");
         return;
       }
-      // [ADJ-02]: cho phép ghi nhận chứng từ không gắn đối soát đã chốt (lưu vào app store).
       if (!orderDoiSoat || orderDoiSoat.trangThai !== "DaChot") {
-        // Fallback: lưu vào store cục bộ để bảng FinancialAdjustmentsTable có bản ghi mới ngay.
-        app.saveFinancialAdjustment({
-          type,
-          amount,
-          orderId: orderId || undefined,
-          importReceiptId: importReceiptId || undefined,
-          reason: reason.trim(),
-          status: "Chờ duyệt",
-          createdBy: "Quản trị viên",
-        });
-        setShowModal(false);
-        setReason("");
-        setSelectedSurchargeId("");
-        setPaySuccess("Đã ghi nhận chứng từ điều chỉnh (chưa có đối soát gốc — chờ chốt đối soát).");
+        setModalError("Vui lòng chọn một đơn thuê đã hoàn tất (có biên bản đối soát đã chốt) để lưu chứng từ điều chỉnh vào hệ thống.");
         return;
       }
 
@@ -208,25 +217,14 @@ export function useAdjustmentsTab(app: ReturnType<typeof useApp>) {
         await reconciliationApi.lapDieuChinh(orderDoiSoat.maDoiSoat, {
           lyDoDieuChinh: reason.trim(),
           danhSachMaPhuPhiDieuChinh: adjustedSurchargeIds,
-          // [ADJ-02]: gửi kèm số tiền có dấu để Backend tự dựng PhuPhi điều chỉnh khi không có phụ phí gốc.
           soTienDieuChinhCoDau: signedAmount,
           ghiChu: reason.trim(),
         } as any);
-        // [ADJ-02]: cập nhật ngay bảng FinancialAdjustmentsTable sau khi lưu thành công.
-        app.saveFinancialAdjustment({
-          type,
-          amount,
-          orderId: orderId || undefined,
-          importReceiptId: importReceiptId || undefined,
-          reason: reason.trim(),
-          status: "Đã duyệt",
-          createdBy: "Quản trị viên",
-          approvedBy: "Quản trị viên",
-        });
         await Promise.all([loadPendingPayments(), app.refreshOrders?.()]);
-        setPaySuccess(`Đã lập biên bản điều chỉnh sau chốt cho đơn #${orderDoiSoat.maDonHienThi || orderDoiSoat.maDonThue}.`);
+        setPaySuccess(`Đã lập & lưu chứng từ điều chỉnh sau chốt cho đơn #${orderDoiSoat.maDonHienThi || orderDoiSoat.maDonThue}.`);
         setShowModal(false);
         setReason("");
+        setOrderId("");
         setSelectedSurchargeId("");
       } catch (err) {
         setModalError(err instanceof Error ? err.message : "Không thể lập chứng từ điều chỉnh tài chính trên máy chủ.");
@@ -273,6 +271,7 @@ export function useAdjustmentsTab(app: ReturnType<typeof useApp>) {
     reason,
     setReason,
     pendingPayments,
+    serverAdjustments,
     payLoading,
     payError,
     paySuccess,

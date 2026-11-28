@@ -1,4 +1,4 @@
-﻿/**
+/**
  * paymentApi.ts - Thanh toán đơn thuê, thu bổ sung đối soát & đối chiếu ngoại lệ (/api/thanh-toan)
  */
 
@@ -64,5 +64,15 @@ export const paymentApi = {
   ): Promise<string> {
     const res = await apiClient.post<unknown>(`/api/thanh-toan/${id}/doi-chieu`, req);
     return unwrapResult<string>(res.data);
+  },
+
+  async taoVnPayUrl(req: {
+    maDonThue?: number;
+    maDoiSoat?: number;
+    bankCode?: string;
+    frontendReturnBaseUrl?: string;
+  }): Promise<{ paymentUrl: string; maYeuCau: string; soTien: number }> {
+    const res = await apiClient.post<unknown>("/api/thanh-toan/vnpay/tao-url", req);
+    return unwrapResult<{ paymentUrl: string; maYeuCau: string; soTien: number }>(res.data);
   },
 };

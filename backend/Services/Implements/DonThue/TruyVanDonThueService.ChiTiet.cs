@@ -22,7 +22,14 @@ public partial class TruyVanDonThueService
 
         var thanhToan = await _context.ThanhToans.AsNoTracking()
             .Where(t => t.MaDonThue == maDonThue).OrderByDescending(t => t.ThoiDiemTao).ThenByDescending(t => t.MaThanhToan)
-            .Select(t => new ThanhToanDonResponse(t.MaThanhToan, t.PhuongThuc, t.TrangThai, t.TongSoTien, t.ThoiDiemThanhCong))
+            .Select(t => new ThanhToanDonResponse(
+                t.MaThanhToan,
+                t.PhuongThuc,
+                t.TrangThai,
+                t.TongSoTien,
+                t.ThoiDiemThanhCong,
+                t.ChiTietThanhToans.Select(c => c.MucDich).FirstOrDefault(),
+                t.GhiChu))
             .ToListAsync();
         var daThu = thanhToan.Where(t => t.TrangThai == "ThanhCong").Sum(t => t.TongSoTien);
 

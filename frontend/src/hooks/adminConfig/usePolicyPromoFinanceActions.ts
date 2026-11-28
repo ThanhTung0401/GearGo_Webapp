@@ -152,5 +152,34 @@ export function usePolicyPromoFinanceActions(p: Params) {
     return { ok: true, data: newAdj };
   };
 
-  return { updatePolicy, pausePromotion, resumePromotion, saveFinancialAdjustment };
+  const reviewFinancialAdjustment = (
+    id: string,
+    approved: boolean,
+    actorName = "Quản trị viên"
+  ): ActionResult<FinancialAdjustment> => {
+    let updatedItem: FinancialAdjustment | undefined;
+    p.setFinancialAdjustments((prev) =>
+      prev.map((a) => {
+        if (a.id !== id) return a;
+        updatedItem = {
+          ...a,
+          status: approved ? "Đã duyệt" : "Từ chối",
+          approvedBy: actorName,
+        };
+        return updatedItem;
+      })
+    );
+    if (!updatedItem) return { ok: false, message: "Không tìm thấy chứng từ điều chỉnh." };
+    p.addAuditLog({
+      actor: actorName,
+      role: "Quản trị viên",
+      action: approved ? "Duyệt chứng từ bù trừ tài chính" : "Từ chối chứng từ bù trừ tài chính",
+      targetEntity: "DieuChinhTaiChinh",
+      targetId: id,
+      detail: `${approved ? "Đã duyệt" : "Từ chối"} chứng từ ${id}`,
+    });
+    return { ok: true, data: updatedItem };
+  };
+
+  return { updatePolicy, pausePromotion, resumePromotion, saveFinancialAdjustment, reviewFinancialAdjustment };
 }

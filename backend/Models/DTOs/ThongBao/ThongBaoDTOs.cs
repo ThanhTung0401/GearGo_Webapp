@@ -13,7 +13,8 @@ public record ThongBaoResponse(
     string? NoiDung,
     DateTime ThoiDiemTao,
     DateTime? ThoiDiemDoc,
-    string? LoaiSuKien = null
+    string? LoaiSuKien = null,
+    string? MaDonHienThi = null
 )
 {
     public bool DaDoc => ThoiDiemDoc.HasValue;

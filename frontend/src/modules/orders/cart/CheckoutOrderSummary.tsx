@@ -1,4 +1,5 @@
 import { fmt } from "../../../store";
+import { useApp } from "../../../context/AppContext";
 import type { CheckoutPaymentMethod } from "./useCheckoutFlow";
 
 interface CheckoutOrderSummaryProps {
@@ -18,9 +19,9 @@ interface CheckoutOrderSummaryProps {
 }
 
 const PAYMENT_METHODS: { id: CheckoutPaymentMethod; name: string; badge: string }[] = [
-  { id: "qr", name: "Chuyển khoản QR ngân hàng (VietQR 24/7)", badge: "Khuyên dùng" },
+  { id: "qr", name: "Thanh toán trực tuyến VNPay Sandbox", badge: "Khuyên dùng" },
   { id: "store", name: "Thanh toán tiền mặt / Thẻ tại cửa hàng", badge: "Tại quầy" },
-  { id: "wallet", name: "Ví điện tử MoMo / ZaloPay", badge: "Ví điện tử" },
+  { id: "wallet", name: "Ví điện tử / Thẻ nội địa qua VNPay", badge: "Ví / ATM" },
 ];
 
 /**
@@ -41,6 +42,8 @@ export function CheckoutOrderSummary({
   submitting,
   onConfirm,
 }: CheckoutOrderSummaryProps) {
+  const { policies } = useApp();
+  const holdMinutes = policies?.holdMinutes ?? 15;
   return (
     <div className="summary-card cp-summary-card">
       <h3 className="summary-title cp-summary-title cp-checkout-summary-title">
@@ -95,14 +98,14 @@ export function CheckoutOrderSummary({
           ))}
         </div>
 
-        {/* Khung minh họa VietQR sinh động */}
+        {/* Ghi chú kênh thanh toán đã chọn */}
         {paymentMethod === "qr" && (
           <div className="cp-vietqr-note">
             <div className="cp-vietqr-note-title">
-              ⚡ Cổng thanh toán VietQR tự động
+              🏦 Cổng thanh toán VNPay Sandbox (v2.1.0)
             </div>
             <div className="cp-vietqr-note-desc">
-              Mã QR chuyển khoản ngân hàng sẽ được tạo lập ngay ở bước kế tiếp kèm đồng hồ giữ chỗ 15 phút.
+              Bạn sẽ thanh toán qua cổng VNPay Sandbox ở bước kế tiếp kèm đồng hồ giữ chỗ {holdMinutes} phút.
             </div>
           </div>
         )}
@@ -134,11 +137,11 @@ export function CheckoutOrderSummary({
         disabled={!agreedTerms || submitting}
         className="btn btn-primary btn-lg btn-full mt-4 cp-btn-checkout"
       >
-        {submitting ? "Đang tạo đơn & giữ chỗ 15 phút..." : "✓ Xác nhận đặt thuê & Giữ chỗ 15 phút"}
+        {submitting ? `Đang tạo đơn & giữ chỗ ${holdMinutes} phút...` : `✓ Xác nhận đặt thuê & Giữ chỗ ${holdMinutes} phút`}
       </button>
 
       <p className="cp-cart-hold-note">
-        🔒 Cam kết giữ chỗ toàn bộ danh mục thiết bị trong 15 phút
+        🔒 Cam kết giữ chỗ toàn bộ danh mục thiết bị trong {holdMinutes} phút
       </p>
     </div>
   );

@@ -1,3 +1,5 @@
+import { useState } from "react";
+import { createPortal } from "react-dom";
 import { fmt, formatDateTimeVi, type Order, type Surcharge } from "../../../store";
 import type { DonChiTietBackend, PhieuBanGiaoKhachBackend } from "../../../services/api";
 import type { ExtraPayStatus, ViewingRecordType } from "./useMyOrders";
@@ -49,12 +51,35 @@ export function OrderDetailPanel({
   onGoToProfile,
   onOpenCancel,
 }: OrderDetailPanelProps) {
+  const [showPolicyModal, setShowPolicyModal] = useState(false);
+
   // Tính số tiền cần thu bổ sung sau đối soát (UC5.5)
   const latestDs = rawOrderDetail?.taiChinh?.doiSoat?.[0];
   const daThuBoSung = Number(rawOrderDetail?.taiChinh?.thu?.thuBoSungDaThu ?? 0);
   const canThuThem = Number(latestDs?.soTienCanThuThem ?? 0);
   const conPhaiThu = Math.max(0, canThuThem - daThuBoSung);
-  const policyContent = orderPolicy?.noiDung as Record<string, unknown> | undefined;
+
+  // Backend trả về `dieuKhoanChoKhach` (fallback `noiDung` nếu dùng dữ liệu cũ)
+  const policyContent = (orderPolicy?.dieuKhoanChoKhach ?? orderPolicy?.noiDung) as Record<string, unknown> | undefined;
+  const rawPolicyName = String(orderPolicy?.tenChinhSach || "Chính sách thuê GearGo");
+  const versionSuffix = orderPolicy?.phienBan ? `v${String(orderPolicy.phienBan)}` : "";
+  // Tránh lặp "(v2) (v2)" nếu tên chính sách trong DB đã kèm sẵn phiên bản
+  const policyTitle = versionSuffix && !rawPolicyName.toLowerCase().includes(versionSuffix.toLowerCase())
+    ? `${rawPolicyName} (${versionSuffix})`
+    : rawPolicyName;
+  const huyDon = policyContent?.huyDon as { tyLeGiuLaiTu24Den48Gio?: number; tyLeGiuLaiDuoi24Gio?: number } | undefined;
+  const khongDenNhan = policyContent?.khongDenNhan as { soPhutChoSauGioNhan?: number; tyLeGiuLaiTienThue?: number } | undefined;
+
+  // Số phút giữ chỗ ưu tiên từ chính sách snapshot của đơn hoặc chênh lệch expiresAt - createdAt
+  const detailHoldMinutes = (() => {
+    const policyMin = Number(policyContent?.thoiGianGiuChoPhut ?? 0);
+    if (Number.isFinite(policyMin) && policyMin > 0) return policyMin;
+    if (detail.expiresAt && detail.createdAt) {
+      const diffMin = Math.round((new Date(detail.expiresAt).getTime() - new Date(detail.createdAt).getTime()) / 60000);
+      if (Number.isFinite(diffMin) && diffMin > 0) return diffMin;
+    }
+    return 15;
+  })();
 
   return (
     <div className="card-panel self-start sticky top-24 cp-card cp-card--elevated cp-sticky-panel--header-offset">
@@ -116,6 +141,7 @@ export function OrderDetailPanel({
       {detail.surcharges && detail.surcharges.length > 0 && (
         <OrderSurchargesBlock
           surcharges={detail.surcharges}
+          isReconciled={detail.status === "Hoàn tất" || detail.reconciliation?.status === "locked"}
           onStartDispute={onStartDispute}
         />
       )}
@@ -128,7 +154,7 @@ export function OrderDetailPanel({
             onClick={() => onPayNow(detail.id)}
             className="cp-doc-btn cp-doc-btn--pay"
           >
-            💳 Mở cổng VietQR thanh toán ngay (Thời hạn 15 phút) →
+            💳 Mở cổng VietQR thanh toán ngay (Thời hạn {detailHoldMinutes} phút) →
           </button>
         )}
 
@@ -234,10 +260,14 @@ export function OrderDetailPanel({
           )}
 
           {orderPolicy && (
-            <div className="cp-order-policy-box">
+            <button
+              type="button"
+              onClick={() => setShowPolicyModal(true)}
+              className="cp-order-policy-box cp-order-policy-btn"
+            >
               <div className="cp-order-policy-title">
-                📜 Chính sách áp dụng: {String(orderPolicy.tenChinhSach || "Chính sách thuê GearGo")}
-                {orderPolicy.phienBan ? ` (v${String(orderPolicy.phienBan)})` : ""}
+                <span>📜 Chính sách áp dụng: {policyTitle}</span>
+                <span className="cp-order-policy-link">Xem chi tiết →</span>
               </div>
               <div className="cp-order-policy-desc">
                 {Boolean(policyContent?.thoiGianGiuChoPhut) && (
@@ -251,7 +281,7 @@ export function OrderDetailPanel({
                   </span>
                 )}
               </div>
-            </div>
+            </button>
           )}
         </div>
       )}
@@ -286,6 +316,115 @@ export function OrderDetailPanel({
         >
           ⭐ Viết đánh giá trải nghiệm (UC9.1)
         </button>
+      )}
+
+      {/* Modal chi tiết chính sách áp dụng tại thời điểm đặt đơn */}
+      {showPolicyModal && orderPolicy && createPortal(
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="modal-overlay cp-modal-overlay cp-modal-overlay--dim"
+          onClick={() => setShowPolicyModal(false)}
+        >
+          <div
+            className="modal-container cp-modal-box cp-modal-box--500"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="modal-header flex justify-between items-start gap-3 pb-3 mb-3 border-b border-bone">
+              <div>
+                <div className="text-xs font-semibold text-moss">
+                  Chính sách áp dụng cho đơn {detail.displayCode || detail.id}
+                </div>
+                <h4 className="font-display font-bold text-base text-bark mt-0.5">
+                  📜 {policyTitle}
+                </h4>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowPolicyModal(false)}
+                className="btn btn-ghost btn-sm text-lg cp-modal-close"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="flex flex-col gap-2.5 text-sm text-bark">
+              {Boolean(orderPolicy.thoiDiemApDung) && (
+                <div className="flex justify-between gap-2 text-xs text-gray-500">
+                  <span>Hiệu lực áp dụng:</span>
+                  <strong>{formatDateTimeVi(String(orderPolicy.thoiDiemApDung))}</strong>
+                </div>
+              )}
+              {policyContent?.thoiGianGiuChoPhut != null && (
+                <div className="flex justify-between gap-2">
+                  <span className="text-gray-600">Thời gian giữ chỗ thanh toán:</span>
+                  <strong>{String(policyContent.thoiGianGiuChoPhut)} phút</strong>
+                </div>
+              )}
+              {policyContent?.tyLeCocPhanTram != null && (
+                <div className="flex justify-between gap-2">
+                  <span className="text-gray-600">Tỷ lệ cọc đảm bảo:</span>
+                  <strong>{String(policyContent.tyLeCocPhanTram)}%</strong>
+                </div>
+              )}
+              {policyContent?.heSoTre != null && (
+                <div className="flex justify-between gap-2">
+                  <span className="text-gray-600">Hệ số phạt trả trễ hạn:</span>
+                  <strong>
+                    ×{String(policyContent.heSoTre)} ({Math.round(Number(policyContent.heSoTre) * 100)}% đơn giá ngày)
+                  </strong>
+                </div>
+              )}
+
+              {huyDon && (
+                <div className="p-2.5 rounded-lg bg-cream border border-bone text-xs flex flex-col gap-1">
+                  <div className="font-bold text-bark">Quy định hủy đơn (UC3.4):</div>
+                  <div>• Trước 48 giờ nhận đồ: <strong>Hoàn 100%</strong> tiền thuê & cọc</div>
+                  {huyDon.tyLeGiuLaiTu24Den48Gio != null && (
+                    <div>
+                      • Từ 24–48 giờ trước nhận: Giữ lại{" "}
+                      <strong>{Math.round(Number(huyDon.tyLeGiuLaiTu24Den48Gio) * 100)}%</strong> tiền thuê (hoàn 100% cọc)
+                    </div>
+                  )}
+                  {huyDon.tyLeGiuLaiDuoi24Gio != null && (
+                    <div>
+                      • Dưới 24 giờ trước nhận: Giữ lại{" "}
+                      <strong>{Math.round(Number(huyDon.tyLeGiuLaiDuoi24Gio) * 100)}%</strong> tiền thuê (hoàn 100% cọc)
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {khongDenNhan && (
+                <div className="p-2.5 rounded-lg bg-cream border border-bone text-xs flex flex-col gap-1">
+                  <div className="font-bold text-bark">Quy định không đến nhận đồ (No-Show):</div>
+                  {khongDenNhan.soPhutChoSauGioNhan != null && (
+                    <div>
+                      • Thời gian chờ tối đa sau giờ hẹn: <strong>{khongDenNhan.soPhutChoSauGioNhan} phút</strong>
+                    </div>
+                  )}
+                  {khongDenNhan.tyLeGiuLaiTienThue != null && (
+                    <div>
+                      • Quá giờ chờ không nhận: Giữ lại{" "}
+                      <strong>{Math.round(Number(khongDenNhan.tyLeGiuLaiTienThue) * 100)}%</strong> tiền thuê (hoàn 100% cọc)
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div className="mt-4 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setShowPolicyModal(false)}
+                className="btn btn-primary btn-sm"
+              >
+                Đóng
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
       )}
     </div>
   );

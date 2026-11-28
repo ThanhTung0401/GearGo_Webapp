@@ -48,12 +48,16 @@ public partial class DoiSoatService
             {
                 return Result<DoiSoatResponse>.Loi("KHONG_CO_PHI_DIEU_CHINH", "Không tìm thấy khoản phụ phí điều chỉnh hợp lệ đã được phê duyệt.");
             }
+            var nv = await _context.NhanViens.AsNoTracking().FirstOrDefaultAsync(n => n.MaNhanVien == maNhanVien);
+            var now = DateTime.UtcNow;
             var dieuChinh = new DoiSoatTienCoc
             {
                 MaDonThue = doiSoatGoc.MaDonThue, MaDoiSoatGoc = doiSoatGoc.MaDoiSoat, LoaiDoiSoat = "DieuChinh",
-                MaNguoiLap = maNhanVien, TienCocDuocDoiSoat = 0, TongPhuPhiDuocDuyet = chenhLech,
+                MaNguoiLap = maNhanVien, MaNguoiChot = maNhanVien,
+                TenNguoiChotLucDoiSoat = nv?.HoTen ?? "Quản trị viên",
+                TienCocDuocDoiSoat = 0, TongPhuPhiDuocDuyet = chenhLech,
                 SoTienCanHoan = chenhLech < 0 ? -chenhLech : 0, SoTienCanThuThem = chenhLech > 0 ? chenhLech : 0,
-                TrangThai = "ChoChot", ThoiDiemLap = DateTime.UtcNow, LyDoDieuChinh = dto.LyDo
+                TrangThai = "DaChot", ThoiDiemLap = now, ThoiDiemChot = now, LyDoDieuChinh = dto.LyDo
             };
             _context.DoiSoatTienCocs.Add(dieuChinh);
             await _context.SaveChangesAsync();

@@ -114,12 +114,18 @@ export function useReconciliationSheet({ order, app, onAfterMutation }: UseRecon
     }
   }, [app.realApi, donId]);
 
+  // Tự động đồng bộ lại bảng đối soát khi phụ phí, phiếu nhận trả hoặc trạng thái đơn vừa cập nhật từ ngoài sheet
+  const surchargesSyncKey = `${order.status}|${order.surcharges.map((s) => `${s.id}:${s.status}:${s.amount}`).join(",")}|${order.returnReceipts?.length ?? 0}`;
+
   useEffect(() => {
     setReconSuccess(null);
     setReconError(null);
     setPendingCollectReq(null);
+  }, [donId]);
+
+  useEffect(() => {
     void loadReconcileState();
-  }, [loadReconcileState]);
+  }, [loadReconcileState, surchargesSyncKey]);
 
   const metrics = computeReconciliationMetrics(order, Boolean(app.realApi), previewBackend, doiSoatBackend, surchargesBackend);
 

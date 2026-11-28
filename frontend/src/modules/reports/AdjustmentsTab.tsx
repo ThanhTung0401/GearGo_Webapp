@@ -68,7 +68,12 @@ export function AdjustmentsTab({ app }: { app: ReturnType<typeof useApp> }) {
         />
       )}
 
-      <FinancialAdjustmentsTable adjustments={app.financialAdjustments} />
+      <FinancialAdjustmentsTable
+        adjustments={vm.realApi ? vm.serverAdjustments : app.financialAdjustments}
+        canReview={!vm.realApi && app.currentUser?.role === "admin"}
+        onApprove={(id) => app.reviewFinancialAdjustment?.(id, true, app.currentUser?.name || "Quản trị viên")}
+        onReject={(id) => app.reviewFinancialAdjustment?.(id, false, app.currentUser?.name || "Quản trị viên")}
+      />
 
       <AdjustmentsModals
         realApi={vm.realApi}

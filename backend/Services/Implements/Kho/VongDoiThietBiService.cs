@@ -67,11 +67,48 @@ public partial class VongDoiThietBiService : IVongDoiThietBiService
                 TinhTrangTruoc = ls.TinhTrangTruoc, TinhTrangSau = ls.TinhTrangSau, ThoiDiem = ls.ThoiDiem, LyDo = ls.LyDo
             }).ToListAsync();
 
+        // Nếu dòng nhập gốc có phiếu SaiGiaNhap đã duyệt, lấy giá vốn hiệu lực mới nhất cho QTV xem trong Sổ đời
+        decimal? giaNhapHieuLuc = thietBi.GiaNhap;
+        if (laAdmin && thietBi.MaChiTietPhieuNhap > 0)
+        {
+            var dieuChinhGia = await _context.ChiTietDieuChinhKhos.AsNoTracking()
+                .Include(ct => ct.PhieuDieuChinhKho)
+                .Where(ct => ct.MaChiTietPhieuNhap == thietBi.MaChiTietPhieuNhap
+                    && ct.PhieuDieuChinhKho.LoaiDieuChinh == "SaiGiaNhap"
+                    && ct.PhieuDieuChinhKho.TrangThai == DomainConstants.Status.Applied)
+                .OrderByDescending(ct => ct.PhieuDieuChinhKho.ThoiDiemApDung ?? ct.PhieuDieuChinhKho.ThoiDiemLap)
+                .Select(ct => ct.GiaTriSau)
+                .FirstOrDefaultAsync();
+
+            if (!string.IsNullOrWhiteSpace(dieuChinhGia))
+            {
+                if (decimal.TryParse(dieuChinhGia, out var parsedPlain))
+                {
+                    giaNhapHieuLuc = parsedPlain;
+                }
+                else
+                {
+                    try
+                    {
+                        using var doc = System.Text.Json.JsonDocument.Parse(dieuChinhGia);
+                        if (doc.RootElement.TryGetProperty("donGiaHieuLuc", out var p) ||
+                            doc.RootElement.TryGetProperty("DonGiaHieuLuc", out p) ||
+                            doc.RootElement.TryGetProperty("donGiaNhap", out p) ||
+                            doc.RootElement.TryGetProperty("DonGiaNhap", out p))
+                        {
+                            giaNhapHieuLuc = p.GetDecimal();
+                        }
+                    }
+                    catch { /* Giữ nguyên giá gốc nếu JSON không hợp lệ */ }
+                }
+            }
+        }
+
         return Result<HoSoVongDoiResponse>.Ok(new HoSoVongDoiResponse
         {
             MaThietBi = thietBi.MaThietBi, MaThietBiHienThi = thietBi.MaThietBiHienThi,
             TrangThaiSuDung = thietBi.TrangThaiSuDung.ToString(), TinhTrang = thietBi.TinhTrang,
-            NgayNhap = thietBi.NgayNhap, GiaNhap = laAdmin ? thietBi.GiaNhap : null,
+            NgayNhap = thietBi.NgayNhap, GiaNhap = laAdmin ? giaNhapHieuLuc : null,
             MaChiTietPhieuNhap = thietBi.MaChiTietPhieuNhap,
             MaSanPhamNguon = thietBi.ChiTietPhieuNhap?.MaSanPham ?? thietBi.MaSanPhamHienTai,
             TenSanPhamNguon = thietBi.ChiTietPhieuNhap?.SanPham?.TenSanPham ?? "",

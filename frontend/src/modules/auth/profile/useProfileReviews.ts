@@ -38,9 +38,38 @@ export function useProfileReviews(onEligibleCountChange?: (count: number) => voi
       reviewApi.layDanhGiaCuaToi().catch(() => ({ items: [], tongSo: 0, trang: 1, soMoiTrang: 20 })),
     ])
       .then(([eligible, myRevs]) => {
+        const mappedReviews = (myRevs.items ?? []).map(mapDanhGiaToReview);
         setEligibleReviewItems(eligible);
         onEligibleCountChange?.(eligible.length);
-        setMyRealReviews((myRevs.items ?? []).map(mapDanhGiaToReview));
+        setMyRealReviews(mappedReviews);
+
+        // Nếu đi từ nút "Viết đánh giá" của một đơn cụ thể: tự mở form nếu chưa đánh giá, hoặc cuộn tới đánh giá đã gửi
+        const targetOrderId = sessionStorage.getItem("geargo_review_order_id");
+        if (targetOrderId) {
+          sessionStorage.removeItem("geargo_review_order_id");
+          const matchedItems = eligible.filter((el) => String(el.maDonThue) === targetOrderId);
+          const firstUnreviewed = matchedItems.find((el) => {
+            const ctId = el.maChiTietDon ?? el.maChiTietDonThue ?? 0;
+            const hasExisting = mappedReviews.some(
+              (r) =>
+                (r.orderId === String(el.maDonThue) || (ctId > 0 && r.orderId === String(ctId))) &&
+                r.productId === String(el.maSanPham)
+            );
+            return !el.daDanhGia && !hasExisting;
+          });
+          if (firstUnreviewed) {
+            openComposer({
+              orderId: String(firstUnreviewed.maDonThue),
+              productId: String(firstUnreviewed.maSanPham),
+              productName: firstUnreviewed.tenSanPham,
+              maChiTietDonThue: firstUnreviewed.maChiTietDon ?? firstUnreviewed.maChiTietDonThue ?? 0,
+            });
+          } else {
+            window.setTimeout(() => {
+              document.getElementById(`review-order-${targetOrderId}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+            }, 100);
+          }
+        }
       })
       .finally(() => setReviewsLoading(false));
   }, [app.realApi, app.currentUser?.id]);

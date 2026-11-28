@@ -20,7 +20,14 @@ function toIsoRange(pickupDate: string, pickupHour: string, returnDate: string, 
 export function useProductsCatalog() {
   const app = useApp();
   const [search, setSearch] = useState("");
-  const [category, setCategory] = useState("Tất cả");
+  const [category, setCategory] = useState(() => {
+    const initial = sessionStorage.getItem("geargo_catalog_category");
+    if (initial) {
+      sessionStorage.removeItem("geargo_catalog_category");
+      return initial;
+    }
+    return "Tất cả";
+  });
   const [brand, setBrand] = useState("Tất cả");
   const [sort, setSort] = useState("popular");
   const [qty, setQty] = useState(1);

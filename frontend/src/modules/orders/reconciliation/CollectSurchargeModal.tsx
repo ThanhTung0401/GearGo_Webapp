@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useApp } from "../../../App";
 import { paymentApi, reconciliationApi, type DoiSoatBackend, type YeuCauThuBackend } from "../../../services/api";
 import { fmt, type Order } from "../../../store";
@@ -38,10 +39,11 @@ export function CollectSurchargeModal(props: Props) {
     syncAfterMutation, reconBusy, setReconBusy,
     setReconError, setReconSuccess, onClose,
   } = props;
+  const [cashOutcome, setCashOutcome] = useState<"success" | "fail">("success");
   const showCollectModal = true;
   const setShowCollectModal = (open: boolean) => { if (!open) onClose(); };
   // Điều kiện vô hiệu hóa nút xác nhận thu bổ sung
-  const isSubmitDisabled = (collectMethod === "cash" && cashTendered < extraAmount) || reconBusy;
+  const isSubmitDisabled = (collectMethod === "cash" && cashOutcome === "success" && cashTendered < extraAmount) || reconBusy;
   return (
     <>
       {showCollectModal && (
@@ -76,7 +78,7 @@ export function CollectSurchargeModal(props: Props) {
                 {[
                   { key: "cash", label: "💵 Tiền mặt" },
                   { key: "pos", label: "💳 Thẻ POS" },
-                  { key: "qr", label: "📱 VietQR" },
+                  { key: "qr", label: "🏦 VNPay Sandbox" },
                 ].map((m) => (
                   <button
                     key={m.key}
@@ -104,6 +106,33 @@ export function CollectSurchargeModal(props: Props) {
                   <strong className={`recon-change-val ${cashTendered >= extraAmount ? "is-enough" : ""}`}>
                     {cashTendered >= extraAmount ? fmt(cashTendered - extraAmount) : "Chưa đủ tiền (Dòng 5.2)"}
                   </strong>
+                </div>
+                <div className="mt-2 pt-2 border-t border-gray-200">
+                  <div className="text-xs font-semibold text-gray-700 mb-1.5">Kết quả thu tiền mặt:</div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setCashOutcome("success")}
+                      className={`px-2.5 py-1.5 rounded-md text-xs font-bold border cursor-pointer ${
+                        cashOutcome === "success"
+                          ? "bg-emerald-600 text-white border-emerald-600"
+                          : "bg-white text-gray-700 border-gray-300"
+                      }`}
+                    >
+                      ✓ Thành công
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCashOutcome("fail")}
+                      className={`px-2.5 py-1.5 rounded-md text-xs font-bold border cursor-pointer ${
+                        cashOutcome === "fail"
+                          ? "bg-red-600 text-white border-red-600"
+                          : "bg-white text-gray-700 border-gray-300"
+                      }`}
+                    >
+                      ✕ Thất bại (Fail)
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
@@ -135,10 +164,10 @@ export function CollectSurchargeModal(props: Props) {
             {collectMethod === "qr" && (
               <div className="recon-method-panel is-qr">
                 <div className="recon-qr-box">
-                  📱
+                  🏦
                 </div>
-                <div className="recon-qr-title">Quét mã VietQR chuyển khoản nhanh</div>
-                <div className="recon-qr-code">Nội dung: GG {order.id} THUTHEM</div>
+                <div className="recon-qr-title">Cổng thanh toán VNPay Sandbox (v2.1.0)</div>
+                <div className="recon-qr-code">Chuyển hướng sang sandbox.vnpayment.vn · Thẻ test NCB: 9704198526191432198 (OTP: 123456)</div>
               </div>
             )}
 
@@ -205,6 +234,10 @@ export function CollectSurchargeModal(props: Props) {
                 type="button"
                 disabled={isSubmitDisabled}
                 onClick={async () => {
+                  if (collectMethod === "cash" && cashOutcome === "fail") {
+                    setReconError("Thanh toán tiền mặt thất bại — giao dịch chưa được ghi nhận, bảng đối soát giữ nguyên chưa chốt.");
+                    return;
+                  }
                   const methodStr = collectMethod === "cash" ? "Tiền mặt tại quầy" : collectMethod === "pos" ? `Thẻ POS (${posTerminalCode}/${posAuthCode})` : "Quét VietQR";
                   if (app.realApi) {
                     setReconBusy(true);
@@ -214,9 +247,19 @@ export function CollectSurchargeModal(props: Props) {
                       if (ds.trangThai === "ChoChot" || ds.trangThai === "DaXacNhan") {
                         ds = await reconciliationApi.yeuCauXuLyTien(ds.maDoiSoat);
                       }
+                      if (collectMethod === "qr") {
+                        // Luồng VNPay Sandbox thật: tạo URL thanh toán có chữ ký HMAC-SHA512 và chuyển hướng
+                        const vnpRes = await paymentApi.taoVnPayUrl({
+                          maDoiSoat: ds.maDoiSoat,
+                          frontendReturnBaseUrl: window.location.origin,
+                        });
+                        if (!vnpRes.paymentUrl) throw new Error("Không tạo được URL VNPay Sandbox.");
+                        window.location.href = vnpRes.paymentUrl;
+                        return;
+                      }
                       const reqThu = await paymentApi.taoThuBoSung(
                         ds.maDoiSoat,
-                        collectMethod === "cash" ? "TienMat" : collectMethod === "qr" ? "VietQR" : "VNPAY"
+                        collectMethod === "cash" ? "TienMat" : "POS"
                       );
                       setPendingCollectReq(reqThu);
                       if (reqThu.trangThai === "ThanhCong") {
@@ -245,7 +288,11 @@ export function CollectSurchargeModal(props: Props) {
                 }}
                 className={`recon-modal-btn-submit ${isSubmitDisabled ? "is-disabled" : ""}`}
               >
-                {reconBusy ? "Đang xử lý..." : "✓ Xác nhận thu bổ sung → Khóa & Hoàn tất"}
+                {reconBusy
+                  ? "Đang xử lý..."
+                  : collectMethod === "qr"
+                  ? "🏦 Thanh toán qua VNPay Sandbox →"
+                  : "✓ Xác nhận thu bổ sung → Khóa & Hoàn tất"}
               </button>
             </div>
           </div>

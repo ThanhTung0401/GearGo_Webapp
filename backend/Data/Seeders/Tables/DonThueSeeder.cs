@@ -17,7 +17,6 @@ internal static class DonThueSeeder
 
         var orders = new[]
         {
-            ("ORD-202611-101", TrangThaiDonThue.ChoThanhToan, 2, 4, 360000m, 0m, 1000000m, false),
             ("ORD-202611-102", TrangThaiDonThue.DaXacNhan, 1, 3, 280000m, 28000m, 800000m, true),
             ("ORD-202611-103", TrangThaiDonThue.DangChuanBi, 0, 2, 450000m, 0m, 1200000m, true),
             ("ORD-202611-104", TrangThaiDonThue.DangThue, -1, 2, 320000m, 50000m, 700000m, true),
@@ -75,9 +74,10 @@ internal static class DonThueSeeder
                 TenSanPhamLucDat = sp.TenSanPham,
                 SoLuong = 1,
                 SoNgayTinhTien = 2,
-                DonGiaThueMoiNgay = sp.GiaThueMoiNgay,
+                // Đồng bộ đơn giá và cọc của dòng chi tiết khớp với tổng tiền đơn mẫu
+                DonGiaThueMoiNgay = tongThue / 2m,
                 TienGiam = giam,
-                MucCocMoiThietBi = sp.MucCocMoiThietBi,
+                MucCocMoiThietBi = coc,
                 GiaTriBoiThuongMoiThietBi = sp.GiaTriBoiThuong
             };
             context.ChiTietDonThues.Add(ctd);

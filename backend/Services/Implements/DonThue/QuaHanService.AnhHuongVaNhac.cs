@@ -49,7 +49,8 @@ public partial class QuaHanService
             var futureDon = fa.ChiTietDon.DonThue;
             resultList.Add(new DonBiAnhHuongResponse
             {
-                MaDonBiAnhHuong = futureDon.MaDonThue, MaDonHienThi = $"DH-{futureDon.MaDonThue:D6}",
+                MaDonBiAnhHuong = futureDon.MaDonThue,
+                MaDonHienThi = !string.IsNullOrWhiteSpace(futureDon.MaDonHienThi) ? futureDon.MaDonHienThi : $"DH-{futureDon.MaDonThue:D6}",
                 TenKhachHang = futureDon.KhachHang?.HoTen ?? "Khách hàng",
                 GioNhanDuKien = futureDon.GioNhanDuKien, GioTraDuKien = futureDon.GioTraDuKien,
                 MaThietBiVung = fa.MaThietBi, MaThietBiHienThi = fa.ThietBi.MaThietBiHienThi,
@@ -110,7 +111,8 @@ public partial class QuaHanService
 
                 resultList.Add(new DonBiAnhHuongResponse
                 {
-                    MaDonBiAnhHuong = fo.MaDonThue, MaDonHienThi = $"DH-{fo.MaDonThue:D6}",
+                    MaDonBiAnhHuong = fo.MaDonThue,
+                    MaDonHienThi = !string.IsNullOrWhiteSpace(fo.MaDonHienThi) ? fo.MaDonHienThi : $"DH-{fo.MaDonThue:D6}",
                     TenKhachHang = fo.KhachHang?.HoTen ?? "Khách hàng",
                     GioNhanDuKien = fo.GioNhanDuKien, GioTraDuKien = fo.GioTraDuKien,
                     MaThietBiVung = null, MaThietBiHienThi = null, MaSanPham = cd.MaSanPham,

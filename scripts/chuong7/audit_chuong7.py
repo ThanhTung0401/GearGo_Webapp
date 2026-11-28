@@ -16,8 +16,8 @@ import docx
 from normalize_components import VALID_REACT_TYPES
 
 DOCX_PATH = "Document/GearGo_Chuong_7_Thiet_Ke_Giao_Dien_Day_Du_ReactJS.docx"
-MANIFEST_PATH = "tests/playwright/Document/screenshots_uc/manifest_71_ucs.json"
-IMG_DIR = "tests/playwright/Document/screenshots_uc"
+IMG_DIR = "Document/screenshots_uc" if os.path.exists("Document/screenshots_uc/manifest_71_ucs.json") else "tests/playwright/Document/screenshots_uc"
+MANIFEST_PATH = os.path.join(IMG_DIR, "manifest_71_ucs.json")
 
 CODE_LEAK_RE = re.compile(
     r"\b(onClick|onSubmit|onChange|onConfirm|localStorage|sessionStorage|LandingView|WorkspaceView|RegisterView|CheckoutView|window\.print|authApi|staffApi|app\.logout|app\.login|form\.auth-form|handle[A-Z]\w*|use[A-Z]\w*)\b|\.tsx\b|/api/",

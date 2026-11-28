@@ -127,7 +127,17 @@ export function useReturnMutations(p: UseReturnMutationsParams) {
         loadReturnData(), hydrateOperationalOrder(order.id), app.refreshOrders?.(), app.refreshEquipment?.(),
       ]);
     } catch (err) {
-      setReturnError(err instanceof Error ? err.message : "Không thể chốt phiếu nhận trả.");
+      const msg = err instanceof Error ? err.message : "Không thể chốt phiếu nhận trả.";
+      setReturnError(msg);
+      // Nếu lỗi do chưa duyệt kết luận mất, tự mở modal Xem phiếu để QTV bấm "Duyệt mất" ngay
+      if (msg.toLowerCase().includes("mất") && !viewingBackendReceipt) {
+        const donId = order.backendId ?? Number(order.id);
+        if (Number.isFinite(donId)) {
+          const list = await returnApi.layDanhSachTheoDon(donId).catch(() => [] as NhanTraBackend[]);
+          const target = list.find((r) => r.maPhieu === phieuId);
+          if (target) setViewingBackendReceipt(target);
+        }
+      }
     } finally {
       setReturnBusy(false);
     }

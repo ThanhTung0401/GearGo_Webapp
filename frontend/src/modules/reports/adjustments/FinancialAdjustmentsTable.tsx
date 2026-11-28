@@ -4,12 +4,20 @@ import { usePagination } from "../../../hooks/usePagination";
 
 interface FinancialAdjustmentsTableProps {
   adjustments: FinancialAdjustment[];
+  canReview?: boolean;
+  onApprove?: (id: string) => void;
+  onReject?: (id: string) => void;
 }
 
 /**
  * Bảng lịch sử chứng từ điều chỉnh tài chính và bù trừ đã lập có phân trang.
  */
-export function FinancialAdjustmentsTable({ adjustments }: FinancialAdjustmentsTableProps) {
+export function FinancialAdjustmentsTable({
+  adjustments,
+  canReview = false,
+  onApprove,
+  onReject,
+}: FinancialAdjustmentsTableProps) {
   const paging = usePagination(adjustments, 8);
   return (
     <div className="adm-table-wrap">
@@ -17,7 +25,7 @@ export function FinancialAdjustmentsTable({ adjustments }: FinancialAdjustmentsT
         <table className="adm-table adm-table--zebra adm-table--md">
           <thead>
             <tr>
-              {["Số chứng từ", "Loại điều chỉnh", "Chứng từ liên quan", "Số tiền (đ)", "Lý do bù trừ", "Người lập / Duyệt", "Thời gian", "Trạng thái"].map((h) => (
+              {["Số chứng từ", "Loại điều chỉnh", "Chứng từ liên quan", "Số tiền (đ)", "Lý do bù trừ", "Người lập / Duyệt", "Thời gian", "Trạng thái", ...(canReview ? ["Thao tác"] : [])].map((h) => (
                 <th key={h}>{h}</th>
               ))}
             </tr>
@@ -25,7 +33,7 @@ export function FinancialAdjustmentsTable({ adjustments }: FinancialAdjustmentsT
           <tbody>
             {paging.pagedItems.length === 0 ? (
               <tr>
-                <td colSpan={8} className="text-center py-8 text-sm text-gray-500">
+                <td colSpan={canReview ? 9 : 8} className="text-center py-8 text-sm text-gray-500">
                   Chưa có chứng từ điều chỉnh tài chính sau chốt nào.
                 </td>
               </tr>
@@ -45,12 +53,48 @@ export function FinancialAdjustmentsTable({ adjustments }: FinancialAdjustmentsT
                   <td className="text-[0.82rem] text-[#374151]">{a.reason}</td>
                   <td className="text-[0.8rem]">
                     <div>{a.createdBy}</div>
-                    <div className="text-[0.7rem] text-[#15803D]">Duyệt: {a.approvedBy || "Hệ thống"}</div>
+                    <div className="text-[0.7rem] text-[#15803D]">
+                      {a.status === "Chờ duyệt" ? "Chờ phê duyệt" : `${a.status === "Từ chối" ? "Từ chối" : "Duyệt"}: ${a.approvedBy || "Hệ thống"}`}
+                    </div>
                   </td>
                   <td className="adm-hint-text text-[0.75rem] whitespace-nowrap">{formatDateTimeVi(a.createdAt)}</td>
                   <td>
-                    <span className="badge badge-success text-[0.72rem]">{a.status}</span>
+                    <span
+                      className={`badge text-[0.72rem] ${
+                        a.status === "Đã duyệt"
+                          ? "badge-success"
+                          : a.status === "Từ chối"
+                          ? "badge-danger"
+                          : "badge-warning"
+                      }`}
+                    >
+                      {a.status}
+                    </span>
                   </td>
+                  {canReview && (
+                    <td>
+                      {a.status === "Chờ duyệt" ? (
+                        <div className="flex gap-1 whitespace-nowrap">
+                          <button
+                            type="button"
+                            onClick={() => onApprove?.(a.id)}
+                            className="adm-btn-green-xs"
+                          >
+                            ✓ Duyệt
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => onReject?.(a.id)}
+                            className="adm-btn-danger-outline-xs"
+                          >
+                            ✕ Từ chối
+                          </button>
+                        </div>
+                      ) : (
+                        <span className="text-[0.72rem] text-gray-400">Đã xử lý</span>
+                      )}
+                    </td>
+                  )}
                 </tr>
               ))
             )}

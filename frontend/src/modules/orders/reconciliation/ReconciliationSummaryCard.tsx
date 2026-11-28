@@ -183,9 +183,9 @@ export function ReconciliationSummaryCard({
             <div className="recon-net-formula">
               Căn cứ tính: Cọc {fmt(depositCollected)} − Phụ phí {fmt(totalApprovedSurcharges)}{" "}
               {priorSettled > 0
-                ? `− Đã thu thêm ${fmt(priorSettled)}`
+                ? `+ Đã thu thêm ${fmt(priorSettled)}`
                 : priorSettled < 0
-                ? `+ Đã hoàn trước ${fmt(Math.abs(priorSettled))}`
+                ? `− Đã hoàn trước ${fmt(Math.abs(priorSettled))}`
                 : ""}{" "}
               = {fmt(Math.abs(netDifference))}
             </div>

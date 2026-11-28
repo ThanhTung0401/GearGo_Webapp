@@ -46,15 +46,22 @@ export function computeReconciliationMetrics(
   const priorCollect = (order.transactions || [])
     .filter((t) => t.type === "Thu thêm" && t.status === "Thành công")
     .reduce((s, t) => s + t.amount, 0);
-  const priorSettled = priorCollect - priorRefund;
+  const backendCollected = realApi ? Number(doiSoatBackend?.daThuThemThanhCong ?? 0) : 0;
+  const backendRefunded = realApi ? Number(doiSoatBackend?.daHoanThanhCong ?? 0) : 0;
+  const effectivePriorCollect = realApi ? Math.max(priorCollect, backendCollected) : priorCollect;
+  const effectivePriorRefund = realApi ? Math.max(priorRefund, backendRefunded) : priorRefund;
+  const priorSettled = effectivePriorCollect - effectivePriorRefund;
 
-  const mockNetDifference = depositCollected - totalApprovedSurcharges - priorSettled;
-  const refundAmount = realApi
-    ? Number(doiSoatBackend?.soTienCanHoan ?? previewBackend?.soTienCanHoan ?? Math.max(0, mockNetDifference))
+  const mockNetDifference = depositCollected - totalApprovedSurcharges + priorSettled;
+  const rawRefund = realApi
+    ? Math.max(0, Number(doiSoatBackend?.soTienCanHoan ?? previewBackend?.soTienCanHoan ?? Math.max(0, mockNetDifference)) - backendRefunded)
     : Math.max(0, mockNetDifference);
-  const extraAmount = realApi
-    ? Number(doiSoatBackend?.soTienCanThuThem ?? previewBackend?.soTienCanThuThem ?? Math.max(0, -mockNetDifference))
+  const rawExtra = realApi
+    ? Math.max(0, Number(doiSoatBackend?.soTienCanThuThem ?? previewBackend?.soTienCanThuThem ?? Math.max(0, -mockNetDifference)) - backendCollected)
     : Math.max(0, -mockNetDifference);
+  // Đơn đã chốt khóa đối soát (Hoàn tất) không còn nghĩa vụ tiền tồn đọng trên bảng đối soát gốc
+  const refundAmount = isOrderCompleted ? 0 : rawRefund;
+  const extraAmount = isOrderCompleted ? 0 : rawExtra;
   const netDifference = refundAmount > 0 ? refundAmount : -extraAmount;
   const isBalanced = refundAmount === 0 && extraAmount === 0;
 
@@ -75,8 +82,8 @@ export function computeReconciliationMetrics(
     depositCollected,
     approvedSurcharges,
     totalApprovedSurcharges,
-    priorRefund,
-    priorCollect,
+    priorRefund: effectivePriorRefund,
+    priorCollect: effectivePriorCollect,
     priorSettled,
     refundAmount,
     extraAmount,

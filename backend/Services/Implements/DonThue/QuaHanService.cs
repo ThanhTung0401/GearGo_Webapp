@@ -160,7 +160,8 @@ public partial class QuaHanService : IQuaHanService
 
         return new DonQuaHanResponse
         {
-            MaDonThue = don.MaDonThue, MaDonHienThi = $"DH-{don.MaDonThue:D6}",
+            MaDonThue = don.MaDonThue,
+            MaDonHienThi = !string.IsNullOrWhiteSpace(don.MaDonHienThi) ? don.MaDonHienThi : $"DH-{don.MaDonThue:D6}",
             TenKhachHang = don.KhachHang?.HoTen ?? "Khách hàng",
             SoDienThoai = don.KhachHang?.TaiKhoan?.SoDienThoai ?? "",
             GioNhanThucTe = banGiaoList.FirstOrDefault()?.PhieuBanGiao?.ThoiDiemGiaoThucTe,

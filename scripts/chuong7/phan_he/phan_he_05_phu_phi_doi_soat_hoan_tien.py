@@ -13,8 +13,8 @@ SCREENS = [
 
 NATURAL_EVENTS = {
     'UC5.1': [
-        ('1', 'Quét mã QR hoặc thực hiện thanh toán theo thông tin chuyển khoản hiển thị', 'Hệ thống ghi nhận giao dịch thanh toán tiền thuê và tiền cọc.'),
-        ('2', 'Nhấn nút xác nhận đã thanh toán / kiểm tra trạng thái', 'Hệ thống cập nhật trạng thái đơn sang Đã xác nhận và hiển thị thông báo hoàn tất đặt thuê.'),
+        ('1', 'Chọn kênh thanh toán (Cổng VNPay Sandbox hoặc Tiền mặt tại quầy) trong thời hạn giữ chỗ 15 phút', 'Hệ thống hiển thị giao diện thanh toán tương ứng: nút chuyển hướng sang VNPay Sandbox (v2.1.0) hoặc tùy chọn kết quả thanh toán tiền mặt (Thành công / Thất bại).'),
+        ('2', 'Nhấn nút "Thanh toán qua VNPay Sandbox" hoặc xác nhận thanh toán tiền mặt / kiểm tra trạng thái giao dịch', 'Hệ thống chuyển hướng sang cổng VNPay Sandbox (hoặc ghi nhận thanh toán tiền mặt), xác thực callback và cập nhật trạng thái đơn sang Đã xác nhận.'),
     ],
     'UC5.2': [
         ('1', 'Chọn loại phụ phí, nhập số tiền và mô tả lý do phát sinh', 'Kiểm tra số tiền hợp lệ, không tính phí hao mòn thông thường và lý do đầy đủ trước khi lập.'),
@@ -30,7 +30,7 @@ NATURAL_EVENTS = {
     ],
     'UC5.5': [
         ('1', 'Nhấn nút "Thu thêm bổ sung" tại đơn có tổng phụ phí lớn hơn tiền cọc', 'Mở hộp thoại thu tiền bổ sung hiển thị chính xác số tiền khách cần thanh toán thêm.'),
-        ('2', 'Chọn phương thức thanh toán và nhấn nút xác nhận đã thu', 'Hệ thống ghi nhận giao dịch thu bổ sung, cập nhật số dư đơn thuê về cân bằng và đóng hộp thoại.'),
+        ('2', 'Chọn phương thức thanh toán (Tiền mặt kèm trạng thái Thành công/Thất bại, Thẻ POS hoặc VNPay Sandbox) và nhấn nút xác nhận', 'Hệ thống ghi nhận giao dịch thu bổ sung (hoặc chuyển hướng sang VNPay Sandbox và nhận callback), cập nhật số dư đơn thuê về cân bằng và đóng hộp thoại.'),
     ],
     'UC5.6': [
         ('1', 'Nhấn nút "Lập & xử lý hoàn tiền cọc" tại đơn có số dư cọc cần hoàn lại cho khách', 'Mở hộp thoại thực hiện hoàn tiền hiển thị số tiền hoàn trả và thông tin nhận tiền.'),

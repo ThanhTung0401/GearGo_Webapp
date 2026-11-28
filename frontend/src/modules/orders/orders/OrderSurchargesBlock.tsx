@@ -2,6 +2,7 @@ import { fmt, type Surcharge } from "../../../store";
 
 interface OrderSurchargesBlockProps {
   surcharges: Surcharge[];
+  isReconciled?: boolean;
   onStartDispute: (surcharge: Surcharge) => void;
 }
 
@@ -10,6 +11,7 @@ interface OrderSurchargesBlockProps {
  */
 export function OrderSurchargesBlock({
   surcharges,
+  isReconciled = false,
   onStartDispute,
 }: OrderSurchargesBlockProps) {
   if (!surcharges || surcharges.length === 0) return null;
@@ -74,8 +76,8 @@ export function OrderSurchargesBlock({
                 </div>
               )}
 
-              {/* Nút Khiếu nại phụ phí (Dòng 5.1 UC5.2) */}
-              {(sc.status === "Chờ duyệt" || sc.status === "Đã duyệt") && (
+              {/* Nút Khiếu nại phụ phí (Dòng 5.1 UC5.2) — chỉ mở khi chưa chốt đối soát */}
+              {(sc.status === "Chờ duyệt" || sc.status === "Đã duyệt") && !isReconciled && (
                 <div className="mt-2 text-right">
                   <button
                     type="button"

@@ -87,8 +87,8 @@ test.describe("[PH4-DEEP] Chuẩn bị, Bàn giao, Nhận trả & Quá hạn (ne
 
   test("[PH4-BE-06] Gán serial trùng cho 2 đơn khác nhau → 409 cho đơn thứ 2", async ({ request }) => {
     const { token } = await getAdmin(request);
+    const { token: custToken } = await loginApi(request, "customer");
     const seededA = await seedPaidOrderApi(request);
-    const seededB = await seedPaidOrderApi(request);
 
     const startA = await request.post(`${API_URL}/api/chuan-bi-don/${seededA.orderId}/bat-dau`, { headers: authHeaders(token) });
     expect(startA.ok()).toBeTruthy();
@@ -98,17 +98,21 @@ test.describe("[PH4-DEEP] Chuẩn bị, Bàn giao, Nhận trả & Quá hạn (ne
     };
     const lineA = prepA.danhSachDong[0];
 
-    // Lấy 1 TB Sẵn sàng của sản phẩm (query params đúng: maSanPhamHienTai + trangThai)
+    // Lấy chi tiết đơn A bằng token khách hàng (GET /api/don-thue/{id} yêu cầu CustomerOnly)
+    const detailARes = await request.get(`${API_URL}/api/don-thue/${seededA.orderId}`, { headers: authHeaders(custToken) });
+    expect(detailARes.ok()).toBeTruthy();
+    const detailABody = ((await detailARes.json()) as { duLieu?: { gioNhanDuKien: string; gioTraDuKien: string } }).duLieu;
+
+    // Lấy danh sách TB Sẵn sàng của sản phẩm (cần >= 2 chiếc để đơn B đặt được cùng lịch, rồi gán trùng chiếc của đơn A)
     const tb = await request.get(`${API_URL}/api/thiet-bi?maSanPhamHienTai=${lineA.maSanPham}&trangThai=SanSang&soMoiTrang=50`, {
       headers: authHeaders(token),
     });
     expect(tb.ok()).toBeTruthy();
     const tbBody = ((await tb.json()) as { duLieu?: { items: Array<{ maThietBi: number; maSanPhamHienTai?: number }> } }).duLieu;
     const allItems = tbBody?.items ?? [];
-    // Client-side filter cho chắc
     const items = allItems.filter((it) => !it.maSanPhamHienTai || it.maSanPhamHienTai === lineA.maSanPham);
-    if (items.length === 0) {
-      test.skip(true, "Không còn TB sẵn sàng để test gán trùng");
+    if (items.length < 2 || !detailABody) {
+      test.skip(true, "Sản phẩm chưa đủ >= 2 TB sẵn sàng để tạo 2 đơn trùng lịch test gán trùng serial");
       return;
     }
     const chosen = items[0].maThietBi;
@@ -119,8 +123,31 @@ test.describe("[PH4-DEEP] Chuẩn bị, Bàn giao, Nhận trả & Quá hạn (ne
     });
     expect(assignA.ok()).toBeTruthy();
 
-    // Giờ gán cùng TB cho đơn B
-    const startB = await request.post(`${API_URL}/api/chuan-bi-don/${seededB.orderId}/bat-dau`, { headers: authHeaders(token) });
+    // Tạo đơn B cùng sản phẩm & cùng khung giờ với đơn A, rồi xác nhận thanh toán
+    const createBRes = await request.post(`${API_URL}/api/don-thue`, {
+      headers: authHeaders(custToken),
+      data: {
+        gioNhanDuKien: detailABody.gioNhanDuKien,
+        gioTraDuKien: detailABody.gioTraDuKien,
+        tenNguoiNhan: "Khách Test Trùng Serial",
+        soDienThoaiNguoiNhan: "0901234567",
+        ghiChu: `PH4-BE-06-${uniqueSuffix()}`,
+        idempotencyKey: `ph4-be-06-${uniqueSuffix()}`,
+        chiTiet: [{ maSanPham: lineA.maSanPham, soLuong: 1 }],
+      },
+    });
+    if (!createBRes.ok()) {
+      test.skip(true, "Không tạo được đơn B cùng khung giờ (hết khả dụng ở khung giờ này)");
+      return;
+    }
+    const createdB = ((await createBRes.json()) as { duLieu?: { maDonThue: number } }).duLieu!;
+    await request.post(`${API_URL}/api/thanh-toan/xac-nhan`, {
+      headers: authHeaders(custToken),
+      data: { maDonThue: createdB.maDonThue, phuongThuc: "VietQR", giaLapKetQua: "ThanhCong" },
+    });
+
+    // Giờ gán cùng TB của đơn A cho đơn B (cùng lịch) -> phải trả 409/400
+    const startB = await request.post(`${API_URL}/api/chuan-bi-don/${createdB.maDonThue}/bat-dau`, { headers: authHeaders(token) });
     if (!startB.ok()) {
       test.skip(true, "Đơn B không bắt đầu chuẩn bị được");
       return;
@@ -129,7 +156,7 @@ test.describe("[PH4-DEEP] Chuẩn bị, Bàn giao, Nhận trả & Quá hạn (ne
       danhSachDong: Array<{ maChiTietDon: number; maSanPham: number }>;
     };
     const lineB = dataB.danhSachDong[0];
-    const assignB = await request.post(`${API_URL}/api/chuan-bi-don/${seededB.orderId}/phan-cong`, {
+    const assignB = await request.post(`${API_URL}/api/chuan-bi-don/${createdB.maDonThue}/phan-cong`, {
       headers: authHeaders(token),
       data: { dongDonId: lineB.maChiTietDon, thietBiIds: [chosen] },
     });

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useApp } from "../../../context/AppContext";
 import { isRealApiEnabled } from "../../../services/apiClient";
 import {
@@ -47,6 +47,29 @@ export function useReturnTab(
   const [returnBusy, setReturnBusy] = useState(false);
   const [returnError, setReturnError] = useState<string | null>(null);
   const [returnSuccess, setReturnSuccess] = useState<string | null>(null);
+  const hasVnpayNoticeRef = useRef(false);
+
+  // Đọc kết quả VNPay Sandbox khi cổng thanh toán redirect về /staff/return?vnpay=...
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const vnpStatus = params.get("vnpay");
+    if (!vnpStatus) return;
+    hasVnpayNoticeRef.current = true;
+    const msg = params.get("msg") || "";
+    const code = params.get("code") || "";
+    const maYeuCau = params.get("maYeuCau") || "";
+    if (vnpStatus === "success") {
+      setReturnSuccess(
+        `Thu tiền bổ sung qua VNPay Sandbox thành công${maYeuCau ? ` (${maYeuCau})` : ""}. Bạn có thể bấm Khóa đối soát & Hoàn tất đơn.`
+      );
+      setReturnError(null);
+      void app.refreshOrders?.();
+    } else {
+      setReturnError(msg || `Thanh toán VNPay bổ sung thất bại (Mã lỗi: ${code || "99"}).`);
+    }
+    window.history.replaceState({}, "", window.location.pathname);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [rejectingSurchargeId, setRejectingSurchargeId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState("");
   const [approveLostTarget, setApproveLostTarget] = useState<ApproveLostTarget | null>(null);
@@ -107,8 +130,12 @@ export function useReturnTab(
   }, [app.realApi, order?.id, order?.backendId, order?.status]);
 
   useEffect(() => {
-    setReturnSuccess(null);
-    setReturnError(null);
+    if (hasVnpayNoticeRef.current) {
+      hasVnpayNoticeRef.current = false;
+    } else {
+      setReturnSuccess(null);
+      setReturnError(null);
+    }
     void loadReturnData();
   }, [loadReturnData]);
 

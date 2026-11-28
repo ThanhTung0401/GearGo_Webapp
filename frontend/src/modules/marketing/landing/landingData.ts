@@ -1,11 +1,18 @@
 import type { IconName } from "../../../components/Icon";
 
-export const LANDING_CATEGORIES: { icon: IconName; name: string; count: number; color: string }[] = [
-  { icon: "tent", name: "Lều trại", count: 2, color: "#244C3A" },
-  { icon: "package", name: "Ngủ", count: 3, color: "#2D6A4F" },
-  { icon: "sparkles", name: "Đèn", count: 4, color: "#3F6C87" },
-  { icon: "package", name: "Nấu ăn", count: 2, color: "#D98550" },
-  { icon: "package", name: "Balo", count: 2, color: "#172E23" },
+export const LANDING_CATEGORIES: {
+  icon: IconName;
+  name: string;
+  subtitle: string;
+  image: string;
+  count: number;
+  color: string;
+}[] = [
+  { icon: "tent", name: "Lều trại", subtitle: "Lều cắm trại & Tarp", image: "/images/categories/tent.jpg", count: 2, color: "#244C3A" },
+  { icon: "package", name: "Ngủ", subtitle: "Túi ngủ & Đệm hơi", image: "/images/categories/sleeping.jpg", count: 3, color: "#2D6A4F" },
+  { icon: "sparkles", name: "Đèn", subtitle: "Đèn bão & Chiếu sáng", image: "/images/categories/lantern.jpg", count: 4, color: "#3F6C87" },
+  { icon: "package", name: "Nấu ăn", subtitle: "Bếp ga & Nồi dã ngoại", image: "/images/categories/cooking.jpg", count: 2, color: "#D98550" },
+  { icon: "package", name: "Balo", subtitle: "Balo leo núi & Trekking", image: "/images/categories/backpack.jpg", count: 2, color: "#172E23" },
 ];
 
 export const LANDING_STEPS: { num: string; icon: IconName; title: string; desc: string }[] = [

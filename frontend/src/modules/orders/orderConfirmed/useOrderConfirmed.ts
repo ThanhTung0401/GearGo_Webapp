@@ -15,6 +15,38 @@ export function useOrderConfirmed() {
   const [checkingGateway, setCheckingGateway] = useState(false);
   const [gatewayMessage, setGatewayMessage] = useState("");
   const [payError, setPayError] = useState("");
+  const [paymentChannel, setPaymentChannel] = useState<"vnpay" | "cash">(() =>
+    sessionStorage.getItem("geargo_checkout_payment_channel") === "cash" ? "cash" : "vnpay"
+  );
+  const [cashOutcome, setCashOutcome] = useState<"success" | "fail">("success");
+
+  // Đọc kết quả VNPay Sandbox khi cổng thanh toán redirect về /order-confirmed?vnpay=...
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const vnpayStatus = params.get("vnpay");
+    if (!vnpayStatus) return;
+
+    const returnedOrderId = params.get("orderId");
+    const msg = params.get("msg") || "";
+    const code = params.get("code") || "";
+
+    if (returnedOrderId && returnedOrderId !== "0") {
+      app.setNewOrderId(returnedOrderId);
+    }
+
+    if (vnpayStatus === "success") {
+      setGatewayMessage(msg || "Thanh toán VNPay Sandbox thành công! Đơn thuê đã được xác nhận.");
+      setPayError("");
+      void app.refreshOrders?.();
+      void app.refreshCatalog?.();
+    } else {
+      setPayError(msg || `Thanh toán VNPay không thành công (Mã lỗi: ${code || "99"}).`);
+    }
+
+    // Dọn query params để F5 không lặp lại thông báo cũ
+    window.history.replaceState({}, "", window.location.pathname);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const order = app.newOrderId ? app.orders.find((o) => o.id === app.newOrderId) : null;
   const paid = order?.status === "Đã xác nhận";
@@ -97,18 +129,44 @@ export function useOrderConfirmed() {
     return mapped;
   };
 
-  // Xác nhận thanh toán (realApi gửi API thanh toán VietQR; mock mô phỏng thành công/thất bại)
+  // Thanh toán bằng VNPay Sandbox (chuyển hướng trực tiếp sang cổng sandbox.vnpayment.vn)
+  const handlePayWithVnPay = async () => {
+    if (!order) return;
+    setProcessing(true);
+    setPayError("");
+    try {
+      const res = await paymentApi.taoVnPayUrl({
+        maDonThue: Number(order.backendId ?? order.id),
+        frontendReturnBaseUrl: window.location.origin,
+      });
+      if (!res.paymentUrl) throw new Error("Không nhận được đường dẫn thanh toán từ VNPay.");
+      window.location.href = res.paymentUrl;
+    } catch (err) {
+      setPayError(err instanceof Error ? err.message : "Không thể khởi tạo giao dịch VNPay Sandbox.");
+      setProcessing(false);
+    }
+  };
+
+  // Xác nhận thanh toán tiền mặt (hỗ trợ chọn Thành công hoặc Thất bại để kiểm thử)
   const handlePay = async (succeed: boolean) => {
     if (!order) return;
+    if (!succeed) {
+      setPayError("Thanh toán tiền mặt thất bại — giao dịch chưa được ghi nhận, đơn thuê vẫn ở trạng thái Chờ thanh toán.");
+      if (!app.realApi) {
+        app.payOrder(order.id, false);
+      }
+      return;
+    }
+
     if (app.realApi) {
       setProcessing(true);
       setPayError("");
       try {
         await paymentApi.xacNhanThanhToan({
           maDonThue: Number(order.backendId ?? order.id),
-          phuongThucThanhToan: "VietQR",
+          phuongThucThanhToan: "TienMat",
           soTienDaTra: totalAmount,
-          maGiaoDichDoiTac: `VQR-${displayOrderCode || order.id}-${Date.now()}`,
+          maGiaoDichDoiTac: `CASH-${displayOrderCode || order.id}-${Date.now()}`,
         });
         await refreshOrderDetail();
         void app.refreshCatalog?.();
@@ -122,7 +180,7 @@ export function useOrderConfirmed() {
 
     setProcessing(true);
     window.setTimeout(() => {
-      app.payOrder(order.id, succeed);
+      app.payOrder(order.id, true);
       setProcessing(false);
     }, 650);
   };
@@ -194,7 +252,12 @@ export function useOrderConfirmed() {
     checkingGateway,
     gatewayMessage,
     payError,
+    paymentChannel,
+    setPaymentChannel,
+    cashOutcome,
+    setCashOutcome,
     handlePay,
+    handlePayWithVnPay,
     handleCancelOrder,
     handleCheckGateway,
   };

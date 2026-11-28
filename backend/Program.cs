@@ -15,6 +15,24 @@ using GearGo.Services.Implements.TaiChinh;
 using GearGo.Services.Interfaces;
 using GearGo.Services.Strategies;
 
+// Nạp biến môi trường từ file .env (ở backend/.env hoặc root/.env) nếu chưa được set
+foreach (var envPath in new[] { Path.Combine(Directory.GetCurrentDirectory(), ".env"), Path.Combine(Directory.GetCurrentDirectory(), "..", ".env") })
+{
+    if (!File.Exists(envPath)) continue;
+    foreach (var rawLine in File.ReadAllLines(envPath))
+    {
+        var line = rawLine.Trim();
+        if (string.IsNullOrEmpty(line) || line.StartsWith('#')) continue;
+        var sep = line.IndexOf('=');
+        if (sep <= 0) continue;
+        var key = line[..sep].Trim();
+        var val = line[(sep + 1)..].Trim().Trim('"');
+        if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable(key)))
+            Environment.SetEnvironmentVariable(key, val);
+    }
+    break;
+}
+
 var builder = WebApplication.CreateBuilder(args);
 
 // ── 1. API Controllers ────────────────────────────────────────────────────────

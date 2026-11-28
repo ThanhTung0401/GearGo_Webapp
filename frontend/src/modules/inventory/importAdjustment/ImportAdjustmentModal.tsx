@@ -103,28 +103,55 @@ export default function ImportAdjustmentModal({ receipt, app, onClose, onSuccess
             </label>
           )}
 
-          <div className="grid grid-cols-2 gap-3">
-            <label className="font-semibold">
-              Giá trị trước điều chỉnh:
-              <input
-                required
-                placeholder="VD: 1.200.000 ₫ hoặc 5 chiếc"
-                value={vm.previousValue}
-                onChange={(e) => vm.setPreviousValue(e.target.value)}
-                className="w-full p-2 rounded-md border border-gray-300 mt-1"
-              />
-            </label>
-            <label className="font-semibold">
-              Giá trị đề nghị sau điều chỉnh:
-              <input
-                required
-                placeholder="VD: 1.150.000 ₫ hoặc 4 chiếc"
-                value={vm.newValue}
-                onChange={(e) => vm.setNewValue(e.target.value)}
-                className="w-full p-2 rounded-md border border-gray-300 mt-1"
-              />
-            </label>
-          </div>
+          {vm.type === "Số lượng" && vm.quantityDirection === "LoaiThua" ? (
+            <div className="font-semibold">
+              Chọn thiết bị khai báo thừa / trùng cần loại bỏ:
+              <div className="mt-1.5 max-h-36 overflow-y-auto border border-gray-300 rounded-md p-2 grid gap-1.5 bg-gray-50">
+                {vm.lineEquipments.length === 0 ? (
+                  <span className="text-gray-500 font-normal">Không có thiết bị khả dụng thuộc dòng nhập này.</span>
+                ) : (
+                  vm.lineEquipments.map((eq) => {
+                    const numId = Number(eq.id);
+                    const checked = vm.selectedEquipmentIds.includes(numId);
+                    return (
+                      <label key={eq.id} className="flex items-center gap-2 font-normal cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => vm.toggleEquipmentId(numId)}
+                        />
+                        <span className="font-mono font-bold text-forest">{eq.displayCode || eq.id}</span>
+                        <span className="text-gray-500">({eq.equipmentStatus})</span>
+                      </label>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-3">
+              <label className="font-semibold">
+                {vm.type === "Số lượng" ? "Số lượng cũ trên phiếu:" : "Giá trị trước điều chỉnh:"}
+                <input
+                  required
+                  placeholder={vm.type === "Số lượng" ? "VD: 1" : "VD: 1.200.000"}
+                  value={vm.previousValue}
+                  onChange={(e) => vm.setPreviousValue(e.target.value)}
+                  className="w-full p-2 rounded-md border border-gray-300 mt-1"
+                />
+              </label>
+              <label className="font-semibold">
+                {vm.type === "Số lượng" ? "Số lượng thực tế muốn thành:" : "Giá trị đề nghị sau điều chỉnh:"}
+                <input
+                  required
+                  placeholder={vm.type === "Số lượng" ? "VD: 5 (sẽ tạo thêm 4 chiếc)" : "VD: 1.150.000"}
+                  value={vm.newValue}
+                  onChange={(e) => vm.setNewValue(e.target.value)}
+                  className="w-full p-2 rounded-md border border-gray-300 mt-1"
+                />
+              </label>
+            </div>
+          )}
 
           <label className="font-semibold">
             Lý do sai lệch & Căn cứ điều chỉnh:

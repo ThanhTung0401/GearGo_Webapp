@@ -1,4 +1,7 @@
+using System;
 using System.Collections.Generic;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace GearGo.Models.DTOs.ChinhSach;
 
@@ -41,6 +44,7 @@ public class NoiDungChinhSachDto
     public decimal? TyLeBoiThuongHuHong { get; set; }
 
     /// <summary>Biểu phí mất/hỏng phụ kiện (UC8.1).</summary>
+    [JsonConverter(typeof(FlexibleJsonStringConverter))]
     public string? BieuPhiPhuKien { get; set; }
 
     public class HuyDonDto
@@ -68,5 +72,25 @@ public class NoiDungChinhSachDto
 
         /// <summary>Số giờ tham chiếu (dương; âm = sau mốc).</summary>
         public int? SoGioTruoc { get; set; }
+    }
+}
+
+/// <summary>
+/// Chấp nhận giá trị vừa có thể là chuỗi JSON vừa có thể là mảng/object JSON thô trong DB.
+/// </summary>
+internal sealed class FlexibleJsonStringConverter : JsonConverter<string?>
+{
+    public override string? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        if (reader.TokenType == JsonTokenType.Null) return null;
+        if (reader.TokenType == JsonTokenType.String) return reader.GetString();
+        using var doc = JsonDocument.ParseValue(ref reader);
+        return doc.RootElement.GetRawText();
+    }
+
+    public override void Write(Utf8JsonWriter writer, string? value, JsonSerializerOptions options)
+    {
+        if (value == null) writer.WriteNullValue();
+        else writer.WriteStringValue(value);
     }
 }

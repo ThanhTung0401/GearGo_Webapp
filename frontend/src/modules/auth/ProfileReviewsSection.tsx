@@ -63,17 +63,23 @@ export function ProfileReviewsSection({
         ) : (
           <div className="flex flex-col gap-3">
             {vm.eligibleReviewItems.map((el) => {
+              const chiTietId = el.maChiTietDon ?? el.maChiTietDonThue ?? 0;
               const existing = vm.myRealReviews.find(
-                (r) => r.orderId === String(el.maDonThue) && r.productId === String(el.maSanPham)
+                (r) =>
+                  (r.orderId === String(el.maDonThue) || (chiTietId > 0 && r.orderId === String(chiTietId))) &&
+                  r.productId === String(el.maSanPham)
               );
               const isCurrentReviewing =
                 vm.reviewingTarget?.orderId === String(el.maDonThue) &&
                 vm.reviewingTarget?.productId === String(el.maSanPham);
 
-              const chiTietId = el.maChiTietDon ?? el.maChiTietDonThue ?? 0;
               const completedDate = el.thoiDiemHoanTat ?? el.ngayHoanTat;
               return (
-                <div key={chiTietId || `${el.maDonThue}-${el.maSanPham}`} className="border border-bone rounded-xl p-4">
+                <div
+                  key={chiTietId || `${el.maDonThue}-${el.maSanPham}`}
+                  id={`review-order-${el.maDonThue}`}
+                  className="border border-bone rounded-xl p-4"
+                >
                   <div className="flex justify-between items-center mb-2 pb-2 border-b border-dashed border-bone flex-wrap gap-2">
                     <div>
                       <strong className="font-mono text-forest">{el.maDonHienThi || el.maDonThue}</strong>
